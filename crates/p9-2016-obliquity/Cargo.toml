@@ -1,0 +1,14 @@
+[package]
+name = "p9-2016-obliquity"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Bailey, Batygin & Brown (2016) 'Solar Obliquity Induced by Planet Nine'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

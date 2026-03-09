@@ -10,8 +10,8 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 |-------|-------|--------|
 | `p9-core` | Shared integrator, orbital mechanics, I/O | MERGED |
 | `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | MERGED |
-| `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | IN PROGRESS |
-| `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | NOT STARTED |
+| `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | MERGED |
+| `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | IN PROGRESS |
 | `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | NOT STARTED |
 | `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | NOT STARTED |
 | `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | NOT STARTED |
@@ -74,3 +74,13 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Brightness curves: V mag vs true anomaly with survey depth overlays
 - [x] SVG plots: acceptance heatmap (Fig 2), brightness curve (Fig 5)
 - [x] All 47 unit tests passing (17 constraints + 16 evidence + 14 core)
+- [x] PR #19 merged — 2026-03-09
+
+### Iteration 4 — p9-2016-obliquity: Bailey, Batygin & Brown (2016) (2026-03-09)
+- [x] Solar model: n=3 polytrope, I_hat=0.08, k₂=0.01, Skumanich spin-down
+- [x] Vector secular Hamiltonian: 3-body quadrupole (gp + P9 + solar spin)
+- [x] Angular momentum coupling: time-dependent solar ring, effective masses
+- [x] RK4 integration with spin-down-driven coupling evolution
+- [x] Parameter survey: bisection search for required i₉ to produce 6° obliquity
+- [x] SVG plots: required inclination contours (Fig 2), obliquity evolution
+- [x] All 60 unit tests passing (13 obliquity + 17 constraints + 16 evidence + 14 core)
