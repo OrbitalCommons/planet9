@@ -6,10 +6,8 @@
 
 use std::fmt::Write;
 
-use crate::detection_prospects::{
-    apparent_magnitude, brightness_table, survey_limits, BrightnessEstimate, P9PhysicalProperties,
-};
-use crate::revised_parameters::{original_2016, revised_2019, P9ParameterSet};
+use crate::detection_prospects::{apparent_magnitude, survey_limits, P9PhysicalProperties};
+use crate::revised_parameters::{original_2016, revised_2019};
 
 /// Generate a parameter comparison chart (2016 vs 2019).
 pub fn parameter_comparison_plot(width: u32, height: u32) -> String {

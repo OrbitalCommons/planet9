@@ -8,6 +8,12 @@ members = [
     "crates/p9-2018-resonance",
     "crates/p9-2019-clustering",
     "crates/p9-2019-review",
+    "crates/p9-2021-oort-cloud",
+    "crates/p9-2021-orbit",
+    "crates/p9-2021-ztf",
+    "crates/p9-2022-des",
+    "crates/p9-2024-panstarrs",
+    "crates/p9-2024-neptune-crossing",
 ]
 
 [workspace.dependencies]

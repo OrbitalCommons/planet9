@@ -7,8 +7,6 @@
 //! - mu: forced equilibrium angle
 //! - sigma: RMS dispersion in (p, g) space
 
-use std::f64::consts::PI;
-
 use p9_core::constants::*;
 use p9_core::types::P9Params;
 

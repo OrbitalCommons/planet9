@@ -18,12 +18,12 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | MERGED |
 | `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | MERGED |
 | `p9-2019-review` | The Planet Nine Hypothesis Review (Batygin+ 2019) | MERGED |
-| `p9-2021-oort-cloud` | Injection of Inner Oort Cloud (Batygin & Brown 2021) | NOT STARTED |
-| `p9-2021-orbit` | The Orbit of Planet Nine (Brown & Batygin 2021) | NOT STARTED |
-| `p9-2021-ztf` | ZTF Search for Planet Nine (Brown & Batygin 2021) | NOT STARTED |
-| `p9-2022-des` | DES Limits on Planet Nine (Belyakov+ 2022) | NOT STARTED |
-| `p9-2024-panstarrs` | Pan-STARRS1 Search (Brown+ 2024) | NOT STARTED |
-| `p9-2024-neptune-crossing` | Neptune-Crossing TNOs (Batygin+ 2024) | NOT STARTED |
+| `p9-2021-oort-cloud` | Injection of Inner Oort Cloud (Batygin & Brown 2021) | MERGED |
+| `p9-2021-orbit` | The Orbit of Planet Nine (Brown & Batygin 2021) | MERGED |
+| `p9-2021-ztf` | ZTF Search for Planet Nine (Brown & Batygin 2021) | MERGED |
+| `p9-2022-des` | DES Limits on Planet Nine (Belyakov+ 2022) | MERGED |
+| `p9-2024-panstarrs` | Pan-STARRS1 Search (Brown+ 2024) | MERGED |
+| `p9-2024-neptune-crossing` | Neptune-Crossing TNOs (Batygin+ 2024) | MERGED |
 
 ## Progress Log
 
@@ -146,3 +146,51 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Detection prospects: V-band magnitude from radius/albedo, survey depth comparison
 - [x] SVG plots: parameter space comparison, brightness curves with survey limits
 - [x] All 150 unit tests passing (13 review + 17 clustering + 18 resonance + 14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
+
+### Iteration 11 — p9-2021-oort-cloud: Batygin & Brown (2021) (2026-03-09)
+- [x] Inner Oort Cloud model: Plummer sphere (M=1200 Msun, r=0.35 pc, a=2000-20000 AU)
+- [x] IOC population generation with uniform random angles
+- [x] Injection simulation: secular/Kozai-Lidov perihelion modulation by P9
+- [x] Population comparison: IOC f_ϖ ~67% vs scattered disk f_ϖ ~88%
+- [x] Semi-major axis distribution histogram with IOC enhancement at a > 2000 AU
+- [x] SVG plots: confinement comparison bar chart, SMA distribution
+- [x] 15 tests passing
+
+### Iteration 12 — p9-2021-orbit: Brown & Batygin (2021) (2026-03-09)
+- [x] MCMC posterior: asymmetric Gaussian per parameter (m=6.2, a=380, i=16°, q=300 AU)
+- [x] Reference population: 100K draws from posterior with V-band magnitude computation
+- [x] Statistical measures: Rayleigh clustering significance on 11 ETNO ϖ values
+- [x] SVG plots: posterior corner plot with 1/2-σ ellipses, a vs V scatter with LSST limit
+- [x] 14 tests passing
+
+### Iteration 13 — p9-2021-ztf: Brown & Batygin (2021) (2026-03-09)
+- [x] ZTF survey model: depth 20.5, sky coverage 75%, linking threshold 7, efficiency 99.66%
+- [x] Detection pipeline: depth/footprint/linking cuts, self-calibration correction
+- [x] Exclusion analysis: 56.4% excluded, combined multi-survey formula
+- [x] SVG plots: exclusion heatmap in (a,V) space, efficiency vs magnitude curve
+- [x] 15 tests passing
+
+### Iteration 14 — p9-2022-des: Belyakov+ (2022) (2026-03-09)
+- [x] DES survey model: 5000 deg² footprint, 575 nights, depth g=24.1, logistic completeness
+- [x] Color models: 5 configurations (fiducial, Neptune-like, methane 40K, super-Ganymede, super-KBO)
+- [x] Recovery analysis: 87% of DES-crossing objects recovered, 5% unique exclusion
+- [x] Combined ZTF+DES exclusion: 61.2%
+- [x] SVG plots: color model bar chart, recovery vs magnitude curve
+- [x] 21 tests passing
+
+### Iteration 15 — p9-2024-panstarrs: Brown+ (2024) (2026-03-09)
+- [x] PS1 survey model: depth 21.5, coverage 75%, linking threshold 9, efficiency 99.2%
+- [x] Detection pipeline: 69802 of 100K detected, 17054 unique to PS1
+- [x] Combined exclusion: ZTF 56.4% + DES 5.0% + PS1 17.1% = 78% total
+- [x] Updated parameters: a=500±170 AU, m=6.6±2.2 ME, V=22.0±1.3
+- [x] SVG plots: combined exclusion stacked bar, remaining parameter space
+- [x] 21 tests passing
+
+### Iteration 16 — p9-2024-neptune-crossing: Batygin+ (2024) (2026-03-09)
+- [x] Observed sample: 17 Neptune-crossing TNOs with selection criteria (a>100, i<40, q<30)
+- [x] Hypothesis testing: KS test (P9: p=0.41 vs null: p=0.0034), ~5σ rejection of P9-free
+- [x] CDF comparison: ζ statistic computation, Anderson-Darling test
+- [x] N-body simulation configs: P9-inclusive (m=5 ME, a=500, e=0.25, i=20°) vs P9-free
+- [x] SVG plots: CDF comparison, perihelion distribution
+- [x] 25 tests passing
+- [x] All 261 workspace tests passing (16 crates)

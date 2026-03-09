@@ -9,8 +9,6 @@
 //! 2. Pole position clustering (p, q) — 96.5% confidence
 //! 3. Combined 4D clustering — 99.8% confidence
 
-use std::f64::consts::PI;
-
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
 
