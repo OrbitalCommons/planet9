@@ -202,6 +202,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-inclined-tnos"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "rayon",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2016-obliquity"
 version = "0.1.0"
 dependencies = [
