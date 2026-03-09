@@ -3,8 +3,6 @@
 //! Computes V-band magnitude estimates for different P9 configurations
 //! and compares with survey depth limits.
 
-use std::f64::consts::PI;
-
 use p9_core::constants::*;
 use p9_core::types::P9Params;
 

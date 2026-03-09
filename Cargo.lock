@@ -287,6 +287,78 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2021-oort-cloud"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2021-orbit"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2021-ztf"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2022-des"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2024-neptune-crossing"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2024-panstarrs"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-core"
 version = "0.1.0"
 dependencies = [

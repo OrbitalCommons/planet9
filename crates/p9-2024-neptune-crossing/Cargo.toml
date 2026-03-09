@@ -1,0 +1,12 @@
+[package]
+name = "p9-2024-neptune-crossing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+approx = { workspace = true }
