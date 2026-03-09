@@ -17,7 +17,7 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | MERGED |
 | `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | MERGED |
 | `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | MERGED |
-| `p9-2019-review` | The Planet Nine Hypothesis Review (Batygin+ 2019) | NOT STARTED |
+| `p9-2019-review` | The Planet Nine Hypothesis Review (Batygin+ 2019) | MERGED |
 | `p9-2021-oort-cloud` | Injection of Inner Oort Cloud (Batygin & Brown 2021) | NOT STARTED |
 | `p9-2021-orbit` | The Orbit of Planet Nine (Brown & Batygin 2021) | NOT STARTED |
 | `p9-2021-ztf` | ZTF Search for Planet Nine (Brown & Batygin 2021) | NOT STARTED |
@@ -136,3 +136,13 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] OSSOS sensitivity analysis: detection power comparison (n=4 vs n=14)
 - [x] SVG plots: Poincaré (x,y) and (p,q) clustering with mean direction
 - [x] All 137 unit tests passing (17 clustering + 18 resonance + 14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
+- [x] PR #25 merged — 2026-03-09
+
+### Iteration 10 — p9-2019-review: Batygin+ (2019) (2026-03-09)
+- [x] Revised parameters: 2016 (m=10, a=700, e=0.6) vs 2019 (m=5-10, a=400-800, e=0.2-0.5)
+- [x] Best-fit parameter sets for 5 ME and 10 ME configurations
+- [x] Parameter grid: a₉ × e₉ × i₉ × m₉ with viability filtering (q₉ ∈ 100-500 AU)
+- [x] Statistical success criteria: a_c, f_ϖ, η, μ, σ
+- [x] Detection prospects: V-band magnitude from radius/albedo, survey depth comparison
+- [x] SVG plots: parameter space comparison, brightness curves with survey limits
+- [x] All 150 unit tests passing (13 review + 17 clustering + 18 resonance + 14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
