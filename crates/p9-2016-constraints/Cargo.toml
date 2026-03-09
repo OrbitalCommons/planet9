@@ -1,0 +1,18 @@
+[package]
+name = "p9-2016-constraints"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Brown & Batygin (2016) 'Observational Constraints on Planet Nine'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2016-evidence = { path = "../p9-2016-evidence" }
+nalgebra = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
