@@ -1,0 +1,6 @@
+[package]
+name = "p9-review-article"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

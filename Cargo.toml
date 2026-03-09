@@ -13,7 +13,7 @@ members = [
     "crates/p9-2021-ztf",
     "crates/p9-2022-des",
     "crates/p9-2024-panstarrs",
-    "crates/p9-2024-neptune-crossing",
+    "crates/p9-2024-neptune-crossing", "crates/p9-review-article",
 ]
 
 [workspace.dependencies]
