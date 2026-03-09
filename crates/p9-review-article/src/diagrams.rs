@@ -366,7 +366,7 @@ pub fn hypothesis_synthesis_diagram() -> String {
         (
             "2016",
             "Evidence for P9",
-            "Batygin & Brown",
+            "Batygin &amp; Brown",
             "#1565c0",
             [
                 "6 KBO clustering",
@@ -378,7 +378,7 @@ pub fn hypothesis_synthesis_diagram() -> String {
         (
             "2016",
             "Constraints",
-            "Brown & Batygin",
+            "Brown &amp; Batygin",
             "#e65100",
             [
                 "19\u{00D7}9\u{00D7}5 param grid",
@@ -402,14 +402,14 @@ pub fn hypothesis_synthesis_diagram() -> String {
         (
             "2016",
             "Inclined TNOs",
-            "Batygin & Brown",
+            "Batygin &amp; Brown",
             "#1565c0",
             [
                 "Kozai-Lidov pump",
                 "Retrograde orbits",
                 "Drac/Niku explained",
             ],
-            "i > 90\u{00B0}",
+            "i &gt; 90\u{00B0}",
         ),
         (
             "2017",
@@ -445,12 +445,12 @@ pub fn hypothesis_synthesis_diagram() -> String {
                 "N/1, N/2 resonances",
                 "Broad a\u{2089} plateau",
             ],
-            "P(res) < 5%",
+            "P(res) &lt; 5%",
         ),
         (
             "2019",
             "4D Clustering",
-            "Brown & Batygin",
+            "Brown &amp; Batygin",
             "#2e7d32",
             [
                 "14 KBO sample",
@@ -474,19 +474,19 @@ pub fn hypothesis_synthesis_diagram() -> String {
         (
             "2021",
             "Oort Cloud Inj.",
-            "Batygin & Brown",
+            "Batygin &amp; Brown",
             "#1565c0",
             [
                 "IOC \u{2192} KB injection",
                 "67% vs 88% confine",
-                "a > 2000 AU pop.",
+                "a &gt; 2000 AU pop.",
             ],
             "f = 67%",
         ),
         (
             "2021",
             "Orbit MCMC",
-            "Brown & Batygin",
+            "Brown &amp; Batygin",
             "#e65100",
             ["MCMC posterior", "11 ETNO fit", "Asymm. Gaussian"],
             "m = 6.2 M\u{2295}",
@@ -494,9 +494,9 @@ pub fn hypothesis_synthesis_diagram() -> String {
         (
             "2021",
             "ZTF Search",
-            "Brown & Batygin",
+            "Brown &amp; Batygin",
             "#c62828",
-            ["V < 20.5 searched", "99.66% link eff.", "56.4% excluded"],
+            ["V &lt; 20.5 searched", "99.66% link eff.", "56.4% excluded"],
             "\u{2013}56.4%",
         ),
         (
@@ -512,7 +512,7 @@ pub fn hypothesis_synthesis_diagram() -> String {
             "Pan-STARRS1",
             "Brown+",
             "#c62828",
-            ["V < 21.5 searched", "+17.1% unique", "78% total excl."],
+            ["V &lt; 21.5 searched", "+17.1% unique", "78% total excl."],
             "\u{2013}78.5%",
         ),
         (
