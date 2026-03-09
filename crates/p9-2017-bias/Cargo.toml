@@ -1,0 +1,15 @@
+[package]
+name = "p9-2017-bias"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Brown (2017) 'Observational Bias and Clustering of Distant KBOs'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
