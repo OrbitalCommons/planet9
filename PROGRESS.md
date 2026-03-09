@@ -15,7 +15,7 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | MERGED |
 | `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | MERGED |
 | `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | MERGED |
-| `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | NOT STARTED |
+| `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | MERGED |
 | `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | NOT STARTED |
 | `p9-2019-review` | The Planet Nine Hypothesis Review (Batygin+ 2019) | NOT STARTED |
 | `p9-2021-oort-cloud` | Injection of Inner Oort Cloud (Batygin & Brown 2021) | NOT STARTED |
@@ -116,3 +116,14 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Perihelion histograms: stacked bars colored by alignment
 - [x] (a, q) scatter plots colored by alignment population
 - [x] All 102 unit tests passing (14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
+- [x] PR #23 merged — 2026-03-09
+
+### Iteration 8 — p9-2018-resonance: Bailey, Brown & Batygin (2018) (2026-03-09)
+- [x] Extended resonance catalog: Farey sequence generation (F5 and F20)
+- [x] MMR identification: period ratio classification (N/1, N/2, high-order)
+- [x] Resonant angle computation and libration detection via circular statistics
+- [x] Planar simulation with J2 approximation, e₉ sweep from 0 to 0.7
+- [x] Resonance occupation probability: P(N/1 or N/2) per e₉ value
+- [x] a₉ distribution: Gaussian kernel density, Farey F5 vs extended comparison
+- [x] SVG plots: resonance occupation histogram, a₉ distribution comparison
+- [x] All 120 unit tests passing (18 resonance + 14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
