@@ -8,8 +8,8 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 
 | Crate | Paper | Status |
 |-------|-------|--------|
-| `p9-core` | Shared integrator, orbital mechanics, I/O | IN PROGRESS |
-| `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | NOT STARTED |
+| `p9-core` | Shared integrator, orbital mechanics, I/O | MERGED |
+| `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | IN PROGRESS |
 | `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | NOT STARTED |
 | `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | NOT STARTED |
 | `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | NOT STARTED |
@@ -52,3 +52,13 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Secular Hamiltonian: quadrupole (coplanar + 3D), phase-space portrait generation
 - [x] Visualization: SVG heatmap + scatter plot generation, viridis colormap
 - [x] All 14 unit tests passing
+- [x] PR #17 merged — 2026-03-09
+
+### Iteration 2 — p9-2016-evidence: Batygin & Brown (2016) (2026-03-09)
+- [x] KBO elements: hardcoded orbital elements for 6 stable KBOs, clone generation
+- [x] Octupole Hamiltonian: coplanar + 3D extensions to p9-core's quadrupole
+- [x] Phase-space portraits: N-body trajectory tracing, alignment classification
+- [x] Scattered disk simulation: planar + 3D configs, snapshot recording, clustering statistics
+- [x] Resonance detection: MMR identification (11 known resonances), libration analysis
+- [x] SVG plots: Figure 1 (KBO clustering), phase portraits, scattered disk clustering
+- [x] All 30 unit tests passing (16 evidence + 14 core)
