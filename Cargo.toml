@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/p9-core",
     "crates/p9-2016-evidence",
+    "crates/p9-2016-constraints",
 ]
 
 [workspace.dependencies]

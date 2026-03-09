@@ -9,8 +9,8 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | Crate | Paper | Status |
 |-------|-------|--------|
 | `p9-core` | Shared integrator, orbital mechanics, I/O | MERGED |
-| `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | IN PROGRESS |
-| `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | NOT STARTED |
+| `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | MERGED |
+| `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | IN PROGRESS |
 | `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | NOT STARTED |
 | `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | NOT STARTED |
 | `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | NOT STARTED |
@@ -62,3 +62,15 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Resonance detection: MMR identification (11 known resonances), libration analysis
 - [x] SVG plots: Figure 1 (KBO clustering), phase portraits, scattered disk clustering
 - [x] All 30 unit tests passing (16 evidence + 14 core)
+- [x] PR #18 merged — 2026-03-09
+
+### Iteration 3 — p9-2016-constraints: Brown & Batygin (2016) (2026-03-09)
+- [x] Parameter grid: 19×9×5 (a, e, mass) survey with perihelion filtering
+- [x] Acceptance criteria: n_survivors ≥ 7, clustering > 0.5, high-q > 0.05
+- [x] Clustering metrics: Rayleigh test, anti-aligned fraction, confinement probability
+- [x] Inclination survey: 8×12 (i₉, ω₉) grid, pole direction, angular separation
+- [x] Detection limits: V magnitude from mass/albedo/distance, mass-radius relation
+- [x] Sky position: ecliptic coordinate computation along orbit
+- [x] Brightness curves: V mag vs true anomaly with survey depth overlays
+- [x] SVG plots: acceptance heatmap (Fig 2), brightness curve (Fig 5)
+- [x] All 47 unit tests passing (17 constraints + 16 evidence + 14 core)
