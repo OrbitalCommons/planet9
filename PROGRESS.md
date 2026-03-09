@@ -12,8 +12,8 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | MERGED |
 | `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | MERGED |
 | `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | MERGED |
-| `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | IN PROGRESS |
-| `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | NOT STARTED |
+| `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | MERGED |
+| `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | MERGED |
 | `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | NOT STARTED |
 | `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | NOT STARTED |
 | `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | NOT STARTED |
@@ -93,3 +93,15 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Analysis: inclination histograms, 2D density maps in (a,i) and (q,i) space
 - [x] SVG plots: density histograms with known TNO overlays, scatter plots
 - [x] All 74 unit tests passing (14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
+- [x] PR #21 merged — 2026-03-09
+
+### Iteration 6 — p9-2017-bias: Brown (2017) (2026-03-09)
+- [x] KBO sample: 10 distant KBOs with a > 230 AU (Sedna, 2012 VP113, etc.)
+- [x] Bias function: perihelion-distance model with r⁻⁴ brightness scaling
+- [x] Galactic plane avoidance: latitude-dependent detection penalty
+- [x] Bias grid: 2D (ϖ, Ω) with inclination marginalization over sin(i) prior
+- [x] Rayleigh z-statistic for angular concentration testing
+- [x] Monte Carlo clustering test: bias-weighted rejection sampling, 10000 iterations
+- [x] Combined p-value: Fisher's method for ϖ and ω clustering
+- [x] SVG plots: ϖ polar distribution with mean direction vector
+- [x] All 88 unit tests passing (14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)

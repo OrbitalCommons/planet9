@@ -227,6 +227,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2017-bias"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-core"
 version = "0.1.0"
 dependencies = [
