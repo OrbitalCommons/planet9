@@ -16,7 +16,7 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | MERGED |
 | `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | MERGED |
 | `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | MERGED |
-| `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | NOT STARTED |
+| `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | MERGED |
 | `p9-2019-review` | The Planet Nine Hypothesis Review (Batygin+ 2019) | NOT STARTED |
 | `p9-2021-oort-cloud` | Injection of Inner Oort Cloud (Batygin & Brown 2021) | NOT STARTED |
 | `p9-2021-orbit` | The Orbit of Planet Nine (Brown & Batygin 2021) | NOT STARTED |
@@ -127,3 +127,12 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] a₉ distribution: Gaussian kernel density, Farey F5 vs extended comparison
 - [x] SVG plots: resonance occupation histogram, a₉ distribution comparison
 - [x] All 120 unit tests passing (18 resonance + 14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
+- [x] PR #24 merged — 2026-03-09
+
+### Iteration 9 — p9-2019-clustering: Brown & Batygin (2019) (2026-03-09)
+- [x] KBO sample: 14 distant KBOs with a > 230 AU (extended from 2017's 10)
+- [x] Poincaré action-angle variables: (x,y) for perihelion, (p,q) for pole position
+- [x] Monte Carlo clustering: 4D significance test (perihelion + pole combined)
+- [x] OSSOS sensitivity analysis: detection power comparison (n=4 vs n=14)
+- [x] SVG plots: Poincaré (x,y) and (p,q) clustering with mean direction
+- [x] All 137 unit tests passing (17 clustering + 18 resonance + 14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)

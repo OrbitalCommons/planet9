@@ -6,6 +6,7 @@ members = [
     "crates/p9-2016-constraints", "crates/p9-2016-obliquity", "crates/p9-2016-inclined-tnos", "crates/p9-2017-bias",
     "crates/p9-2018-kuiper-belt",
     "crates/p9-2018-resonance",
+    "crates/p9-2019-clustering",
 ]
 
 [workspace.dependencies]
