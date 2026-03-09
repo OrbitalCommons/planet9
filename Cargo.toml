@@ -4,6 +4,7 @@ members = [
     "crates/p9-core",
     "crates/p9-2016-evidence",
     "crates/p9-2016-constraints", "crates/p9-2016-obliquity", "crates/p9-2016-inclined-tnos", "crates/p9-2017-bias",
+    "crates/p9-2018-kuiper-belt",
 ]
 
 [workspace.dependencies]

@@ -14,7 +14,7 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | MERGED |
 | `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | MERGED |
 | `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | MERGED |
-| `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | NOT STARTED |
+| `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | MERGED |
 | `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | NOT STARTED |
 | `p9-2019-clustering` | Orbital Clustering in the Distant Solar System (Brown & Batygin 2019) | NOT STARTED |
 | `p9-2019-review` | The Planet Nine Hypothesis Review (Batygin+ 2019) | NOT STARTED |
@@ -105,3 +105,14 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Combined p-value: Fisher's method for ϖ and ω clustering
 - [x] SVG plots: ϖ polar distribution with mean direction vector
 - [x] All 88 unit tests passing (14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
+- [x] PR #22 merged — 2026-03-09
+
+### Iteration 7 — p9-2018-kuiper-belt: Khain, Batygin & Brown (2018) (2026-03-09)
+- [x] Simulation: narrow (q 30–36 AU) vs broad (q 30–300 AU) initial distributions
+- [x] Coplanar Planet Nine: a=700 AU, e=0.6, i=0°, m=10 M_Earth
+- [x] Population classification: aligned vs anti-aligned via Δϖ threshold
+- [x] Population statistics: count, median/mean/min/max perihelion distance
+- [x] Bimodality detection: checks for both aligned and anti-aligned survivors
+- [x] Perihelion histograms: stacked bars colored by alignment
+- [x] (a, q) scatter plots colored by alignment population
+- [x] All 102 unit tests passing (14 kb + 14 bias + 14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
