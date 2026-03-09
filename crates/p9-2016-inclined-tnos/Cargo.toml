@@ -1,0 +1,17 @@
+[package]
+name = "p9-2016-inclined-tnos"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Batygin & Brown (2016) 'Generation of Highly Inclined TNOs by Planet Nine'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rayon = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

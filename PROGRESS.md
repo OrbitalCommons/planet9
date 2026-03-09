@@ -11,8 +11,8 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 | `p9-core` | Shared integrator, orbital mechanics, I/O | MERGED |
 | `p9-2016-evidence` | Evidence for a Distant Giant Planet (Batygin & Brown 2016) | MERGED |
 | `p9-2016-constraints` | Observational Constraints on Planet Nine (Brown & Batygin 2016) | MERGED |
-| `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | IN PROGRESS |
-| `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | NOT STARTED |
+| `p9-2016-obliquity` | Solar Obliquity Induced by Planet Nine (Bailey+ 2016) | MERGED |
+| `p9-2016-inclined-tnos` | Highly Inclined TNOs by Planet Nine (Batygin & Brown 2016) | IN PROGRESS |
 | `p9-2017-bias` | Observational Bias and Clustering (Brown 2017) | NOT STARTED |
 | `p9-2018-kuiper-belt` | Generation of Distant Kuiper Belt (Khain+ 2018) | NOT STARTED |
 | `p9-2018-resonance` | Resonance-based Planet Nine Search (Bailey+ 2018) | NOT STARTED |
@@ -84,3 +84,12 @@ Re-implementation of all numerical models from Batygin, Brown et al. Planet Nine
 - [x] Parameter survey: bisection search for required i₉ to produce 6° obliquity
 - [x] SVG plots: required inclination contours (Fig 2), obliquity evolution
 - [x] All 60 unit tests passing (13 obliquity + 17 constraints + 16 evidence + 14 core)
+- [x] PR #20 merged — 2026-03-09
+
+### Iteration 5 — p9-2016-inclined-tnos: Batygin & Brown (2016) (2026-03-09)
+- [x] Known objects: Drac, Niku, 2016 NM56 orbital elements
+- [x] Full N-body simulation: all 4 giants + P9, 3200 particles, hybrid integrator
+- [x] Kozai-Lidov detection: Kozai integral conservation, pathway classification
+- [x] Analysis: inclination histograms, 2D density maps in (a,i) and (q,i) space
+- [x] SVG plots: density histograms with known TNO overlays, scatter plots
+- [x] All 74 unit tests passing (14 inclined + 13 obliquity + 17 constraints + 16 evidence + 14 core)
