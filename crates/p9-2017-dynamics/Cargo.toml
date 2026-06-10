@@ -1,0 +1,15 @@
+[package]
+name = "p9-2017-dynamics"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Batygin & Morbidelli (2017) 'Dynamical Evolution Induced by Planet Nine'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

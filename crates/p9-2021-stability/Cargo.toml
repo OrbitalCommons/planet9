@@ -1,0 +1,15 @@
+[package]
+name = "p9-2021-stability"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Batygin, Mardling & Nesvorny (2021) 'The Stability Boundary of the Distant Scattered Disk'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
