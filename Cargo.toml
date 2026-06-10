@@ -3,17 +3,25 @@ resolver = "2"
 members = [
     "crates/p9-core",
     "crates/p9-2016-evidence",
-    "crates/p9-2016-constraints", "crates/p9-2016-obliquity", "crates/p9-2016-inclined-tnos", "crates/p9-2017-bias",
+    "crates/p9-2016-constraints", "crates/p9-2016-obliquity", "crates/p9-2016-inclined-tnos",
+    "crates/p9-2017-bias",
+    "crates/p9-2017-dynamics",
     "crates/p9-2018-kuiper-belt",
     "crates/p9-2018-resonance",
     "crates/p9-2019-clustering",
     "crates/p9-2019-review",
     "crates/p9-2021-oort-cloud",
     "crates/p9-2021-orbit",
+    "crates/p9-2021-stability",
     "crates/p9-2021-ztf",
     "crates/p9-2022-des",
-    "crates/p9-2024-panstarrs",
     "crates/p9-2024-neptune-crossing",
+    "crates/p9-2024-oort-selfgrav",
+    "crates/p9-2024-panstarrs",
+    "crates/p9-2025-clustering",
+    "crates/p9-2025-iras-akari",
+    "crates/p9-2025-perturbation",
+    "crates/p9-review-article",
 ]
 
 [workspace.dependencies]

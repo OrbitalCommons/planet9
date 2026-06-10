@@ -1,0 +1,15 @@
+[package]
+name = "p9-2025-perturbation"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Belyakov & Batygin (2025) 'The Perturbation Theory Approach to Stability in the Scattered Disk'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
