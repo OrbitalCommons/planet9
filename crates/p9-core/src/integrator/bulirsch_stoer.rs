@@ -4,11 +4,29 @@
 //! arbitrary accuracy. This is the fallback integrator when a particle enters
 //! a planet's Hill sphere and the symplectic integrator would fail.
 //!
-//! Reference: Press et al. Numerical Recipes, Stoer & Bulirsch (1980)
+//! Two fixes relative to the original implementation (see MODELING_REVIEW):
+//!
+//! 1. **Planets move during the step.** Each acceleration evaluation
+//!    Kepler-drifts every massive body from its step-start state to the
+//!    substep epoch, instead of holding planets frozen over the full dt
+//!    (Jupiter moves ~25 deg in 300 d).
+//! 2. **Adaptive step reduction.** When the extrapolation tableau fails to
+//!    converge, the step is recursively halved (`bs_step_adaptive`) rather
+//!    than silently returning the unconverged full-step estimate.
+//!
+//! The force model supports the Chambers (1999) hybrid changeover: each body
+//! carries a critical radius `r_crit`, and the BS force takes the fraction
+//! `1 - K(d)` of the direct planet force (the kick stage applies the
+//! complementary `K(d)` fraction plus the indirect term). Pass `r_crit = 0`
+//! for full direct force (pure BS integration, no kick sharing).
+//!
+//! Reference: Press et al. Numerical Recipes, Stoer & Bulirsch (1980),
+//! Chambers (1999)
 
 use nalgebra::Vector3;
 
 use crate::constants::GM_SUN;
+use crate::integrator::kepler_step::kepler_drift;
 use crate::types::{MassiveBody, StateVector};
 
 /// Maximum subdivision sequence for Bulirsch-Stoer extrapolation.
@@ -18,8 +36,45 @@ const BS_SEQUENCE: [usize; 12] = [2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128];
 /// Maximum number of columns in the extrapolation tableau.
 const MAX_COLUMNS: usize = 12;
 
-/// Compute gravitational acceleration on a test particle from the Sun + massive bodies.
-fn acceleration(pos: &Vector3<f64>, bodies: &[MassiveBody]) -> Vector3<f64> {
+/// Maximum recursive halvings before giving up (dt reduction of 2^8 = 256x).
+const MAX_HALVINGS: u32 = 8;
+
+/// Chambers (1999) changeover function K(d).
+///
+/// Returns the fraction of the direct planet force handled by the *kick*
+/// stage: K = 1 far from the planet (d >= r_crit, pure symplectic kick),
+/// K = 0 deep inside the encounter region (d <= 0.1 r_crit, pure BS), with
+/// the smooth rational bridge K = y^2 / (2y^2 - 2y + 1) in between.
+/// The BS force uses the complement (1 - K).
+pub fn changeover_k(d: f64, r_crit: f64) -> f64 {
+    if r_crit <= 0.0 {
+        return 1.0;
+    }
+    let y = (d - 0.1 * r_crit) / (0.9 * r_crit);
+    if y <= 0.0 {
+        0.0
+    } else if y >= 1.0 {
+        1.0
+    } else {
+        y * y / (2.0 * y * y - 2.0 * y + 1.0)
+    }
+}
+
+/// Gravitational acceleration on a test particle at time `t` after the step
+/// start: Sun plus the BS share `(1 - K)` of the direct force from each body,
+/// with bodies Kepler-drifted from their step-start states to time `t`.
+///
+/// The indirect (heliocentric-frame) term is *not* included here: in the
+/// hybrid scheme it is applied at full weight by the kick stage. For
+/// standalone BS use (empty `r_crit` handling via `r_crit[i] = 0`) the
+/// indirect term is negligible only if the bodies are massless or the caller
+/// accounts for it separately.
+fn acceleration(
+    pos: &Vector3<f64>,
+    t: f64,
+    bodies: &[MassiveBody],
+    r_crit: &[f64],
+) -> Vector3<f64> {
     let r = pos.norm();
     let mut accel = if r > 1e-30 {
         -GM_SUN * pos / (r * r * r)
@@ -27,37 +82,47 @@ fn acceleration(pos: &Vector3<f64>, bodies: &[MassiveBody]) -> Vector3<f64> {
         Vector3::zeros()
     };
 
-    for body in bodies {
-        let dr = pos - body.state.pos;
+    for (j, body) in bodies.iter().enumerate() {
+        // Drift the planet to the substep epoch (frozen planets give O(1)
+        // errors over a 300 d step).
+        let body_pos = if t != 0.0 {
+            kepler_drift(&body.state, t, GM_SUN + body.gm).pos
+        } else {
+            body.state.pos
+        };
+        let dr = pos - body_pos;
         let dr_mag = dr.norm();
         if dr_mag > 1e-30 {
-            accel -= body.gm * dr / (dr_mag * dr_mag * dr_mag);
+            let bs_weight = 1.0 - changeover_k(dr_mag, r_crit.get(j).copied().unwrap_or(0.0));
+            accel -= bs_weight * body.gm * dr / (dr_mag * dr_mag * dr_mag);
         }
     }
 
     accel
 }
 
-/// Modified midpoint method: integrate from t to t+H using n substeps.
+/// Modified midpoint method: integrate from t0 to t0+H using n substeps.
 /// Returns the final state vector.
 fn modified_midpoint(
     state: &StateVector,
     bodies: &[MassiveBody],
+    r_crit: &[f64],
+    t0: f64,
     h_total: f64,
     n_steps: usize,
 ) -> StateVector {
     let h = h_total / n_steps as f64;
 
     // First step: Euler
-    let a0 = acceleration(&state.pos, bodies);
+    let a0 = acceleration(&state.pos, t0, bodies, r_crit);
     let mut z_prev = state.pos;
     let mut z_curr = state.pos + h * state.vel;
     let mut v_prev = state.vel;
     let mut v_curr = state.vel + h * a0;
 
     // General steps: leapfrog
-    for _ in 1..n_steps {
-        let a = acceleration(&z_curr, bodies);
+    for k in 1..n_steps {
+        let a = acceleration(&z_curr, t0 + k as f64 * h, bodies, r_crit);
         let z_next = z_prev + 2.0 * h * v_curr;
         let v_next = v_prev + 2.0 * h * a;
 
@@ -68,34 +133,31 @@ fn modified_midpoint(
     }
 
     // Final smoothing step
-    let a_final = acceleration(&z_curr, bodies);
+    let a_final = acceleration(&z_curr, t0 + h_total, bodies, r_crit);
     let pos = 0.5 * (z_prev + z_curr + h * v_curr);
     let vel = 0.5 * (v_prev + v_curr + h * a_final);
 
     StateVector::new(pos, vel)
 }
 
-/// Perform one Bulirsch-Stoer step on a single test particle.
+/// One Bulirsch-Stoer extrapolation attempt over [t0, t0+dt].
 ///
-/// Adaptively subdivides the step until the extrapolation converges to within
-/// the specified tolerance `epsilon`.
-///
-/// Returns (new_state, actual_dt_used). If the step cannot converge,
-/// it returns the best estimate with the full dt.
-pub fn bs_step(
+/// Returns `(state, converged)`: the extrapolated state and whether the
+/// tableau met the tolerance `epsilon`.
+fn bs_attempt(
     state: &StateVector,
     bodies: &[MassiveBody],
+    r_crit: &[f64],
+    t0: f64,
     dt: f64,
     epsilon: f64,
-) -> (StateVector, f64) {
-    // Extrapolation tableau (rational or polynomial)
-    // We use polynomial extrapolation for simplicity.
+) -> (StateVector, bool) {
     let mut pos_tableau = [[Vector3::<f64>::zeros(); MAX_COLUMNS]; MAX_COLUMNS];
     let mut vel_tableau = [[Vector3::<f64>::zeros(); MAX_COLUMNS]; MAX_COLUMNS];
 
     for k in 0..MAX_COLUMNS {
         let n = BS_SEQUENCE[k];
-        let result = modified_midpoint(state, bodies, dt, n);
+        let result = modified_midpoint(state, bodies, r_crit, t0, dt, n);
 
         pos_tableau[k][0] = result.pos;
         vel_tableau[k][0] = result.vel;
@@ -120,14 +182,59 @@ pub fn bs_step(
             let vel_scale = vel_tableau[k][k].norm().max(1e-6);
 
             if pos_err / pos_scale < epsilon && vel_err / vel_scale < epsilon {
-                return (StateVector::new(pos_tableau[k][k], vel_tableau[k][k]), dt);
+                return (StateVector::new(pos_tableau[k][k], vel_tableau[k][k]), true);
             }
         }
     }
 
-    // Did not converge — return best estimate
     let k = MAX_COLUMNS - 1;
-    (StateVector::new(pos_tableau[k][k], vel_tableau[k][k]), dt)
+    (
+        StateVector::new(pos_tableau[k][k], vel_tableau[k][k]),
+        false,
+    )
+}
+
+/// Recursive halving driver around `bs_attempt`.
+fn bs_recurse(
+    state: &StateVector,
+    bodies: &[MassiveBody],
+    r_crit: &[f64],
+    t0: f64,
+    dt: f64,
+    epsilon: f64,
+    depth: u32,
+) -> (StateVector, bool) {
+    let (result, converged) = bs_attempt(state, bodies, r_crit, t0, dt, epsilon);
+    if converged {
+        return (result, true);
+    }
+    if depth >= MAX_HALVINGS {
+        return (result, false);
+    }
+    let half = 0.5 * dt;
+    let (mid, ok1) = bs_recurse(state, bodies, r_crit, t0, half, epsilon, depth + 1);
+    let (end, ok2) = bs_recurse(&mid, bodies, r_crit, t0 + half, half, epsilon, depth + 1);
+    (end, ok1 && ok2)
+}
+
+/// Perform one Bulirsch-Stoer step on a single test particle over [0, dt].
+///
+/// `bodies` hold their step-start states and are Kepler-drifted internally to
+/// each substep epoch. `r_crit` gives the Chambers changeover radius per body
+/// (use 0.0, or an empty slice, for full direct force).
+///
+/// On convergence failure the step is recursively halved up to 2^8 times;
+/// the returned flag is `false` only if even the smallest substep failed.
+///
+/// Returns `(new_state, converged)`.
+pub fn bs_step(
+    state: &StateVector,
+    bodies: &[MassiveBody],
+    r_crit: &[f64],
+    dt: f64,
+    epsilon: f64,
+) -> (StateVector, bool) {
+    bs_recurse(state, bodies, r_crit, 0.0, dt, epsilon, 0)
 }
 
 #[cfg(test)]
@@ -147,7 +254,8 @@ mod tests {
 
         let mut s = state;
         for _ in 0..n_steps {
-            let (new_s, _) = bs_step(&s, &[], dt, 1e-12);
+            let (new_s, converged) = bs_step(&s, &[], &[], dt, 1e-12);
+            assert!(converged);
             s = new_s;
         }
 
@@ -165,12 +273,100 @@ mod tests {
         let e0 = energy(&state);
         let mut s = state;
         for _ in 0..100 {
-            let (new_s, _) = bs_step(&s, &[], 50.0, 1e-12);
+            let (new_s, converged) = bs_step(&s, &[], &[], 50.0, 1e-12);
+            assert!(converged);
             s = new_s;
         }
         let e1 = energy(&s);
 
         let de = ((e1 - e0) / e0).abs();
         assert!(de < 1e-10, "BS energy error: {:.2e}", de);
+    }
+
+    #[test]
+    fn test_bs_adaptive_halving_high_eccentricity() {
+        // e = 0.99 orbit at perihelion with a step that spans the whole
+        // perihelion passage: a single tableau cannot converge, the adaptive
+        // halving must.
+        let a = 1.0;
+        let e = 0.99;
+        let q = a * (1.0 - e);
+        let v_peri = (GM_SUN * (2.0 / q - 1.0 / a)).sqrt();
+        let state = StateVector::new(Vector3::new(q, 0.0, 0.0), Vector3::new(0.0, v_peri, 0.0));
+
+        let energy = |s: &StateVector| 0.5 * s.vel.norm_squared() - GM_SUN / s.pos.norm();
+        let e0 = energy(&state);
+
+        // ~1/6 of the orbital period in one BS call
+        let period = 2.0 * std::f64::consts::PI * (a * a * a / GM_SUN).sqrt();
+        let (s1, converged) = bs_step(&state, &[], &[], period / 6.0, 1e-12);
+        assert!(converged, "adaptive BS should converge via halving");
+
+        let de = ((energy(&s1) - e0) / e0).abs();
+        assert!(de < 1e-8, "energy error through perihelion: {:.2e}", de);
+    }
+
+    #[test]
+    fn test_bs_planets_drift_during_step() {
+        // A particle co-orbiting far from a Jupiter-mass planet: the
+        // acceleration evaluated at the end of the step must use the drifted
+        // planet position. We verify by comparing one big BS step against
+        // many small ones — frozen planets would produce a secular offset.
+        let gm_jup = 1e-3 * GM_SUN;
+        let a_jup = 5.2;
+        let v_jup = (GM_SUN / a_jup).sqrt();
+        let jupiter = MassiveBody {
+            name: "Jupiter".to_string(),
+            gm: gm_jup,
+            mass: gm_jup / GM_SUN,
+            state: StateVector::new(Vector3::new(a_jup, 0.0, 0.0), Vector3::new(0.0, v_jup, 0.0)),
+            radius_au: 4.78e-4,
+            j2: None,
+            j4: None,
+        };
+
+        let a_p = 8.0;
+        let v_p = (GM_SUN / a_p).sqrt();
+        let particle = StateVector::new(Vector3::new(0.0, a_p, 0.0), Vector3::new(-v_p, 0.0, 0.0));
+
+        // One 600 d step vs 60 x 10 d steps (re-drifting Jupiter between calls)
+        let (coarse, ok) = bs_step(&particle, &[jupiter.clone()], &[0.0], 600.0, 1e-13);
+        assert!(ok);
+
+        let mut fine = particle;
+        let mut jup = jupiter;
+        for _ in 0..60 {
+            let (s, ok) = bs_step(&fine, &[jup.clone()], &[0.0], 10.0, 1e-13);
+            assert!(ok);
+            fine = s;
+            jup.state = kepler_drift(&jup.state, 10.0, GM_SUN + jup.gm);
+        }
+
+        let dr = (coarse.pos - fine.pos).norm();
+        assert!(
+            dr < 1e-6,
+            "coarse vs fine BS positions differ by {dr:.2e} AU"
+        );
+    }
+
+    #[test]
+    fn test_changeover_limits_and_monotone() {
+        let rc = 1.0;
+        assert_eq!(changeover_k(0.0, rc), 0.0);
+        assert_eq!(changeover_k(0.05, rc), 0.0);
+        assert_eq!(changeover_k(1.0, rc), 1.0);
+        assert_eq!(changeover_k(5.0, rc), 1.0);
+        // r_crit = 0 disables the changeover (full kick share)
+        assert_eq!(changeover_k(0.5, 0.0), 1.0);
+
+        let mut prev = 0.0;
+        for k in 0..=100 {
+            let d = k as f64 * 0.01;
+            let val = changeover_k(d, rc);
+            assert!(val >= prev, "K not monotone at d = {d}");
+            prev = val;
+        }
+        // Continuity at the midpoint: K(0.55) = y^2/(2y^2-2y+1) at y = 0.5 -> 0.5
+        assert_relative_eq!(changeover_k(0.55, rc), 0.5, epsilon = 1e-12);
     }
 }

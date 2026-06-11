@@ -57,7 +57,8 @@ impl InclinedTnoConfig {
             q_max: 50.0,
             sigma_i: 15.0 * DEG2RAD,
             t_total: 4.0 * GYR_DAYS,
-            dt: 300.0,
+            // With Jupiter integrated directly, WHM needs dt <= P_jup/20 ~ 215 d
+            dt: 200.0,
             snapshot_interval: 100e6 * YEAR_DAYS, // 100 Myr
         }
     }
@@ -80,7 +81,8 @@ impl InclinedTnoConfig {
             q_max: 50.0,
             sigma_i: 15.0 * DEG2RAD,
             t_total: 1e4 * YEAR_DAYS,
-            dt: 300.0,
+            // With Jupiter integrated directly, WHM needs dt <= P_jup/20 ~ 215 d
+            dt: 200.0,
             snapshot_interval: 5e3 * YEAR_DAYS,
         }
     }

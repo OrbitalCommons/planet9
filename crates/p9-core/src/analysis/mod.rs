@@ -1,5 +1,10 @@
+pub mod circular;
 pub mod elements;
+pub mod hansen;
+pub mod photometry;
+pub mod resonance;
 pub mod secular;
+pub mod surveys;
 
 /// Snapshot of orbital elements for all active particles at a given time.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

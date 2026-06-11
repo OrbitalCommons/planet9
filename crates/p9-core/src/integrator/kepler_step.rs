@@ -49,9 +49,38 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
     // Newton-Raphson iteration on the universal Kepler equation
     // f(s) = r0*s + r0_dot_v0/sqrt(gm) * s^2 * c2(alpha*s^2)
     //        + (1 - r0*alpha) * s^3 * c3(alpha*s^2) - sqrt(gm)*dt = 0
+    //
+    // f is strictly monotone in s (f' = r > 0), so a sign-changing bracket
+    // always exists and bisection-safeguarded Newton cannot diverge.
     let sqrt_gm = gm.sqrt();
 
-    for _ in 0..50 {
+    let kepler_f = |s: f64| -> f64 {
+        let psi = alpha * s * s;
+        let (c2, c3) = stumpff_c2c3(psi);
+        let s2 = s * s;
+        r0_mag * s + r0_dot_v0 / sqrt_gm * s2 * c2 + (1.0 - r0_mag * alpha) * s2 * s * c3
+            - sqrt_gm * dt
+    };
+
+    // Bracket the root: f(0) = -sqrt(gm)*dt has the opposite sign of dt,
+    // expand outward from the starter until the sign changes.
+    let (mut lo, mut hi) = if dt >= 0.0 {
+        let mut hi = s.abs().max(dt / r0_mag).max(1e-8);
+        while kepler_f(hi) < 0.0 {
+            hi *= 2.0;
+        }
+        (0.0, hi)
+    } else {
+        let mut lo = -s.abs().max(-dt / r0_mag).max(1e-8);
+        while kepler_f(lo) > 0.0 {
+            lo *= 2.0;
+        }
+        (lo, 0.0)
+    };
+    s = s.clamp(lo, hi);
+
+    let mut converged = false;
+    for _ in 0..100 {
         let psi = alpha * s * s;
         let (c2, c3) = stumpff_c2c3(psi);
 
@@ -61,17 +90,32 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
         let f_val = r0_mag * s + r0_dot_v0 / sqrt_gm * s2 * c2 + (1.0 - r0_mag * alpha) * s3 * c3
             - sqrt_gm * dt;
 
+        if f_val > 0.0 {
+            hi = s;
+        } else {
+            lo = s;
+        }
+
         // F'(χ) = r(χ) — the distance at the current iterate
         let df =
             r0_mag + r0_dot_v0 / sqrt_gm * s * (1.0 - psi * c3) + (1.0 - r0_mag * alpha) * s2 * c2;
 
-        let ds = -f_val / df;
-        s += ds;
+        let mut next = s - f_val / df;
+        if !(lo..=hi).contains(&next) {
+            next = 0.5 * (lo + hi);
+        }
+        let ds = (next - s).abs();
+        s = next;
 
-        if ds.abs() < 1e-15 * s.abs().max(1.0) {
+        if ds < 1e-15 * s.abs().max(1.0) {
+            converged = true;
             break;
         }
     }
+    debug_assert!(
+        converged,
+        "universal Kepler solver failed to converge: dt = {dt}, gm = {gm}"
+    );
 
     // Compute f, g, fdot, gdot Lagrange coefficients
     let psi = alpha * s * s;
@@ -99,21 +143,36 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
 /// Stumpff functions c2(psi) and c3(psi).
 /// c2(psi) = (1 - cos(sqrt(psi))) / psi     for psi > 0
 /// c3(psi) = (sqrt(psi) - sin(sqrt(psi))) / psi^(3/2)  for psi > 0
+///
+/// Uses 4-fold argument reduction: psi is divided by 4 until |psi| <= 0.1,
+/// the series is evaluated there, and the quadruple-angle recurrences
+///   c2(4x) = c1(x)^2 / 2,  c3(4x) = (c2(x) + c0(x) c3(x)) / 4
+/// (with c0 = 1 - x c2, c1 = 1 - x c3) recover the original argument.
+/// This avoids the catastrophic cosh overflow / cancellation the direct
+/// formulas suffer for large hyperbolic |psi|.
 fn stumpff_c2c3(psi: f64) -> (f64, f64) {
-    if psi > 1e-6 {
-        let sqrt_psi = psi.sqrt();
-        let c2 = (1.0 - sqrt_psi.cos()) / psi;
-        let c3 = (sqrt_psi - sqrt_psi.sin()) / (psi * sqrt_psi);
-        (c2, c3)
-    } else if psi < -1e-6 {
-        let sqrt_neg_psi = (-psi).sqrt();
-        let c2 = (1.0 - sqrt_neg_psi.cosh()) / psi;
-        let c3 = (sqrt_neg_psi.sinh() - sqrt_neg_psi) / (-psi * sqrt_neg_psi);
-        (c2, c3)
-    } else {
-        // Taylor series for small psi
-        (1.0 / 2.0 - psi / 24.0, 1.0 / 6.0 - psi / 120.0)
+    let mut x = psi;
+    let mut depth = 0u32;
+    while x.abs() > 0.1 {
+        x *= 0.25;
+        depth += 1;
     }
+
+    // Maclaurin series, |x| <= 0.1: truncation error < 1e-16.
+    let mut c2 = (1.0 / 2.0) + x * (-1.0 / 24.0 + x * (1.0 / 720.0 + x * (-1.0 / 40_320.0)));
+    let mut c3 = (1.0 / 6.0) + x * (-1.0 / 120.0 + x * (1.0 / 5_040.0 + x * (-1.0 / 362_880.0)));
+
+    let mut c0 = 1.0 - x * c2;
+    let mut c1 = 1.0 - x * c3;
+
+    for _ in 0..depth {
+        c3 = (c2 + c0 * c3) * 0.25;
+        c2 = c1 * c1 * 0.5;
+        c1 *= c0;
+        c0 = 2.0 * c0 * c0 - 1.0;
+    }
+
+    (c2, c3)
 }
 
 #[cfg(test)]

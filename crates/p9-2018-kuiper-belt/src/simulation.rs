@@ -61,7 +61,8 @@ impl KuiperBeltConfig {
             q_max: 36.0,
             sigma_i: 15.0 * DEG2RAD,
             t_total: 4.0 * GYR_DAYS,
-            dt: 300.0,
+            // With Jupiter integrated directly, WHM needs dt <= P_jup/20 ~ 215 d
+            dt: 200.0,
             snapshot_interval: 500e6 * YEAR_DAYS,
         }
     }
@@ -77,7 +78,8 @@ impl KuiperBeltConfig {
             q_max: 300.0,
             sigma_i: 15.0 * DEG2RAD,
             t_total: 4.0 * GYR_DAYS,
-            dt: 300.0,
+            // With Jupiter integrated directly, WHM needs dt <= P_jup/20 ~ 215 d
+            dt: 200.0,
             snapshot_interval: 500e6 * YEAR_DAYS,
         }
     }

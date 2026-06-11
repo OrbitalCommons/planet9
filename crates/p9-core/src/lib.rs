@@ -1,6 +1,7 @@
 pub mod analysis;
 pub mod constants;
 pub mod coords;
+pub mod data;
 pub mod forces;
 pub mod initial_conditions;
 pub mod integrator;

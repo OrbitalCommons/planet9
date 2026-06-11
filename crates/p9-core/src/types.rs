@@ -218,8 +218,11 @@ impl P9Params {
             mean_anomaly: self.mean_anomaly,
         };
         let state = elements.to_state_vector(GM_SUN);
-        // TODO: Estimate radius from mass-radius relation (r = (m/3M_earth) * R_earth)
-        let radius_au = 3.0 * EARTH_MASS_SOLAR * self.mass_earth * 6_371.0 / AU_KM;
+        // Neptune-anchored mass-radius relation, R ≈ 3.4 R⊕ at 10 M⊕
+        // (see analysis::photometry::mass_radius_neptunian for the source).
+        let radius_km =
+            crate::analysis::photometry::mass_radius_neptunian(self.mass_earth) * EARTH_RADIUS_KM;
+        let radius_au = radius_km / AU_KM;
         MassiveBody {
             name: "Planet Nine".to_string(),
             gm: self.gm(),
@@ -287,8 +290,10 @@ pub fn elements_to_cartesian(elem: &OrbitalElements, gm: f64) -> StateVector {
         let cos_nu = (ea.cos() - elem.e) / (1.0 - elem.e * ea.cos());
         sin_nu.atan2(cos_nu)
     } else {
-        // Hyperbolic case
-        let sin_nu = -(elem.e * elem.e - 1.0).sqrt() * ea.sinh() / (elem.e * ea.cosh() - 1.0);
+        // Hyperbolic case: sin ν = +√(e²−1)·sinh H / (e·cosh H − 1), so that
+        // M > 0 (outbound, r·v > 0) maps to ν > 0. A negated sin ν mirrors the
+        // state about perihelion (inbound/outbound swapped).
+        let sin_nu = (elem.e * elem.e - 1.0).sqrt() * ea.sinh() / (elem.e * ea.cosh() - 1.0);
         let cos_nu = (elem.e - ea.cosh()) / (elem.e * ea.cosh() - 1.0);
         sin_nu.atan2(cos_nu)
     };
@@ -376,9 +381,11 @@ pub fn cartesian_to_elements(state: &StateVector, gm: f64) -> OrbitalElements {
     // Argument of perihelion
     let omega = if n_mag < 1e-30 || e < 1e-15 {
         if e >= 1e-15 {
-            // No inclination but has eccentricity
+            // Equatorial (no node): perihelion longitude measured along the
+            // direction of motion; h.z's sign distinguishes prograde from
+            // retrograde (a v.x or e_vec.y test alone breaks for i = π).
             let mut w = (e_vec.x / e).clamp(-1.0, 1.0).acos();
-            if e_vec.y < 0.0 {
+            if e_vec.y * h.z.signum() < 0.0 {
                 w = TWO_PI - w;
             }
             w
@@ -397,8 +404,10 @@ pub fn cartesian_to_elements(state: &StateVector, gm: f64) -> OrbitalElements {
     // True anomaly
     let nu = if e < 1e-15 {
         if n_mag < 1e-30 {
+            // Circular equatorial: true longitude along the direction of
+            // motion, prograde/retrograde resolved by sign(h.z).
             let mut nu = (r.x / r_mag).clamp(-1.0, 1.0).acos();
-            if v.x > 0.0 {
+            if r.y * h.z.signum() < 0.0 {
                 nu = TWO_PI - nu;
             }
             nu
@@ -446,32 +455,114 @@ pub fn cartesian_to_elements(state: &StateVector, gm: f64) -> OrbitalElements {
     }
 }
 
-/// Solve Kepler's equation M = E - e*sin(E) for eccentric anomaly.
-/// Uses Newton-Raphson iteration.
-fn kepler_equation(e: f64, mean_anomaly: f64) -> f64 {
+/// Solve Kepler's equation for the eccentric (e < 1) or hyperbolic (e > 1) anomaly.
+///
+/// Elliptic: M = E − e·sin E. Hyperbolic: M = e·sinh H − H.
+///
+/// Newton-Raphson with a bisection safeguard: the Kepler function is strictly
+/// monotone in the anomaly, so the iterate is confined to a sign-changing
+/// bracket and cannot diverge, even for e → 1. Starters: E₀ = π for e > 0.8
+/// (elliptic, avoids the e·sin E ≈ M degeneracy near perihelion), Danby's
+/// H₀ = ln(2M/e + 1.8) (hyperbolic).
+///
+/// This is the single Kepler solver for the workspace (several crates
+/// previously carried unguarded Newton copies).
+pub fn solve_kepler(e: f64, mean_anomaly: f64) -> f64 {
     if e < 1.0 {
-        // Elliptic case
-        let m = mean_anomaly % TWO_PI;
-        let mut ea = if e > 0.8 { std::f64::consts::PI } else { m };
+        // Reduce M to (-pi, pi] and exploit the odd symmetry E(-M) = -E(M).
+        let mut m = mean_anomaly % TWO_PI;
+        if m > std::f64::consts::PI {
+            m -= TWO_PI;
+        } else if m < -std::f64::consts::PI {
+            m += TWO_PI;
+        }
+        let sign = if m < 0.0 { -1.0 } else { 1.0 };
+        let m = m.abs();
 
-        for _ in 0..50 {
-            let delta = (ea - e * ea.sin() - m) / (1.0 - e * ea.cos());
-            ea -= delta;
-            if delta.abs() < 1e-15 {
+        // For m in [0, pi] the root lies in [m, m + e] (since 0 <= e sin E <= e).
+        let mut lo = m;
+        let mut hi = (m + e).min(std::f64::consts::PI + e);
+        let mut ea = if e > 0.8 {
+            std::f64::consts::PI
+        } else {
+            m + 0.85 * e
+        };
+        ea = ea.clamp(lo, hi);
+
+        let mut converged = false;
+        for _ in 0..100 {
+            let f = ea - e * ea.sin() - m;
+            if f > 0.0 {
+                hi = ea;
+            } else {
+                lo = ea;
+            }
+            let fp = 1.0 - e * ea.cos();
+            let delta = f / fp;
+            let mut next = ea - delta;
+            if !(lo..=hi).contains(&next) {
+                // Newton left the bracket: bisect instead.
+                next = 0.5 * (lo + hi);
+            }
+            let step = (next - ea).abs();
+            ea = next;
+            if step < 1e-15 * ea.abs().max(1.0) {
+                converged = true;
                 break;
             }
         }
-        ea
+        debug_assert!(
+            converged || (ea - e * ea.sin() - m).abs() < 1e-12,
+            "Kepler solver failed to converge: e = {e}, M = {mean_anomaly}"
+        );
+        sign * ea
     } else {
-        // Hyperbolic case
-        let mut ha = mean_anomaly.signum() * mean_anomaly.abs().ln().max(1.0);
-        for _ in 0..50 {
-            let delta = (e * ha.sinh() - ha - mean_anomaly) / (e * ha.cosh() - 1.0);
-            ha -= delta;
-            if delta.abs() < 1e-15 {
+        // Hyperbolic, odd symmetry H(-M) = -H(M).
+        let sign = if mean_anomaly < 0.0 { -1.0 } else { 1.0 };
+        let m = mean_anomaly.abs();
+
+        // Danby (1988) starter.
+        let mut ha = (2.0 * m / e + 1.8).ln().max(1e-12);
+
+        // Bracket: f(0) = -m <= 0; expand hi until f(hi) >= 0
+        // (f' = e cosh H - 1 > 0, so the root is unique).
+        let f = |h: f64| e * h.sinh() - h - m;
+        let mut lo = 0.0_f64;
+        let mut hi = ha.max(1.0);
+        while f(hi) < 0.0 {
+            hi *= 2.0;
+        }
+        ha = ha.clamp(lo, hi);
+
+        let mut converged = false;
+        for _ in 0..100 {
+            let fv = f(ha);
+            if fv > 0.0 {
+                hi = ha;
+            } else {
+                lo = ha;
+            }
+            let fp = e * ha.cosh() - 1.0;
+            let mut next = ha - fv / fp;
+            if !(lo..=hi).contains(&next) {
+                next = 0.5 * (lo + hi);
+            }
+            let step = (next - ha).abs();
+            ha = next;
+            if step < 1e-15 * ha.abs().max(1.0) {
+                converged = true;
                 break;
             }
         }
-        ha
+        debug_assert!(
+            converged || f(ha).abs() < 1e-12 * m.max(1.0),
+            "hyperbolic Kepler solver failed to converge: e = {e}, M = {mean_anomaly}"
+        );
+        sign * ha
     }
+}
+
+/// Backwards-compatible internal alias.
+fn kepler_equation(e: f64, mean_anomaly: f64) -> f64 {
+    solve_kepler(e, mean_anomaly)
 }

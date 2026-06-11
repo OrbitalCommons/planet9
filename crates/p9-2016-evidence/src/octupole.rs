@@ -49,8 +49,8 @@ pub fn coplanar_octupole_hamiltonian(
     // Quadrupole coupling constant
     let c_quad = gm_p * alpha * alpha / (4.0 * a_p * (1.0 - e_p * e_p).powf(1.5));
 
-    // Quadrupole Hamiltonian (coplanar)
-    let h_quad = -c_quad * (2.0 + 3.0 * e2 - 5.0 * e2 * delta_varpi.cos().powi(2));
+    // Quadrupole Hamiltonian (coplanar; Δϖ-independent at this order)
+    let h_quad = p9_core::analysis::secular::coplanar_quadrupole(a, e, a_p, e_p, gm_p);
 
     // Octupole coupling constant
     let eps_oct = octupole_epsilon(a, a_p, e_p);
@@ -83,17 +83,9 @@ pub fn full_octupole_hamiltonian(
     e_p: f64,
     gm_p: f64,
 ) -> f64 {
-    // Quadrupole part from p9-core
-    let h_quad = p9_core::analysis::secular::quadrupole_hamiltonian(
-        a,
-        e,
-        delta_varpi,
-        i,
-        delta_omega,
-        a_p,
-        e_p,
-        gm_p,
-    );
+    // Quadrupole part from p9-core (axisymmetric in the apsidal angle)
+    let h_quad =
+        p9_core::analysis::secular::quadrupole_hamiltonian(a, e, i, delta_omega, a_p, e_p, gm_p);
 
     let alpha = a / a_p;
     let e2 = e * e;
@@ -166,7 +158,7 @@ mod tests {
         let dv = 1.0;
 
         let h_oct = coplanar_octupole_hamiltonian(a, e, dv, p9.a, p9.e, gm_p);
-        let h_quad = p9_core::analysis::secular::coplanar_quadrupole(a, e, dv, p9.a, p9.e, gm_p);
+        let h_quad = p9_core::analysis::secular::coplanar_quadrupole(a, e, p9.a, p9.e, gm_p);
 
         // Should be very close since alpha is small
         let rel_diff = ((h_oct - h_quad) / h_quad).abs();
