@@ -1,12 +1,39 @@
 //! TNO clone generation from observational uncertainties.
 //!
-//! 25 clones per TNO, orbital elements sampled from normal distributions
-//! around measured values. Dataset: a > 150 AU (or a + sigma_a > 150 AU),
-//! excluding sigma_a > 100 AU.
+//! 25 clones per TNO (paper scale), orbital elements sampled around the
+//! measured values. Dataset: the vetted `p9_core::data::etno` table
+//! (Brown 2017 / JPL SBDB cross-checked) filtered to the paper's
+//! selection (a > 150 AU or a + σ_a > 150 AU, σ_a ≤ 100 AU) — replacing
+//! the previous 7 hard-coded TNOs.
+//!
+//! Uncertainty model (documented assumption — the vetted table carries no
+//! covariances): σ_a = 2% of a, σ_e from the (a, e) correlation below,
+//! σ_i = σ_ω = σ_Ω = 0.1°. ETNO angles are tightly constrained by
+//! astrometry relative to a and e.
+//!
+//! Correlated (a, e) draws: for a multi-opposition ETNO the perihelion
+//! distance q is far better constrained than a, so the dominant error
+//! mode moves along the q ≈ const curve: we draw δa, set
+//! e = 1 − q₀/a + N(0, σ_e) with small independent jitter σ_e = 0.005.
+//!
+//! Clones that would cross Neptune (q < a_N) when the parent does not are
+//! *resampled* rather than silently clamped; if resampling fails after
+//! 1000 draws the clone keeps the parent's (a, e) and is flagged via
+//! `neptune_crossing` (no silent class changes).
 
+use p9_core::constants::{A_NEPTUNE_AU, DEG2RAD, TWO_PI};
+use p9_core::data::etno::BROWN_2017_SAMPLE;
+use p9_core::types::OrbitalElements;
 use rand::Rng;
-use rand_distr::{Distribution, Normal};
+use rand_distr::{Distribution, Normal, Uniform};
 use serde::{Deserialize, Serialize};
+
+/// Fractional semi-major-axis uncertainty assumed for the vetted sample.
+const SIGMA_A_FRAC: f64 = 0.02;
+/// Independent eccentricity jitter on top of the q-preserving correlation.
+const SIGMA_E: f64 = 0.005;
+/// Angle uncertainties (radians): 0.1° for i, ω, Ω.
+const SIGMA_ANGLE: f64 = 0.1 * DEG2RAD;
 
 /// Observed TNO with uncertainties.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,19 +45,36 @@ pub struct ObservedTno {
     pub sigma_a: f64,
     /// Eccentricity
     pub e: f64,
-    /// Uncertainty in e
+    /// Independent eccentricity jitter (the dominant e error is the
+    /// q-preserving correlation with a)
     pub sigma_e: f64,
     /// Inclination (rad)
     pub i: f64,
     /// Uncertainty in i (rad)
     pub sigma_i: f64,
-    /// Longitude of perihelion (rad)
-    pub varpi: f64,
+    /// Argument of perihelion (rad)
+    pub omega: f64,
     /// Longitude of ascending node (rad)
     pub omega_big: f64,
+    /// Uncertainty applied to ω and Ω (rad)
+    pub sigma_angle: f64,
 }
 
-/// A clone of a TNO with sampled orbital elements.
+impl ObservedTno {
+    /// Perihelion distance q = a(1 − e) in AU.
+    pub fn perihelion(&self) -> f64 {
+        self.a * (1.0 - self.e)
+    }
+
+    /// Longitude of perihelion ϖ = ω + Ω (rad), wrapped to [0, 2π).
+    pub fn varpi(&self) -> f64 {
+        (self.omega + self.omega_big).rem_euclid(TWO_PI)
+    }
+}
+
+/// A clone of a TNO with sampled orbital elements (all six, including the
+/// angles and a uniform mean anomaly — the previous version copied the
+/// parent's angles verbatim).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TnoClone {
     pub parent_name: &'static str,
@@ -38,28 +82,79 @@ pub struct TnoClone {
     pub a: f64,
     pub e: f64,
     pub i: f64,
-    pub varpi: f64,
+    /// Argument of perihelion (rad)
+    pub omega: f64,
+    /// Longitude of ascending node (rad)
     pub omega_big: f64,
+    /// Mean anomaly (rad), drawn uniformly (unconstrained by the table)
+    pub mean_anomaly: f64,
+    /// True when resampling could not keep the clone outside Neptune's
+    /// orbit even though the parent is (flagged, never silently clamped)
+    pub neptune_crossing: bool,
 }
 
 impl TnoClone {
     pub fn perihelion(&self) -> f64 {
         self.a * (1.0 - self.e)
     }
+
+    /// Longitude of perihelion ϖ = ω + Ω (rad), wrapped to [0, 2π).
+    pub fn varpi(&self) -> f64 {
+        (self.omega + self.omega_big).rem_euclid(TWO_PI)
+    }
+
+    /// Full orbital element set for integration.
+    pub fn elements(&self) -> OrbitalElements {
+        OrbitalElements {
+            a: self.a,
+            e: self.e,
+            i: self.i,
+            omega: self.omega,
+            omega_big: self.omega_big,
+            mean_anomaly: self.mean_anomaly,
+        }
+    }
 }
 
-/// Generate clones for a single TNO.
+/// Generate clones for a single TNO (see module docs for the sampling
+/// model: correlated (a, e), perturbed angles, resampling instead of
+/// clamping).
 pub fn generate_clones<R: Rng>(tno: &ObservedTno, n_clones: usize, rng: &mut R) -> Vec<TnoClone> {
-    let a_dist = Normal::new(tno.a, tno.sigma_a.max(0.01)).unwrap();
-    let e_dist = Normal::new(tno.e, tno.sigma_e.max(0.001)).unwrap();
-    let i_dist = Normal::new(tno.i, tno.sigma_i.max(0.001)).unwrap();
+    let a_dist = Normal::new(0.0, tno.sigma_a.max(1e-6)).unwrap();
+    let e_dist = Normal::new(0.0, tno.sigma_e.max(1e-9)).unwrap();
+    let i_dist = Normal::new(0.0, tno.sigma_i.max(1e-9)).unwrap();
+    let ang_dist = Normal::new(0.0, tno.sigma_angle.max(1e-9)).unwrap();
+    let m_dist = Uniform::new(0.0, TWO_PI);
+
+    let q0 = tno.perihelion();
+    let parent_crossing = q0 < A_NEPTUNE_AU;
 
     let mut clones = Vec::with_capacity(n_clones);
 
     for idx in 0..n_clones {
-        let a = a_dist.sample(rng).max(50.0);
-        let e = e_dist.sample(rng).clamp(0.01, 0.999);
-        let i = i_dist.sample(rng).max(0.0);
+        let mut accepted: Option<(f64, f64)> = None;
+        for _attempt in 0..1000 {
+            let a = tno.a + a_dist.sample(rng);
+            // (a, e) correlation: preserve q, plus small independent jitter
+            let e = 1.0 - q0 / a + e_dist.sample(rng);
+            let valid_shape = a > 0.0 && e > 0.0 && e < 0.999;
+            let crosses = a * (1.0 - e) < A_NEPTUNE_AU;
+            if valid_shape && (parent_crossing || !crosses) {
+                accepted = Some((a, e));
+                break;
+            }
+        }
+        // Resampling exhausted: keep the parent's (a, e) and flag.
+        let (a, e, neptune_crossing) = match accepted {
+            Some((a, e)) => (a, e, false),
+            None => (tno.a, tno.e, !parent_crossing),
+        };
+
+        // Inclination: redraw rather than clamp at 0.
+        let mut i = tno.i + i_dist.sample(rng);
+        while i < 0.0 {
+            i = tno.i + i_dist.sample(rng);
+        }
 
         clones.push(TnoClone {
             parent_name: tno.name,
@@ -67,101 +162,46 @@ pub fn generate_clones<R: Rng>(tno: &ObservedTno, n_clones: usize, rng: &mut R) 
             a,
             e,
             i,
-            varpi: tno.varpi,
-            omega_big: tno.omega_big,
+            omega: (tno.omega + ang_dist.sample(rng)).rem_euclid(TWO_PI),
+            omega_big: (tno.omega_big + ang_dist.sample(rng)).rem_euclid(TWO_PI),
+            mean_anomaly: m_dist.sample(rng),
+            neptune_crossing,
         });
     }
 
     clones
 }
 
-/// Selection criteria from the paper.
+/// Selection criteria from the paper: a > 150 AU (or a + σ_a > 150 AU),
+/// excluding σ_a > 100 AU.
 pub fn passes_selection(tno: &ObservedTno) -> bool {
     (tno.a > 150.0 || tno.a + tno.sigma_a > 150.0) && tno.sigma_a <= 100.0
 }
 
-/// Sample of distant TNOs used in the analysis.
+/// Sample of distant TNOs used in the analysis: the vetted
+/// `p9_core::data::etno` table with the documented uncertainty model,
+/// filtered to the paper's selection.
 pub fn distant_tno_sample() -> Vec<ObservedTno> {
-    use p9_core::constants::DEG2RAD;
-    vec![
-        ObservedTno {
-            name: "Sedna",
-            a: 506.0,
-            sigma_a: 6.0,
-            e: 0.843,
-            sigma_e: 0.001,
-            i: 11.93 * DEG2RAD,
-            sigma_i: 0.01 * DEG2RAD,
-            varpi: 311.5 * DEG2RAD,
-            omega_big: 144.5 * DEG2RAD,
-        },
-        ObservedTno {
-            name: "2012 VP113",
-            a: 261.0,
-            sigma_a: 8.0,
-            e: 0.693,
-            sigma_e: 0.002,
-            i: 24.05 * DEG2RAD,
-            sigma_i: 0.01 * DEG2RAD,
-            varpi: 293.8 * DEG2RAD,
-            omega_big: 90.8 * DEG2RAD,
-        },
-        ObservedTno {
-            name: "2015 TG387",
-            a: 1094.0,
-            sigma_a: 75.0,
-            e: 0.945,
-            sigma_e: 0.003,
-            i: 11.67 * DEG2RAD,
-            sigma_i: 0.01 * DEG2RAD,
-            varpi: 118.2 * DEG2RAD,
-            omega_big: 300.8 * DEG2RAD,
-        },
-        ObservedTno {
-            name: "2013 SY99",
-            a: 735.0,
-            sigma_a: 50.0,
-            e: 0.932,
-            sigma_e: 0.003,
-            i: 4.23 * DEG2RAD,
-            sigma_i: 0.01 * DEG2RAD,
-            varpi: 32.5 * DEG2RAD,
-            omega_big: 29.5 * DEG2RAD,
-        },
-        ObservedTno {
-            name: "2014 SR349",
-            a: 289.0,
-            sigma_a: 15.0,
-            e: 0.840,
-            sigma_e: 0.005,
-            i: 18.0 * DEG2RAD,
-            sigma_i: 0.02 * DEG2RAD,
-            varpi: 341.5 * DEG2RAD,
-            omega_big: 34.8 * DEG2RAD,
-        },
-        ObservedTno {
-            name: "2004 VN112",
-            a: 319.0,
-            sigma_a: 4.0,
-            e: 0.854,
-            sigma_e: 0.001,
-            i: 25.56 * DEG2RAD,
-            sigma_i: 0.01 * DEG2RAD,
-            varpi: 327.1 * DEG2RAD,
-            omega_big: 66.0 * DEG2RAD,
-        },
-        ObservedTno {
-            name: "2010 GB174",
-            a: 351.0,
-            sigma_a: 9.0,
-            e: 0.862,
-            sigma_e: 0.002,
-            i: 21.54 * DEG2RAD,
-            sigma_i: 0.01 * DEG2RAD,
-            varpi: 347.8 * DEG2RAD,
-            omega_big: 130.6 * DEG2RAD,
-        },
-    ]
+    BROWN_2017_SAMPLE
+        .iter()
+        .map(|k| ObservedTno {
+            name: k.name,
+            a: k.a,
+            sigma_a: SIGMA_A_FRAC * k.a,
+            e: k.e,
+            sigma_e: SIGMA_E,
+            i: k.i_deg * DEG2RAD,
+            sigma_i: SIGMA_ANGLE,
+            omega: k.omega_deg * DEG2RAD,
+            omega_big: k.omega_big_deg * DEG2RAD,
+            sigma_angle: SIGMA_ANGLE,
+        })
+        .filter(passes_selection_ref)
+        .collect()
+}
+
+fn passes_selection_ref(tno: &ObservedTno) -> bool {
+    passes_selection(tno)
 }
 
 #[cfg(test)]
@@ -170,9 +210,14 @@ mod tests {
     use rand::SeedableRng;
 
     #[test]
-    fn test_sample_count() {
+    fn test_sample_from_vetted_table() {
         let sample = distant_tno_sample();
-        assert!(sample.len() >= 7, "should have at least 7 TNOs");
+        // The Brown (2017) table has 10 ETNOs; all pass the a > 150 AU
+        // selection (smallest is 2000 CR105 at 228 AU).
+        assert_eq!(sample.len(), 10, "expanded sample should have 10 TNOs");
+        let names: Vec<&str> = sample.iter().map(|t| t.name).collect();
+        assert!(names.contains(&"Sedna"));
+        assert!(names.contains(&"2013 RF98"));
     }
 
     #[test]
@@ -211,12 +256,77 @@ mod tests {
     }
 
     #[test]
-    fn test_clone_eccentricity_valid() {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(99);
+    fn test_clone_angles_and_anomaly_perturbed() {
+        // M9: all elements vary across clones, including angles and M.
+        let mut rng = rand::rngs::StdRng::seed_from_u64(7);
         let tno = &distant_tno_sample()[0];
-        let clones = generate_clones(tno, 100, &mut rng);
+        let clones = generate_clones(tno, 50, &mut rng);
+
+        let distinct = |get: fn(&TnoClone) -> f64| {
+            let v0 = get(&clones[0]);
+            clones.iter().any(|c| (get(c) - v0).abs() > 1e-9)
+        };
+        assert!(distinct(|c| c.omega), "ω never perturbed");
+        assert!(distinct(|c| c.omega_big), "Ω never perturbed");
+        assert!(distinct(|c| c.i), "i never perturbed");
+        assert!(distinct(|c| c.mean_anomaly), "M never drawn");
+
+        // Mean anomalies roughly cover the circle (uniform draw).
+        let spread = clones
+            .iter()
+            .map(|c| c.mean_anomaly)
+            .fold((f64::MAX, f64::MIN), |(lo, hi), m| (lo.min(m), hi.max(m)));
+        assert!(spread.1 - spread.0 > 3.0, "M spread = {:?}", spread);
+    }
+
+    #[test]
+    fn test_correlated_a_e_preserves_perihelion() {
+        // The (a, e) draws move along q ≈ const: clone perihelia scatter
+        // by ~σ_e·a (≈ 2.5 AU for Sedna), much tighter than the naive
+        // independent-draw scatter σ_a (≈ 10 AU).
+        let mut rng = rand::rngs::StdRng::seed_from_u64(11);
+        let tno = &distant_tno_sample()[0]; // Sedna, q = 75.9 AU
+        let clones = generate_clones(tno, 200, &mut rng);
+        let q0 = tno.perihelion();
         for c in &clones {
-            assert!(c.e > 0.0 && c.e < 1.0, "e = {} invalid", c.e);
+            assert!(
+                (c.perihelion() - q0).abs() < 5.0 * SIGMA_E * c.a,
+                "{}: clone q = {:.1} vs parent q = {:.1}",
+                c.parent_name,
+                c.perihelion(),
+                q0
+            );
         }
+    }
+
+    #[test]
+    fn test_clone_eccentricity_valid_and_no_silent_crossers() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(99);
+        for tno in distant_tno_sample() {
+            let clones = generate_clones(&tno, 100, &mut rng);
+            for c in &clones {
+                assert!(c.e > 0.0 && c.e < 1.0, "e = {} invalid", c.e);
+                // Parent is detached (q > a_N): clones either stay
+                // outside Neptune or carry the explicit flag.
+                if !c.neptune_crossing {
+                    assert!(
+                        c.perihelion() > A_NEPTUNE_AU,
+                        "{}: silent Neptune crosser q = {:.1}",
+                        c.parent_name,
+                        c.perihelion()
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_clone_elements_roundtrip() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(3);
+        let tno = &distant_tno_sample()[1];
+        let clone = &generate_clones(tno, 1, &mut rng)[0];
+        let elem = clone.elements();
+        assert!((elem.a - clone.a).abs() < 1e-12);
+        assert!((elem.perihelion() - clone.perihelion()).abs() < 1e-9);
     }
 }

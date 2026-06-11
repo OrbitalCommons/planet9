@@ -5,8 +5,9 @@
 //! 1. Start with IRAS FSC 60 µm sources and AKARI Monthly Unconfirmed 90 µm sources
 //! 2. Apply flux cuts to retain only sources consistent with P9 thermal emission
 //! 3. For each IRAS-AKARI pair, compute angular separation
-//! 4. Retain pairs with separation in [42', 69.6'] (corresponding to 500–700 AU)
-//! 5. Apply flux-ratio consistency check
+//! 4. Retain pairs with separation in [42', 69.6'] (corresponding to 500–700 AU),
+//!    inflated by the combined positional uncertainty of the pair
+//! 5. Apply a flux-ratio consistency check derived from the thermal model
 //! 6. Image inspection (not reproducible computationally — we flag candidates)
 //!
 //! The paper finds 13 pairs after step 4, and 1 good candidate after step 6.
@@ -14,6 +15,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::survey_model::{angular_separation_arcmin, FirSource};
+use crate::thermal_model::flux_ratio_60_90;
 
 /// Selection criteria for the IRAS-AKARI cross-match.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,17 +28,38 @@ pub struct SelectionCriteria {
     pub max_flux_ratio: f64,
     /// Minimum allowed flux ratio
     pub min_flux_ratio: f64,
+    /// Separation window inflation in units of the pair's combined 1σ
+    /// positional uncertainty (the catalogued 20"/30" errors were
+    /// previously carried but never used in the match).
+    pub pos_err_n_sigma: f64,
 }
 
-impl Default for SelectionCriteria {
-    fn default() -> Self {
+impl SelectionCriteria {
+    /// Criteria with the flux-ratio window derived from the blackbody
+    /// thermal model over `[t_min_k, t_max_k]`, widened by a fractional
+    /// `margin` for flux-calibration error and emissivity deviations.
+    ///
+    /// For 30–50 K and margin 0.5 this gives ≈ [0.16, 0.99] — physically
+    /// motivated, unlike the previous ad-hoc [0.05, 3.0].
+    pub fn from_thermal_model(t_min_k: f64, t_max_k: f64, margin: f64) -> Self {
+        let r_lo = flux_ratio_60_90(t_min_k);
+        let r_hi = flux_ratio_60_90(t_max_k);
+        let (r_lo, r_hi) = (r_lo.min(r_hi), r_lo.max(r_hi));
         Self {
             sep_min_arcmin: 42.0,
             sep_max_arcmin: 69.6,
-            // Flux ratio F_60/F_90 for a 30–50 K blackbody is roughly 0.2–2.0
-            max_flux_ratio: 3.0,
-            min_flux_ratio: 0.05,
+            min_flux_ratio: r_lo / (1.0 + margin),
+            max_flux_ratio: r_hi * (1.0 + margin),
+            pos_err_n_sigma: 3.0,
         }
+    }
+}
+
+impl Default for SelectionCriteria {
+    /// Paper window 42'–69.6'; flux-ratio bounds derived from the 30–50 K
+    /// thermal model with a 50% margin; 3σ positional-error inflation.
+    fn default() -> Self {
+        Self::from_thermal_model(30.0, 50.0, 0.5)
     }
 }
 
@@ -49,7 +72,10 @@ pub struct CandidatePair {
     pub akari_source: FirSource,
     /// Angular separation in arcminutes
     pub separation_arcmin: f64,
-    /// Implied heliocentric distance in AU (from proper motion inversion)
+    /// Combined 1σ positional uncertainty of the pair (arcmin)
+    pub combined_pos_err_arcmin: f64,
+    /// Implied heliocentric distance in AU (geocentric maximum-distance
+    /// inversion, see `proper_motion::implied_distance`)
     pub implied_distance_au: f64,
     /// Flux ratio (IRAS 60µm / AKARI 90µm)
     pub flux_ratio: f64,
@@ -62,7 +88,7 @@ pub struct SearchResult {
     pub n_iras: usize,
     /// Number of AKARI sources considered
     pub n_akari: usize,
-    /// Number of pairs within the angular separation window
+    /// Number of pairs within the (uncertainty-inflated) separation window
     pub n_pairs_in_window: usize,
     /// Number of pairs passing the flux ratio cut
     pub n_pairs_flux_cut: usize,
@@ -70,20 +96,17 @@ pub struct SearchResult {
     pub candidates: Vec<CandidatePair>,
 }
 
-/// Implied heliocentric distance from angular separation over a baseline.
-///
-/// Inverts µ = sqrt(GM_sun)/d^(3/2) * conversion_factor
-/// sep = µ * baseline
-/// d = (sqrt(GM_sun) * conversion * baseline / sep)^(2/3)
-fn implied_distance(sep_arcmin: f64, baseline_years: f64) -> f64 {
-    use p9_core::constants::{GM_SUN, RAD2DEG, YEAR_DAYS};
-    let k = GM_SUN.sqrt() * RAD2DEG * 60.0 * YEAR_DAYS * baseline_years;
-    (k / sep_arcmin).powf(2.0 / 3.0)
+/// Combined 1σ positional uncertainty of a pair in arcminutes.
+fn combined_pos_err_arcmin(iras: &FirSource, akari: &FirSource) -> f64 {
+    (iras.pos_err_arcsec.powi(2) + akari.pos_err_arcsec.powi(2)).sqrt() / 60.0
 }
 
 /// Run the IRAS-AKARI cross-match candidate search.
 ///
-/// This is the core algorithm from Phan et al. (2025) §3.
+/// This is the core algorithm from Phan et al. (2025) §3. The separation
+/// window is inflated per-pair by `pos_err_n_sigma` × the combined
+/// positional uncertainty, so genuine pairs scattered just outside the
+/// nominal window by measurement error are not lost.
 pub fn search_candidates(
     iras_sources: &[FirSource],
     akari_sources: &[FirSource],
@@ -98,7 +121,9 @@ pub fn search_candidates(
             let sep =
                 angular_separation_arcmin(iras.ra_deg, iras.dec_deg, akari.ra_deg, akari.dec_deg);
 
-            if sep < criteria.sep_min_arcmin || sep > criteria.sep_max_arcmin {
+            let sigma = combined_pos_err_arcmin(iras, akari);
+            let pad = criteria.pos_err_n_sigma * sigma;
+            if sep < criteria.sep_min_arcmin - pad || sep > criteria.sep_max_arcmin + pad {
                 continue;
             }
             n_pairs_in_window += 1;
@@ -109,12 +134,13 @@ pub fn search_candidates(
                 continue;
             }
 
-            let d = implied_distance(sep, baseline_years);
+            let d = crate::proper_motion::implied_distance(sep, baseline_years);
 
             candidates.push(CandidatePair {
                 iras_source: iras.clone(),
                 akari_source: akari.clone(),
                 separation_arcmin: sep,
+                combined_pos_err_arcmin: sigma,
                 implied_distance_au: d,
                 flux_ratio,
             });
@@ -132,32 +158,97 @@ pub fn search_candidates(
     }
 }
 
-/// Estimate the number of spurious (chance-alignment) pairs expected
-/// from uncorrelated source catalogues.
+/// Galactic-latitude-dependent source-density model for far-infrared
+/// catalogues.
 ///
-/// For N_iras IRAS sources and N_akari AKARI sources spread over the
-/// full sky (41,253 deg²), the expected number of chance pairs in an
-/// annular search window [θ_min, θ_max] is:
+/// IRAS 60 µm (and AKARI 90 µm) source counts are strongly concentrated
+/// toward the galactic plane (young stellar objects, HII regions, cirrus
+/// knots) on top of a roughly isotropic extragalactic floor. We model the
+/// relative density as
 ///
-///   N_spurious = N_iras * N_akari * π(θ_max² - θ_min²) / A_sky
+///   w(b) = f_disk · exp(−|sin b| / s) / Z + (1 − f_disk),
 ///
-/// where angles are in the same units as A_sky.
-pub fn expected_spurious_pairs(
-    n_iras: usize,
-    n_akari: usize,
+/// with Z = s(1 − e^{−1/s}) normalizing the disk term to unit sky average,
+/// so ⟨w⟩ = 1 and N_total is preserved. Defaults: f_disk = 0.5 of sources
+/// in the disk component, scale s = 0.15 (|b| scale height ≈ 9°) — a
+/// simple documented stand-in for the FSC count maps.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct GalacticDensityModel {
+    /// Fraction of sources in the plane-concentrated component
+    pub disk_fraction: f64,
+    /// Exponential scale in sin|b|
+    pub sin_b_scale: f64,
+}
+
+impl Default for GalacticDensityModel {
+    fn default() -> Self {
+        Self {
+            disk_fraction: 0.5,
+            sin_b_scale: 0.15,
+        }
+    }
+}
+
+impl GalacticDensityModel {
+    /// Relative density w(b) at galactic latitude `b_deg` (sky average 1).
+    pub fn relative_density(&self, b_deg: f64) -> f64 {
+        let s = self.sin_b_scale;
+        let z = s * (1.0 - (-1.0 / s).exp());
+        let u = b_deg.to_radians().sin().abs();
+        self.disk_fraction * (-u / s).exp() / z + (1.0 - self.disk_fraction)
+    }
+
+    /// Chance-pair enhancement factor ⟨w²⟩ ≥ 1: both catalogues share the
+    /// latitude concentration, so chance pairs are more likely than the
+    /// uniform-sky estimate by the sky average of w_iras·w_akari
+    /// (= ⟨w²⟩ for a shared model). Computed by numerical integration over
+    /// sin b.
+    pub fn pair_enhancement(&self) -> f64 {
+        let n = 2000;
+        let mut sum = 0.0;
+        for k in 0..n {
+            // uniform in sin b ∈ [0, 1] — the area-weighted measure
+            let u = (k as f64 + 0.5) / n as f64;
+            let b = u.asin().to_degrees();
+            sum += self.relative_density(b).powi(2);
+        }
+        sum / n as f64
+    }
+}
+
+/// Expected number of chance-alignment pairs in the separation annulus,
+/// conditioned on the *post-flux-cut* source counts (the population the
+/// pair search actually runs on — using the full-catalogue counts
+/// overestimates by ~3 orders of magnitude), including the
+/// galactic-latitude pair enhancement.
+///
+///   λ = N_iras · N_akari · π(θ_max² − θ_min²)/A_sky · ⟨w²⟩
+pub fn expected_chance_pairs(
+    n_iras_post_cut: usize,
+    n_akari_post_cut: usize,
     sep_min_arcmin: f64,
     sep_max_arcmin: f64,
+    density: &GalacticDensityModel,
 ) -> f64 {
-    // Full sky = 4π sr = 41,253 deg² = 41,253 * 3600 arcmin²
+    // Full sky = 41,253 deg² = 41,253 × 3600 arcmin²
     let full_sky_arcmin2 = 41_253.0 * 3600.0;
     let annulus_area = std::f64::consts::PI * (sep_max_arcmin.powi(2) - sep_min_arcmin.powi(2));
-    (n_iras as f64) * (n_akari as f64) * annulus_area / full_sky_arcmin2
+    (n_iras_post_cut as f64) * (n_akari_post_cut as f64) * annulus_area / full_sky_arcmin2
+        * density.pair_enhancement()
+}
+
+/// Poisson false-alarm probability of finding at least one surviving pair
+/// by chance: P(N ≥ 1) = 1 − e^{−λ}. This is the key statistic for the
+/// single candidate the paper retains after image inspection.
+pub fn false_alarm_probability(expected_pairs: f64) -> f64 {
+    1.0 - (-expected_pairs).exp()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::survey_model::Survey;
+    use rand::{Rng, SeedableRng};
 
     fn make_iras_source(ra: f64, dec: f64, flux: f64) -> FirSource {
         FirSource {
@@ -183,7 +274,8 @@ mod tests {
 
     #[test]
     fn pair_within_window_is_found() {
-        // Place sources ~1° apart (60') — within [42', 69.6']
+        // Place sources ~1° apart (60') — within [42', 69.6'].
+        // Flux ratio 0.5/0.6 ≈ 0.83 sits inside the thermal window.
         let iras = vec![make_iras_source(180.0, 45.0, 0.5)];
         let akari = vec![make_akari_source(180.0, 46.0, 0.6)];
         let criteria = SelectionCriteria::default();
@@ -192,18 +284,42 @@ mod tests {
         assert_eq!(result.candidates.len(), 1);
         let pair = &result.candidates[0];
         assert!((pair.separation_arcmin - 60.0).abs() < 0.5);
-        assert!(pair.implied_distance_au > 400.0 && pair.implied_distance_au < 800.0);
+        // Geocentric maximum-distance inversion: 60' → ~560 AU.
+        assert!(
+            pair.implied_distance_au > 500.0 && pair.implied_distance_au < 630.0,
+            "implied d = {:.0} AU",
+            pair.implied_distance_au
+        );
     }
 
     #[test]
     fn pair_outside_window_is_rejected() {
-        // Place sources 2° apart (120') — outside [42', 69.6']
+        // Place sources 2° apart (120') — outside even the inflated window
         let iras = vec![make_iras_source(180.0, 45.0, 0.5)];
         let akari = vec![make_akari_source(180.0, 47.0, 0.6)];
         let criteria = SelectionCriteria::default();
         let result = search_candidates(&iras, &akari, &criteria, 23.0);
         assert_eq!(result.n_pairs_in_window, 0);
         assert!(result.candidates.is_empty());
+    }
+
+    #[test]
+    fn positional_uncertainty_inflates_window() {
+        // Combined σ = √(20² + 30²)/60 = 0.6'; 3σ = 1.8'. A pair at
+        // 70.5' (0.9' beyond the nominal 69.6') must be kept, one at
+        // 75' rejected.
+        let criteria = SelectionCriteria::default();
+        let iras = vec![make_iras_source(180.0, 45.0, 0.5)];
+        let akari_in = vec![make_akari_source(180.0, 45.0 + 70.5 / 60.0, 0.6)];
+        let akari_out = vec![make_akari_source(180.0, 45.0 + 75.0 / 60.0, 0.6)];
+        assert_eq!(
+            search_candidates(&iras, &akari_in, &criteria, 23.0).n_pairs_in_window,
+            1
+        );
+        assert_eq!(
+            search_candidates(&iras, &akari_out, &criteria, 23.0).n_pairs_in_window,
+            0
+        );
     }
 
     #[test]
@@ -218,27 +334,71 @@ mod tests {
     }
 
     #[test]
-    fn implied_distance_at_60_arcmin() {
-        // 60' over 23 years: for circular orbits this maps to ~450 AU.
-        // The implied_distance function inverts the circular-orbit proper
-        // motion, so smaller distances are expected than the paper's
-        // 500–700 AU range (which accounts for eccentric orbits).
-        let d = implied_distance(60.0, 23.0);
+    fn flux_ratio_window_derived_from_thermal_model() {
+        let criteria = SelectionCriteria::default();
+        // 30–50 K blackbody ratio range 0.23–0.66, ±50% margin
         assert!(
-            d > 350.0 && d < 550.0,
-            "implied distance = {d:.0} AU, expected ~410-500"
+            (criteria.min_flux_ratio - 0.233 / 1.5).abs() < 0.02,
+            "min ratio = {:.3}",
+            criteria.min_flux_ratio
+        );
+        assert!(
+            (criteria.max_flux_ratio - 0.66 * 1.5).abs() < 0.05,
+            "max ratio = {:.3}",
+            criteria.max_flux_ratio
+        );
+        // The paper's good candidate (0.24 Jy / 0.27 Jy = 0.89) passes;
+        // the old ad-hoc window [0.05, 3.0] does not bound it usefully.
+        let candidate_ratio = 0.24 / 0.27;
+        assert!(
+            candidate_ratio > criteria.min_flux_ratio && candidate_ratio < criteria.max_flux_ratio
         );
     }
 
     #[test]
-    fn spurious_pairs_estimate() {
-        // With ~173,000 IRAS sources and ~1000 AKARI unconfirmed sources,
-        // and the 42'–69.6' annulus, estimate spurious pairs
-        let n_spurious = expected_spurious_pairs(173_000, 1_000, 42.0, 69.6);
-        // This gives a rough number to compare against the 13 pairs found
-        assert!(n_spurious > 0.0);
-        // The paper found 13, so spurious rate should be in a similar ballpark
-        // (most pairs are indeed chance alignments)
+    fn chance_pairs_conditioned_on_post_cut_counts() {
+        let density = GalacticDensityModel::default();
+        // Post-flux-cut populations of order 10³ (IRAS) × 10² (AKARI)
+        // give an expectation of the same order as the paper's 13 pairs.
+        let lambda = expected_chance_pairs(1_800, 100, 42.0, 69.6, &density);
+        assert!(
+            lambda > 5.0 && lambda < 50.0,
+            "λ = {lambda:.1}, expected same order as the paper's 13 pairs"
+        );
+
+        // The uniform full-catalogue estimate is ~3 orders of magnitude
+        // larger — the error this conditioning fixes.
+        let lambda_full = expected_chance_pairs(173_000, 1_000, 42.0, 69.6, &density);
+        assert!(
+            lambda_full / lambda > 100.0,
+            "full-catalogue λ = {lambda_full:.0} should dwarf post-cut λ = {lambda:.1}"
+        );
+    }
+
+    #[test]
+    fn galactic_density_model_normalized() {
+        let density = GalacticDensityModel::default();
+        // Sky average of w(b) is 1 (area-weighted, uniform in sin b).
+        let n = 4000;
+        let mean: f64 = (0..n)
+            .map(|k| {
+                let u = (k as f64 + 0.5) / n as f64;
+                density.relative_density(u.asin().to_degrees())
+            })
+            .sum::<f64>()
+            / n as f64;
+        assert!((mean - 1.0).abs() < 0.01, "⟨w⟩ = {mean:.3}");
+        // Plane denser than pole; enhancement ⟨w²⟩ > 1.
+        assert!(density.relative_density(0.0) > density.relative_density(90.0));
+        let enh = density.pair_enhancement();
+        assert!(enh > 1.0 && enh < 5.0, "⟨w²⟩ = {enh:.2}");
+    }
+
+    #[test]
+    fn false_alarm_probability_limits() {
+        assert!((false_alarm_probability(0.01) - 0.00995).abs() < 1e-4);
+        assert!(false_alarm_probability(20.0) > 0.999);
+        assert!(false_alarm_probability(0.0).abs() < 1e-12);
     }
 
     #[test]
@@ -250,9 +410,69 @@ mod tests {
     }
 
     #[test]
-    fn selection_criteria_default_matches_paper() {
+    fn selection_criteria_default_matches_paper_window() {
         let criteria = SelectionCriteria::default();
         assert!((criteria.sep_min_arcmin - 42.0).abs() < 1e-10);
         assert!((criteria.sep_max_arcmin - 69.6).abs() < 1e-10);
+    }
+
+    /// Seeded end-to-end smoke test: synthetic catalogues with one
+    /// injected moving source; the pipeline must recover the injected
+    /// pair and the chance-pair count must be of the expected order.
+    #[test]
+    fn end_to_end_pipeline_recovers_injected_candidate() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(20250610);
+
+        // Background populations in a 30°×30° patch.
+        let patch = |rng: &mut rand::rngs::StdRng| {
+            (
+                150.0 + rng.gen::<f64>() * 30.0,
+                30.0 + rng.gen::<f64>() * 30.0,
+            )
+        };
+        let mut iras: Vec<FirSource> = (0..200)
+            .map(|_| {
+                let (ra, dec) = patch(&mut rng);
+                make_iras_source(ra, dec, 0.2 + rng.gen::<f64>() * 0.4)
+            })
+            .collect();
+        let mut akari: Vec<FirSource> = (0..50)
+            .map(|_| {
+                let (ra, dec) = patch(&mut rng);
+                make_akari_source(ra, dec, 0.55 + rng.gen::<f64>() * 0.4)
+            })
+            .collect();
+
+        // Injected Planet Nine: moved 50' south between epochs, with a
+        // thermally consistent flux ratio (0.30/0.50 = 0.6).
+        iras.push(make_iras_source(165.0, 45.0, 0.30));
+        akari.push(make_akari_source(165.0, 45.0 - 50.0 / 60.0, 0.50));
+
+        let criteria = SelectionCriteria::default();
+        let result = search_candidates(&iras, &akari, &criteria, 23.0);
+
+        let injected = result.candidates.iter().find(|c| {
+            (c.iras_source.ra_deg - 165.0).abs() < 1e-9 && (c.separation_arcmin - 50.0).abs() < 0.5
+        });
+        let injected = injected.expect("injected pair must be recovered");
+        assert!(
+            injected.implied_distance_au > 450.0 && injected.implied_distance_au < 800.0,
+            "implied d = {:.0} AU",
+            injected.implied_distance_au
+        );
+
+        // The chance-pair count in the patch should be of the same order
+        // as the Poisson expectation scaled to the patch area (the patch
+        // is 900 deg² of the 41,253 deg² sky; densities are patch-local
+        // so we compare directly against the patch-scaled estimate).
+        let patch_area_arcmin2 = 30.0 * 30.0 * 3600.0;
+        let annulus = std::f64::consts::PI
+            * (criteria.sep_max_arcmin.powi(2) - criteria.sep_min_arcmin.powi(2));
+        let lambda_patch = 200.0 * 50.0 * annulus / patch_area_arcmin2;
+        let n_chance = result.n_pairs_in_window as f64 - 1.0; // minus injected
+        assert!(
+            n_chance > 0.2 * lambda_patch && n_chance < 5.0 * lambda_patch,
+            "chance pairs {n_chance} vs expectation {lambda_patch:.1}"
+        );
     }
 }

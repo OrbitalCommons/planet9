@@ -243,6 +243,7 @@ name = "p9-2017-dynamics"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "nalgebra",
  "p9-core",
  "rand",
  "rand_distr",
@@ -303,6 +304,7 @@ name = "p9-2021-oort-cloud"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "nalgebra",
  "p9-core",
  "rand",
  "rand_distr",
@@ -327,6 +329,7 @@ name = "p9-2021-stability"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "nalgebra",
  "p9-core",
  "rand",
  "rand_distr",
@@ -339,6 +342,7 @@ name = "p9-2021-ztf"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "p9-2021-orbit",
  "p9-core",
  "rand",
  "rand_distr",
