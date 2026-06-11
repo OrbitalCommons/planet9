@@ -9,8 +9,11 @@
 //!
 //! Planet Nine parameters: a₉ = 700 AU, e₉ = 0.6, i₉ = 0°, m₉ = 10 M_Earth.
 //!
-//! TODO: Full 4 Gyr integration with Mercury6-style hybrid integrator.
-//! Currently uses WHM with the same integration framework as other subcrates.
+//! Integration uses the Mercury6-style hybrid stepper (WHM + Bulirsch-Stoer
+//! for Neptune encounters) with the J2-averaged Jupiter+Saturn+Uranus field
+//! and direct Neptune + Planet Nine; the full 4 Gyr paper-scale run sits
+//! behind an `#[ignore]`d test. Alignment is classified from the Δϖ(t)
+//! snapshot series, not a single snapshot.
 
 pub mod plots;
 pub mod population_analysis;

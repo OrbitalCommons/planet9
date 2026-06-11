@@ -293,7 +293,7 @@ fn draw_distribution_line(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::probability_analysis::{compare_distributions, OBSERVED_KBO_AXES};
+    use crate::probability_analysis::{compare_distributions, observed_kbo_axes};
 
     #[test]
     fn test_resonance_histogram_plot() {
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_a9_comparison_plot() {
-        let comparison = compare_distributions(OBSERVED_KBO_AXES);
+        let comparison = compare_distributions(&observed_kbo_axes());
         let svg = a9_comparison_plot(&comparison, 700, 400);
         assert!(svg.contains("<svg"));
         assert!(svg.contains("</svg>"));
