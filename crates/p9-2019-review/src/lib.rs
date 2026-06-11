@@ -8,8 +8,11 @@
 //! Revised parameters: m₉ ~ 5-10 M_Earth, a₉ ~ 400-800 AU,
 //! e₉ ~ 0.2-0.5, i₉ ~ 15-25°
 //!
-//! TODO: Full semi-averaged integrator (J2+Neptune+P9) and N-body parameter grid.
-//! Currently implements the parameter survey framework and detection prospects.
+//! The critical semi-major axis a_c is computed with real secular machinery
+//! (p9-core numerical Gauss-ring averaging + the giants' J2 field); the
+//! paper's N-body-ensemble statistics (f_ϖ, η, μ, σ) are not emulated —
+//! they require the full simulation suite and are omitted rather than
+//! replaced by scaling guesses.
 
 pub mod detection_prospects;
 pub mod parameter_survey;

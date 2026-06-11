@@ -1,55 +1,39 @@
-//! Chirikov resonance overlap criterion for the 2:j chain.
+//! Chirikov resonance overlap criterion for the Neptune 2:j chain.
 //!
-//! Overlap parameter: Delta_a/delta_a = (24/sqrt(5))*(a/a_N)^(5/4) * sqrt(m_N/M_sun) * exp(-(q/(2*a_N))^2)
-//!
-//! When the overlap parameter exceeds unity, adjacent resonances overlap and chaos ensues.
-//! This connects to the standard map K parameter.
+//! The overlap parameter and the critical perihelion are sourced from
+//! `p9_core::analysis::resonance` — the single, internally consistent
+//! implementation (this crate previously used exp(−q²/4a_N²) in the overlap
+//! parameter while `critical_perihelion` was the K = 1 root of the
+//! exp(−q²/2a_N²) form, so `is_chaotic` and `stability::classify` disagreed
+//! about the same orbit by a factor exp(q²/4a_N²) ≈ 1.4 at q = 35 AU).
 
 use serde::{Deserialize, Serialize};
 
-use crate::hansen::A_NEPTUNE;
-use crate::resonance_chain::M_NEPTUNE_SOLAR;
+pub use p9_core::analysis::resonance::{
+    chirikov_overlap_parameter, critical_perihelion, is_chaotic,
+};
 
-/// Chirikov overlap parameter for the 2:j resonance chain.
+/// Standard map stochasticity parameter K from the resonance overlap
+/// parameter s = Δω/δω.
 ///
-/// K = Delta_a / delta_a = (24/sqrt(5)) * (a/a_N)^{5/4} * sqrt(m_N/M_sun) * exp(-(q/(2*a_N))^2)
-pub fn chirikov_overlap_parameter(a: f64, q: f64) -> f64 {
-    let alpha = a / A_NEPTUNE;
-    (24.0 / 5.0_f64.sqrt())
-        * alpha.powf(1.25)
-        * M_NEPTUNE_SOLAR.sqrt()
-        * (-(q / (2.0 * A_NEPTUNE)).powi(2)).exp()
-}
-
-/// Check if orbits at given (a, q) are in the chaotic overlap regime.
-pub fn is_chaotic(a: f64, q: f64) -> bool {
-    chirikov_overlap_parameter(a, q) > 1.0
-}
-
-/// Standard map stochasticity parameter K from the modulated pendulum.
+/// Derivation (Chirikov 1979, §4): the standard map's primary resonances sit
+/// at integer frequencies (spacing Δω = 2π in action units of the map) and
+/// each has full width 4√K, so s = 4√K/2π = 2√K/π and therefore
 ///
-/// The Chirikov standard map emerges as the stroboscopic mapping of the
-/// modulated pendulum. K > K_crit ~ 0.97 indicates global chaos.
+///   K = (π s / 2)².
+///
+/// Touching resonances (s = 1) give K = π²/4 ≈ 2.47, well above the global
+/// chaos threshold K_c ≈ 0.97; conversely K = K_c corresponds to
+/// s = 2√K_c/π ≈ 0.63 — Chirikov's "two-thirds rule".
 pub fn standard_map_k(a: f64, q: f64) -> f64 {
-    let k = chirikov_overlap_parameter(a, q);
-    // The standard map K is the square of the overlap parameter
-    // in the modulated pendulum formulation
-    k * k
+    let s = chirikov_overlap_parameter(a, q);
+    let half_pi_s = std::f64::consts::FRAC_PI_2 * s;
+    half_pi_s * half_pi_s
 }
 
-/// Compute the critical perihelion distance below which chaos ensues.
-///
-/// q_crit = a_N * sqrt(ln((24^2/5) * (m_N/M_sun) * (a/a_N)^(5/2)))
-///
-/// This is the central analytical result of the paper.
-pub fn critical_perihelion(a: f64) -> f64 {
-    let alpha = a / A_NEPTUNE;
-    let argument = (576.0 / 5.0) * M_NEPTUNE_SOLAR * alpha.powf(2.5);
-    if argument <= 1.0 {
-        return 0.0; // No chaos possible
-    }
-    A_NEPTUNE * argument.ln().sqrt()
-}
+/// Overlap parameter s at which the standard map reaches the global chaos
+/// threshold K_c ≈ 0.9716: s = 2√K_c/π ≈ 0.63 (the two-thirds rule).
+pub const OVERLAP_GLOBAL_CHAOS: f64 = 0.627_465_891_8;
 
 /// Scan the (a, q) plane and compute Chirikov overlap parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,11 +88,27 @@ mod tests {
         assert!(k1 > k2, "overlap should decrease with perihelion");
     }
 
+    /// H1 regression: the two public APIs must agree about the chaotic
+    /// boundary — K(a, q_crit(a)) = 1 exactly.
     #[test]
-    fn test_critical_perihelion_reasonable() {
-        // Need large a for the formula argument to exceed 1
+    fn test_overlap_and_critical_perihelion_consistent() {
+        for &a in &[300.0, 500.0, 1000.0] {
+            let q_crit = critical_perihelion(a);
+            assert!(q_crit > 0.0);
+            let k = chirikov_overlap_parameter(a, q_crit);
+            assert!((k - 1.0).abs() < 1e-10, "K(a, q_crit) = {k}");
+            assert!(is_chaotic(a, q_crit - 1.0));
+            assert!(!is_chaotic(a, q_crit + 1.0));
+        }
+    }
+
+    /// Paper-number regression: BMN21 Eq. for the critical perihelion,
+    /// q_crit = a_N √(ln[(24²/5)(m_N/M_☉)(a/a_N)^{5/2}]), evaluated at
+    /// a = 500 AU gives 41.4 AU (cf. their Fig. 4 stability boundary).
+    #[test]
+    fn test_critical_perihelion_paper_value() {
         let q_crit = critical_perihelion(500.0);
-        assert!(q_crit > 20.0 && q_crit < 60.0, "q_crit = {}", q_crit);
+        assert!((q_crit - 41.4).abs() < 0.3, "q_crit(500 AU) = {q_crit:.2}");
     }
 
     #[test]
@@ -119,9 +119,15 @@ mod tests {
     }
 
     #[test]
-    fn test_is_chaotic_near_neptune() {
-        // At large a with perihelion near Neptune, should be chaotic
-        assert!(is_chaotic(500.0, 31.0));
+    fn test_standard_map_k_at_two_thirds_rule() {
+        // K = (π s/2)²: s = 1 → K = π²/4; s = OVERLAP_GLOBAL_CHAOS → K ≈ 0.97.
+        let s_to_k = |s: f64| (std::f64::consts::FRAC_PI_2 * s).powi(2);
+        assert!((s_to_k(1.0) - std::f64::consts::PI.powi(2) / 4.0).abs() < 1e-12);
+        assert!((s_to_k(OVERLAP_GLOBAL_CHAOS) - 0.9716).abs() < 1e-3);
+        // And the public function is that map of the overlap parameter.
+        let (a, q) = (500.0, 35.0);
+        let s = chirikov_overlap_parameter(a, q);
+        assert!((standard_map_k(a, q) - s_to_k(s)).abs() < 1e-12);
     }
 
     #[test]

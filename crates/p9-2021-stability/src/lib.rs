@@ -14,6 +14,7 @@
 pub mod chirikov;
 pub mod diffusion;
 pub mod hansen;
+pub mod nbody_validation;
 pub mod plots;
 pub mod resonance_chain;
 pub mod stability;

@@ -1,7 +1,12 @@
-//! MCMC posterior parameters from Brown & Batygin (2021).
+//! Posterior-summary *emulator* for Brown & Batygin (2021).
 //!
-//! The paper derives posterior distributions for Planet Nine's orbital
-//! parameters using Markov Chain Monte Carlo analysis of 11 distant KBOs.
+//! This module is not an MCMC reproduction: the paper's likelihood (11 ETNO
+//! orbits against N-body reference populations) is not re-evaluated here.
+//! Instead the published posterior *summaries* (median with asymmetric
+//! 1-sigma intervals) are emulated with two-piece (split-normal)
+//! distributions, plus a documented correlation assumption linking a and q
+//! (and hence e) — the published corner plot shows a strong positive a–q
+//! degeneracy which independent marginal sampling would erase.
 
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -10,8 +15,16 @@ use serde::{Deserialize, Serialize};
 use p9_core::constants::DEG2RAD;
 use p9_core::types::P9Params;
 
-/// Posterior distribution for a single orbital parameter,
-/// represented as an asymmetric Gaussian (median with upper/lower 1-sigma).
+/// Assumed correlation between the a and q marginals when sampling jointly.
+///
+/// Documented emulator assumption: Brown & Batygin (2021, Fig. 7) show a
+/// strong positive a–q degeneracy (more distant solutions require larger
+/// perihelia); 0.85 reproduces the visual elongation of that contour. This
+/// is an assumption of the emulator, not a published number.
+pub const A_Q_CORRELATION: f64 = 0.85;
+
+/// Posterior distribution for a single orbital parameter, represented as a
+/// two-piece normal (mode with upper/lower 1-sigma widths).
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AsymmetricGaussian {
     pub median: f64,
@@ -20,12 +33,13 @@ pub struct AsymmetricGaussian {
 }
 
 impl AsymmetricGaussian {
-    /// Sample from the asymmetric Gaussian using a split-normal distribution.
-    /// Draws from the upper half-Gaussian if the uniform variate > 0.5,
-    /// otherwise from the lower half-Gaussian.
+    /// Sample from the two-piece normal. The side is chosen with the proper
+    /// weights — lower side with probability σ_l/(σ_l + σ_u) — so the
+    /// density is continuous at the mode (a 50/50 split, the previous
+    /// behavior, over-weights the narrow side and biases the mean).
     pub fn sample<R: Rng>(&self, rng: &mut R) -> f64 {
-        let u: f64 = rng.gen();
-        if u < 0.5 {
+        let w_lower = self.sigma_lower / (self.sigma_lower + self.sigma_upper);
+        if rng.gen::<f64>() < w_lower {
             let normal = Normal::new(0.0, self.sigma_lower).unwrap();
             self.median - normal.sample(rng).abs()
         } else {
@@ -43,9 +57,15 @@ impl AsymmetricGaussian {
             }
         }
     }
+
+    /// Mean of the (untruncated) two-piece normal:
+    /// mode + sqrt(2/π)(σ_u − σ_l).
+    pub fn mean(&self) -> f64 {
+        self.median + (2.0 / std::f64::consts::PI).sqrt() * (self.sigma_upper - self.sigma_lower)
+    }
 }
 
-/// Full MCMC posterior for Planet Nine orbital parameters.
+/// Full posterior summary for Planet Nine orbital parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct P9Posterior {
     /// Mass in Earth masses
@@ -74,7 +94,7 @@ pub struct PosteriorSummary {
     pub q_au: f64,
 }
 
-/// Returns the MCMC posterior from Brown & Batygin (2021).
+/// Returns the published posterior summaries from Brown & Batygin (2021).
 ///
 /// Parameter constraints from the paper:
 /// - Mass: 6.2 (+2.2/-1.3) Earth masses
@@ -130,23 +150,34 @@ pub fn mcmc_2021_posterior() -> P9Posterior {
     }
 }
 
-/// Sample a set of P9 orbital parameters from the 2021 posterior.
+/// Sample a set of P9 orbital parameters from the 2021 posterior emulator.
 ///
-/// Uses truncated asymmetric Gaussians to ensure physical validity:
-/// - Mass > 0
-/// - Semi-major axis > 0
-/// - 0 < eccentricity < 1
-/// - 0 < inclination < 90 degrees
-/// - Perihelion > 0 and < semi-major axis
+/// a and q (hence e) are sampled *jointly*: a is drawn from its marginal,
+/// then q from its conditional given a, using a linear (Gaussian-style)
+/// regression with correlation `A_Q_CORRELATION` applied to the two-piece
+/// summaries:
 ///
-/// The argument of perihelion and longitude of ascending node are
-/// drawn uniformly (the paper constrains longitude of perihelion
-/// but not these individually).
+///   q | a ~ TwoPiece(q_med + ρ (σ_q/σ_a)(a − a_med), σ's shrunk by √(1−ρ²))
+///
+/// Truncations keep the sample physical (q < a so 0 < e < 1, etc.). Mass and
+/// inclination are drawn from their marginals; the angles the paper does not
+/// constrain individually (ω, Ω, M) are uniform.
 pub fn sample_from_posterior<R: Rng>(posterior: &P9Posterior, rng: &mut R) -> P9Params {
     let mass = posterior.mass.sample_truncated(rng, 1.0, 20.0);
     let a = posterior.a.sample_truncated(rng, 200.0, 1000.0);
     let i_deg = posterior.i.sample_truncated(rng, 0.0, 90.0);
-    let q = posterior.perihelion.sample_truncated(rng, 50.0, a);
+
+    // Conditional q | a with the documented correlation assumption.
+    let rho = A_Q_CORRELATION;
+    let sigma_a = 0.5 * (posterior.a.sigma_upper + posterior.a.sigma_lower);
+    let sigma_q = 0.5 * (posterior.perihelion.sigma_upper + posterior.perihelion.sigma_lower);
+    let shrink = (1.0 - rho * rho).sqrt();
+    let conditional = AsymmetricGaussian {
+        median: posterior.perihelion.median + rho * (sigma_q / sigma_a) * (a - posterior.a.median),
+        sigma_upper: posterior.perihelion.sigma_upper * shrink,
+        sigma_lower: posterior.perihelion.sigma_lower * shrink,
+    };
+    let q = conditional.sample_truncated(rng, 50.0, 0.999 * a);
     let e = 1.0 - q / a;
 
     let omega: f64 = rng.gen_range(0.0..std::f64::consts::TAU);
@@ -184,6 +215,65 @@ mod tests {
         let post = mcmc_2021_posterior();
         let expected_e = 1.0 - 300.0 / 380.0;
         assert_relative_eq!(post.e.median, expected_e, epsilon = 0.01);
+    }
+
+    /// H5 regression: the two-piece sampler must put mass
+    /// σ_l/(σ_l + σ_u) below the mode (a 50/50 side split biases the mean
+    /// low for σ_u > σ_l).
+    #[test]
+    fn test_two_piece_side_weights() {
+        let g = AsymmetricGaussian {
+            median: 0.0,
+            sigma_upper: 3.0,
+            sigma_lower: 1.0,
+        };
+        let mut rng = rand::rngs::StdRng::seed_from_u64(5);
+        let n = 200_000;
+        let below = (0..n).filter(|_| g.sample(&mut rng) < 0.0).count();
+        let frac_below = below as f64 / n as f64;
+        let expected = 1.0 / 4.0; // sigma_l / (sigma_l + sigma_u)
+        assert!(
+            (frac_below - expected).abs() < 0.005,
+            "frac below mode = {frac_below:.4}, expected {expected}"
+        );
+
+        // And the sample mean matches the closed-form two-piece mean.
+        let mean_mc: f64 = (0..n).map(|_| g.sample(&mut rng)).sum::<f64>() / n as f64;
+        assert!(
+            (mean_mc - g.mean()).abs() < 0.02,
+            "MC mean {mean_mc:.3} vs analytic {:.3}",
+            g.mean()
+        );
+    }
+
+    /// H5: a and q must come out correlated (joint sampling), not
+    /// independent.
+    #[test]
+    fn test_a_q_jointly_sampled() {
+        let post = mcmc_2021_posterior();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+        let samples: Vec<P9Params> = (0..5000)
+            .map(|_| sample_from_posterior(&post, &mut rng))
+            .collect();
+
+        let qs: Vec<f64> = samples.iter().map(|s| s.perihelion()).collect();
+        let a_mean = samples.iter().map(|s| s.a).sum::<f64>() / samples.len() as f64;
+        let q_mean = qs.iter().sum::<f64>() / qs.len() as f64;
+        let mut sa = 0.0;
+        let mut sq = 0.0;
+        let mut saq = 0.0;
+        for (s, &q) in samples.iter().zip(&qs) {
+            let da = s.a - a_mean;
+            let dq = q - q_mean;
+            sa += da * da;
+            sq += dq * dq;
+            saq += da * dq;
+        }
+        let corr = saq / (sa.sqrt() * sq.sqrt());
+        assert!(
+            (corr - A_Q_CORRELATION).abs() < 0.1,
+            "sample corr(a, q) = {corr:.3}, assumed {A_Q_CORRELATION}"
+        );
     }
 
     #[test]

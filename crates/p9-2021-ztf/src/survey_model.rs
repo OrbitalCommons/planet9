@@ -1,36 +1,48 @@
 //! ZTF survey characteristics for the Planet Nine search.
 //!
-//! Models the Zwicky Transient Facility's sky coverage, depth limits,
-//! and tracklet-linking requirements as used in Brown & Batygin (2021).
+//! Models the Zwicky Transient Facility's footprint (a *declination-limited*
+//! survey from Palomar, δ ≳ −30°), depth, and tracklet-linking efficiency as
+//! used in Brown & Batygin (2021). The depth limit comes from the shared
+//! survey table in `p9_core::analysis::surveys`.
 
 use serde::{Deserialize, Serialize};
 
 /// ZTF survey model parameters for Planet Nine detection.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZtfSurvey {
-    /// Single-exposure depth limit in V-band magnitude (~20.5 for ZTF r-band)
+    /// 50%-efficiency magnitude of the recovery pipeline (~20.5, ZTF r-band)
     pub depth_limit: f64,
-    /// Fraction of sky covered by ZTF public survey (~0.75 of accessible sky)
-    pub sky_coverage_frac: f64,
-    /// Minimum number of detections required to form a tracklet and link
-    pub linking_threshold: u32,
+    /// Logistic steepness of the efficiency roll-off near the depth limit
+    /// (mag⁻¹); calibrated against known-asteroid recoveries in the paper,
+    /// which show a sharp (few-tenths of a magnitude) transition.
+    pub efficiency_steepness: f64,
+    /// Southern declination limit of the footprint (degrees); ZTF observes
+    /// from Palomar and covers δ > −30°.
+    pub dec_limit_deg: f64,
 }
 
 impl Default for ZtfSurvey {
     fn default() -> Self {
         Self {
-            depth_limit: 20.5,
-            sky_coverage_frac: 0.75,
-            linking_threshold: 7,
+            depth_limit: p9_core::analysis::surveys::limiting_magnitude("ZTF")
+                .expect("ZTF in shared survey table"),
+            efficiency_steepness: 4.0,
+            dec_limit_deg: -30.0,
         }
     }
 }
 
 impl ZtfSurvey {
-    /// Returns true if an object at the given apparent magnitude is bright enough
-    /// to be detected in a single ZTF exposure.
-    pub fn is_detectable(&self, apparent_magnitude: f64) -> bool {
-        apparent_magnitude < self.depth_limit
+    /// Magnitude-dependent single-epoch detection efficiency: a logistic
+    /// roll-off centered on the depth limit (the self-calibration curve from
+    /// known-asteroid injections), replacing the previous hard step at 20.5.
+    pub fn detection_efficiency(&self, apparent_magnitude: f64) -> f64 {
+        1.0 / (1.0 + ((apparent_magnitude - self.depth_limit) * self.efficiency_steepness).exp())
+    }
+
+    /// Whether a sky position falls in the ZTF footprint (declination cut).
+    pub fn in_footprint(&self, dec_deg: f64) -> bool {
+        dec_deg > self.dec_limit_deg
     }
 
     /// Tracklet-linking efficiency measured from known asteroid recoveries.
@@ -47,25 +59,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_matches_paper_values() {
+    fn default_matches_shared_survey_table() {
         let survey = ZtfSurvey::default();
         assert!((survey.depth_limit - 20.5).abs() < 1e-10);
-        assert!((survey.sky_coverage_frac - 0.75).abs() < 1e-10);
-        assert_eq!(survey.linking_threshold, 7);
+        assert!((survey.dec_limit_deg - (-30.0)).abs() < 1e-10);
     }
 
     #[test]
-    fn bright_object_is_detectable() {
+    fn efficiency_is_logistic_not_step() {
         let survey = ZtfSurvey::default();
-        assert!(survey.is_detectable(19.0));
-        assert!(survey.is_detectable(20.4));
+        // Near unity well above the limit, ~0.5 at the limit, ~0 below.
+        assert!(survey.detection_efficiency(18.0) > 0.99);
+        assert!((survey.detection_efficiency(20.5) - 0.5).abs() < 1e-10);
+        assert!(survey.detection_efficiency(23.0) < 0.01);
+        // Smooth: intermediate efficiency just past the limit.
+        let e = survey.detection_efficiency(20.8);
+        assert!(e > 0.05 && e < 0.5, "ε(20.8) = {e:.3}");
     }
 
     #[test]
-    fn faint_object_not_detectable() {
+    fn footprint_is_declination_limited() {
         let survey = ZtfSurvey::default();
-        assert!(!survey.is_detectable(21.0));
-        assert!(!survey.is_detectable(25.0));
+        assert!(survey.in_footprint(0.0));
+        assert!(survey.in_footprint(60.0));
+        assert!(!survey.in_footprint(-45.0));
     }
 
     #[test]

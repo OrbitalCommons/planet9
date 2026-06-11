@@ -286,6 +286,7 @@ mod tests {
         PopulationComparison {
             f_varpi_ioc: 0.67,
             f_varpi_scattered: 0.88,
+            f_varpi_control: 0.5,
             n_ioc_injected: 50,
             n_ioc_total: 300,
             injection_efficiency: 50.0 / 300.0,
@@ -297,10 +298,12 @@ mod tests {
             injection_fraction: 0.1,
             f_varpi_ioc: 0.67,
             f_varpi_scattered: 0.88,
+            f_varpi_control: 0.5,
             n_injected: 5,
             n_total: 50,
             injected_sma: vec![500.0, 3000.0, 5000.0, 8000.0, 15000.0],
             injected_dvarpi: vec![0.1, -0.5, 0.3, -0.2, 0.7],
+            scattered_sma: vec![200.0, 300.0, 350.0, 410.0, 520.0],
         }
     }
 

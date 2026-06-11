@@ -8,8 +8,10 @@
 //! Key result: combined clustering probability = 0.2% (99.8% confidence).
 //! OSSOS survey is insensitive to the clustering signal.
 //!
-//! TODO: Full MPC-based bias computation requires survey metadata.
-//! Currently uses simplified bias model from p9-2017-bias.
+//! The Monte Carlo null is survey-bias weighted (galactic-plane suppression
+//! of perihelion longitudes + declination coverage), a simplified
+//! single-factor stand-in for the paper's full MPC-metadata bias maps; the
+//! uniform null is kept as a labeled baseline.
 
 pub mod clustering_analysis;
 pub mod kbo_sample;

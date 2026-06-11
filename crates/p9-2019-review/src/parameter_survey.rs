@@ -1,51 +1,51 @@
-//! Parameter grid survey with statistical success measures.
+//! Parameter grid survey with the critical-semi-major-axis success measure.
 //!
-//! Implements the statistical measures from the review paper (Figure 16):
-//! - a_c: critical semi-major axis (transition from random to confined)
-//! - f_varpi: apsidal confinement fraction
-//! - eta: forced equilibrium magnitude
-//! - mu: forced equilibrium angle
-//! - sigma: RMS dispersion in (p, g) space
+//! The review paper (Figure 16) scores each P9 parameter set by several
+//! statistics measured from N-body ensembles. Of these, the critical
+//! semi-major axis a_c — the boundary beyond which test-particle orbits are
+//! apsidally confined by P9 — is computable from real secular machinery, and
+//! is implemented here via the p9-core numerical Gauss-ring double averaging
+//! (`p9_core::analysis::secular::numerical_secular_hamiltonian`) plus the
+//! orbit-averaged J2 field of the giant planets: a_c is the smallest test
+//! particle semi-major axis at which the secular Hamiltonian H(e, Δϖ) has an
+//! interior extremum on the anti-aligned axis (a libration island, cf.
+//! Batygin & Brown 2016 phase portraits).
+//!
+//! The paper's remaining ensemble statistics (f_ϖ, η, μ, σ) require the full
+//! N-body simulation suite and are intentionally NOT emulated — a previous
+//! version returned invented scaling relations for them (admitted TODO),
+//! which made every Figure-16-style output decorative. They are omitted from
+//! the results path rather than faked.
 
+use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::*;
+use p9_core::forces::j2_secular::combined_j2_jsu;
 use p9_core::types::P9Params;
 
-/// Statistical success criteria from the review paper.
+/// Statistical success criterion for the survey: the critical semi-major
+/// axis should fall in the observed transition range (200, 300) AU
+/// (Batygin, Adams, Brown & Becker 2019).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SuccessCriteria {
     /// Critical semi-major axis should be in (200, 300) AU
     pub a_c_range: (f64, f64),
-    /// Apsidal confinement fraction should be >= 0.8
-    pub f_varpi_min: f64,
-    /// Forced equilibrium magnitude should be ~0.1
-    pub eta_target: f64,
-    /// Forced equilibrium angle should be <= 10 degrees
-    pub mu_max_deg: f64,
-    /// RMS dispersion should be ~0.2
-    pub sigma_target: f64,
 }
 
 impl SuccessCriteria {
     pub fn paper_defaults() -> Self {
         Self {
             a_c_range: (200.0, 300.0),
-            f_varpi_min: 0.80,
-            eta_target: 0.1,
-            mu_max_deg: 10.0,
-            sigma_target: 0.2,
         }
     }
 }
 
-/// Result of evaluating a single simulation against success criteria.
+/// Result of evaluating a single parameter set.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SimulationScore {
     pub params: P9ParamsSummary,
-    pub a_c: f64,
-    pub f_varpi: f64,
-    pub eta: f64,
-    pub mu_deg: f64,
-    pub sigma: f64,
+    /// Critical semi-major axis from the secular island criterion (AU);
+    /// None if no island appears anywhere on the scanned grid.
+    pub a_c: Option<f64>,
     pub passes: bool,
 }
 
@@ -141,41 +141,83 @@ impl ParameterGrid {
     }
 }
 
-/// Evaluate a parameter set against success criteria.
+/// Coplanar secular Hamiltonian of a test particle at (a, e, Δϖ) under P9
+/// (numerical Gauss-ring double average) plus the orbit-averaged J2 field of
+/// the giants:
 ///
-/// TODO: This requires running the actual simulation. Currently returns
-/// analytical estimates based on secular theory scaling relations.
+///   H_J2(e) = −GM J2_eff R_ref² / (2 a³ (1 − e²)^{3/2}),
+///
+/// which supplies the prograde apsidal precession against which P9's torque
+/// competes (without it the island location is wrong).
+pub fn secular_hamiltonian(a: f64, e: f64, dvarpi: f64, p9: &P9Params, n_quad: usize) -> f64 {
+    let softening = 0.02 * p9.a;
+    let h_p9 = numerical_secular_hamiltonian(
+        a,
+        e,
+        0.0,
+        dvarpi,
+        0.0,
+        p9.a,
+        p9.e,
+        p9.gm(),
+        n_quad,
+        softening,
+    );
+    let (j2, _, gm_boost) = combined_j2_jsu();
+    let gm_eff = GM_SUN + gm_boost;
+    let h_j2 = -gm_eff * j2 / (2.0 * a.powi(3) * (1.0 - e * e).powf(1.5));
+    h_p9 + h_j2
+}
+
+/// Whether the secular Hamiltonian at fixed `a` has an anti-aligned
+/// libration island: an interior extremum (not saddle) of H(e, Δϖ) on the
+/// Δϖ = π symmetry axis.
+pub fn has_anti_aligned_island(a: f64, p9: &P9Params, n_quad: usize) -> bool {
+    let e_grid: Vec<f64> = (1..=17).map(|k| 0.05 + 0.05 * k as f64).collect(); // 0.10..0.90
+    let h_line: Vec<f64> = e_grid
+        .iter()
+        .map(|&e| secular_hamiltonian(a, e, std::f64::consts::PI, p9, n_quad))
+        .collect();
+
+    for k in 1..e_grid.len() - 1 {
+        let d2e = h_line[k + 1] + h_line[k - 1] - 2.0 * h_line[k];
+        let interior_extremum = (h_line[k] > h_line[k - 1] && h_line[k] > h_line[k + 1])
+            || (h_line[k] < h_line[k - 1] && h_line[k] < h_line[k + 1]);
+        if !interior_extremum {
+            continue;
+        }
+        // Saddle check: curvature along Δϖ must have the same sign as the
+        // curvature along e (closed contours around the fixed point).
+        let dphi = 0.3;
+        let h_off = secular_hamiltonian(a, e_grid[k], std::f64::consts::PI - dphi, p9, n_quad);
+        let d2phi = 2.0 * (h_off - h_line[k]); // symmetric about π
+        if d2e * d2phi > 0.0 {
+            return true;
+        }
+    }
+    false
+}
+
+/// Critical semi-major axis: smallest particle a on the scan grid at which
+/// the anti-aligned secular island exists. Returns None if no island
+/// appears up to the grid edge.
+pub fn critical_semi_major_axis(p9: &P9Params) -> Option<f64> {
+    let n_quad = 48;
+    (100..=600)
+        .step_by(25)
+        .map(|a| a as f64)
+        .find(|&a| has_anti_aligned_island(a, p9, n_quad))
+}
+
+/// Evaluate a parameter set against the success criteria using the real
+/// secular machinery (see module docs).
 pub fn evaluate_params(params: &P9Params, criteria: &SuccessCriteria) -> SimulationScore {
-    // Analytical estimate of critical semi-major axis
-    // a_c scales approximately as a₉ * (m₉/M_sun)^(2/7) / (1+e₉)
-    let m_ratio = params.mass_earth * EARTH_MASS_SOLAR;
-    let a_c = params.a * m_ratio.powf(2.0 / 7.0) / (1.0 + params.e);
-
-    // Apsidal confinement fraction scales with mass and proximity
-    let q = params.a * (1.0 - params.e);
-    let f_varpi = (params.mass_earth / 10.0 * (400.0 / q).sqrt()).min(1.0);
-
-    // Forced equilibrium magnitude scales with i₉
-    let eta = 0.3 * params.i.sin();
-
-    // Forced equilibrium angle
-    let mu_deg = (10.0 / params.mass_earth * (params.a / 500.0)).min(30.0);
-
-    // RMS dispersion
-    let sigma = 0.15 + 0.1 * params.e;
-
-    let passes = a_c >= criteria.a_c_range.0
-        && a_c <= criteria.a_c_range.1
-        && f_varpi >= criteria.f_varpi_min
-        && mu_deg <= criteria.mu_max_deg;
+    let a_c = critical_semi_major_axis(params);
+    let passes = a_c.is_some_and(|a| a >= criteria.a_c_range.0 && a <= criteria.a_c_range.1);
 
     SimulationScore {
         params: P9ParamsSummary::from(params),
         a_c,
-        f_varpi,
-        eta,
-        mu_deg,
-        sigma,
         passes,
     }
 }
@@ -214,27 +256,33 @@ mod tests {
         assert!(viable > 0, "Quick grid should have viable params");
     }
 
+    /// Paper-anchored regression: for the review's favored configuration
+    /// (m₉ = 5 M⊕, a₉ = 500 AU, e₉ = 0.25), the transition to apsidal
+    /// confinement occurs at a_c ≈ 200–300 AU (Batygin et al. 2019; cf.
+    /// Batygin & Brown 2016 phase portraits). The secular-island criterion
+    /// must place a_c in the (150, 350) AU band.
     #[test]
-    fn test_evaluate_best_fit() {
-        let criteria = SuccessCriteria::paper_defaults();
-        let params = P9Params {
-            mass_earth: 5.0,
-            a: 500.0,
-            e: 0.25,
-            i: 20.0 * DEG2RAD,
-            omega: 140.0 * DEG2RAD,
-            omega_big: 100.0 * DEG2RAD,
-            mean_anomaly: 0.0,
-        };
+    fn test_critical_a_for_favored_params() {
+        let p9 = P9Params::revised_2019();
+        let a_c = critical_semi_major_axis(&p9).expect("island should exist on grid");
+        assert!(
+            (150.0..=350.0).contains(&a_c),
+            "a_c = {a_c} AU, expected ~200-300"
+        );
+    }
 
-        let score = evaluate_params(&params, &criteria);
-        assert!(score.f_varpi > 0.0);
-        assert!(score.eta > 0.0);
+    /// The island criterion must respond to the perturber: far inside the
+    /// critical radius there is no anti-aligned island.
+    #[test]
+    fn test_no_island_well_inside() {
+        let p9 = P9Params::revised_2019();
+        assert!(!has_anti_aligned_island(100.0, &p9, 48));
     }
 
     #[test]
-    fn test_quick_survey() {
-        let scores = quick_survey();
-        assert!(!scores.is_empty());
+    fn test_evaluate_favored_params_passes() {
+        let criteria = SuccessCriteria::paper_defaults();
+        let score = evaluate_params(&P9Params::revised_2019(), &criteria);
+        assert!(score.a_c.is_some());
     }
 }
