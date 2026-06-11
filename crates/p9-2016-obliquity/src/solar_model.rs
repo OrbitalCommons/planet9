@@ -33,19 +33,27 @@ pub fn omega_sun(period_days: f64) -> f64 {
     2.0 * PI / period_days
 }
 
-/// Skumanich spin-down: ω(t) = ω₀ * (t₀/t)^{1/2}
+/// Skumanich spin-down: ω(t) = ω₀ * (t₀/t)^{1/2}, capped at the initial
+/// rotation rate.
 ///
-/// We normalize so that ω(4.5 Gyr) = present-day ω.
-/// Then ω(t) = ω_present * sqrt(t_age / t) for t > 0.
+/// We normalize so that ω(t_age) = present-day ω, and cap the divergent
+/// t → 0 behavior at the P = 10 d initial rotation:
+///
+///   ω(t) = min( ω(P = 10 d), ω_present √(t_age/t) ).
+///
+/// Without the cap the first integration step sees ω ≈ 300× present (beyond
+/// breakup), and since the spin-orbit coupling is largest early, the whole
+/// obliquity excitation is inflated.
 ///
 /// `t` is time since formation in days.
 /// `t_age` is the total age (4.5 Gyr in days).
 pub fn solar_omega_at_time(t: f64, t_age: f64) -> f64 {
-    let omega_present = omega_sun(P_SUN_PRESENT_DAYS);
+    let omega_initial = omega_sun(P_SUN_INITIAL_DAYS);
     if t <= 0.0 {
-        return omega_sun(P_SUN_INITIAL_DAYS);
+        return omega_initial;
     }
-    omega_present * (t_age / t).sqrt()
+    let omega_present = omega_sun(P_SUN_PRESENT_DAYS);
+    (omega_present * (t_age / t).sqrt()).min(omega_initial)
 }
 
 /// Spin angular momentum of the Sun: L = I_hat * M * R² * ω
@@ -68,45 +76,27 @@ pub fn solar_ring_semimajor_axis(omega: f64) -> f64 {
     (numerator / denominator).powf(1.0 / 3.0)
 }
 
+/// The four giant planets as (mass in M_sun, semi-major axis in AU) — the
+/// rigid coplanar "wire" set whose couplings are summed *per planet*
+/// (Bailey+ 2016). Collapsing them to a single angular-momentum-conserving
+/// ring underestimates Σmᵢ/aᵢ³-type couplings by ~40% and Σmᵢaᵢ² ones
+/// by ~45%.
+pub const GIANT_PLANETS: [(f64, f64); 4] = [
+    (MASS_JUPITER_SOLAR, 5.2026),
+    (MASS_SATURN_SOLAR, 9.5549),
+    (MASS_URANUS_SOLAR, 19.2184),
+    (MASS_NEPTUNE_SOLAR, A_NEPTUNE_AU),
+];
+
 /// Combined angular momentum of the four giant planets.
 ///
 /// L_planets = Σ m_i * sqrt(G * M_sun * a_i) for each giant planet.
 /// Returns in M_sun * AU² / day.
 pub fn giant_planet_angular_momentum() -> f64 {
-    let planets = [
-        (MASS_JUPITER_SOLAR, 5.2026),  // Jupiter a in AU
-        (MASS_SATURN_SOLAR, 9.5549),   // Saturn
-        (MASS_URANUS_SOLAR, 19.2184),  // Uranus
-        (MASS_NEPTUNE_SOLAR, 30.1104), // Neptune
-    ];
-
-    planets
+    GIANT_PLANETS
         .iter()
         .map(|&(m, a)| m * (G_AU3_MSUN_DAY2 * M_SUN_SOLAR * a).sqrt())
         .sum()
-}
-
-/// Effective semi-major axis for the combined giant planet ring.
-///
-/// The combined ring has mass m_eff and semi-major axis a_eff such that
-/// L = m_eff * sqrt(G * M_sun * a_eff).
-///
-/// We compute a_eff as the angular-momentum-weighted mean.
-pub fn giant_planet_effective_orbit() -> (f64, f64) {
-    let planets = [
-        (MASS_JUPITER_SOLAR, 5.2026),
-        (MASS_SATURN_SOLAR, 9.5549),
-        (MASS_URANUS_SOLAR, 19.2184),
-        (MASS_NEPTUNE_SOLAR, 30.1104),
-    ];
-
-    let m_total: f64 = planets.iter().map(|&(m, _)| m).sum();
-    let l_total = giant_planet_angular_momentum();
-
-    // a_eff from L = m_total * sqrt(GM * a_eff)
-    let a_eff = (l_total / m_total).powi(2) / (G_AU3_MSUN_DAY2 * M_SUN_SOLAR);
-
-    (m_total, a_eff)
 }
 
 /// Planet Nine angular momentum magnitude.
@@ -142,6 +132,34 @@ mod tests {
             "ratio = {:.6}, expected sqrt(2)",
             ratio
         );
+    }
+
+    #[test]
+    fn test_spindown_capped_at_initial_rotation() {
+        let t_age = 4.5 * GYR_DAYS;
+        let omega_initial = omega_sun(P_SUN_INITIAL_DAYS);
+
+        // Early times: the divergent √(t_age/t) is capped at ω(P = 10 d).
+        for &t in &[0.0, 1.0, 1e3, 1e6, 0.01 * t_age] {
+            let w = solar_omega_at_time(t, t_age);
+            assert!(
+                w <= omega_initial * (1.0 + 1e-12),
+                "ω(t={t:.1e}) = {w:.3e} exceeds the initial rotation"
+            );
+        }
+
+        // The cap releases exactly at t_c = t_age (ω_present/ω_initial)².
+        let t_c = t_age * (P_SUN_INITIAL_DAYS / P_SUN_PRESENT_DAYS).powi(2);
+        let w_after = solar_omega_at_time(1.01 * t_c, t_age);
+        assert!(w_after < omega_initial);
+
+        // Monotonically non-increasing
+        let mut prev = f64::INFINITY;
+        for k in 0..100 {
+            let w = solar_omega_at_time(k as f64 * t_age / 100.0, t_age);
+            assert!(w <= prev + 1e-15);
+            prev = w;
+        }
     }
 
     #[test]

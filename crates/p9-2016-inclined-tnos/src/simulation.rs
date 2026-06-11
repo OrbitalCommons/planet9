@@ -7,13 +7,13 @@
 //! giant planets (not J2 averaging), which is critical for capturing
 //! Neptune scattering events that decouple particles from Planet Nine.
 
-use std::f64::consts::PI;
-
 use p9_core::constants::*;
 use p9_core::initial_conditions::planets;
 use p9_core::initial_conditions::scattered_disk::{generate_scattered_disk, ScatteredDiskConfig};
-use p9_core::integrator::whm::WhmIntegrator;
+use p9_core::integrator::hybrid::hybrid_step;
 use p9_core::types::*;
+
+use crate::kozai_lidov::ParticleHistory;
 
 /// Configuration for the inclined TNO simulation.
 #[derive(Debug, Clone)]
@@ -40,16 +40,13 @@ pub struct InclinedTnoConfig {
 
 impl InclinedTnoConfig {
     /// Paper's nominal configuration: 3,200 particles, 4 Gyr.
+    ///
+    /// The P9 parameter set is `P9Params::inclined_tnos_2016()` — the single
+    /// documented source of truth in p9-core (a previous local copy here
+    /// disagreed with it on Ω₉).
     pub fn nominal() -> Self {
-        let mut p9 = P9Params::nominal_2016();
-        p9.a = 600.0;
-        p9.e = 0.5;
-        p9.i = 30.0 * DEG2RAD;
-        p9.omega = 150.0 * DEG2RAD;
-        p9.omega_big = PI; // Anti-aligned
-
         Self {
-            p9,
+            p9: P9Params::inclined_tnos_2016(),
             n_particles: 3200,
             a_min: 150.0,
             a_max: 550.0,
@@ -63,17 +60,10 @@ impl InclinedTnoConfig {
         }
     }
 
-    /// Quick test configuration.
+    /// Quick test configuration (same P9 source of truth as `nominal`).
     pub fn quick_test() -> Self {
-        let mut p9 = P9Params::nominal_2016();
-        p9.a = 600.0;
-        p9.e = 0.5;
-        p9.i = 30.0 * DEG2RAD;
-        p9.omega = 150.0 * DEG2RAD;
-        p9.omega_big = PI;
-
         Self {
-            p9,
+            p9: P9Params::inclined_tnos_2016(),
             n_particles: 20,
             a_min: 150.0,
             a_max: 550.0,
@@ -93,6 +83,9 @@ impl InclinedTnoConfig {
 pub struct TnoSnapshot {
     pub t: f64,
     pub elements: Vec<OrbitalElements>,
+    /// Particle indices parallel to `elements`, so per-particle time series
+    /// (needed for pathway classification) survive removals.
+    pub ids: Vec<usize>,
     pub active_count: usize,
     pub total_count: usize,
 }
@@ -102,11 +95,21 @@ pub struct TnoSnapshot {
 pub struct SimulationResult {
     pub snapshots: Vec<TnoSnapshot>,
     pub config_summary: String,
+    /// RNG seed used (recorded for reproducibility).
+    pub seed: u64,
+    /// Number of close-encounter Bulirsch-Stoer steps that failed to
+    /// converge (0 = all clean).
+    pub bs_failures: usize,
 }
 
 /// Run the inclined TNO simulation.
 ///
-/// This is the full simulation with all four giant planets in direct N-body.
+/// This is the full simulation with all four giant planets in direct N-body,
+/// integrated with the Chambers-style hybrid: Wisdom-Holman everywhere, with
+/// particles inside a planet's changeover radius handed to Bulirsch-Stoer
+/// for the step. Fixed-step WHM through Neptune encounters — the exact
+/// mechanism that produces the Drac/Niku analogs — makes O(1) errors per
+/// encounter, so the hybrid is required here, not optional.
 pub fn run_simulation(config: &InclinedTnoConfig, seed: u64) -> SimulationResult {
     use rand::SeedableRng;
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -138,18 +141,19 @@ pub fn run_simulation(config: &InclinedTnoConfig, seed: u64) -> SimulationResult
         bs_epsilon: 1e-11,
     };
 
-    let integrator = WhmIntegrator::new();
-
     let mut snapshots = Vec::new();
     let mut t = 0.0;
-    let mut next_snapshot = 0.0;
+    // Snapshot trigger convention shared with the p9-2016-evidence disk
+    // sims: record at t = 0, then at each crossing of the interval.
+    let mut next_snapshot = config.snapshot_interval;
+    let mut bs_failures = 0usize;
 
     // Initial snapshot
     snapshots.push(take_snapshot(&particles, &active, t, n_actual));
 
     let n_steps = (config.t_total / config.dt).ceil() as usize;
     for step in 0..n_steps {
-        integrator.step(
+        bs_failures += hybrid_step(
             &mut bodies,
             &mut particles,
             &mut active,
@@ -158,7 +162,7 @@ pub fn run_simulation(config: &InclinedTnoConfig, seed: u64) -> SimulationResult
         );
         t += config.dt;
 
-        if t >= next_snapshot + config.snapshot_interval {
+        if t >= next_snapshot {
             snapshots.push(take_snapshot(&particles, &active, t, n_actual));
             next_snapshot += config.snapshot_interval;
 
@@ -174,11 +178,15 @@ pub fn run_simulation(config: &InclinedTnoConfig, seed: u64) -> SimulationResult
         }
     }
 
-    // Final snapshot
-    snapshots.push(take_snapshot(&particles, &active, t, n_actual));
+    // Final snapshot (unless the loop already recorded this epoch)
+    if snapshots.last().map(|s| s.t) != Some(t) {
+        snapshots.push(take_snapshot(&particles, &active, t, n_actual));
+    }
 
     SimulationResult {
         snapshots,
+        seed,
+        bs_failures,
         config_summary: format!(
             "n={}, a=({},{}), q=({},{}), σi={:.0}°, P9: m={}Me a={}AU e={} i={:.0}°",
             config.n_particles,
@@ -197,18 +205,45 @@ pub fn run_simulation(config: &InclinedTnoConfig, seed: u64) -> SimulationResult
 
 fn take_snapshot(particles: &[StateVector], active: &[bool], t: f64, total: usize) -> TnoSnapshot {
     let mut elements = Vec::new();
+    let mut ids = Vec::new();
     for (i, p) in particles.iter().enumerate() {
         if active[i] {
             elements.push(cartesian_to_elements(p, GM_SUN));
+            ids.push(i);
         }
     }
     let active_count = elements.len();
     TnoSnapshot {
         t,
         elements,
+        ids,
         active_count,
         total_count: total,
     }
+}
+
+/// Assemble per-particle time series from a simulation result (particles
+/// are tracked across snapshots by id; a particle's history ends when it is
+/// removed).
+pub fn particle_histories(result: &SimulationResult) -> Vec<ParticleHistory> {
+    let n_total = result.snapshots.first().map(|s| s.total_count).unwrap_or(0);
+
+    let mut histories: Vec<ParticleHistory> = (0..n_total)
+        .map(|id| ParticleHistory {
+            id,
+            times: Vec::new(),
+            elements: Vec::new(),
+        })
+        .collect();
+
+    for snap in &result.snapshots {
+        for (k, &id) in snap.ids.iter().enumerate() {
+            histories[id].times.push(snap.t);
+            histories[id].elements.push(snap.elements[k]);
+        }
+    }
+
+    histories
 }
 
 /// Identify highly inclined particles from a snapshot.
@@ -339,6 +374,36 @@ mod tests {
         let initial = &result.snapshots[0];
         assert!(initial.active_count > 0);
         assert_eq!(initial.total_count, config.n_particles);
+
+        // Reproducibility metadata is recorded with the result
+        assert_eq!(result.seed, 42);
+        assert_eq!(result.bs_failures, 0, "BS close-encounter steps diverged");
+    }
+
+    #[test]
+    fn test_particle_histories_and_census() {
+        let mut config = InclinedTnoConfig::quick_test();
+        config.n_particles = 6;
+        config.t_total = 2e3 * YEAR_DAYS;
+        config.snapshot_interval = 1e2 * YEAR_DAYS;
+        let result = run_simulation(&config, 7);
+
+        let histories = particle_histories(&result);
+        assert_eq!(histories.len(), result.snapshots[0].total_count);
+
+        for history in &histories {
+            assert_eq!(history.times.len(), history.elements.len());
+            // Times are strictly increasing per particle
+            for w in history.times.windows(2) {
+                assert!(w[1] > w[0]);
+            }
+        }
+
+        // The census covers every particle exactly once
+        let (scattered, kozai, high_i, removed) = crate::kozai_lidov::pathway_census(&histories);
+        assert_eq!(scattered + kozai + high_i + removed, histories.len());
+        // Over 2 kyr nothing has had time to leave the scattered disk
+        assert_eq!(high_i, 0);
     }
 
     #[test]
@@ -371,6 +436,7 @@ mod tests {
                     mean_anomaly: 0.0,
                 },
             ],
+            ids: vec![0, 1, 2],
             active_count: 3,
             total_count: 3,
         };
@@ -411,6 +477,7 @@ mod tests {
                     mean_anomaly: 0.0,
                 },
             ],
+            ids: vec![0, 1, 2],
             active_count: 3,
             total_count: 3,
         };
@@ -434,6 +501,7 @@ mod tests {
                 omega_big: 0.0,
                 mean_anomaly: 0.0,
             }],
+            ids: vec![0],
             active_count: 1,
             total_count: 1,
         };

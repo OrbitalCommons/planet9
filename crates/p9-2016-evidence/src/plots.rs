@@ -210,13 +210,7 @@ pub fn scattered_disk_clustering(
         }
 
         let varpi = elem.omega + elem.omega_big;
-        let mut dv = varpi - varpi_p9;
-        while dv > std::f64::consts::PI {
-            dv -= TWO_PI;
-        }
-        while dv < -std::f64::consts::PI {
-            dv += TWO_PI;
-        }
+        let dv = p9_core::analysis::circular::wrap_to_pi(varpi - varpi_p9);
 
         let px = margin + (elem.a - a_min) / a_range * plot_w;
         let py = margin + (1.0 - (dv + std::f64::consts::PI) / TWO_PI) * plot_h;
@@ -317,6 +311,8 @@ mod tests {
             ],
             active_count: 2,
             total_count: 2,
+            varpi_p9: 2.5,
+            seed: 0,
         };
         let svg = scattered_disk_clustering(&snapshot, 2.5, 500, 400);
         assert!(svg.contains("<svg"));

@@ -13,8 +13,6 @@
 //! The equations of motion in vector form are:
 //!   dL̂_i/dt = (3/L_i) Σ_j C_ij (L̂_i · L̂_j) (L̂_i × L̂_j)
 
-use std::f64::consts::PI;
-
 use p9_core::constants::*;
 
 use crate::solar_model;
@@ -113,6 +111,27 @@ fn coupling_constant(m1: f64, m2: f64, a_inner: f64, a_outer: f64, epsilon_outer
     g * m1 * m2 / (4.0 * a_outer) * ratio * ratio / epsilon_outer.powi(3)
 }
 
+/// Giant-planet ↔ Planet Nine coupling, summed planet by planet
+/// (∝ Σ mᵢaᵢ²). Collapsing the giants into one L-conserving ring (as a
+/// previous version did) underestimates this sum by ~45%, a near-2×
+/// systematic in the spin-orbit coupling that shifts the required-i₉
+/// contours.
+fn coupling_gp_9(m9_solar: f64, a9: f64, epsilon_9: f64) -> f64 {
+    solar_model::GIANT_PLANETS
+        .iter()
+        .map(|&(m_i, a_i)| coupling_constant(m_i, m9_solar, a_i, a9, epsilon_9))
+        .sum()
+}
+
+/// Solar-spin-ring ↔ giant-planet coupling, summed planet by planet
+/// (∝ Σ mᵢ/aᵢ³; the collapsed ring underestimates this by ~42%).
+fn coupling_sun_gp(m_sun_eff: f64, a_tilde: f64) -> f64 {
+    solar_model::GIANT_PLANETS
+        .iter()
+        .map(|&(m_i, a_i)| coupling_constant(m_sun_eff, m_i, a_tilde, a_i, 1.0))
+        .sum()
+}
+
 /// Compute the cross product a × b.
 fn cross(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
     [
@@ -186,7 +205,13 @@ fn derivatives(
     (dl_gp, dl_9, dl_sun)
 }
 
-/// Add scaled derivative: dst = src + scale * deriv
+/// Add scaled derivative: dst = src + scale * deriv.
+///
+/// RK4 stages are *not* renormalized: projecting the intermediate stages
+/// onto the unit sphere violates the Butcher conditions and degrades the
+/// method to 2nd order. Only the completed step is renormalized (an O(dt⁵)
+/// projection, since the exact flow preserves the norms), which keeps the
+/// scheme 4th order — see the dt-halving convergence test.
 fn add_scaled(
     src: &SpinOrbitState,
     scale: f64,
@@ -194,7 +219,7 @@ fn add_scaled(
     dl_9: &[f64; 3],
     dl_sun: &[f64; 3],
 ) -> SpinOrbitState {
-    let mut s = SpinOrbitState {
+    SpinOrbitState {
         l_gp: [
             src.l_gp[0] + scale * dl_gp[0],
             src.l_gp[1] + scale * dl_gp[1],
@@ -210,12 +235,7 @@ fn add_scaled(
             src.l_sun[1] + scale * dl_sun[1],
             src.l_sun[2] + scale * dl_sun[2],
         ],
-    };
-    // Re-normalize to keep unit vectors
-    normalize(&mut s.l_gp);
-    normalize(&mut s.l_9);
-    normalize(&mut s.l_sun);
-    s
+    }
 }
 
 /// Snapshot of the integration at a given time.
@@ -249,13 +269,12 @@ pub fn integrate_obliquity(
     let dt = params.dt;
     let n_steps = (t_age / dt).ceil() as usize;
 
-    let (m_planets, a_planets) = solar_model::giant_planet_effective_orbit();
     let l_gp_mag = solar_model::giant_planet_angular_momentum();
     let epsilon_9 = params.epsilon_9();
     let l_9_mag = solar_model::p9_angular_momentum(params.m9_solar, params.a9, params.e9);
 
-    // Giant planet ↔ Planet Nine coupling (constant)
-    let c_gp_9 = coupling_constant(m_planets, params.m9_solar, a_planets, params.a9, epsilon_9);
+    // Giant planet ↔ Planet Nine coupling (constant, per-planet sum)
+    let c_gp_9 = coupling_gp_9(params.m9_solar, params.a9, epsilon_9);
 
     let mut state = initial;
     let mut t = 0.0;
@@ -274,7 +293,7 @@ pub fn integrate_obliquity(
             // Effective mass of solar spin ring
             let m_sun_eff = l_sun_mag / (G_AU3_MSUN_DAY2 * a_tilde).sqrt();
 
-            let c_sun_gp = coupling_constant(m_sun_eff, m_planets, a_tilde, a_planets, 1.0);
+            let c_sun_gp = coupling_sun_gp(m_sun_eff, a_tilde);
             let c_sun_9 =
                 coupling_constant(m_sun_eff, params.m9_solar, a_tilde, params.a9, epsilon_9);
 
@@ -335,13 +354,7 @@ fn make_snapshot(state: &SpinOrbitState, t: f64) -> ObliquitySnapshot {
     let _i_sun = state.l_sun[2].clamp(-1.0, 1.0).acos();
     let omega_big_sun = state.l_sun[1].atan2(state.l_sun[0]);
 
-    let mut delta = omega_big_sun - omega_big_9;
-    while delta > PI {
-        delta -= 2.0 * PI;
-    }
-    while delta < -PI {
-        delta += 2.0 * PI;
-    }
+    let delta = p9_core::analysis::circular::wrap_to_pi(omega_big_sun - omega_big_9);
 
     ObliquitySnapshot {
         t,
@@ -357,12 +370,141 @@ fn make_snapshot(state: &SpinOrbitState, t: f64) -> ObliquitySnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_coupling_constant_positive() {
         let c = coupling_constant(1e-3, 3e-5, 10.0, 700.0, 0.8);
         assert!(c > 0.0, "Coupling constant should be positive");
         assert!(c.is_finite());
+    }
+
+    #[test]
+    fn test_per_planet_coupling_exceeds_collapsed_ring() {
+        // H6 regression: the collapsed L-conserving ring (m_total at a_eff
+        // with L = m_total √(GM a_eff)) underestimates both coupling sums
+        // by ~40-45%; the per-planet sums must be substantially larger.
+        let m_total: f64 = solar_model::GIANT_PLANETS.iter().map(|&(m, _)| m).sum();
+        let l_total = solar_model::giant_planet_angular_momentum();
+        let a_eff = (l_total / m_total).powi(2) / G_AU3_MSUN_DAY2;
+
+        let m9 = 10.0 * EARTH_MASS_SOLAR;
+        let (a9, eps9) = (700.0, 0.8);
+        let c_collapsed_gp9 = coupling_constant(m_total, m9, a_eff, a9, eps9);
+        let c_per_planet_gp9 = coupling_gp_9(m9, a9, eps9);
+        let ratio_gp9 = c_per_planet_gp9 / c_collapsed_gp9;
+        assert!(
+            ratio_gp9 > 1.5 && ratio_gp9 < 2.5,
+            "Σmᵢaᵢ² per-planet / collapsed = {ratio_gp9:.2} (expected ~1.8)"
+        );
+
+        let a_tilde = 1e-4; // a_tilde << a_planet: ratio independent of it
+        let m_sun_eff = 1e-2;
+        let c_collapsed_sgp = coupling_constant(m_sun_eff, m_total, a_tilde, a_eff, 1.0);
+        let c_per_planet_sgp = coupling_sun_gp(m_sun_eff, a_tilde);
+        let ratio_sgp = c_per_planet_sgp / c_collapsed_sgp;
+        assert!(
+            ratio_sgp > 1.4 && ratio_sgp < 2.5,
+            "Σmᵢ/aᵢ³ per-planet / collapsed = {ratio_sgp:.2} (expected ~1.7)"
+        );
+    }
+
+    #[test]
+    fn test_node_regression_matches_two_vector_frequency() {
+        // L4: in the two-vector (gp ↔ 9) problem both L̂'s precess rigidly
+        // about the conserved total L with frequency
+        //   Ω̇ = −3 C cos θ |L_tot| / (L_gp L_9)
+        // (regression for prograde mutual inclination). The solar spin ring
+        // contributes only at the ~1e-10 level, so the integrated node rate
+        // must match the analytic frequency.
+        let m9_solar = 10.0 * EARTH_MASS_SOLAR;
+        let (a9, e9) = (700.0, 0.6);
+        let l_gp_mag = solar_model::giant_planet_angular_momentum();
+        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, a9, e9);
+
+        let initial = SpinOrbitState::from_inclinations(20.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
+        let theta = initial.mutual_inclination();
+        let epsilon_9 = (1.0_f64 - e9 * e9).sqrt();
+        let c_gp_9 = coupling_gp_9(m9_solar, a9, epsilon_9);
+
+        // |L_tot| with the two vectors θ apart
+        let l_tot =
+            (l_gp_mag * l_gp_mag + l_9_mag * l_9_mag + 2.0 * l_gp_mag * l_9_mag * theta.cos())
+                .sqrt();
+        let omega_node_analytic = -3.0 * c_gp_9 * theta.cos() * l_tot / (l_gp_mag * l_9_mag);
+
+        let params = SecularParams {
+            m9_solar,
+            a9,
+            e9,
+            t_total: 1e8 * YEAR_DAYS,
+            dt: 1e4 * YEAR_DAYS,
+        };
+        let snapshots = integrate_obliquity(initial, &params, 1e7 * YEAR_DAYS);
+
+        let first = &snapshots[0];
+        let last = snapshots.last().unwrap();
+        // Total node motion is ~0.02 rad here, far from wrapping.
+        let omega_node_measured = (last.omega_big_9 - first.omega_big_9) / (last.t - first.t);
+
+        assert!(
+            omega_node_measured < 0.0,
+            "prograde mutual tilt must regress the node: {omega_node_measured:.3e}"
+        );
+        let rel = ((omega_node_measured - omega_node_analytic) / omega_node_analytic).abs();
+        assert!(
+            rel < 0.05,
+            "node rate {omega_node_measured:.4e} vs analytic {omega_node_analytic:.4e} (rel {rel:.2e})"
+        );
+    }
+
+    #[test]
+    fn test_rk4_dt_halving_convergence() {
+        // L5: with stage renormalization removed, the integrator must show
+        // 4th-order convergence (error ratio ~16 under dt halving). Uses a
+        // compact toy orbit (a9 = 70 AU) so the precession is fast enough
+        // for truncation error to dominate roundoff.
+        let m9_solar = 10.0 * EARTH_MASS_SOLAR;
+        let (a9, e9) = (70.0, 0.6);
+        let l_gp_mag = solar_model::giant_planet_angular_momentum();
+        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, a9, e9);
+        let initial = SpinOrbitState::from_inclinations(30.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
+
+        let t_total = 1e7 * YEAR_DAYS;
+        let run = |dt: f64| -> [f64; 3] {
+            let params = SecularParams {
+                m9_solar,
+                a9,
+                e9,
+                t_total,
+                dt,
+            };
+            let snap = integrate_obliquity(initial, &params, t_total);
+            let last = snap.last().unwrap();
+            [
+                last.i_9.sin() * last.omega_big_9.cos(),
+                last.i_9.sin() * last.omega_big_9.sin(),
+                last.i_9.cos(),
+            ]
+        };
+
+        let dist = |a: [f64; 3], b: [f64; 3]| -> f64 {
+            ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+        };
+
+        let reference = run(1.25e4 * YEAR_DAYS);
+        let e1 = dist(run(1e5 * YEAR_DAYS), reference);
+        let e2 = dist(run(5e4 * YEAR_DAYS), reference);
+
+        assert!(
+            e1 > 1e-12,
+            "error too small to measure convergence: {e1:.2e}"
+        );
+        let ratio = e1 / e2;
+        assert!(
+            (8.0..32.0).contains(&ratio),
+            "dt-halving error ratio = {ratio:.1} (4th order expects ~16; e1={e1:.2e}, e2={e2:.2e})"
+        );
     }
 
     #[test]
