@@ -93,16 +93,19 @@ pub fn generate_scattered_disk<R: Rng>(
     let mut particles = Vec::with_capacity(config.n_particles);
 
     for _ in 0..config.n_particles {
-        let a = a_dist.sample(rng);
-        let q = q_dist.sample(rng);
-
-        // Eccentricity from a and q: e = 1 - q/a
-        let e = 1.0 - q / a;
-
-        // Skip invalid configurations (q > a means e < 0, or q = 0)
-        if e < 0.0 || e >= 1.0 {
-            continue;
-        }
+        // Resample (not skip) invalid (a, q) draws with q > a, so the output
+        // always has exactly n_particles. The resulting distribution is
+        // uniform on the q <= a wedge of the [a_min, a_max] x [q_min, q_max]
+        // rectangle (a skip-on-invalid loop silently returned fewer
+        // particles and the same wedge bias, undocumented).
+        let (a, e) = loop {
+            let a = a_dist.sample(rng);
+            let q = q_dist.sample(rng);
+            if q <= a {
+                // e = 1 - q/a in [0, 1); q >= q_min > 0 keeps e < 1.
+                break (a, 1.0 - q / a);
+            }
+        };
 
         // Half-normal inclination: take absolute value of normal sample
         let i = incl_normal.sample(rng).abs();
@@ -151,13 +154,14 @@ pub fn generate_planar_disk<R: Rng>(
     let mut particles = Vec::with_capacity(n_particles);
 
     for _ in 0..n_particles {
-        let a = a_dist.sample(rng);
-        let q = q_dist.sample(rng);
-        let e = 1.0 - q / a;
-
-        if e < 0.0 || e >= 1.0 {
-            continue;
-        }
+        // Resample invalid q > a draws (see generate_scattered_disk).
+        let (a, e) = loop {
+            let a = a_dist.sample(rng);
+            let q = q_dist.sample(rng);
+            if q <= a {
+                break (a, 1.0 - q / a);
+            }
+        };
 
         let omega = angle_dist.sample(rng);
         let mean_anomaly = angle_dist.sample(rng);

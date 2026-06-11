@@ -1,53 +1,55 @@
 //! Parameter-space exclusion analysis for Planet Nine.
 //!
-//! Given a reference population of P9 orbital parameters drawn from the
-//! prior (Brown & Batygin 2021 Table 1), compute the fraction of parameter
-//! space ruled out by the ZTF non-detection.
+//! Given a reference population of synthetic Planet Nine realizations drawn
+//! from the posterior (Brown & Batygin 2021), each orbit's probability of
+//! having been detected by ZTF is computed from its sky position
+//! (declination footprint), its apparent magnitude (logistic recovery
+//! efficiency) and the linking efficiency. Since no Planet Nine was found,
+//! the *expected exclusion fraction* is the mean of these per-orbit
+//! detection probabilities.
+//!
+//! (The previous implementation collapsed to a pure brightness cut: a
+//! constant 0.75 × 0.9966 "probability" exceeded its 0.5 threshold for every
+//! object brighter than 20.5, so footprint and linking had zero effect, and
+//! the headline test fabricated 564 bright objects out of 1000 to "match"
+//! the paper's 56.4%.)
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::types::OrbitalElements;
+
+use crate::detection_efficiency::detection_probability_for_orbit;
 use crate::survey_model::ZtfSurvey;
+
+pub use p9_core::analysis::surveys::{combined_unique_exclusion, EXCLUSION_FRACTIONS};
 
 /// Result of the exclusion analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExclusionResult {
-    /// Fraction of the prior parameter space excluded (paper: 56.4%)
+    /// Expected fraction of the prior parameter space excluded (paper: 56.4%)
     pub fraction_excluded: f64,
     /// Total number of prior draws evaluated
     pub n_total: u32,
-    /// Number of draws that would have been detected (and thus excluded)
-    pub n_excluded: u32,
+    /// Expected number of draws that would have been detected
+    pub expected_excluded: f64,
 }
 
-/// Compute the fraction of the Planet Nine prior excluded by the ZTF survey.
-///
-/// Each entry in `magnitudes` is the predicted apparent magnitude for a
-/// synthetic P9 orbit drawn from the prior. The survey model determines
-/// which of these would have been detected; since no P9 was found, those
-/// orbits are excluded.
-///
-/// The linking efficiency and sky-coverage fraction are folded in as
-/// multiplicative probabilities.
-pub fn compute_exclusion(survey: &ZtfSurvey, magnitudes: &[f64]) -> ExclusionResult {
-    let n_total = magnitudes.len() as u32;
-    let mut n_excluded = 0u32;
-
-    let linking_eff = survey.linking_efficiency();
-
-    for mag in magnitudes {
-        if !survey.is_detectable(*mag) {
-            continue;
-        }
-        // Probability this orbit falls in the ZTF footprint and is linked
-        let p_detect = survey.sky_coverage_frac * linking_eff;
-        // Treat each orbit as excluded if its detection probability exceeds 50%
-        if p_detect > 0.5 {
-            n_excluded += 1;
-        }
-    }
+/// Compute the expected fraction of the Planet Nine prior excluded by the
+/// ZTF non-detection, from per-orbit detection probabilities accumulated
+/// deterministically over the (seeded, caller-generated) reference
+/// population of `(elements, apparent magnitude)` pairs.
+pub fn compute_exclusion(
+    survey: &ZtfSurvey,
+    population: &[(OrbitalElements, f64)],
+) -> ExclusionResult {
+    let n_total = population.len() as u32;
+    let expected_excluded: f64 = population
+        .iter()
+        .map(|(elements, mag)| detection_probability_for_orbit(survey, elements, *mag))
+        .sum();
 
     let fraction_excluded = if n_total > 0 {
-        n_excluded as f64 / n_total as f64
+        expected_excluded / n_total as f64
     } else {
         0.0
     };
@@ -55,64 +57,117 @@ pub fn compute_exclusion(survey: &ZtfSurvey, magnitudes: &[f64]) -> ExclusionRes
     ExclusionResult {
         fraction_excluded,
         n_total,
-        n_excluded,
+        expected_excluded,
     }
-}
-
-/// Placeholder for combining ZTF exclusion with DES and Pan-STARRS results.
-///
-/// The combined exclusion across independent surveys is:
-///   1 - (1 - f_ZTF)(1 - f_DES)(1 - f_PS1)
-/// assuming independent sky coverage. Full implementation requires the
-/// exclusion maps from Meisner et al. (2018) and Holman & Payne (2016).
-pub fn combined_exclusion(ztf_excluded: f64, des_excluded: f64, ps1_excluded: f64) -> f64 {
-    1.0 - (1.0 - ztf_excluded) * (1.0 - des_excluded) * (1.0 - ps1_excluded)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use p9_2021_orbit::reference_population::generate_reference_population;
+    use p9_core::constants::DEG2RAD;
+    use rand::SeedableRng;
 
+    /// H3 regression against the published number: a seeded reference
+    /// population from the p9-2021-orbit posterior emulator, piped through
+    /// the per-orbit survey model, must reproduce the ZTF exclusion fraction
+    /// (0.564, shared table) to within a few points.
     #[test]
-    fn paper_exclusion_fraction() {
-        // Reproduce the paper's 56.4% exclusion by constructing a magnitude
-        // distribution where ~56.4% of draws are brighter than the depth limit.
-        let n = 1000;
-        let n_bright = 564;
-        let mut mags = Vec::with_capacity(n);
-        for _ in 0..n_bright {
-            mags.push(19.0); // detectable
-        }
-        for _ in n_bright..n {
-            mags.push(22.0); // too faint
-        }
+    fn paper_exclusion_fraction_from_reference_population() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2021);
+        let population: Vec<(OrbitalElements, f64)> = generate_reference_population(4000, &mut rng)
+            .into_iter()
+            .map(|p| {
+                (
+                    OrbitalElements {
+                        a: p.a,
+                        e: p.e,
+                        i: p.i,
+                        omega: p.omega,
+                        omega_big: p.omega_big,
+                        mean_anomaly: p.mean_anomaly,
+                    },
+                    p.v_magnitude,
+                )
+            })
+            .collect();
 
         let survey = ZtfSurvey::default();
-        let result = compute_exclusion(&survey, &mags);
-        assert_eq!(result.n_total, n as u32);
-        assert!((result.fraction_excluded - 0.564).abs() < 0.01);
+        let result = compute_exclusion(&survey, &population);
+
+        let published = EXCLUSION_FRACTIONS[0].unique_fraction; // ZTF: 0.564
+        assert!(
+            (result.fraction_excluded - published).abs() < 0.08,
+            "exclusion {:.3} vs published {published}",
+            result.fraction_excluded
+        );
+    }
+
+    /// The footprint must matter: removing the declination cut changes the
+    /// exclusion (the old model was invariant to it).
+    #[test]
+    fn footprint_affects_exclusion() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(7);
+        let population: Vec<(OrbitalElements, f64)> = generate_reference_population(2000, &mut rng)
+            .into_iter()
+            .map(|p| {
+                (
+                    OrbitalElements {
+                        a: p.a,
+                        e: p.e,
+                        i: p.i,
+                        omega: p.omega,
+                        omega_big: p.omega_big,
+                        mean_anomaly: p.mean_anomaly,
+                    },
+                    p.v_magnitude,
+                )
+            })
+            .collect();
+
+        let ztf = ZtfSurvey::default();
+        let all_sky = ZtfSurvey {
+            dec_limit_deg: -90.0,
+            ..ZtfSurvey::default()
+        };
+        let f_ztf = compute_exclusion(&ztf, &population).fraction_excluded;
+        let f_all = compute_exclusion(&all_sky, &population).fraction_excluded;
+        assert!(
+            f_all > f_ztf + 0.02,
+            "all-sky {f_all:.3} should exceed dec-limited {f_ztf:.3}"
+        );
     }
 
     #[test]
     fn all_faint_nothing_excluded() {
-        let mags = vec![23.0; 200];
         let survey = ZtfSurvey::default();
-        let result = compute_exclusion(&survey, &mags);
-        assert_eq!(result.n_excluded, 0);
-        assert!((result.fraction_excluded - 0.0).abs() < 1e-10);
+        let population: Vec<(OrbitalElements, f64)> = (0..200)
+            .map(|k| {
+                (
+                    OrbitalElements {
+                        a: 400.0,
+                        e: 0.2,
+                        i: 15.0 * DEG2RAD,
+                        omega: 0.0,
+                        omega_big: 0.0,
+                        mean_anomaly: k as f64 * DEG2RAD,
+                    },
+                    24.0,
+                )
+            })
+            .collect();
+        let result = compute_exclusion(&survey, &population);
+        assert!(result.fraction_excluded < 1e-4);
     }
 
+    /// Combination across surveys uses the shared p9-core table.
     #[test]
-    fn combined_exclusion_independent_surveys() {
-        let combined = combined_exclusion(0.564, 0.20, 0.10);
-        // 1 - (1-0.564)*(1-0.20)*(1-0.10) = 1 - 0.436*0.80*0.90 = 1 - 0.31392
-        assert!((combined - 0.68608).abs() < 1e-4);
-    }
-
-    #[test]
-    fn combined_exclusion_boundary_cases() {
-        assert!((combined_exclusion(0.0, 0.0, 0.0) - 0.0).abs() < 1e-10);
-        assert!((combined_exclusion(1.0, 0.0, 0.0) - 1.0).abs() < 1e-10);
-        assert!((combined_exclusion(1.0, 1.0, 1.0) - 1.0).abs() < 1e-10);
+    fn combined_exclusion_from_shared_table() {
+        let fracs: Vec<f64> = EXCLUSION_FRACTIONS
+            .iter()
+            .map(|s| s.unique_fraction)
+            .collect();
+        let combined = combined_unique_exclusion(&fracs);
+        assert!((combined - 0.785).abs() < 1e-12);
     }
 }

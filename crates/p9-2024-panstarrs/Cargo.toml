@@ -10,3 +10,6 @@ rand_distr = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 approx = { workspace = true }
+p9-2021-orbit = { version = "0.1.0", path = "../p9-2021-orbit" }
+p9-2021-ztf = { version = "0.1.0", path = "../p9-2021-ztf" }
+p9-2022-des = { version = "0.1.0", path = "../p9-2022-des" }

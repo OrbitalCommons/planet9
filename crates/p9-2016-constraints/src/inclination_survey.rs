@@ -66,16 +66,55 @@ pub struct InclinationResult {
     pub accepted: bool,
 }
 
-/// Acceptance criteria for inclination survey:
-/// 1. Mean pole angle > 20°
-/// 2. RMS spread < 6.2° (matching observed 6 KBOs)
-/// 3. Confinement probability > 0.5
+/// Observed orbital-pole statistics of the vetted ETNO sample
+/// (`p9_core::data::etno`): returns (mean pole tilt from the ecliptic pole,
+/// RMS angular scatter of the poles about their mean direction), both in
+/// degrees. These are the comparison values for the inclination survey,
+/// replacing previously invented thresholds (20°, 6.2°).
+pub fn observed_pole_stats() -> (f64, f64) {
+    let poles: Vec<(f64, f64, f64)> = p9_core::data::etno::BROWN_2017_SAMPLE
+        .iter()
+        .map(|k| pole_direction(k.i_deg * DEG2RAD, k.omega_big_deg * DEG2RAD))
+        .collect();
+
+    let mut mean = (0.0, 0.0, 0.0);
+    for p in &poles {
+        mean.0 += p.0;
+        mean.1 += p.1;
+        mean.2 += p.2;
+    }
+    let mag = (mean.0 * mean.0 + mean.1 * mean.1 + mean.2 * mean.2).sqrt();
+    let mean = (mean.0 / mag, mean.1 / mag, mean.2 / mag);
+
+    let tilt = pole_separation_deg(mean, (0.0, 0.0, 1.0));
+    let rms = (poles
+        .iter()
+        .map(|&p| pole_separation_deg(mean, p).powi(2))
+        .sum::<f64>()
+        / poles.len() as f64)
+        .sqrt();
+
+    (tilt, rms)
+}
+
+/// Acceptance criteria for the inclination survey, recast as a comparison
+/// against the observed ETNO sample (`observed_pole_stats`; tilt ≈ 13.8°,
+/// RMS ≈ 15.8°):
+/// 1. the simulated mean pole tilt is consistent with the observed mean
+///    tilt to within the observed sample scatter;
+/// 2. the simulated poles scatter no more than the observed RMS (the
+///    population is at least as confined as the data);
+/// 3. confinement probability > 0.5 — **assumption**: a majority floor not
+///    published in the paper.
 pub fn evaluate_inclination_acceptance(
     pole_angle_mean: f64,
     pole_angle_rms: f64,
     confinement_prob: f64,
 ) -> bool {
-    pole_angle_mean > 20.0 && pole_angle_rms < 6.2 && confinement_prob > 0.5
+    let (obs_tilt, obs_rms) = observed_pole_stats();
+    (pole_angle_mean - obs_tilt).abs() <= obs_rms
+        && pole_angle_rms <= obs_rms
+        && confinement_prob > 0.5
 }
 
 /// Compute the pole angle of an orbit relative to the ecliptic.
@@ -141,10 +180,32 @@ mod tests {
     }
 
     #[test]
+    fn test_observed_pole_stats() {
+        // Mean pole tilt ≈ 13.8° (sample inclinations 12–30° with widely
+        // spread nodes) and RMS scatter ≈ 15.8°.
+        let (tilt, rms) = observed_pole_stats();
+        assert!((tilt - 13.8).abs() < 0.5, "mean tilt = {tilt:.1}°");
+        assert!((rms - 15.8).abs() < 0.5, "pole RMS = {rms:.1}°");
+    }
+
+    #[test]
     fn test_acceptance_criteria() {
-        assert!(evaluate_inclination_acceptance(25.0, 5.0, 0.7));
-        assert!(!evaluate_inclination_acceptance(15.0, 5.0, 0.7)); // pole angle too low
-        assert!(!evaluate_inclination_acceptance(25.0, 8.0, 0.7)); // spread too high
-        assert!(!evaluate_inclination_acceptance(25.0, 5.0, 0.3)); // confinement too low
+        let (obs_tilt, obs_rms) = observed_pole_stats();
+        // Matching the observed sample: accepted
+        assert!(evaluate_inclination_acceptance(obs_tilt, obs_rms, 0.7));
+        // Mean tilt inconsistent with the observed plane: rejected
+        assert!(!evaluate_inclination_acceptance(
+            obs_tilt + obs_rms + 1.0,
+            obs_rms,
+            0.7
+        ));
+        // Scatter larger than observed: rejected
+        assert!(!evaluate_inclination_acceptance(
+            obs_tilt,
+            obs_rms + 1.0,
+            0.7
+        ));
+        // Confinement below the (assumed) majority floor: rejected
+        assert!(!evaluate_inclination_acceptance(obs_tilt, obs_rms, 0.3));
     }
 }

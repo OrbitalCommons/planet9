@@ -12,7 +12,8 @@
 //! - Implied heliocentric distance (given assumed orbit shape)
 //! - Constraints on (a, e) pairs consistent with the observed motion
 
-use p9_core::constants::{GM_SUN, RAD2DEG, YEAR_DAYS};
+use crate::proper_motion;
+use crate::survey_model::angular_separation_arcmin;
 
 /// The candidate pair from Phan et al. (2025) Table 2.
 pub struct CandidatePair {
@@ -78,9 +79,10 @@ pub struct TwoEpochConstraints {
 pub struct DistanceOrbitConstraint {
     /// Assumed semi-major axis (AU)
     pub a_au: f64,
-    /// Implied heliocentric distance (AU) from circular-orbit proper motion inversion
-    pub r_circular_au: f64,
-    /// Implied eccentricity if distance = r_circular and semi-major axis = a
+    /// Heliocentric distance at observation (AU), perihelion branch
+    pub r_au: f64,
+    /// Eccentricity required to reproduce the observed sky rate at
+    /// perihelion of an orbit with this semi-major axis
     pub implied_eccentricity: f64,
     /// Whether this (a, e) combination is physically plausible
     pub plausible: bool,
@@ -90,19 +92,19 @@ pub struct DistanceOrbitConstraint {
 pub fn derive_constraints(pair: &CandidatePair) -> TwoEpochConstraints {
     let baseline = pair.akari_epoch - pair.iras_epoch;
 
+    // Angular separation: single shared Vincenty implementation.
+    let sep_arcmin = angular_separation_arcmin(
+        pair.iras_ra_deg,
+        pair.iras_dec_deg,
+        pair.akari_ra_deg,
+        pair.akari_dec_deg,
+    );
+
     let ra1 = pair.iras_ra_deg.to_radians();
     let dec1 = pair.iras_dec_deg.to_radians();
     let ra2 = pair.akari_ra_deg.to_radians();
     let dec2 = pair.akari_dec_deg.to_radians();
-
-    // Angular separation (Vincenty)
     let d_ra = ra2 - ra1;
-    let num = ((dec2.cos() * d_ra.sin()).powi(2)
-        + (dec1.cos() * dec2.sin() - dec1.sin() * dec2.cos() * d_ra.cos()).powi(2))
-    .sqrt();
-    let den = dec1.sin() * dec2.sin() + dec1.cos() * dec2.cos() * d_ra.cos();
-    let sep_rad = num.atan2(den);
-    let sep_arcmin = sep_rad.to_degrees() * 60.0;
 
     // Position angle (bearing from IRAS position to AKARI position)
     let pa_y = dec2.cos() * d_ra.sin();
@@ -125,95 +127,72 @@ pub fn derive_constraints(pair: &CandidatePair) -> TwoEpochConstraints {
     }
 }
 
-/// Invert the circular-orbit proper motion to get implied distance.
-///
-/// µ = sqrt(GM) / r^(3/2) * conversion
-/// r = (sqrt(GM) * conversion / µ_per_day)^(2/3)
+/// Invert the circular-orbit, parallax-free proper motion to get the
+/// implied (lower-bound) distance. Delegates to the single shared
+/// implementation in `proper_motion`.
 pub fn implied_distance_circular(proper_motion_arcmin_yr: f64) -> f64 {
-    let mu_per_day = proper_motion_arcmin_yr / (RAD2DEG * 60.0 * YEAR_DAYS);
-    // mu_per_day = sqrt(GM) / r^(3/2)
-    // r^(3/2) = sqrt(GM) / mu_per_day
-    (GM_SUN.sqrt() / mu_per_day).powf(2.0 / 3.0)
+    proper_motion::implied_distance_circular(proper_motion_arcmin_yr)
 }
 
-/// Explore the (a, e) parameter space consistent with the observed proper motion.
+/// Explore the (a, e) parameter space consistent with the observed proper
+/// motion, assuming the object is observed near perihelion (the favorable
+/// configuration: at perihelion the velocity is purely transverse and the
+/// sky rate is maximal for a given orbit).
 ///
-/// For each assumed semi-major axis `a`, compute the heliocentric distance `r`
-/// that would produce the observed proper motion for a circular orbit, then
-/// derive the eccentricity needed: e = |1 - r/a| (approximately).
+/// For each assumed semi-major axis `a`, solve for the eccentricity at
+/// which the perihelion transverse rate
+///
+///   µ(e) = √(GM·a(1−e²)) / (a(1−e))²
+///
+/// (monotonically increasing in e) matches the observed rate, by
+/// bisection. No solution with e ∈ [0, 0.95] → implausible.
 pub fn explore_orbit_space(
     constraints: &TwoEpochConstraints,
     a_values: &[f64],
 ) -> Vec<DistanceOrbitConstraint> {
+    let mu_obs = constraints.proper_motion_arcmin_yr;
     a_values
         .iter()
         .map(|&a| {
-            // For the observed µ, the vis-viva equation gives:
-            // µ = v/r = sqrt(GM*(2/r - 1/a)) / r
-            // We need to solve for r given µ and a.
-            // Use numerical inversion.
-            let r = solve_distance_for_motion(constraints.proper_motion_arcmin_yr, a);
-            let e = if r <= a {
-                // r = a(1-e*cos(E)), but simplest constraint: perihelion <= r <= aphelion
-                // e_min such that a(1-e) <= r: e >= 1 - r/a
-                // e_max such that r <= a(1+e): e >= r/a - 1
-                (1.0 - r / a).abs()
-            } else {
-                // r > a: only possible if r is near aphelion
-                r / a - 1.0
+            let rate_at = |e: f64| {
+                let r = a * (1.0 - e);
+                proper_motion::transverse_rate_arcmin_yr(r, a, e)
             };
-            let plausible = e < 1.0 && r > 0.0 && a > 0.0;
+            const E_LIM: f64 = 0.95;
+            if rate_at(0.0) > mu_obs || rate_at(E_LIM) < mu_obs {
+                // Even circular at r = a is too fast, or e = 0.95 too slow.
+                return DistanceOrbitConstraint {
+                    a_au: a,
+                    r_au: f64::NAN,
+                    implied_eccentricity: f64::NAN,
+                    plausible: false,
+                };
+            }
+            let (mut lo, mut hi) = (0.0_f64, E_LIM);
+            for _ in 0..60 {
+                let mid = 0.5 * (lo + hi);
+                if rate_at(mid) < mu_obs {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+            }
+            let e = 0.5 * (lo + hi);
             DistanceOrbitConstraint {
                 a_au: a,
-                r_circular_au: r,
+                r_au: a * (1.0 - e),
                 implied_eccentricity: e,
-                plausible,
+                plausible: true,
             }
         })
         .collect()
 }
 
-/// Solve for heliocentric distance r given observed proper motion and semi-major axis a.
-///
-/// µ = sqrt(GM * (2/r - 1/a)) / r  →  µ²r² = GM(2/r - 1/a)
-/// µ²r³ + GM/a = 2*GM*... This is cubic in r; we solve numerically.
-fn solve_distance_for_motion(mu_arcmin_yr: f64, a_au: f64) -> f64 {
-    let mu_rad_per_day = mu_arcmin_yr / (RAD2DEG * 60.0 * YEAR_DAYS);
-    let mu2 = mu_rad_per_day * mu_rad_per_day;
-
-    // f(r) = mu² * r² - GM*(2/r - 1/a)
-    // f(r) = mu² * r² - 2*GM/r + GM/a
-    // We want f(r) = 0, with r > 0.
-    // Multiply by r: mu² * r³ + GM/a * r - 2*GM = 0
-
-    let gm = GM_SUN;
-    // Coefficients of cubic: mu²*r³ + 0*r² + (GM/a)*r - 2*GM = 0
-    // Use Newton's method starting from the circular estimate.
-    let r_circ = (gm.sqrt() / mu_rad_per_day).powf(2.0 / 3.0);
-    let mut r = r_circ;
-
-    for _ in 0..100 {
-        let f = mu2 * r.powi(3) + (gm / a_au) * r - 2.0 * gm;
-        let fp = 3.0 * mu2 * r.powi(2) + gm / a_au;
-        if fp.abs() < 1e-30 {
-            break;
-        }
-        let dr = f / fp;
-        r -= dr;
-        if r < 1.0 {
-            r = 1.0;
-        }
-        if dr.abs() < 1e-10 {
-            break;
-        }
-    }
-    r
-}
-
 /// Ecliptic coordinates (approximate) from RA/Dec.
 ///
 /// Uses the obliquity of the ecliptic ε = 23.4393° to convert
-/// equatorial coordinates to ecliptic coordinates.
+/// equatorial coordinates to ecliptic coordinates. (p9-core provides no
+/// equatorial↔ecliptic transform; kept local.)
 pub fn equatorial_to_ecliptic(ra_deg: f64, dec_deg: f64) -> (f64, f64) {
     let eps = 23.4393_f64.to_radians();
     let ra = ra_deg.to_radians();
@@ -280,15 +259,23 @@ mod tests {
     }
 
     #[test]
-    fn implied_circular_distance() {
+    fn implied_circular_distance_is_lower_bound() {
         let pair = CandidatePair::paper_candidate();
         let c = derive_constraints(&pair);
-        let d = implied_distance_circular(c.proper_motion_arcmin_yr);
-        // For µ ≈ 2.06'/yr circular orbit, d ≈ 420 AU
+        let d_circ = implied_distance_circular(c.proper_motion_arcmin_yr);
+        // Circular/parallax-free inversion: ~420 AU (the lower bound).
         assert!(
-            d > 350.0 && d < 500.0,
-            "implied circular distance = {d:.0} AU"
+            d_circ > 350.0 && d_circ < 500.0,
+            "implied circular distance = {d_circ:.0} AU"
         );
+        // The geocentric maximum-distance inversion lands in the paper's
+        // 500–700 AU range.
+        let d_geo = proper_motion::implied_distance(c.separation_arcmin, c.baseline_years);
+        assert!(
+            d_geo > 500.0 && d_geo < 720.0,
+            "implied geocentric distance = {d_geo:.0} AU"
+        );
+        assert!(d_geo > d_circ);
     }
 
     #[test]
@@ -305,17 +292,30 @@ mod tests {
             "no plausible orbits found in 300-1200 AU range"
         );
 
-        // For a = 700 AU (nominal P9), check eccentricity is moderate
+        // For a = 700 AU (nominal P9): perihelion-branch solution at
+        // e ≈ 0.26, r ≈ 520 AU.
         let a700 = orbits
             .iter()
             .find(|o| (o.a_au - 700.0).abs() < 1.0)
             .unwrap();
         assert!(a700.plausible, "a=700 AU should be plausible");
         assert!(
-            a700.implied_eccentricity < 0.8,
-            "e = {:.2} at a=700, expected moderate",
+            a700.implied_eccentricity > 0.1 && a700.implied_eccentricity < 0.4,
+            "e = {:.2} at a=700, expected ~0.26",
             a700.implied_eccentricity
         );
+        assert!(
+            (a700.r_au - 520.0).abs() < 40.0,
+            "r = {:.0} at a=700, expected ~520",
+            a700.r_au
+        );
+        // Round trip: the solved (r, a, e) reproduces the observed rate.
+        let mu = proper_motion::transverse_rate_arcmin_yr(
+            a700.r_au,
+            a700.a_au,
+            a700.implied_eccentricity,
+        );
+        assert!((mu - c.proper_motion_arcmin_yr).abs() < 1e-6);
     }
 
     #[test]
@@ -355,19 +355,6 @@ mod tests {
         assert!(
             akari_ratio > 1.0,
             "AKARI S_90/S_65 = {akari_ratio:.2}, expected > 1 for cold source"
-        );
-    }
-
-    #[test]
-    fn solve_distance_recovers_circular_orbit() {
-        // Compute µ for a circular orbit at d=500 AU, then solve with a=500.
-        // Should recover r=500.
-        let d = 500.0;
-        let mu = crate::proper_motion::annual_proper_motion_circular(d);
-        let r_solved = solve_distance_for_motion(mu, d);
-        assert!(
-            (r_solved - d).abs() < 1.0,
-            "r_solved={r_solved:.1}, expected {d}"
         );
     }
 }

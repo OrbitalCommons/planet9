@@ -1,9 +1,30 @@
-//! The 17 well-characterized multi-opposition Neptune-crossing TNOs from the paper.
+//! The 17 well-characterized, multi-opposition Neptune-crossing TNOs of
+//! Batygin, Morbidelli, Brown & Nesvorny (2024), ApJL 966, L8
+//! (arXiv:2404.11594), Figure 1.
 //!
-//! Selection criteria: a > 100 AU, i < 40 deg, q < 30 AU.
-//! Orbital elements are approximate barycentric osculating values.
+//! Selection criteria (paper Sec. 1 and Fig. 1 caption): semi-major axis
+//! a > 100 AU, perihelion q < 30 AU (Neptune-crossing), inclination
+//! i < 40 deg, restricted to objects "whose orbits have been quantified
+//! through multi-opposition observations" (17 of the 29 MPC objects meeting
+//! the orbital cuts at the time of writing).
+//!
+//! Provenance: orbital elements queried from the JPL Small-Body Database
+//! (https://ssd-api.jpl.nasa.gov/sbdb_query.api) with the constraints
+//! a > 100 AU, q < 30 AU, i < 40 deg (June 2026). The 17 paper objects were
+//! identified by cross-matching each labelled inclination in the paper's
+//! Figure 1 (5.7, 6.1, 9.2, 10.8, 11.5, 12.3, 16.5, 19.4, 20.0, 22.4, 26.1,
+//! 26.2, 26.3, 26.5, 28.0, 30.8, 32.1 deg) against the SBDB result set; all
+//! 17 match uniquely. The previous version of this table contained
+//! fabricated entries ("2016 QV89" is a ~30 m NEA, "2014 LU28" is a
+//! retrograde centaur); both are gone.
 
 use serde::{Deserialize, Serialize};
+
+/// Provenance statement for the table below (tested non-empty and SBDB-sourced).
+pub const PROVENANCE: &str = "JPL SBDB query (sbdb_query.api, June 2026): \
+a > 100 AU, q < 30 AU, i < 40 deg, asteroid kind; multi-opposition subset \
+cross-matched object-by-object against the inclination labels of Figure 1 \
+of Batygin, Morbidelli, Brown & Nesvorny (2024), ApJL 966, L8.";
 
 /// A Neptune-crossing TNO with basic orbital parameters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,130 +56,128 @@ pub fn selection_criteria() -> SelectionCriteria {
     }
 }
 
-/// Returns the 17 well-characterized multi-opposition TNOs from the paper sample.
-///
-/// All objects satisfy a > 100 AU, i < 40 deg, q < 30 AU.
-/// Orbital elements are approximate values from MPC/JPL.
+/// The 17 multi-opposition TNOs of the paper sample (JPL SBDB osculating
+/// heliocentric elements; see module docs for the query and cross-match).
 pub fn observed_sample() -> Vec<NeptuneCrossingTno> {
     vec![
         NeptuneCrossingTno {
-            name: "2014 SS349",
-            a: 129.2,
-            e: 0.793,
-            i: 19.8,
-            q: 26.7,
+            name: "54520 (2000 PJ30)",
+            a: 121.9,
+            e: 0.7656,
+            i: 5.72,
+            q: 28.560,
         },
         NeptuneCrossingTno {
-            name: "2013 UL10",
-            a: 109.2,
-            e: 0.781,
-            i: 7.5,
-            q: 23.9,
+            name: "87269 (2000 OO67)",
+            a: 597.1,
+            e: 0.9651,
+            i: 20.05,
+            q: 20.846,
         },
         NeptuneCrossingTno {
-            name: "2015 KH163",
-            a: 153.0,
-            e: 0.846,
-            i: 27.1,
-            q: 23.6,
+            name: "308933 (2006 SQ372)",
+            a: 805.4,
+            e: 0.9699,
+            i: 19.47,
+            q: 24.214,
         },
         NeptuneCrossingTno {
-            name: "2013 FS28",
-            a: 193.6,
-            e: 0.854,
-            i: 13.1,
-            q: 28.3,
+            name: "353222 (2009 YD7)",
+            a: 126.1,
+            e: 0.8938,
+            i: 30.76,
+            q: 13.390,
         },
         NeptuneCrossingTno {
-            name: "2017 FO161",
-            a: 225.6,
-            e: 0.870,
-            i: 10.9,
-            q: 29.3,
+            name: "469750 (2005 PU21)",
+            a: 179.2,
+            e: 0.8369,
+            i: 6.17,
+            q: 29.234,
         },
         NeptuneCrossingTno {
-            name: "2010 ER65",
-            a: 147.0,
-            e: 0.808,
-            i: 22.0,
-            q: 28.2,
+            name: "523771 (2014 XP40)",
+            a: 103.6,
+            e: 0.7313,
+            i: 11.53,
+            q: 27.840,
         },
         NeptuneCrossingTno {
-            name: "2014 OE394",
-            a: 165.1,
-            e: 0.838,
-            i: 11.7,
-            q: 26.7,
+            name: "600217 (2011 QY100)",
+            a: 177.8,
+            e: 0.8899,
+            i: 26.22,
+            q: 19.581,
         },
         NeptuneCrossingTno {
-            name: "2015 RY245",
-            a: 130.3,
-            e: 0.859,
-            i: 4.8,
-            q: 18.4,
+            name: "767044 (2014 QW510)",
+            a: 217.2,
+            e: 0.8804,
+            i: 26.12,
+            q: 25.977,
         },
         NeptuneCrossingTno {
-            name: "2013 JO64",
-            a: 102.5,
-            e: 0.718,
-            i: 31.8,
-            q: 28.9,
+            name: "2012 GU11",
+            a: 175.8,
+            e: 0.8967,
+            i: 10.76,
+            q: 18.162,
         },
         NeptuneCrossingTno {
-            name: "2015 GA58",
-            a: 115.5,
-            e: 0.771,
-            i: 20.2,
-            q: 26.5,
+            name: "2013 AZ60",
+            a: 428.1,
+            e: 0.9816,
+            i: 16.54,
+            q: 7.883,
         },
         NeptuneCrossingTno {
-            name: "2014 QR441",
-            a: 139.7,
-            e: 0.810,
-            i: 16.0,
-            q: 26.5,
+            name: "2013 GJ138",
+            a: 123.0,
+            e: 0.7877,
+            i: 27.96,
+            q: 26.107,
         },
         NeptuneCrossingTno {
-            name: "2016 QV89",
-            a: 110.2,
-            e: 0.760,
-            i: 12.4,
-            q: 26.5,
+            name: "2013 GW141",
+            a: 566.4,
+            e: 0.9585,
+            i: 32.08,
+            q: 23.527,
         },
         NeptuneCrossingTno {
-            name: "2018 AD39",
-            a: 134.0,
-            e: 0.810,
-            i: 8.6,
-            q: 25.5,
+            name: "2014 NV65",
+            a: 113.0,
+            e: 0.8033,
+            i: 12.33,
+            q: 22.232,
         },
         NeptuneCrossingTno {
-            name: "2014 LU28",
-            a: 101.6,
-            e: 0.707,
-            i: 24.3,
-            q: 29.8,
+            name: "2014 RK86",
+            a: 372.7,
+            e: 0.9410,
+            i: 26.39,
+            q: 22.005,
         },
         NeptuneCrossingTno {
-            name: "2012 GA32",
-            a: 105.1,
-            e: 0.746,
-            i: 14.0,
-            q: 26.7,
+            name: "2014 UY224",
+            a: 133.5,
+            e: 0.8473,
+            i: 26.44,
+            q: 20.390,
         },
         NeptuneCrossingTno {
-            name: "2013 AT183",
-            a: 120.0,
-            e: 0.784,
-            i: 25.5,
-            q: 25.9,
+            name: "2015 VD168",
+            a: 116.5,
+            e: 0.7786,
+            i: 22.45,
+            q: 25.789,
         },
         NeptuneCrossingTno {
-            name: "2015 DW224",
-            a: 140.8,
-            e: 0.828,
-            i: 6.2,
-            q: 24.2,
+            name: "2021 CP5",
+            a: 414.8,
+            e: 0.9745,
+            i: 9.23,
+            q: 10.564,
         },
     ]
 }
@@ -170,6 +189,25 @@ mod tests {
     #[test]
     fn test_sample_size() {
         assert_eq!(observed_sample().len(), 17);
+    }
+
+    #[test]
+    fn test_provenance_documented() {
+        assert!(PROVENANCE.contains("SBDB"), "provenance must cite JPL SBDB");
+        assert!(
+            PROVENANCE.contains("2024"),
+            "provenance must cite the paper"
+        );
+    }
+
+    #[test]
+    fn test_fabricated_objects_removed() {
+        // "2016 QV89" is a ~30 m near-Earth asteroid and "2014 LU28" a
+        // retrograde centaur; neither belongs in this sample.
+        for tno in observed_sample() {
+            assert!(!tno.name.contains("2016 QV89"), "fabricated entry");
+            assert!(!tno.name.contains("2014 LU28"), "fabricated entry");
+        }
     }
 
     #[test]
@@ -214,11 +252,13 @@ mod tests {
 
     #[test]
     fn test_perihelion_consistency() {
+        // q must equal a(1-e) to within the rounding of the published
+        // elements (a to 0.1 AU, e to 1e-4 => |dq| <~ 0.07 AU).
         for tno in observed_sample() {
             let q_computed = tno.a * (1.0 - tno.e);
             assert!(
-                (tno.q - q_computed).abs() < 1.0,
-                "{}: listed q = {}, computed q = {:.1}",
+                (tno.q - q_computed).abs() < 0.1,
+                "{}: listed q = {}, computed q = {:.3}",
                 tno.name,
                 tno.q,
                 q_computed,

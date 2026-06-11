@@ -4,12 +4,18 @@
 //! The paper identifies resonances: 2:1, 3:1, 5:3, 7:4, 9:4, 11:4, 13:4,
 //! 23:6, 27:17, 29:17, 33:19.
 //!
-//! A particle is in p:q resonance when:
-//!   a_particle / a_p9 ≈ (q/p)^(2/3)
+//! Conventions: the p:q labels here are particle:P9 orbit counts, i.e. the
+//! particle is *interior* to Planet Nine (n/n₉ = p/q with p > q) and sits at
+//! a_res = a₉ (q/p)^{2/3}. The stationary resonant angle is therefore
 //!
-//! More precisely, the resonant angle φ = p*λ_particle - q*λ_p9 - (p-q)*ϖ_particle
-//! should librate (oscillate around a fixed value) rather than circulate.
+//!   φ = q λ − p λ₉ + (p − q) ϖ
+//!
+//! which is p9-core's exterior convention with the roles of particle and
+//! planet exchanged. (A previous local implementation had p and q swapped,
+//! so the angle circulated at n₉(p² − q²)/q even for an exactly resonant
+//! orbit and `is_librating` could never fire.)
 
+use p9_core::analysis::resonance as core_resonance;
 use p9_core::constants::*;
 use p9_core::types::OrbitalElements;
 
@@ -29,12 +35,17 @@ pub const KNOWN_RESONANCES: &[(u32, u32)] = &[
     (33, 19),
 ];
 
-/// Compute the expected semi-major axis for a p:q resonance with a perturber
-/// at semi-major axis a_p.
+/// Minimum empty arc (radians) used by the gap-based libration detector.
+/// ~1 rad is robust for ≳50 samples spanning several libration periods.
+pub const LIBRATION_MIN_GAP: f64 = 1.0;
+
+/// Compute the expected semi-major axis for a p:q (particle:P9) resonance
+/// with a perturber at semi-major axis `a_p`: a_res = a_p (q/p)^{2/3}.
 ///
-/// a_res = a_p * (q/p)^(2/3)
+/// This is p9-core's exterior `resonance_semi_major_axis` with the particle
+/// and planet roles exchanged (the particle here is interior to P9).
 pub fn resonance_semimajor_axis(a_p: f64, p: u32, q: u32) -> f64 {
-    a_p * (q as f64 / p as f64).powf(2.0 / 3.0)
+    core_resonance::resonance_semi_major_axis(q, p, a_p)
 }
 
 /// Identify which known resonance (if any) a particle with semi-major axis `a`
@@ -58,11 +69,12 @@ pub fn identify_resonance(a: f64, a_p: f64, tolerance_frac: f64) -> Option<(u32,
     best
 }
 
-/// Compute the resonant angle for a p:q resonance.
+/// Compute the resonant angle for a p:q (particle:P9, interior) resonance:
 ///
-/// φ = p*λ_particle - q*λ_p9 - (p-q)*ϖ_particle
+///   φ = q λ − p λ₉ + (p − q) ϖ
 ///
-/// where λ = M + ω + Ω (mean longitude) and ϖ = ω + Ω (longitude of perihelion).
+/// where λ = M + ω + Ω and ϖ = ω + Ω. Satisfies the d'Alembert rule and is
+/// stationary when n/n₉ = p/q. Returned wrapped to (−π, π].
 pub fn resonant_angle(
     elem_particle: &OrbitalElements,
     elem_p9: &OrbitalElements,
@@ -73,52 +85,22 @@ pub fn resonant_angle(
     let lambda_p9 = elem_p9.mean_anomaly + elem_p9.omega + elem_p9.omega_big;
     let varpi_part = elem_particle.omega + elem_particle.omega_big;
 
-    let mut phi =
-        p as f64 * lambda_part - q as f64 * lambda_p9 - (p as i64 - q as i64) as f64 * varpi_part;
-
-    // Wrap to [-π, π]
-    phi = phi % TWO_PI;
-    if phi > std::f64::consts::PI {
-        phi -= TWO_PI;
-    }
-    if phi < -std::f64::consts::PI {
-        phi += TWO_PI;
-    }
-
-    phi
+    // Interior particle: exchange roles in p9-core's exterior convention,
+    // i.e. core's (p, q, λ, λ_planet, ϖ) ← (q, p, λ, λ₉, ϖ).
+    let phi = core_resonance::resonant_angle(q, p, lambda_part, lambda_p9, varpi_part);
+    p9_core::analysis::circular::wrap_to_pi(phi)
 }
 
-/// Check if a series of resonant angles indicates libration (resonance trapping).
+/// Check if a series of resonant angles indicates libration (resonance
+/// trapping), using p9-core's largest-empty-gap detector.
 ///
-/// A librating angle stays within a bounded range (< 2π).
-/// A circulating angle covers the full 2π range.
-///
-/// Returns (is_librating, amplitude) where amplitude is the peak-to-peak range.
+/// Returns (is_librating, amplitude) where amplitude is the libration
+/// half-width (2π for a circulating angle).
 pub fn is_librating(angles: &[f64]) -> (bool, f64) {
-    if angles.len() < 10 {
-        return (false, TWO_PI);
+    match core_resonance::libration_amplitude(angles, LIBRATION_MIN_GAP) {
+        Some(amp) => (true, amp),
+        None => (false, TWO_PI),
     }
-
-    // Compute the range of the angle, accounting for wraparound
-    // Use the circular statistics approach
-    let sin_sum: f64 = angles.iter().map(|&a| a.sin()).sum();
-    let cos_sum: f64 = angles.iter().map(|&a| a.cos()).sum();
-    let n = angles.len() as f64;
-
-    let r_bar = (sin_sum * sin_sum + cos_sum * cos_sum).sqrt() / n;
-
-    // r_bar close to 1 means tightly clustered (librating)
-    // r_bar close to 0 means spread out (circulating)
-    let is_lib = r_bar > 0.5;
-
-    // Estimate amplitude from circular dispersion
-    let amplitude = if r_bar > 0.0 {
-        2.0 * (-2.0 * r_bar.ln()).sqrt()
-    } else {
-        TWO_PI
-    };
-
-    (is_lib, amplitude.min(TWO_PI))
 }
 
 /// Scan all known resonances and report which ones have particles.
@@ -148,6 +130,47 @@ pub fn resonance_census(
 mod tests {
     use super::*;
 
+    /// Build particle/P9 element pairs along an exactly 2:1 resonant
+    /// trajectory (n = 2 n₉), with an optional libration oscillation in λ.
+    fn two_to_one_series(
+        lib_amp: f64,
+        n_samples: usize,
+    ) -> Vec<(OrbitalElements, OrbitalElements)> {
+        let a_p9 = 700.0;
+        let (p, q) = (2u32, 1u32);
+        let a_res = resonance_semimajor_axis(a_p9, p, q);
+
+        let n_p9 = TWO_PI / (a_p9.powf(1.5) * 365.25); // rad/day (Kepler, a in AU)
+        let n_part = n_p9 * p as f64 / q as f64;
+        let varpi = 1.3;
+
+        (0..n_samples)
+            .map(|k| {
+                let t = k as f64 * 2.0e4; // days
+                                          // Libration enters the angle through q·δλ; oscillate λ so the
+                                          // resonant angle swings by ±lib_amp.
+                let dlambda = (lib_amp / q as f64) * (1.7e-6 * t).sin();
+                let elem = OrbitalElements {
+                    a: a_res,
+                    e: 0.5,
+                    i: 0.0,
+                    omega: varpi,
+                    omega_big: 0.0,
+                    mean_anomaly: n_part * t + dlambda,
+                };
+                let elem_p9 = OrbitalElements {
+                    a: a_p9,
+                    e: 0.6,
+                    i: 0.0,
+                    omega: 0.4,
+                    omega_big: 0.0,
+                    mean_anomaly: n_p9 * t,
+                };
+                (elem, elem_p9)
+            })
+            .collect()
+    }
+
     #[test]
     fn test_resonance_semimajor_axes() {
         let a_p = 700.0; // P9 nominal
@@ -174,6 +197,68 @@ mod tests {
         // Particle far from any resonance
         let result = identify_resonance(600.0, a_p, 0.01);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_exact_two_to_one_trajectory_librates() {
+        // A constructed 2:1 resonant trajectory with a ±0.5 rad libration:
+        // the correct angle librates; the previous p↔q-swapped convention
+        // circulated at n₉(p² − q²)/q and classified this as circulating.
+        let series = two_to_one_series(0.5, 400);
+        let angles: Vec<f64> = series
+            .iter()
+            .map(|(e, e9)| resonant_angle(e, e9, 2, 1))
+            .collect();
+
+        let (is_lib, amp) = is_librating(&angles);
+        assert!(is_lib, "exactly resonant trajectory must librate");
+        assert!((amp - 0.5).abs() < 0.1, "amplitude {amp} (expected ~0.5)");
+    }
+
+    #[test]
+    fn test_exact_resonance_angle_stationary() {
+        // With zero libration amplitude the resonant angle is constant.
+        let series = two_to_one_series(0.0, 100);
+        let phi0 = resonant_angle(&series[0].0, &series[0].1, 2, 1);
+        for (e, e9) in &series {
+            let phi = resonant_angle(e, e9, 2, 1);
+            assert!((phi - phi0).abs() < 1e-8, "angle drifted: {phi} vs {phi0}");
+        }
+    }
+
+    #[test]
+    fn test_off_resonance_circulates() {
+        // 10% off the 2:1 commensurability: the angle must circulate
+        // (φ̇ = 0.2 n₉, so the series below spans ~2.4 circulations).
+        let a_p9: f64 = 700.0;
+        let n_p9 = TWO_PI / (a_p9.powf(1.5) * 365.25);
+        let n_part = n_p9 * 2.0 * 1.10;
+
+        let angles: Vec<f64> = (0..400)
+            .map(|k| {
+                let t = k as f64 * 2.0e5;
+                let elem = OrbitalElements {
+                    a: 420.0,
+                    e: 0.5,
+                    i: 0.0,
+                    omega: 1.3,
+                    omega_big: 0.0,
+                    mean_anomaly: n_part * t,
+                };
+                let elem_p9 = OrbitalElements {
+                    a: a_p9,
+                    e: 0.6,
+                    i: 0.0,
+                    omega: 0.4,
+                    omega_big: 0.0,
+                    mean_anomaly: n_p9 * t,
+                };
+                resonant_angle(&elem, &elem_p9, 2, 1)
+            })
+            .collect();
+
+        let (is_lib, _) = is_librating(&angles);
+        assert!(!is_lib, "off-resonance trajectory must circulate");
     }
 
     #[test]

@@ -1,8 +1,22 @@
-//! Three-regime stability boundary computation.
+//! Three-regime stability boundary computation (Belyakov & Batygin 2025).
 //!
 //! Regime 1 (fully chaotic layer):     q = 13.37 + 0.55 * a^0.64
-//! Regime 2 (1:j diffusion barrier):   q = -63.1 + 19.4 * log(a)
-//! Regime 3 (fine comb boundary):      q = 10.28 + 6.01 * a^0.34
+//! Regime 2 (1:j diffusion barrier):   q = -63.1 + 19.4 * ln(a)
+//! Regime 3 (fine comb):               q = 10.28 + 6.01 * a^0.34
+//!
+//! Semantics per the paper's figure: the *instability* boundary is set by
+//! the fully chaotic layer at small a and by the 1:j diffusion barrier
+//! beyond their crossing (a ≈ 90 AU) — NOT by the fine comb. The fine
+//! comb of high-order intermediate resonances above the diffusion barrier
+//! produces only weak, *bounded* chaos: orbits there are chaotic but do
+//! not diffuse to instability, so taking max() of all three curves (as
+//! the previous version did) wrongly made the fine comb the binding
+//! instability boundary over a ≈ 100–300 AU.
+//!
+//! Natural-log check for the −63.1 + 19.4·log(a) fit: with log = ln the
+//! curve gives q ≈ 40 AU at a = 200 AU and stays positive for a ≳ 26 AU,
+//! matching the paper's figure; with log10 it would be negative until
+//! a ≈ 1800 AU (q(200) ≈ −18 AU), which is unphysical — the fit uses ln.
 
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +27,21 @@ pub enum BoundaryRegime {
     ChaoticLayer,
     /// Intermediate barrier set by 1:j resonance diffusion
     DiffusionBarrier,
-    /// Outer fine comb of higher-order resonances
+    /// Outer fine comb of higher-order resonances (weak, bounded chaos —
+    /// not an instability boundary)
     FineComb,
+}
+
+/// Orbit classification against the three regimes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OrbitClass {
+    /// Below the instability boundary: macroscopic chaotic diffusion
+    Unstable,
+    /// Between the instability boundary and the fine comb: chaotic but
+    /// bounded (no large-scale diffusion)
+    BoundedChaos,
+    /// Above the fine comb: regular
+    Stable,
 }
 
 /// Fully chaotic layer boundary.
@@ -26,42 +53,55 @@ pub fn chaotic_layer_boundary(a: f64) -> f64 {
 
 /// 1:j resonance diffusion barrier boundary.
 ///
-/// q = -63.1 + 19.4 * ln(a)
+/// q = -63.1 + 19.4 * ln(a)   (natural log — see module docs)
 pub fn diffusion_barrier_boundary(a: f64) -> f64 {
     -63.1 + 19.4 * a.ln()
 }
 
-/// Fine comb boundary from higher-order resonance overlap.
+/// Fine comb boundary from higher-order resonance overlap. Marks the
+/// onset of weak *bounded* chaos, not instability.
 ///
 /// q = 10.28 + 6.01 * a^0.34
 pub fn fine_comb_boundary(a: f64) -> f64 {
     10.28 + 6.01 * a.powf(0.34)
 }
 
-/// Determine which regime applies at a given semi-major axis.
-///
-/// The effective boundary is the maximum of all three regimes.
+/// The instability boundary at a given semi-major axis, with the regime
+/// that sets it: the chaotic layer below the crossing at a ≈ 90 AU, the
+/// 1:j diffusion barrier beyond. The fine comb is deliberately excluded
+/// (bounded chaos — see module docs).
 pub fn effective_boundary(a: f64) -> (f64, BoundaryRegime) {
     let q_chaotic = chaotic_layer_boundary(a);
     let q_diffusion = diffusion_barrier_boundary(a);
-    let q_comb = fine_comb_boundary(a);
 
-    if q_chaotic >= q_diffusion && q_chaotic >= q_comb {
+    if q_chaotic >= q_diffusion {
         (q_chaotic, BoundaryRegime::ChaoticLayer)
-    } else if q_diffusion >= q_comb {
-        (q_diffusion, BoundaryRegime::DiffusionBarrier)
     } else {
-        (q_comb, BoundaryRegime::FineComb)
+        (q_diffusion, BoundaryRegime::DiffusionBarrier)
     }
 }
 
-/// Classify orbit stability using the three-regime boundary.
-pub fn is_stable(a: f64, q: f64) -> bool {
-    let (q_boundary, _) = effective_boundary(a);
-    q > q_boundary
+/// Classify orbit stability using the piecewise boundary semantics.
+pub fn classify_orbit(a: f64, q: f64) -> OrbitClass {
+    let (q_instability, _) = effective_boundary(a);
+    if q <= q_instability {
+        OrbitClass::Unstable
+    } else if q <= fine_comb_boundary(a) {
+        OrbitClass::BoundedChaos
+    } else {
+        OrbitClass::Stable
+    }
 }
 
-/// Compute the stability boundary curve over a range of semi-major axes.
+/// Whether an orbit avoids macroscopic instability (bounded chaos in the
+/// fine comb counts as surviving).
+pub fn is_stable(a: f64, q: f64) -> bool {
+    classify_orbit(a, q) != OrbitClass::Unstable
+}
+
+/// Compute the stability boundary curves over a range of semi-major axes.
+/// All three regime curves are exposed; `q_effective`/`regimes` carry the
+/// instability boundary (chaotic layer / diffusion barrier).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoundaryCurve {
     pub a_values: Vec<f64>,
@@ -110,9 +150,14 @@ mod tests {
     }
 
     #[test]
-    fn test_diffusion_barrier_reasonable() {
+    fn test_diffusion_barrier_uses_natural_log() {
+        // ln: q(200) ≈ 39.7 AU (paper figure); log10 would give −18.5.
         let q = diffusion_barrier_boundary(200.0);
-        assert!(q > 20.0 && q < 60.0, "q = {}", q);
+        assert!((q - 39.7).abs() < 0.5, "q = {q}");
+        // Positive across the paper's fitted range.
+        for a in [50.0, 100.0, 500.0, 1000.0] {
+            assert!(diffusion_barrier_boundary(a) > 0.0, "negative at a = {a}");
+        }
     }
 
     #[test]
@@ -129,12 +174,24 @@ mod tests {
     }
 
     #[test]
-    fn test_effective_boundary_is_max() {
+    fn test_regime_handoff_piecewise() {
+        // Chaotic layer binds at small a, diffusion barrier beyond ~90 AU.
+        let (_, regime_inner) = effective_boundary(60.0);
+        assert_eq!(regime_inner, BoundaryRegime::ChaoticLayer);
+        let (_, regime_outer) = effective_boundary(200.0);
+        assert_eq!(regime_outer, BoundaryRegime::DiffusionBarrier);
+    }
+
+    #[test]
+    fn test_fine_comb_not_instability_boundary() {
+        // At a = 200 AU the fine comb (≈ 46.8 AU) lies above the
+        // diffusion barrier (≈ 39.7 AU): with the old max() rule it set
+        // the boundary; here q = 43 AU is bounded chaos, not unstable.
         let a = 200.0;
-        let (q_eff, _) = effective_boundary(a);
-        assert!(q_eff >= chaotic_layer_boundary(a));
-        assert!(q_eff >= diffusion_barrier_boundary(a));
-        assert!(q_eff >= fine_comb_boundary(a));
+        assert!(fine_comb_boundary(a) > effective_boundary(a).0);
+        assert_eq!(classify_orbit(a, 43.0), OrbitClass::BoundedChaos);
+        assert!(is_stable(a, 43.0));
+        assert_eq!(classify_orbit(a, 50.0), OrbitClass::Stable);
     }
 
     #[test]
@@ -148,6 +205,7 @@ mod tests {
             !is_stable(200.0, 25.0),
             "q=25 AU should be unstable at a=200"
         );
+        assert_eq!(classify_orbit(200.0, 25.0), OrbitClass::Unstable);
     }
 
     #[test]
@@ -156,5 +214,11 @@ mod tests {
         assert_eq!(curve.a_values.len(), 50);
         assert_eq!(curve.q_effective.len(), 50);
         assert_eq!(curve.regimes.len(), 50);
+        // The effective boundary never exceeds both source curves and the
+        // fine comb is exposed separately.
+        for i in 0..50 {
+            assert!(curve.q_effective[i] <= curve.q_chaotic[i].max(curve.q_diffusion[i]) + 1e-12);
+            assert!(curve.q_comb[i] > 0.0);
+        }
     }
 }

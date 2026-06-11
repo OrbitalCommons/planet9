@@ -248,6 +248,7 @@ mod tests {
                     mean_anomaly: 0.0,
                 },
             ],
+            ids: vec![0, 1],
             active_count: 2,
             total_count: 2,
         };
@@ -271,6 +272,7 @@ mod tests {
                 omega_big: 0.0,
                 mean_anomaly: 0.0,
             }],
+            ids: vec![0],
             active_count: 1,
             total_count: 1,
         };

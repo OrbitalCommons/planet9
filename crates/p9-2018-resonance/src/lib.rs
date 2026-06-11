@@ -8,8 +8,11 @@
 //!
 //! Key finding: P < 5% that all 6 observed KBOs reside in N/1 or N/2 resonances.
 //!
-//! TODO: Full 4 Gyr planar integration with J2 approximation.
-//! Currently uses analytical resonance identification and probability analysis.
+//! The planar integration applies the giant-planet J2 quadrupole
+//! (`p9_core::forces::ExtraForce::J2Jsu`) in the WHM kick and classifies
+//! resonance membership by libration of recorded resonant-angle time series
+//! (`p9_core::analysis::resonance`); the 4 Gyr paper-scale sweep sits
+//! behind an `#[ignore]`d test.
 
 pub mod plots;
 pub mod probability_analysis;

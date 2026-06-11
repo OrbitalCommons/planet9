@@ -75,3 +75,43 @@ pub fn compute_v_bary(bodies: &[MassiveBody], m_sun: f64) -> Vector3<f64> {
 
     total_momentum / total_mass
 }
+
+/// Inverse-transform correction for states currently in DH coordinates.
+///
+/// With barycentric (DH) velocities, momentum conservation fixes the Sun's
+/// barycentric velocity to −Σmᵢvᵢ/m_sun, so heliocentric velocities are
+/// recovered as v_helio = v_DH + Σmᵢvᵢ/m_sun. (At the instant of the forward
+/// transform this equals `compute_v_bary` of the heliocentric velocities, but
+/// it must be re-evaluated after the velocities have evolved.)
+pub fn dh_velocity_correction(bodies: &[MassiveBody], m_sun: f64) -> Vector3<f64> {
+    let mut total_momentum = Vector3::zeros();
+    for b in bodies {
+        total_momentum += b.mass * b.state.vel;
+    }
+    total_momentum / m_sun
+}
+
+/// Solar-drift substep of the democratic heliocentric scheme (DLL98).
+///
+/// H_sun = |Σpᵢ|²/(2 m_sun) advances every heliocentric position (bodies and
+/// test particles alike) by dt·Σmᵢvᵢ/m_sun, with vᵢ the DH (barycentric)
+/// velocities. Omitting this substep is what makes a naive heliocentric
+/// "WHM" non-symplectic.
+pub fn solar_drift(
+    bodies: &mut [MassiveBody],
+    particles: &mut [StateVector],
+    active: &[bool],
+    dt: f64,
+    m_sun: f64,
+) {
+    let shift = dt * dh_velocity_correction(bodies, m_sun);
+    for b in bodies.iter_mut() {
+        b.state.pos += shift;
+    }
+    for (i, p) in particles.iter_mut().enumerate() {
+        if !active[i] {
+            continue;
+        }
+        p.pos += shift;
+    }
+}

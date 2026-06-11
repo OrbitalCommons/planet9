@@ -9,4 +9,5 @@
 pub mod detection_efficiency;
 pub mod exclusion;
 pub mod plots;
+pub mod sky;
 pub mod survey_model;

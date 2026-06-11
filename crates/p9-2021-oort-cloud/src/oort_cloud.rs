@@ -127,22 +127,46 @@ pub fn generate_ioc_population<R: Rng>(
     population
 }
 
-/// Estimate the fraction of disk mass lifted into the IOC by cluster encounters.
+/// Fraction of scattered planetesimals trapped into the inner Oort cloud
+/// during the Sun's birth-cluster phase.
 ///
-/// Returns a rough fraction based on the cluster density and encounter rate.
-/// Typical values are 1-10% for clusters of ~1000 stars.
-pub fn ioc_mass_fraction(config: &OortCloudConfig) -> f64 {
-    let r_au = config.cluster_radius_pc * PC_AU;
-    let n_stars = config.cluster_mass_msun;
-    let density = n_stars / (4.0 / 3.0 * std::f64::consts::PI * r_au.powi(3));
+/// Documented literature assumption, not a computed quantity: cluster N-body
+/// simulations (Brasser, Duncan & Levison 2006; cited by Batygin & Brown
+/// 2021 for their IOC source population) find a trapping efficiency of a few
+/// per cent for ~10³ M☉ embedded clusters. Computing it would require the
+/// full cluster encounter simulation, which is outside this crate's scope.
+/// (Replaces an invented 0.05·√(ρ/ρ₀) scaling whose only test was circular.)
+pub const IOC_TRAPPING_FRACTION_ASSUMED: f64 = 0.05;
 
-    // Empirical scaling: f_IOC ~ 0.05 * (rho / rho_0)^0.5
-    // where rho_0 corresponds to the nominal cluster
-    let nominal = OortCloudConfig::nominal();
-    let r0_au = nominal.cluster_radius_pc * PC_AU;
-    let rho_0 = nominal.cluster_mass_msun / (4.0 / 3.0 * std::f64::consts::PI * r0_au.powi(3));
+/// Generate a distant scattered-disk comparison population: a ∈ (250, 550)
+/// AU (the paper's distant-belt membership range), q ∈ (30, 50) AU, moderate
+/// inclinations, uniform angles. Used as the reduced-scale simulated
+/// population for the f_ϖ and semi-major-axis comparisons (previously the
+/// comparison histogram was hard-coded counts).
+pub fn generate_scattered_disk<R: Rng>(n: usize, rng: &mut R) -> Vec<OrbitalElements> {
+    let a_dist = Uniform::new(250.0, 550.0);
+    let q_dist = Uniform::new(30.0, 50.0);
+    let angle_dist = Uniform::new(0.0, TWO_PI);
+    let incl_normal = Normal::new(0.0, 15.0 * DEG2RAD).unwrap();
 
-    0.05 * (density / rho_0).sqrt()
+    let mut population = Vec::with_capacity(n);
+    while population.len() < n {
+        let a = a_dist.sample(rng);
+        let q = q_dist.sample(rng);
+        let e = 1.0 - q / a;
+        if !(0.0..1.0).contains(&e) {
+            continue;
+        }
+        population.push(OrbitalElements {
+            a,
+            e,
+            i: incl_normal.sample(rng).abs().min(std::f64::consts::PI),
+            omega: angle_dist.sample(rng),
+            omega_big: angle_dist.sample(rng),
+            mean_anomaly: angle_dist.sample(rng),
+        });
+    }
+    population
 }
 
 #[cfg(test)]
@@ -207,20 +231,15 @@ mod tests {
     }
 
     #[test]
-    fn test_ioc_mass_fraction() {
-        let config = OortCloudConfig::nominal();
-        let f = ioc_mass_fraction(&config);
-        assert!(f > 0.0 && f < 1.0, "fraction = {f}");
-        assert!((f - 0.05).abs() < 0.01, "nominal should give ~5%");
-    }
-
-    #[test]
-    fn test_compact_cluster_higher_fraction() {
-        let nominal = ioc_mass_fraction(&OortCloudConfig::nominal());
-        let compact = ioc_mass_fraction(&OortCloudConfig::compact_cluster());
-        assert!(
-            compact > nominal,
-            "compact cluster should produce more IOC: {compact} vs {nominal}"
-        );
+    fn test_scattered_disk_population_ranges() {
+        let mut rng = StdRng::seed_from_u64(3);
+        let pop = generate_scattered_disk(200, &mut rng);
+        assert_eq!(pop.len(), 200);
+        for e in &pop {
+            assert!(e.a >= 250.0 && e.a <= 550.0);
+            let q = e.perihelion();
+            assert!(q >= 29.9 && q <= 50.1, "q = {q}");
+            assert!(e.e > 0.0 && e.e < 1.0);
+        }
     }
 }

@@ -1,13 +1,20 @@
 //! Synthetic reference population generation for Planet Nine.
 //!
 //! Generates a large population of synthetic Planet Nine realizations
-//! drawn from the MCMC posterior, computing observable properties
-//! (apparent magnitude, sky position) for each.
+//! drawn from the posterior emulator, computing observable properties
+//! (apparent magnitude, heliocentric distance) for each.
+//!
+//! Photometry comes from `p9_core::analysis::photometry` (Neptune-anchored
+//! mass-radius relation, reflected-sunlight distance law, Neptune's geometric
+//! albedo 0.41) — the previous inline model invented an albedo ~ U(0.3, 0.7)
+//! and a super-Earth mass-radius exponent inconsistent with the rest of the
+//! workspace.
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use p9_core::types::P9Params;
+use p9_core::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
+use p9_core::types::{solve_kepler, P9Params};
 
 use crate::posterior::{mcmc_2021_posterior, sample_from_posterior, P9Posterior};
 
@@ -28,41 +35,21 @@ pub struct ReferenceP9 {
     pub omega_big: f64,
     /// Mean anomaly in radians
     pub mean_anomaly: f64,
-    /// Geometric albedo (assumed)
+    /// Geometric albedo (Neptune's V-band value, 0.41)
     pub albedo: f64,
     /// Apparent V-band magnitude at current position
     pub v_magnitude: f64,
 }
 
-/// Estimate V-band apparent magnitude of Planet Nine.
+/// Apparent V magnitude of a planet of `mass_earth` at heliocentric distance
+/// `helio_distance_au`, observed at opposition.
 ///
-/// Uses the IAU standard absolute magnitude H = -2.5*log10(p) - 5*log10(D/1329)
-/// where p is geometric albedo and D is diameter in km.
-///
-/// For distant objects at opposition (delta ~ r):
-///   V = H + 5 * log10(r^2) = H + 10 * log10(r)
-///
-/// Planet radius estimated from mass using R ~ (M/M_earth)^0.55 * R_earth
-/// (appropriate for super-Earth / mini-Neptune range).
+/// Delegates to `p9_core::analysis::photometry::planet_apparent_magnitude`.
 pub fn brightness_at_position(mass_earth: f64, helio_distance_au: f64, albedo: f64) -> f64 {
-    let r_earth_km = 6371.0;
-    let radius_km = r_earth_km * mass_earth.powf(0.55);
-    let diameter_km = 2.0 * radius_km;
-
-    // IAU standard absolute magnitude: H = -2.5 * log10(p) - 5 * log10(D_km / 1329)
-    let h_abs = -2.5 * albedo.log10() - 5.0 * (diameter_km / 1329.0).log10();
-
-    // Apparent magnitude: V = H + 5 * log10(r * delta)
-    // For distant objects at opposition, delta ~ r
-    h_abs + 5.0 * (helio_distance_au * helio_distance_au).log10()
+    planet_apparent_magnitude(mass_earth, albedo, helio_distance_au)
 }
 
 /// Generate a reference population of synthetic Planet Nine objects.
-///
-/// Each realization is drawn from the MCMC posterior. The heliocentric
-/// distance is computed from the orbital elements and a random true anomaly
-/// (uniformly distributed in mean anomaly), and the apparent magnitude
-/// is estimated assuming a geometric albedo of 0.5.
 pub fn generate_reference_population<R: Rng>(n: usize, rng: &mut R) -> Vec<ReferenceP9> {
     let posterior = mcmc_2021_posterior();
     generate_reference_population_with_posterior(n, &posterior, rng)
@@ -78,7 +65,7 @@ pub fn generate_reference_population_with_posterior<R: Rng>(
 
     for _ in 0..n {
         let params = sample_from_posterior(posterior, rng);
-        let albedo = 0.3 + rng.gen::<f64>() * 0.4;
+        let albedo = ALBEDO_NEPTUNE;
 
         let helio_dist = heliocentric_distance(&params);
         let v_mag = brightness_at_position(params.mass_earth, helio_dist, albedo);
@@ -99,33 +86,13 @@ pub fn generate_reference_population_with_posterior<R: Rng>(
     population
 }
 
-/// Compute heliocentric distance from orbital elements at the given mean anomaly.
-///
-/// Solves Kepler's equation to get the true anomaly, then computes
-/// r = a(1-e^2) / (1 + e*cos(nu)).
-fn heliocentric_distance(params: &P9Params) -> f64 {
+/// Compute heliocentric distance from orbital elements at the given mean
+/// anomaly, via the safeguarded p9-core Kepler solver (the previous local
+/// Newton loop started at E₀ = M, which stalls for e → 1 near perihelion).
+pub fn heliocentric_distance(params: &P9Params) -> f64 {
     let e = params.e;
-    let m = params.mean_anomaly;
-
-    let ea = solve_kepler(e, m);
-
-    let nu = 2.0 * ((1.0 + e).sqrt() * (ea / 2.0).sin()).atan2((1.0 - e).sqrt() * (ea / 2.0).cos());
-
-    let p = params.a * (1.0 - e * e);
-    p / (1.0 + e * nu.cos())
-}
-
-/// Solve Kepler's equation M = E - e*sin(E) via Newton-Raphson.
-fn solve_kepler(e: f64, m: f64) -> f64 {
-    let mut ea = m;
-    for _ in 0..50 {
-        let delta = (ea - e * ea.sin() - m) / (1.0 - e * ea.cos());
-        ea -= delta;
-        if delta.abs() < 1e-15 {
-            break;
-        }
-    }
-    ea
+    let ea = solve_kepler(e, params.mean_anomaly);
+    params.a * (1.0 - e * ea.cos())
 }
 
 #[cfg(test)]
@@ -136,26 +103,23 @@ mod tests {
 
     #[test]
     fn test_brightness_perihelion() {
-        let v = brightness_at_position(6.2, 300.0, 0.5);
+        let v = brightness_at_position(6.2, 300.0, ALBEDO_NEPTUNE);
         assert!(v > 15.0 && v < 30.0, "V magnitude at perihelion: {:.1}", v);
     }
 
     #[test]
-    fn test_brightness_aphelion() {
-        let v_peri = brightness_at_position(6.2, 300.0, 0.5);
-        let v_apo = brightness_at_position(6.2, 460.0, 0.5);
-        assert!(
-            v_apo > v_peri,
-            "Should be fainter at aphelion: {:.1} vs {:.1}",
-            v_apo,
-            v_peri
-        );
+    fn test_brightness_reflected_light_scaling() {
+        // Reflected sunlight: doubling the distance dims by ~10 log10(2) ≈ 3 mag.
+        let v_300 = brightness_at_position(6.2, 300.0, ALBEDO_NEPTUNE);
+        let v_600 = brightness_at_position(6.2, 600.0, ALBEDO_NEPTUNE);
+        let dm = v_600 - v_300;
+        assert!((dm - 3.01).abs() < 0.05, "Δm for 2x distance = {dm:.2}");
     }
 
     #[test]
     fn test_brightness_mass_dependence() {
-        let v_light = brightness_at_position(3.0, 300.0, 0.5);
-        let v_heavy = brightness_at_position(10.0, 300.0, 0.5);
+        let v_light = brightness_at_position(3.0, 300.0, ALBEDO_NEPTUNE);
+        let v_heavy = brightness_at_position(10.0, 300.0, ALBEDO_NEPTUNE);
         assert!(
             v_light > v_heavy,
             "Heavier planet should be brighter: {:.1} vs {:.1}",
@@ -174,7 +138,7 @@ mod tests {
             assert!(obj.mass > 0.0);
             assert!(obj.a > 0.0);
             assert!(obj.e > 0.0 && obj.e < 1.0);
-            assert!(obj.albedo > 0.0 && obj.albedo < 1.0);
+            assert!((obj.albedo - ALBEDO_NEPTUNE).abs() < 1e-12);
             assert!(obj.v_magnitude.is_finite());
         }
     }
@@ -198,5 +162,22 @@ mod tests {
             r,
             expected_q
         );
+    }
+
+    #[test]
+    fn test_heliocentric_distance_high_e_aphelion() {
+        // The safeguarded solver must handle e = 0.95 at aphelion.
+        let params = P9Params {
+            mass_earth: 6.2,
+            a: 380.0,
+            e: 0.95,
+            i: 0.0,
+            omega: 0.0,
+            omega_big: 0.0,
+            mean_anomaly: std::f64::consts::PI,
+        };
+        let r = heliocentric_distance(&params);
+        let expected = 380.0 * 1.95;
+        assert!((r - expected).abs() < 0.01, "r = {r:.2}");
     }
 }

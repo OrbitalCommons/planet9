@@ -108,16 +108,19 @@ pub fn sensitivity_analysis(
     }
 }
 
-/// Compute the expected power of the OSSOS survey to detect clustering.
+/// Minimum mean resultant length R̄ detectable at significance `alpha` with
+/// a sample of `n_objects` under the Rayleigh test.
 ///
-/// With only n=4 objects, the minimum detectable clustering signal is
-/// approximately 1/sqrt(n) ≈ 0.5 in Poincaré coordinates, which is
-/// much larger than typical clustering strengths.
-pub fn ossos_detection_power(n_objects: usize) -> f64 {
-    // Rough approximation: detection threshold ∝ 1/sqrt(n)
-    // With n=4, threshold ≈ 0.5
-    // With n=14, threshold ≈ 0.27
-    1.0 / (n_objects as f64).sqrt()
+/// From the Rayleigh tail p ≈ exp(−n R̄²): setting p = alpha gives
+///
+///   R̄_min = sqrt(ln(1/alpha) / n).
+///
+/// With n = 4 at alpha = 0.05 this is ≈ 0.87 — far above typical clustering
+/// strengths, which is why the OSSOS subsample alone cannot detect the
+/// signal. (This replaces the former `ossos_detection_power = 1/sqrt(n)`
+/// placeholder, which was not a defined statistical quantity.)
+pub fn detectable_resultant_threshold(n_objects: usize, alpha: f64) -> f64 {
+    ((1.0 / alpha).ln() / n_objects as f64).sqrt()
 }
 
 #[cfg(test)]
@@ -143,16 +146,20 @@ mod tests {
     }
 
     #[test]
-    fn test_detection_power() {
-        let power_4 = ossos_detection_power(4);
-        let power_14 = ossos_detection_power(14);
+    fn test_detectable_resultant_threshold() {
+        // Rayleigh inversion: R̄_min = sqrt(ln(1/α)/n).
+        let t4 = detectable_resultant_threshold(4, 0.05);
+        let t14 = detectable_resultant_threshold(14, 0.05);
+        assert!((t4 - ((1.0_f64 / 0.05).ln() / 4.0).sqrt()).abs() < 1e-12);
 
-        // With fewer objects, threshold is higher (harder to detect)
+        // With fewer objects, the threshold is higher (harder to detect).
         assert!(
-            power_4 > power_14,
+            t4 > t14,
             "OSSOS (n=4) threshold {:.2} should be higher than full (n=14) {:.2}",
-            power_4,
-            power_14
+            t4,
+            t14
         );
+        // n = 4 cannot detect realistic clustering (R̄ ~ 0.5-0.7).
+        assert!(t4 > 0.8, "t4 = {t4:.2}");
     }
 }

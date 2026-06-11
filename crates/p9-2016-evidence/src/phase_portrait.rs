@@ -3,12 +3,21 @@
 //! Reproduces Figures 3 and 4 of Batygin & Brown (2016):
 //! - Figure 3: analytical secular phase portraits at 6 semi-major axes
 //! - Figure 4: N-body simulated phase portraits showing anti-aligned orbits
+//!
+//! The N-body portraits are *planar*: Planet Nine is coplanarized
+//! (i₉ = Ω₉ = 0; Δϖ is not a meaningful angle at 30° mutual inclination),
+//! particle mean anomalies are randomized (seeded) so the ensemble is not
+//! phase-correlated at perihelion, and the giant planets enter through the
+//! J2-averaged quadrupole field exactly as in the scattered-disk runs.
 
 use std::f64::consts::PI;
 
+use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::*;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::*;
+
+use crate::scattered_disk_sim::j2_jsun_force;
 
 /// Result of tracing a single trajectory in (e, Δϖ) space.
 #[derive(Debug, Clone)]
@@ -21,11 +30,14 @@ pub struct TrajectoryPoint {
 
 /// Run an N-body phase-space portrait for a single semi-major axis.
 ///
-/// Creates `n_trajectories` test particles at the given semi-major axis
-/// with eccentricities linearly spaced from 0.025 to 0.95, half starting
-/// at Δϖ=0 and half at Δϖ=π. Integrates for `t_total` days.
+/// Creates test particles at the given semi-major axis with eccentricities
+/// linearly spaced from 0.025 to 0.95, half starting at Δϖ=0 and half at
+/// Δϖ=π, with mean anomalies drawn uniformly (seeded). P9 is coplanarized
+/// (i₉ = Ω₉ = 0) and the J+S+U+N quadrupole field is applied in the kick.
+/// Integrates for `t_total` days.
 ///
 /// Returns the trajectory points for all particles.
+#[allow(clippy::too_many_arguments)]
 pub fn nbody_phase_portrait(
     a_test: f64,
     p9: &P9Params,
@@ -34,9 +46,19 @@ pub fn nbody_phase_portrait(
     t_total: f64,
     dt: f64,
     snapshot_interval: f64,
+    seed: u64,
 ) -> Vec<TrajectoryPoint> {
-    let p9_body = p9.to_body();
-    let varpi_p9 = p9.omega + p9.omega_big;
+    use rand::Rng;
+    use rand::SeedableRng;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+
+    // Coplanar portrait: project P9 into the reference plane. With Ω₉ = 0
+    // the longitude of perihelion is just ω₉.
+    let mut p9_planar = *p9;
+    p9_planar.i = 0.0;
+    p9_planar.omega_big = 0.0;
+    let p9_body = p9_planar.to_body();
+    let varpi_p9 = p9_planar.omega;
 
     // Create test particles at two starting Δϖ values: 0 and π
     let mut particles = Vec::new();
@@ -54,7 +76,7 @@ pub fn nbody_phase_portrait(
                 i: 0.0,
                 omega_big: 0.0,
                 omega,
-                mean_anomaly: 0.0,
+                mean_anomaly: rng.gen_range(0.0..TWO_PI),
             };
             particles.push(elements_to_cartesian(&elem, GM_SUN));
             active.push(true);
@@ -75,10 +97,16 @@ pub fn nbody_phase_portrait(
         bs_epsilon: 1e-11,
     };
 
-    let integrator = WhmIntegrator::new();
+    // Giant planets via the orbit-averaged J+S+U+N quadrupole (planar runs
+    // integrate no planet directly).
+    let integrator = WhmIntegrator::with_extra_forces(vec![j2_jsun_force()]);
     let mut results = Vec::new();
     let mut t = 0.0;
-    let mut next_snapshot = 0.0;
+    // Snapshot trigger convention shared with the disk simulations: record
+    // whenever t crosses the next multiple of the snapshot interval (the
+    // first crossing is at t = snapshot_interval; initial conditions are the
+    // caller's inputs).
+    let mut next_snapshot = snapshot_interval;
 
     let n_steps = (t_total / dt).ceil() as usize;
     for _ in 0..n_steps {
@@ -87,23 +115,16 @@ pub fn nbody_phase_portrait(
 
         if t >= next_snapshot {
             // Record orbital elements for all active particles
+            let p9_elem = cartesian_to_elements(&bodies.last().unwrap().state, GM_SUN);
+            let varpi_p9_current = p9_elem.omega + p9_elem.omega_big;
+
             for (i, particle) in particles.iter().enumerate() {
                 if !active[i] {
                     continue;
                 }
                 let elem = cartesian_to_elements(particle, GM_SUN);
-
-                // Compute Δϖ relative to Planet Nine's current position
-                let p9_elem = cartesian_to_elements(&bodies.last().unwrap().state, GM_SUN);
-                let varpi_p9_current = p9_elem.omega + p9_elem.omega_big;
                 let varpi_test = elem.omega + elem.omega_big;
-                let mut dv = varpi_test - varpi_p9_current;
-                while dv > PI {
-                    dv -= 2.0 * PI;
-                }
-                while dv < -PI {
-                    dv += 2.0 * PI;
-                }
+                let dv = wrap_to_pi(varpi_test - varpi_p9_current);
 
                 results.push(TrajectoryPoint {
                     t,
@@ -149,16 +170,27 @@ pub fn paper_phase_portraits(
     p9: &P9Params,
     t_total: f64,
     dt: f64,
+    seed: u64,
 ) -> Vec<(f64, Vec<TrajectoryPoint>)> {
     let test_axes = [50.0, 150.0, 250.0, 350.0, 450.0, 550.0];
 
     let mut results = Vec::new();
 
-    for &a in &test_axes {
-        // Start with no other bodies (pure P9 + Sun for the phase portrait)
+    for (k, &a) in test_axes.iter().enumerate() {
+        // No directly integrated planets besides P9 (giants enter through
+        // the averaged quadrupole inside nbody_phase_portrait).
         let mut bodies = Vec::new();
 
-        let points = nbody_phase_portrait(a, p9, &mut bodies, 20, t_total, dt, t_total / 100.0);
+        let points = nbody_phase_portrait(
+            a,
+            p9,
+            &mut bodies,
+            20,
+            t_total,
+            dt,
+            t_total / 100.0,
+            seed.wrapping_add(k as u64),
+        );
 
         results.push((a, points));
     }
@@ -184,6 +216,7 @@ mod tests {
             1e6,   // 1 Myr
             300.0, // 300 day timestep
             1e5,   // snapshot every 100 kyr
+            42,
         );
 
         assert!(!points.is_empty(), "Should produce trajectory points");
@@ -200,6 +233,18 @@ mod tests {
                 p.delta_varpi
             );
         }
+    }
+
+    #[test]
+    fn test_portrait_p9_is_coplanar() {
+        // The portrait must coplanarize P9 even when handed the inclined
+        // nominal parameters: all returned particles stay at i ≈ 0 only if
+        // P9 exerts no out-of-plane force.
+        let p9 = P9Params::nominal_2016(); // i = 30°
+        let mut bodies = Vec::new();
+        let _ = nbody_phase_portrait(250.0, &p9, &mut bodies, 2, 1e5, 300.0, 5e4, 1);
+        // bodies restored
+        assert!(bodies.is_empty());
     }
 
     #[test]

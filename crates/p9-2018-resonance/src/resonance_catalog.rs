@@ -4,12 +4,19 @@
 //! spectrum of high-order resonances identified in Bailey+ (2018).
 //!
 //! Key concept: the Farey sequence F_n contains all fractions p/q with
-//! q ≤ n in lowest terms. Millholland & Laughlin (2017) used F_5 (only
-//! denominators ≤ 5), while Bailey+ (2018) shows the actual resonance
-//! occupation includes many higher-order terms.
+//! p, q ≤ n in lowest terms. Millholland & Laughlin (2017) used F_5, while
+//! Bailey+ (2018) shows the actual resonance occupation includes many
+//! higher-order terms.
+//!
+//! Convention: a "p:q" resonance here has period ratio T_particle/T_P9 =
+//! q/p (a_res = a₉ (q/p)^{2/3}; interior particles have q < p and complete
+//! p orbits per q Planet Nine orbits). The stationary resonant angle is
+//! φ = q λ − p λ₉ + (p − q) ϖ, delegated to
+//! `p9_core::analysis::resonance::resonant_angle` — the single workspace
+//! convention. (A previous local version had the p/q roles swapped, which
+//! circulates at n₉(p² − q²)/q even for an exactly resonant orbit.)
 
-use std::f64::consts::PI;
-
+use p9_core::analysis::resonance as core_resonance;
 use p9_core::constants::TWO_PI;
 use p9_core::types::OrbitalElements;
 
@@ -94,9 +101,12 @@ pub fn farey_resonances(max_denominator: u32, max_p: u32) -> Vec<Resonance> {
     resonances
 }
 
-/// Farey F_5 sequence used by Millholland & Laughlin (2017).
+/// Farey F_5 sequence used by Millholland & Laughlin (2017): all period
+/// ratios p:q with *both* p ≤ 5 and q ≤ 5 in lowest terms. (A previous
+/// version passed max_p = 30, admitting 29:5 and 30:1 — far outside F₅ —
+/// which flattened the baseline the comparison exists to demonstrate.)
 pub fn farey_f5() -> Vec<Resonance> {
-    farey_resonances(5, 30)
+    farey_resonances(5, 5)
 }
 
 /// Extended resonance catalog including high-order terms (denominators up to 20).
@@ -157,9 +167,12 @@ pub fn identify_resonance(
     best
 }
 
-/// Compute the resonant angle for a p:q resonance.
+/// Compute the resonant angle for a p:q resonance (period ratio q/p):
 ///
-/// φ = p*λ_particle - q*λ_p9 - (p-q)*ϖ_particle
+///   φ = q λ_particle − p λ_p9 + (p − q) ϖ_particle
+///
+/// via the single workspace convention in `p9_core::analysis::resonance`
+/// (whose (P, Q) arguments map to (q, p) here). Wrapped to [0, 2π).
 pub fn resonant_angle(
     elem_particle: &OrbitalElements,
     elem_p9: &OrbitalElements,
@@ -169,40 +182,31 @@ pub fn resonant_angle(
     let lambda_p9 = elem_p9.mean_anomaly + elem_p9.omega + elem_p9.omega_big;
     let varpi_part = elem_particle.omega + elem_particle.omega_big;
 
-    let diff = res.p as i64 - res.q as i64;
-    let mut phi = res.p as f64 * lambda_part - res.q as f64 * lambda_p9 - diff as f64 * varpi_part;
-
-    phi = phi % TWO_PI;
-    if phi > PI {
-        phi -= TWO_PI;
-    }
-    if phi < -PI {
-        phi += TWO_PI;
-    }
-    phi
+    core_resonance::resonant_angle(res.q, res.p, lambda_part, lambda_p9, varpi_part)
 }
 
-/// Check if a sequence of resonant angles indicates libration.
+/// Resonant angle from raw angles (radians) rather than element structs.
+pub fn resonant_angle_from_angles(lambda: f64, lambda_p9: f64, varpi: f64, res: &Resonance) -> f64 {
+    core_resonance::resonant_angle(res.q, res.p, lambda, lambda_p9, varpi)
+}
+
+/// Minimum empty gap (rad) on the circle for the gap-based libration test.
+pub const LIBRATION_MIN_GAP: f64 = 1.0;
+
+/// Check if a sequence of resonant angles indicates libration, delegating to
+/// the gap-based detector in `p9_core::analysis::resonance` (a circulating
+/// angle covers the circle; a librator leaves an empty arc).
 ///
-/// Uses circular statistics: r_bar close to 1 means tightly clustered (librating).
+/// Returns (is_librating, libration half-amplitude in rad; 2π if
+/// circulating).
 pub fn is_librating(angles: &[f64]) -> (bool, f64) {
     if angles.len() < 10 {
         return (false, TWO_PI);
     }
-
-    let sin_sum: f64 = angles.iter().map(|&a| a.sin()).sum();
-    let cos_sum: f64 = angles.iter().map(|&a| a.cos()).sum();
-    let n = angles.len() as f64;
-    let r_bar = (sin_sum * sin_sum + cos_sum * cos_sum).sqrt() / n;
-
-    let is_lib = r_bar > 0.5;
-    let amplitude = if r_bar > 0.0 {
-        2.0 * (-2.0 * r_bar.ln()).sqrt()
-    } else {
-        TWO_PI
-    };
-
-    (is_lib, amplitude.min(TWO_PI))
+    match core_resonance::libration_amplitude(angles, LIBRATION_MIN_GAP) {
+        Some(amplitude) => (true, amplitude),
+        None => (false, TWO_PI),
+    }
 }
 
 /// Count how many elements in a snapshot fall near each resonance.
@@ -232,6 +236,7 @@ pub fn resonance_census(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_resonance_semimajor_axis() {
@@ -257,15 +262,43 @@ mod tests {
         let f5 = farey_f5();
         assert!(!f5.is_empty());
 
-        // All denominators should be ≤ 5
+        // F5 proper: both p and q ≤ 5 (the old max_p = 30 admitted 29:5).
         for res in &f5 {
             assert!(res.q <= 5, "F5 should have q ≤ 5, got {}", res);
+            assert!(res.p <= 5, "F5 should have p ≤ 5, got {}", res);
         }
 
         // Should contain standard resonances
         assert!(f5.contains(&Resonance::new(2, 1)));
         assert!(f5.contains(&Resonance::new(3, 1)));
         assert!(f5.contains(&Resonance::new(3, 2)));
+        assert!(!f5.contains(&Resonance::new(29, 5)));
+    }
+
+    #[test]
+    fn test_resonant_angle_stationary_on_resonance() {
+        // 3:1 (particle does 3 orbits per P9 orbit): advancing the mean
+        // anomalies along the resonant orbit must keep φ constant. The
+        // previous p/q-swapped convention circulated at n₉(p² − q²)/q.
+        let res = Resonance::new(3, 1);
+        let elem = |m: f64| OrbitalElements {
+            a: 0.0,
+            e: 0.0,
+            i: 0.0,
+            omega: 0.4,
+            omega_big: 0.2,
+            mean_anomaly: m,
+        };
+        let phi0 = resonant_angle(&elem(0.0), &elem(0.0), &res);
+        for k in 1..50 {
+            let m9 = k as f64 * 0.21;
+            let phi = resonant_angle(&elem(3.0 * m9), &elem(m9), &res);
+            let mut d = (phi - phi0).rem_euclid(TWO_PI);
+            if d > std::f64::consts::PI {
+                d -= TWO_PI;
+            }
+            assert!(d.abs() < 1e-9, "φ drifted by {d:.2e} at step {k}");
+        }
     }
 
     #[test]

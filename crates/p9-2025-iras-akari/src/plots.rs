@@ -379,7 +379,7 @@ mod tests {
         let distances: Vec<f64> = (200..=1000).step_by(50).map(|d| d as f64).collect();
         let seps: Vec<f64> = distances
             .iter()
-            .map(|d| crate::proper_motion::angular_separation_arcmin(*d, *d, 23.0))
+            .map(|d| crate::proper_motion::heliocentric_separation_arcmin(*d, *d, 0.0, 23.0))
             .collect();
         let svg = separation_vs_distance_plot(&distances, &seps, 700, 450);
         assert!(svg.contains("<svg"));

@@ -215,11 +215,13 @@ mod tests {
                     e: 0.6,
                     perihelion: 280.0,
                 },
+                r_bar_dvarpi: 0.8,
                 clustering_fraction: 0.8,
                 high_perihelion_fraction: 0.2,
                 n_survivors: 15,
                 n_total: 400,
                 accepted: true,
+                seed: 1,
             },
             GridResult {
                 point: GridPoint {
@@ -228,11 +230,13 @@ mod tests {
                     e: 0.2,
                     perihelion: 240.0,
                 },
+                r_bar_dvarpi: 0.1,
                 clustering_fraction: 0.1,
                 high_perihelion_fraction: 0.0,
                 n_survivors: 3,
                 n_total: 400,
                 accepted: false,
+                seed: 2,
             },
         ];
 

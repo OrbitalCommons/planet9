@@ -163,9 +163,13 @@ pub fn paper_sample_a230() -> Vec<DistantKbo> {
         },
         DistantKbo {
             name: "2014 FE72",
+            // e from JPL SBDB: q ≈ 36 AU at a ≈ 2155 AU → e ≈ 0.983.
+            // (Previously 0.99, which put q at 21.6 AU — Neptune-crossing and
+            // in violation of the sample's q > 30 AU cut; as the largest-Γ
+            // object it shifted the mean Poincaré vector.)
             elements: OrbitalElements {
                 a: 2155.0,
-                e: 0.99,
+                e: 0.983,
                 i: 20.6 * DEG2RAD,
                 omega: 134.0 * DEG2RAD,
                 omega_big: 336.8 * DEG2RAD,
@@ -197,11 +201,26 @@ mod tests {
         }
     }
 
+    /// The sample cut is q > 30 AU (no Neptune crossers). This test was
+    /// previously loosened to q > 20 to mask the corrupted 2014 FE72
+    /// eccentricity (M1).
     #[test]
-    fn test_all_positive_perihelion() {
+    fn test_sample_cut_q_above_30() {
         for kbo in paper_sample_a230() {
             let q = kbo.elements.perihelion();
-            assert!(q > 20.0, "{} has q = {:.1} AU, expected > 20", kbo.name, q);
+            assert!(q > 30.0, "{} has q = {:.1} AU, expected > 30", kbo.name, q);
         }
+    }
+
+    #[test]
+    fn test_2014_fe72_perihelion() {
+        let kbos = paper_sample_a230();
+        let fe72 = kbos.iter().find(|k| k.name == "2014 FE72").unwrap();
+        assert!((fe72.elements.e - 0.983).abs() < 1e-12);
+        assert!(
+            (fe72.elements.perihelion() - 36.0).abs() < 1.0,
+            "q = {:.1}",
+            fe72.elements.perihelion()
+        );
     }
 }

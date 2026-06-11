@@ -1,8 +1,12 @@
 //! Detection prospects for revised Planet Nine parameters.
 //!
 //! Computes V-band magnitude estimates for different P9 configurations
-//! and compares with survey depth limits.
+//! and compares with survey depth limits. Photometry goes through
+//! `p9_core::analysis::photometry` (single workspace implementation of the
+//! reflected-sunlight distance law and absolute magnitude); survey depths
+//! shared with `p9_core::analysis::surveys` where available.
 
+use p9_core::analysis::photometry;
 use p9_core::constants::*;
 use p9_core::types::P9Params;
 
@@ -49,29 +53,13 @@ impl P9PhysicalProperties {
     }
 }
 
-/// Compute apparent V-band magnitude at a given heliocentric distance.
-///
-/// Uses the standard asteroid photometry formula:
-///   V = H + 5 * log10(r * delta) - 2.5 * log10(phase_function)
-///
-/// where H is the absolute magnitude (r=1 AU, delta=1 AU, zero phase angle).
-///
-/// For distant objects (r >> 1 AU), delta ≈ r, so:
-///   V ≈ H + 10 * log10(r)
+/// Compute apparent V-band magnitude at a given heliocentric distance,
+/// observed at opposition, via the shared p9-core photometry:
+///   H = 5 log10(1329 / (√p · D_km)),  m = H + 5 log10(r·Δ),  Δ = r − 1 AU.
 pub fn apparent_magnitude(r_au: f64, physical: &P9PhysicalProperties) -> f64 {
-    // Physical radius in AU
-    let r_earth_au = 4.26e-5_f64; // Earth radius in AU
-    let radius_au = physical.radius_earth * r_earth_au;
-
-    // Absolute magnitude from radius and albedo
-    // H = -5 * log10(diameter_km) - 2.5 * log10(albedo) + 15.618
-    let diameter_km = radius_au * 2.0 * AU_KM;
-    let h = -5.0 * diameter_km.log10() - 2.5 * physical.albedo.log10() + 15.618;
-
-    // At large distances, geocentric distance ≈ heliocentric distance
-    let delta = r_au;
-
-    h + 5.0 * (r_au * delta).log10()
+    let radius_km = physical.radius_earth * EARTH_RADIUS_KM;
+    let h = photometry::absolute_magnitude(radius_km, physical.albedo);
+    photometry::apparent_magnitude(h, r_au, photometry::opposition_delta(r_au))
 }
 
 /// Compute V magnitude at perihelion and aphelion.
@@ -92,16 +80,20 @@ pub struct SurveyLimit {
     pub v_limit: f64,
 }
 
-/// Known survey depth limits.
+/// Known survey depth limits. Pan-STARRS and DES come from the shared
+/// p9-core survey table; Subaru HSC and LSST are not in the shared table
+/// (deep targeted surveys) and are kept here.
 pub fn survey_limits() -> Vec<SurveyLimit> {
     vec![
         SurveyLimit {
             name: "Pan-STARRS",
-            v_limit: 21.5,
+            v_limit: p9_core::analysis::surveys::limiting_magnitude("PS1 3pi")
+                .expect("PS1 in shared table"),
         },
         SurveyLimit {
-            name: "DECam/Blanco",
-            v_limit: 23.5,
+            name: "DECam/DES",
+            v_limit: p9_core::analysis::surveys::limiting_magnitude("DES")
+                .expect("DES in shared table"),
         },
         SurveyLimit {
             name: "Subaru HSC",

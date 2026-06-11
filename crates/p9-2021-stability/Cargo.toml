@@ -5,6 +5,7 @@ edition = "2021"
 description = "Reproduction of Batygin, Mardling & Nesvorny (2021) 'The Stability Boundary of the Distant Scattered Disk'"
 
 [dependencies]
+nalgebra.workspace = true
 p9-core = { path = "../p9-core" }
 rand = { workspace = true }
 rand_distr = { workspace = true }

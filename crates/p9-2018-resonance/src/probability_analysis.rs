@@ -5,27 +5,37 @@
 //! - Show that P(all 6 KBOs in N/1 or N/2) < 5%
 //! - Compare a₉ distributions using Farey F5 vs full resonance spectrum
 //!
-//! Key result: the prominent peak at a₉ ≈ 660 AU dissolves into a broad
-//! plateau when high-order resonances are included.
-
-use p9_core::constants::*;
+//! Key result: the prominent peak at a₉ ≈ 660 AU (Millholland & Laughlin
+//! 2017) dissolves into a broad plateau when high-order resonances are
+//! included.
+//!
+//! Observational input: the vetted ETNO table in `p9_core::data::etno`
+//! (the local `OBSERVED_KBO_AXES` copy this replaces had scrambled
+//! semi-major axes — e.g. 2013 RF98 at 780 AU instead of ~325 — displacing
+//! every implied-a₉ peak by tens of AU).
 
 use crate::resonance_catalog::{extended_catalog, farey_f5, Resonance};
 
-/// Observed KBO semi-major axes from Malhotra et al. (2016).
-/// Used for the feasibility analysis.
-pub const OBSERVED_KBO_AXES: &[f64] = &[
-    164.0, // 2003 CR105
-    220.0, // 2003 GB32 (approximate)
-    226.0, // 2001 FP185
-    266.0, // 2012 VP113
-    356.0, // 2004 VN112 (approximate)
-    472.0, // Sedna
-    735.0, // 2013 SY99 (approximate)
-    316.0, // 2010 GB174
-    780.0, // 2013 RF98 (approximate)
-    540.0, // 2007 TG422 (approximate)
+/// Names of the 6 clustered ETNOs of Batygin & Brown (2016) — the sample
+/// Millholland & Laughlin (2017) and Bailey+ (2018) analyze ("all 6 KBOs").
+const BB16_SAMPLE: [&str; 6] = [
+    "Sedna",
+    "2012 VP113",
+    "2004 VN112",
+    "2010 GB174",
+    "2007 TG422",
+    "2013 RF98",
 ];
+
+/// Semi-major axes (AU) of the observed 6-KBO sample, drawn from the single
+/// vetted workspace table in `p9_core::data::etno`.
+pub fn observed_kbo_axes() -> Vec<f64> {
+    p9_core::data::etno::BROWN_2017_SAMPLE
+        .iter()
+        .filter(|k| BB16_SAMPLE.contains(&k.name))
+        .map(|k| k.a)
+        .collect()
+}
 
 /// Compute the probability that a randomly chosen resonant particle
 /// is in an N/1 or N/2 resonance, given the resonance catalog.
@@ -60,6 +70,40 @@ pub fn implied_a9(a_kbo: f64, res: &Resonance) -> f64 {
     a_kbo * (res.p as f64 / res.q as f64).powf(2.0 / 3.0)
 }
 
+/// Explicit, honest prior on a₉ and the kernel model for the
+/// commensurability scan. Every parameter is a documented assumption (the
+/// previous implementation hid a hard a₉ > 500 AU step inside an expression
+/// dressed up as a mass marginalization).
+#[derive(Debug, Clone)]
+pub struct A9Prior {
+    /// Lower edge of the uniform a₉ prior (AU). Dynamical-stability and
+    /// survey arguments exclude a₉ ≲ 300 AU for a body shepherding ETNOs
+    /// with a up to ~500 AU.
+    pub a9_min: f64,
+    /// Upper edge of the uniform a₉ prior (AU): beyond ~1000 AU the
+    /// perturber is too distant to maintain the observed clustering.
+    pub a9_max: f64,
+    /// Fractional 1σ uncertainty on the observed KBO semi-major axes,
+    /// setting the kernel width σ = frac · a_kbo of the commensurability
+    /// score. ~2% is conservative for the multi-opposition orbits in the
+    /// vetted table.
+    pub a_kbo_fractional_sigma: f64,
+    /// When true, weight each commensurability by 1/order (a proxy for
+    /// resonance width/occupancy) instead of equally.
+    pub order_weighting: bool,
+}
+
+impl Default for A9Prior {
+    fn default() -> Self {
+        Self {
+            a9_min: 300.0,
+            a9_max: 1000.0,
+            a_kbo_fractional_sigma: 0.02,
+            order_weighting: false,
+        }
+    }
+}
+
 /// Result of a₉ distribution computation.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct A9Distribution {
@@ -71,50 +115,58 @@ pub struct A9Distribution {
     pub label: String,
 }
 
-/// Compute the a₉ distribution using a given resonance catalog.
+/// Compute the a₉ commensurability distribution for a given resonance
+/// catalog (the Millholland & Laughlin 2017 scan, generalized to an
+/// arbitrary catalog as in Bailey+ 2018).
 ///
-/// For each observed KBO and each resonance in the catalog, compute the
-/// implied a₉ and add a Gaussian kernel. This implements the approach
-/// of Millholland & Laughlin (2017) but with different resonance sets.
+/// For each trial a₉ on the explicit prior range, each KBO is scored by its
+/// *best-fitting* commensurability: max over interior resonances of
+/// w · exp(−(a_kbo − a₉ (q/p)^{2/3})² / 2σ²) with σ = frac · a_kbo from the
+/// KBO's a-uncertainty. Scoring the best match per KBO (rather than summing
+/// a kernel per resonance) is what makes the scan a consensus statistic:
+/// the peak appears where *all* KBOs are simultaneously near low-order
+/// commensurabilities, and adding high-order resonances to the catalog
+/// dilutes it toward a plateau — the paper's headline comparison.
+///
+/// Only interior resonances (period ratio < 1; the perturber exterior to
+/// the clustered ETNOs, as the Planet Nine hypothesis requires) are scored.
 pub fn compute_a9_distribution(
     kbo_axes: &[f64],
     catalog: &[Resonance],
-    a9_range: (f64, f64),
+    prior: &A9Prior,
     n_bins: usize,
-    sigma: f64,
     label: &str,
 ) -> A9Distribution {
-    let da = (a9_range.1 - a9_range.0) / n_bins as f64;
+    let da = (prior.a9_max - prior.a9_min) / n_bins as f64;
     let bins: Vec<f64> = (0..n_bins)
-        .map(|i| a9_range.0 + (i as f64 + 0.5) * da)
+        .map(|i| prior.a9_min + (i as f64 + 0.5) * da)
         .collect();
     let mut density = vec![0.0_f64; n_bins];
 
-    // Mass range for Monte Carlo sampling
-    let mass_mean = 10.0; // M_Earth
-    let _mass_min = 5.0;
-    let _mass_max = 20.0;
-
-    for &a_kbo in kbo_axes {
-        for res in catalog {
-            let a9 = implied_a9(a_kbo, res);
-
-            // Valid range: [200, 800] AU approximately
-            let a9_min = 200.0 + 30.0 * mass_mean / EARTH_MASS_SOLAR * EARTH_MASS_SOLAR;
-            let a9_max = 800.0;
-            if a9 < a9_min || a9 > a9_max {
-                continue;
+    for (j, &a9) in bins.iter().enumerate() {
+        let mut score = 0.0;
+        for &a_kbo in kbo_axes {
+            let sigma = prior.a_kbo_fractional_sigma * a_kbo;
+            let mut best = 0.0_f64;
+            for res in catalog {
+                if res.period_ratio() >= 1.0 {
+                    continue; // exterior: P9 inside the KBO orbit
+                }
+                let a_res = res.semimajor_axis(a9);
+                let z = (a_kbo - a_res) / sigma;
+                let weight = if prior.order_weighting {
+                    1.0 / res.order().max(1) as f64
+                } else {
+                    1.0
+                };
+                best = best.max(weight * (-0.5 * z * z).exp());
             }
-
-            // Add Gaussian kernel
-            for (j, &bin) in bins.iter().enumerate() {
-                let z = (bin - a9) / sigma;
-                density[j] += (-0.5 * z * z).exp();
-            }
+            score += best;
         }
+        density[j] = score;
     }
 
-    // Normalize
+    // Normalize to a probability density over the prior range.
     let total: f64 = density.iter().sum::<f64>() * da;
     if total > 0.0 {
         for d in &mut density {
@@ -131,19 +183,16 @@ pub fn compute_a9_distribution(
 
 /// Compute a₉ distribution using the Farey F5 sequence (Millholland & Laughlin 2017).
 pub fn a9_distribution_farey_f5(kbo_axes: &[f64]) -> A9Distribution {
-    let catalog = farey_f5();
-    compute_a9_distribution(kbo_axes, &catalog, (200.0, 1200.0), 100, 30.0, "Farey F5")
+    compute_a9_distribution(kbo_axes, &farey_f5(), &A9Prior::default(), 100, "Farey F5")
 }
 
 /// Compute a₉ distribution using the full extended catalog (Bailey+ 2018).
 pub fn a9_distribution_extended(kbo_axes: &[f64]) -> A9Distribution {
-    let catalog = extended_catalog();
     compute_a9_distribution(
         kbo_axes,
-        &catalog,
-        (200.0, 1200.0),
+        &extended_catalog(),
+        &A9Prior::default(),
         100,
-        30.0,
         "Extended (Bailey+ 2018)",
     )
 }
@@ -217,6 +266,19 @@ mod tests {
     }
 
     #[test]
+    fn test_observed_axes_vetted() {
+        // Single source: the p9-core ETNO table (Sedna 506, 2013 RF98 ~325 —
+        // not the scrambled 472/780 of the deleted local copy), restricted
+        // to the 6-object Batygin & Brown (2016) sample the papers analyze.
+        let axes = observed_kbo_axes();
+        assert_eq!(axes.len(), 6);
+        assert!(axes.contains(&506.0));
+        assert!(axes.contains(&325.0));
+        assert!(!axes.contains(&780.0));
+        assert!(!axes.contains(&472.0));
+    }
+
+    #[test]
     fn test_p_simple_resonance() {
         let census = vec![
             (Resonance::new(1, 3), 10), // N/1 (p=1, period ratio 3)
@@ -236,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_a9_distribution_f5() {
-        let dist = a9_distribution_farey_f5(OBSERVED_KBO_AXES);
+        let dist = a9_distribution_farey_f5(&observed_kbo_axes());
         assert!(!dist.bins.is_empty());
         assert!(!dist.density.is_empty());
 
@@ -245,14 +307,27 @@ mod tests {
     }
 
     #[test]
-    fn test_extended_distribution_flatter() {
-        let comparison = compare_distributions(OBSERVED_KBO_AXES);
-
-        // The extended distribution should be flatter (lower peak-to-mean)
-        // This is the main result of the paper
+    fn test_f5_peak_near_paper_value() {
+        // Paper-number regression (Millholland & Laughlin 2017): the F5
+        // implied-a₉ distribution peaks near 660 AU.
+        let comparison = compare_distributions(&observed_kbo_axes());
         assert!(
-            comparison.ext_peak_to_mean < comparison.f5_peak_to_mean * 1.5,
-            "Extended peak/mean ({:.2}) should be smaller than F5 ({:.2})",
+            (comparison.f5_peak_a9 - 660.0).abs() < 60.0,
+            "F5 peak at {:.0} AU, expected ~660 AU",
+            comparison.f5_peak_a9
+        );
+    }
+
+    #[test]
+    fn test_extended_distribution_flatter() {
+        // The main result of Bailey+ (2018): including the full resonance
+        // spectrum makes the implied-a₉ distribution strictly *less* peaked
+        // than the F5 baseline. (The previous assertion allowed the extended
+        // peak to be 1.5x larger — vacuous.)
+        let comparison = compare_distributions(&observed_kbo_axes());
+        assert!(
+            comparison.ext_peak_to_mean < 0.8 * comparison.f5_peak_to_mean,
+            "Extended peak/mean ({:.2}) should be well below F5 ({:.2})",
             comparison.ext_peak_to_mean,
             comparison.f5_peak_to_mean,
         );

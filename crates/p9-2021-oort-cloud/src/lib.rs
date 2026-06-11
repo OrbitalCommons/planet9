@@ -10,6 +10,14 @@
 //! The birth cluster environment (Plummer sphere, M ~ 1200 Msun, r ~ 0.35 pc)
 //! generates the IOC population through stellar encounters during the Sun's
 //! early cluster membership.
+//!
+//! Implementation: real secular evolution at reduced scale — Planet Nine as a
+//! softened, dwell-time-weighted Gauss ring (the doubly-averaged secular
+//! picture), with the ring mass boosted and the integration time shortened by
+//! the same factor; injection classified by q(t) crossings; f_ϖ measured from
+//! end-state Δϖ with the anti-aligned convention; and a genuine P9-free
+//! control run. The published 67%/88% fractions are not asserted (they
+//! require the paper's full-scale ensemble including the giant planets).
 
 pub mod injection_simulation;
 pub mod oort_cloud;

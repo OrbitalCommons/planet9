@@ -8,6 +8,8 @@ pub const G_AU3_MSUN_DAY2: f64 = 2.959122082855911e-4;
 pub const GM_SUN: f64 = 2.959122082855911e-4;
 pub const GM_MERCURY: f64 = 4.912_486_6e-11;
 pub const GM_VENUS: f64 = 7.243_452_5e-10;
+/// GM of the Earth-Moon *system* (barycenter). Note this is NOT the same body
+/// as `EARTH_MASS_SOLAR` below, which is the Earth alone (the Moon adds ~1.2%).
 pub const GM_EARTH_MOON: f64 = 8.997_011_4e-10;
 pub const GM_MARS: f64 = 9.549_535_2e-11;
 pub const GM_JUPITER: f64 = 2.825_345_818e-7;
@@ -22,8 +24,11 @@ pub const MASS_SATURN_SOLAR: f64 = 2.858_859_81e-4;
 pub const MASS_URANUS_SOLAR: f64 = 4.366_244_0e-5;
 pub const MASS_NEPTUNE_SOLAR: f64 = 5.151_389_0e-5;
 
-/// Earth mass in solar masses
+/// Earth mass in solar masses (Earth only, excluding the Moon; see GM_EARTH_MOON)
 pub const EARTH_MASS_SOLAR: f64 = 3.003_489e-6;
+
+/// Earth equatorial radius in km (IAU 2015 nominal)
+pub const EARTH_RADIUS_KM: f64 = 6_378.1;
 
 /// Equatorial radii in AU
 pub const RADIUS_JUPITER_AU: f64 = 71_492.0 / 1.495_978_707e8;
@@ -59,6 +64,10 @@ pub const J2000: f64 = 2_451_545.0;
 pub const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
 pub const DEG2RAD: f64 = std::f64::consts::PI / 180.0;
 pub const RAD2DEG: f64 = 180.0 / std::f64::consts::PI;
+
+/// Neptune's semi-major axis in AU (single source for the resonance/Hansen
+/// machinery; several paper crates previously re-defined this inconsistently)
+pub const A_NEPTUNE_AU: f64 = 30.07;
 
 /// Neptune's orbital period in days (~164.8 years)
 pub const NEPTUNE_PERIOD_DAYS: f64 = 60_190.03;

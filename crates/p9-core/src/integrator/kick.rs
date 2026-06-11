@@ -42,8 +42,92 @@ pub fn perturbation_acceleration(
     -gm_pert * (dr / dr3 + r_pert / rp3)
 }
 
+/// Direct gravitational acceleration only (no indirect term).
+///
+/// In the democratic heliocentric splitting (Duncan, Levison & Lee 1998) the
+/// Sun-recoil physics is carried by the separate solar-drift substep, so the
+/// kick must apply only the direct term.
+#[inline]
+pub fn direct_acceleration(r: &Vector3<f64>, r_pert: &Vector3<f64>, gm_pert: f64) -> Vector3<f64> {
+    let dr = r - r_pert;
+    let dr_mag = dr.norm();
+    if dr_mag < 1e-30 {
+        return Vector3::zeros();
+    }
+    -gm_pert * dr / dr_mag.powi(3)
+}
+
+/// Direct-only mutual kick for massive bodies (democratic heliocentric scheme).
+pub fn kick_bodies_direct(bodies: &mut [MassiveBody], dt: f64) {
+    let n = bodies.len();
+    if n < 2 {
+        return;
+    }
+
+    let mut accels = vec![Vector3::<f64>::zeros(); n];
+    for i in 0..n {
+        for j in 0..n {
+            if i == j {
+                continue;
+            }
+            accels[i] +=
+                direct_acceleration(&bodies[i].state.pos, &bodies[j].state.pos, bodies[j].gm);
+        }
+    }
+
+    for (body, accel) in bodies.iter_mut().zip(accels.iter()) {
+        body.state.vel += dt * accel;
+    }
+}
+
+/// Direct-only kick on test particles from massive bodies (democratic heliocentric).
+pub fn kick_particles_direct(
+    particles: &mut [StateVector],
+    active: &[bool],
+    bodies: &[MassiveBody],
+    dt: f64,
+) {
+    for (i, particle) in particles.iter_mut().enumerate() {
+        if !active[i] {
+            continue;
+        }
+        let mut accel = Vector3::zeros();
+        for body in bodies {
+            accel += direct_acceleration(&particle.pos, &body.state.pos, body.gm);
+        }
+        particle.vel += dt * accel;
+    }
+}
+
+/// Direct-only particle kick using rayon for parallelism.
+pub fn kick_particles_direct_parallel(
+    particles: &mut [StateVector],
+    active: &[bool],
+    bodies: &[MassiveBody],
+    dt: f64,
+) {
+    use rayon::prelude::*;
+
+    particles
+        .par_iter_mut()
+        .zip(active.par_iter())
+        .for_each(|(particle, &is_active)| {
+            if !is_active {
+                return;
+            }
+            let mut accel = Vector3::zeros();
+            for body in bodies {
+                accel += direct_acceleration(&particle.pos, &body.state.pos, body.gm);
+            }
+            particle.vel += dt * accel;
+        });
+}
+
 /// Apply a kick (velocity impulse) to all massive bodies due to mutual interactions.
 /// Each body receives acceleration from all other bodies.
+///
+/// Direct + indirect form, for heliocentric-velocity schemes. The
+/// democratic-heliocentric integrator uses `kick_bodies_direct` instead.
 pub fn kick_bodies(bodies: &mut [MassiveBody], dt: f64) {
     let n = bodies.len();
     if n < 2 {

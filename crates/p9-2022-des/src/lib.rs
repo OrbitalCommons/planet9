@@ -11,4 +11,5 @@
 pub mod color_models;
 pub mod plots;
 pub mod recovery_analysis;
+pub mod sky;
 pub mod survey_model;

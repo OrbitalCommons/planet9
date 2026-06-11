@@ -5,9 +5,11 @@
 //! The core result: combined ϖ + ω clustering has only 0.025% probability of
 //! arising by chance, even accounting for observational bias.
 //!
-//! TODO: Full bias function computation requires MPC discovery catalog
-//! (survey pointings, depths, detection efficiencies). Currently uses
-//! simplified perihelion-distance bias model from the paper.
+//! The bias model is a documented simplification of the paper's MPC
+//! pointing/depth catalog: detectability from H magnitudes and the
+//! reflected-light r⁻⁴ law, longitudinal galactic-plane suppression at the
+//! ecliptic crossings (λ ≈ 95°/275°), and an ecliptic-latitude coverage
+//! penalty. See `bias_function::BiasParams` for the assumptions.
 
 pub mod bias_function;
 pub mod clustering_test;

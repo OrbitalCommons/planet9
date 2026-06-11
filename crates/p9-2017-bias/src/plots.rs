@@ -3,11 +3,11 @@
 use std::fmt::Write;
 
 use crate::clustering_test::ClusteringResult;
-use crate::kbo_sample::DistantKbo;
+use crate::kbo_sample::Etno;
 
 /// Generate a plot showing KBO ϖ distribution with clustering statistic.
 pub fn varpi_distribution_plot(
-    kbos: &[DistantKbo],
+    kbos: &[Etno],
     result: &ClusteringResult,
     width: u32,
     height: u32,
@@ -51,7 +51,7 @@ pub fn varpi_distribution_plot(
 
     // KBO points
     for kbo in kbos {
-        let varpi = kbo.elements.omega + kbo.elements.omega_big;
+        let varpi = kbo.longitude_of_perihelion();
         let px = cx + r * varpi.cos();
         let py = cy - r * varpi.sin();
         writeln!(
@@ -62,10 +62,7 @@ pub fn varpi_distribution_plot(
     }
 
     // Mean direction
-    let varpis: Vec<f64> = kbos
-        .iter()
-        .map(|k| k.elements.omega + k.elements.omega_big)
-        .collect();
+    let varpis: Vec<f64> = kbos.iter().map(|k| k.longitude_of_perihelion()).collect();
     let sin_sum: f64 = varpis.iter().map(|v| v.sin()).sum();
     let cos_sum: f64 = varpis.iter().map(|v| v.cos()).sum();
     let mean_varpi = sin_sum.atan2(cos_sum);

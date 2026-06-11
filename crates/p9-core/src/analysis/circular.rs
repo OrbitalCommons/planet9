@@ -1,0 +1,222 @@
+//! Circular (directional) statistics.
+//!
+//! Single source for the circular mean, mean resultant length, Rayleigh test
+//! (with the small-n correction — the bare exp(−nR̄²) approximation is poor at
+//! the n = 6–11 sample sizes of the clustering papers), and the Kuiper test.
+//! Previously re-implemented inline at least six times across the workspace,
+//! sometimes with arithmetic (non-circular) means.
+//!
+//! Reference: Mardia & Jupp (2000), "Directional Statistics"; Fisher (1993)
+
+use crate::constants::TWO_PI;
+
+/// Circular mean of a set of angles (radians). Returns a value in [0, 2π).
+///
+/// Returns `None` for an empty slice or when the resultant vector vanishes
+/// (perfectly balanced angles have no defined mean direction).
+pub fn circular_mean(angles: &[f64]) -> Option<f64> {
+    if angles.is_empty() {
+        return None;
+    }
+    let s: f64 = angles.iter().map(|a| a.sin()).sum();
+    let c: f64 = angles.iter().map(|a| a.cos()).sum();
+    if s.hypot(c) < 1e-12 * angles.len() as f64 {
+        return None;
+    }
+    Some(s.atan2(c).rem_euclid(TWO_PI))
+}
+
+/// Mean resultant length R̄ ∈ [0, 1]: 1 = perfectly aligned, 0 = balanced.
+pub fn mean_resultant_length(angles: &[f64]) -> f64 {
+    if angles.is_empty() {
+        return 0.0;
+    }
+    let n = angles.len() as f64;
+    let s: f64 = angles.iter().map(|a| a.sin()).sum();
+    let c: f64 = angles.iter().map(|a| a.cos()).sum();
+    s.hypot(c) / n
+}
+
+/// Circular standard deviation: sqrt(−2 ln R̄) (radians).
+pub fn circular_std(angles: &[f64]) -> f64 {
+    let r = mean_resultant_length(angles);
+    if r <= 0.0 {
+        f64::INFINITY
+    } else if r >= 1.0 {
+        0.0
+    } else {
+        (-2.0 * r.ln()).sqrt()
+    }
+}
+
+/// Rayleigh test for non-uniformity of circular data.
+///
+/// Returns the p-value for the null hypothesis that the angles are uniform on
+/// the circle, using the series correction of Mardia & Jupp (2000), Eq. 6.3.5:
+///
+///   p ≈ exp(−Z)·[1 + (2Z − Z²)/(4n) − (24Z − 132Z² + 76Z³ − 9Z⁴)/(288n²)]
+///
+/// with Z = n R̄². The bare exp(−Z) first term is biased at small n (the
+/// regime of the 6–11 object ETNO samples); the correction is accurate to
+/// O(n⁻³).
+pub fn rayleigh_p_value(angles: &[f64]) -> f64 {
+    let n = angles.len() as f64;
+    if n == 0.0 {
+        return 1.0;
+    }
+    let r_bar = mean_resultant_length(angles);
+    let z = n * r_bar * r_bar;
+
+    let p = (-z).exp()
+        * (1.0 + (2.0 * z - z * z) / (4.0 * n)
+            - (24.0 * z - 132.0 * z * z + 76.0 * z.powi(3) - 9.0 * z.powi(4)) / (288.0 * n * n));
+    p.clamp(0.0, 1.0)
+}
+
+/// Kuiper statistic V_n for circular uniformity.
+///
+/// V_n = D⁺ + D⁻ against the uniform CDF on [0, 2π); rotation-invariant,
+/// unlike Kolmogorov-Smirnov.
+pub fn kuiper_statistic(angles: &[f64]) -> f64 {
+    let n = angles.len();
+    if n == 0 {
+        return 0.0;
+    }
+    let mut u: Vec<f64> = angles
+        .iter()
+        .map(|a| a.rem_euclid(TWO_PI) / TWO_PI)
+        .collect();
+    u.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let nf = n as f64;
+    let mut d_plus: f64 = 0.0;
+    let mut d_minus: f64 = 0.0;
+    for (i, &ui) in u.iter().enumerate() {
+        d_plus = d_plus.max((i as f64 + 1.0) / nf - ui);
+        d_minus = d_minus.max(ui - i as f64 / nf);
+    }
+    d_plus + d_minus
+}
+
+/// Approximate p-value for the Kuiper statistic (Stephens 1970 asymptotic
+/// series with the finite-n stabilization factor).
+pub fn kuiper_p_value(angles: &[f64]) -> f64 {
+    let n = angles.len() as f64;
+    if n < 2.0 {
+        return 1.0;
+    }
+    let v = kuiper_statistic(angles);
+    // Stabilized statistic
+    let lambda = (n.sqrt() + 0.155 + 0.24 / n.sqrt()) * v;
+    if lambda < 0.4 {
+        return 1.0;
+    }
+    let mut p = 0.0;
+    for j in 1..=100 {
+        let jf = j as f64;
+        let a = 4.0 * jf * jf * lambda * lambda;
+        let term = (2.0 * a - 2.0) * (-0.5 * a).exp();
+        p += term;
+        if term.abs() < 1e-12 {
+            break;
+        }
+    }
+    p.clamp(0.0, 1.0)
+}
+
+/// Wrap an angle difference into (−π, π].
+pub fn wrap_to_pi(angle: f64) -> f64 {
+    let mut a = angle.rem_euclid(TWO_PI);
+    if a > std::f64::consts::PI {
+        a -= TWO_PI;
+    }
+    a
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use std::f64::consts::PI;
+
+    #[test]
+    fn test_circular_mean_wraps_correctly() {
+        // Angles straddling 0: arithmetic mean would give π, circular gives ~0.
+        let angles = [0.1, TWO_PI - 0.1];
+        let mean = circular_mean(&angles).unwrap();
+        assert!(mean < 0.01 || mean > TWO_PI - 0.01, "mean = {mean}");
+    }
+
+    #[test]
+    fn test_circular_mean_balanced_is_none() {
+        let angles = [0.0, PI / 2.0, PI, 3.0 * PI / 2.0];
+        assert!(circular_mean(&angles).is_none());
+        assert!(circular_mean(&[]).is_none());
+    }
+
+    #[test]
+    fn test_resultant_length_limits() {
+        assert_relative_eq!(
+            mean_resultant_length(&[1.0, 1.0, 1.0]),
+            1.0,
+            epsilon = 1e-12
+        );
+        assert!(mean_resultant_length(&[0.0, PI]) < 1e-12);
+    }
+
+    #[test]
+    fn test_rayleigh_clustered_vs_uniform() {
+        // Tightly clustered: small p.
+        let clustered: Vec<f64> = (0..10).map(|k| 1.0 + 0.05 * k as f64).collect();
+        assert!(rayleigh_p_value(&clustered) < 1e-3);
+
+        // Evenly spread: p near 1.
+        let uniform: Vec<f64> = (0..10).map(|k| k as f64 * TWO_PI / 10.0).collect();
+        assert!(rayleigh_p_value(&uniform) > 0.9);
+    }
+
+    #[test]
+    fn test_rayleigh_small_n_correction_matters() {
+        // n = 6, R̄ moderate: the corrected p differs measurably from exp(-Z).
+        let angles = [0.0, 0.4, 0.9, 1.5, 2.2, 3.0];
+        let n = angles.len() as f64;
+        let r = mean_resultant_length(&angles);
+        let z = n * r * r;
+        let naive = (-z).exp();
+        let corrected = rayleigh_p_value(&angles);
+        assert!(
+            (naive - corrected).abs() / naive > 0.01,
+            "correction too small: naive {naive:.4}, corrected {corrected:.4}"
+        );
+    }
+
+    #[test]
+    fn test_kuiper_uniform_vs_clustered() {
+        let uniform: Vec<f64> = (0..20).map(|k| k as f64 * TWO_PI / 20.0).collect();
+        let clustered: Vec<f64> = (0..20).map(|k| 1.0 + 0.02 * k as f64).collect();
+        assert!(kuiper_statistic(&clustered) > kuiper_statistic(&uniform));
+        assert!(kuiper_p_value(&clustered) < 0.01);
+        assert!(kuiper_p_value(&uniform) > 0.5);
+    }
+
+    #[test]
+    fn test_kuiper_rotation_invariant() {
+        let angles: Vec<f64> = vec![0.2, 1.1, 2.0, 4.5, 5.9];
+        let rotated: Vec<f64> = angles
+            .iter()
+            .map(|a| (a + 2.7).rem_euclid(TWO_PI))
+            .collect();
+        assert_relative_eq!(
+            kuiper_statistic(&angles),
+            kuiper_statistic(&rotated),
+            epsilon = 1e-12
+        );
+    }
+
+    #[test]
+    fn test_wrap_to_pi() {
+        assert_relative_eq!(wrap_to_pi(3.0 * PI), PI, epsilon = 1e-12);
+        assert_relative_eq!(wrap_to_pi(-0.5), -0.5, epsilon = 1e-12);
+        assert_relative_eq!(wrap_to_pi(TWO_PI + 0.5), 0.5, epsilon = 1e-12);
+    }
+}

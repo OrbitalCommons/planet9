@@ -8,8 +8,12 @@
 //!
 //! Three stability boundary regimes:
 //! - Fully chaotic layer: q = 13.37 + 0.55 * a^0.64
-//! - 1:j resonance diffusion barrier: q = -63.1 + 19.4 * log(a)
-//! - Fine comb boundary: q = 10.28 + 6.01 * a^0.34
+//! - 1:j resonance diffusion barrier: q = -63.1 + 19.4 * ln(a)
+//! - Fine comb boundary (weak, *bounded* chaos): q = 10.28 + 6.01 * a^0.34
+//!
+//! Resonance widths use the single sourced p9-core Hansen/Chirikov
+//! machinery; the 2:j chain is exactly consistent with
+//! `p9_core::analysis::resonance::chirikov_overlap_parameter`.
 
 pub mod chirikov;
 pub mod hansen;

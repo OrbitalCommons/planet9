@@ -1,33 +1,54 @@
-//! Octupole-order secular Hamiltonian.
+//! Secular Hamiltonian beyond quadrupole order.
 //!
-//! Extends p9-core's quadrupole Hamiltonian (Eq. 1 of Batygin & Brown 2016)
-//! with the octupole correction (Eq. 5), which becomes important when the
-//! semi-major axis ratio alpha = a/a_p is not small.
+//! Two fidelity levels, dispatched on the semi-major axis ratio α = a/a_p:
 //!
-//! The octupole Hamiltonian captures asymmetry between aligned and anti-aligned
-//! libration islands, breaking the Δϖ → -Δϖ symmetry present at quadrupole order.
+//! 1. **Analytic hierarchical expansion** (`coplanar_hierarchical_hamiltonian`):
+//!    the doubly-averaged quadrupole + octupole disturbing function for an
+//!    interior test particle and an exterior eccentric perturber,
 //!
-//! Reference: Batygin & Brown (2016), Equations 1-5; Mardling (2013)
+//!      H = −(gm_p/a_p)·[ (α²/4)(1 + 3e²/2)/(1−e_p²)^{3/2}
+//!          − (15/16) α³ e e_p (1 + 3e²/4) cos Δϖ / (1−e_p²)^{5/2} ]
+//!
+//!    (standard coplanar octupole form, e.g. Lee & Peale 2003 Eq. 5;
+//!    Naoz 2016 test-particle limit). Only the cos Δϖ harmonic appears at
+//!    octupole order — a previous implementation carried unsourced
+//!    coefficients and a cos 3Δϖ term that match no standard form, plus a
+//!    bolted-on cos(i) "3D" factor; both are removed. Valid only in the
+//!    hierarchical regime (see `hierarchical_expansion_valid`).
+//!
+//! 2. **Numerical Gauss-ring double averaging** via
+//!    `p9_core::analysis::secular::numerical_secular_hamiltonian`: the exact
+//!    doubly-averaged 1/Δ. The multipole expansion diverges for the
+//!    α ≈ 0.3–0.8 of every use in this crate (test particles cross P9's
+//!    orbit); Batygin & Brown (2016) used numerical ring averaging for
+//!    exactly this reason, and the phase portraits here do the same.
+//!
+//! Reference: Batygin & Brown (2016) Section 3; Lee & Peale (2003);
+//! Naoz (2016)
 
-use std::f64::consts::PI;
+use p9_core::analysis::secular;
 
-/// Octupole coupling coefficient epsilon_oct = (a/a_p) * e_p / (1 - e_p^2).
+/// Octupole coupling strength epsilon_oct = (a/a_p) * e_p / (1 - e_p^2).
 /// When this is large, the octupole term significantly modifies the dynamics.
 pub fn octupole_epsilon(a: f64, a_p: f64, e_p: f64) -> f64 {
     (a / a_p) * e_p / (1.0 - e_p * e_p)
 }
 
-/// Coplanar secular Hamiltonian to octupole order.
-///
-/// H = H_quad + H_oct
-///
-/// H_quad = -C_quad * [2 + 3e^2 - 5e^2 cos^2(Δϖ)]
-///
-/// H_oct = C_oct * e * [A * cos(Δϖ) + B * cos(3Δϖ)]
-///
-/// where the octupole terms (from Mardling 2013, adapted by Batygin):
-///   A = -35/8 * e^2 + 25/8
-///   B = -35/8 * e^2 + 15/8
+/// Largest α = a/a_p for which the truncated quadrupole+octupole expansion
+/// is used. Beyond this the multipole series converges too slowly (or not at
+/// all, once orbits cross) and the numerical average is required.
+pub const HIERARCHICAL_ALPHA_MAX: f64 = 0.1;
+
+/// Whether the analytic hierarchical expansion is trustworthy: requires both
+/// α = a/a_p below `HIERARCHICAL_ALPHA_MAX` and a non-crossing geometry
+/// (particle aphelion inside the perturber perihelion).
+pub fn hierarchical_expansion_valid(a: f64, e: f64, a_p: f64, e_p: f64) -> bool {
+    (a / a_p) < HIERARCHICAL_ALPHA_MAX && a * (1.0 + e) < a_p * (1.0 - e_p)
+}
+
+/// Coplanar secular Hamiltonian to octupole order (analytic, hierarchical
+/// regime only — see `hierarchical_expansion_valid` and the module docs for
+/// the source of the coefficients).
 ///
 /// `a`: test particle semi-major axis (AU)
 /// `e`: test particle eccentricity
@@ -35,7 +56,7 @@ pub fn octupole_epsilon(a: f64, a_p: f64, e_p: f64) -> f64 {
 /// `a_p`: perturber semi-major axis (AU)
 /// `e_p`: perturber eccentricity
 /// `gm_p`: perturber GM (AU^3/day^2)
-pub fn coplanar_octupole_hamiltonian(
+pub fn coplanar_hierarchical_hamiltonian(
     a: f64,
     e: f64,
     delta_varpi: f64,
@@ -46,81 +67,57 @@ pub fn coplanar_octupole_hamiltonian(
     let alpha = a / a_p;
     let e2 = e * e;
 
-    // Quadrupole coupling constant
-    let c_quad = gm_p * alpha * alpha / (4.0 * a_p * (1.0 - e_p * e_p).powf(1.5));
+    // Quadrupole part (axisymmetric in Δϖ at this order)
+    let h_quad = secular::coplanar_quadrupole(a, e, a_p, e_p, gm_p);
 
-    // Quadrupole Hamiltonian (coplanar)
-    let h_quad = -c_quad * (2.0 + 3.0 * e2 - 5.0 * e2 * delta_varpi.cos().powi(2));
-
-    // Octupole coupling constant
-    let eps_oct = octupole_epsilon(a, a_p, e_p);
-    let c_oct = c_quad * eps_oct * 15.0 / 4.0;
-
-    // Octupole terms
-    let cos_dv = delta_varpi.cos();
-    let cos_3dv = (3.0 * delta_varpi).cos();
-
-    let a_coeff = -35.0 / 8.0 * e2 + 25.0 / 8.0;
-    let b_coeff = -35.0 / 8.0 * e2 + 15.0 / 8.0;
-
-    let h_oct = c_oct * e * (a_coeff * cos_dv + b_coeff * cos_3dv);
+    // Octupole: H_oct = +(15/16)(gm_p/a_p) α³ e e_p (1 + 3e²/4) cosΔϖ / (1−e_p²)^{5/2}
+    let h_oct = (15.0 / 16.0) * (gm_p / a_p) * alpha.powi(3) * e * e_p * (1.0 + 0.75 * e2)
+        / (1.0 - e_p * e_p).powf(2.5)
+        * delta_varpi.cos();
 
     h_quad + h_oct
 }
 
-/// Full 3D secular Hamiltonian to octupole order.
-///
-/// Includes inclination-dependent terms from the Mardling (2013) expansion.
-/// For the inclined case, the quadrupole part uses the full p9-core formula,
-/// and the octupole adds inclination-modulated corrections.
-pub fn full_octupole_hamiltonian(
+/// Quadrature nodes per anomaly for the numerical double average.
+const N_QUAD: usize = 64;
+
+/// Softening for crossing geometries, as a fraction of a_p (matches
+/// p9-core's portrait default).
+const SOFTENING_FRAC: f64 = 0.01;
+
+/// Coplanar secular Hamiltonian, automatically choosing the analytic
+/// hierarchical expansion (small, non-crossing α) or the numerically
+/// double-averaged exact interaction (everything else — the regime of every
+/// phase portrait in this crate).
+pub fn coplanar_secular_hamiltonian(
     a: f64,
     e: f64,
     delta_varpi: f64,
-    i: f64,
-    delta_omega: f64,
     a_p: f64,
     e_p: f64,
     gm_p: f64,
 ) -> f64 {
-    // Quadrupole part from p9-core
-    let h_quad = p9_core::analysis::secular::quadrupole_hamiltonian(
-        a,
-        e,
-        delta_varpi,
-        i,
-        delta_omega,
-        a_p,
-        e_p,
-        gm_p,
-    );
-
-    let alpha = a / a_p;
-    let e2 = e * e;
-
-    // Octupole coupling
-    let c_quad = gm_p * alpha * alpha / (4.0 * a_p * (1.0 - e_p * e_p).powf(1.5));
-    let eps_oct = octupole_epsilon(a, a_p, e_p);
-    let c_oct = c_quad * eps_oct * 15.0 / 4.0;
-
-    // Coplanar octupole terms (simplified — the full 3D octupole has
-    // many inclination terms; for now we use the dominant coplanar part)
-    // TODO: Implement full 3D octupole from Mardling (2013) Eq. A11-A14
-    let cos_i = i.cos();
-
-    let cos_dv = delta_varpi.cos();
-    let cos_3dv = (3.0 * delta_varpi).cos();
-
-    let a_coeff = -35.0 / 8.0 * e2 + 25.0 / 8.0;
-    let b_coeff = -35.0 / 8.0 * e2 + 15.0 / 8.0;
-
-    // Inclination modulation: in the coplanar limit (i=0), cos_i = 1
-    let h_oct = c_oct * e * cos_i * (a_coeff * cos_dv + b_coeff * cos_3dv);
-
-    h_quad + h_oct
+    if hierarchical_expansion_valid(a, e, a_p, e_p) {
+        coplanar_hierarchical_hamiltonian(a, e, delta_varpi, a_p, e_p, gm_p)
+    } else {
+        secular::numerical_secular_hamiltonian(
+            a,
+            e,
+            0.0,
+            delta_varpi,
+            0.0,
+            a_p,
+            e_p,
+            gm_p,
+            N_QUAD,
+            SOFTENING_FRAC * a_p,
+        )
+    }
 }
 
-/// Generate phase-space portrait with octupole Hamiltonian.
+/// Generate a coplanar phase-space portrait of the secular Hamiltonian using
+/// the numerical Gauss-ring double average (the α here is far outside the
+/// hierarchical regime).
 ///
 /// Returns (e_vals, dvarpi_vals, portrait) where portrait[i][j] = H(e_i, dvarpi_j).
 pub fn octupole_phase_portrait(
@@ -131,44 +128,29 @@ pub fn octupole_phase_portrait(
     n_e: usize,
     n_dvarpi: usize,
 ) -> (Vec<f64>, Vec<f64>, Vec<Vec<f64>>) {
-    let e_vals: Vec<f64> = (0..n_e)
-        .map(|i| (i as f64 + 0.5) / n_e as f64 * 0.95)
-        .collect();
-
-    let dvarpi_vals: Vec<f64> = (0..n_dvarpi)
-        .map(|j| (j as f64) / n_dvarpi as f64 * 2.0 * PI - PI)
-        .collect();
-
-    let mut portrait = vec![vec![0.0; n_dvarpi]; n_e];
-
-    for (i, &e) in e_vals.iter().enumerate() {
-        for (j, &dv) in dvarpi_vals.iter().enumerate() {
-            portrait[i][j] = coplanar_octupole_hamiltonian(a, e, dv, a_p, e_p, gm_p);
-        }
-    }
-
-    (e_vals, dvarpi_vals, portrait)
+    secular::phase_portrait(a, a_p, e_p, gm_p, n_e, n_dvarpi)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use p9_core::types::P9Params;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_octupole_reduces_to_quadrupole_at_small_alpha() {
-        // When a << a_p, octupole epsilon -> 0, so octupole should match quadrupole
+        // When a << a_p, the octupole correction is O(α·e_p) of the
+        // quadrupole and the analytic H approaches the quadrupole-only H.
         let p9 = P9Params::nominal_2016();
         let gm_p = p9.gm();
 
-        let a = 50.0; // Very small alpha = 50/700 = 0.071
+        let a = 50.0; // alpha = 50/700 = 0.071
         let e = 0.5;
         let dv = 1.0;
 
-        let h_oct = coplanar_octupole_hamiltonian(a, e, dv, p9.a, p9.e, gm_p);
-        let h_quad = p9_core::analysis::secular::coplanar_quadrupole(a, e, dv, p9.a, p9.e, gm_p);
+        let h_oct = coplanar_hierarchical_hamiltonian(a, e, dv, p9.a, p9.e, gm_p);
+        let h_quad = secular::coplanar_quadrupole(a, e, p9.a, p9.e, gm_p);
 
-        // Should be very close since alpha is small
         let rel_diff = ((h_oct - h_quad) / h_quad).abs();
         assert!(
             rel_diff < 0.1,
@@ -178,25 +160,76 @@ mod tests {
     }
 
     #[test]
+    fn test_analytic_octupole_matches_numerical_at_small_alpha() {
+        // The Δϖ-dependent part of the exact double average is dominated by
+        // the octupole at small α. The aligned/anti-aligned difference
+        //   ΔH = H(Δϖ=0) − H(Δϖ=π) = 2·(15/16)(gm_p/a_p) α³ e e_p (1+3e²/4)/(1−e_p²)^{5/2}
+        // must match the numerical average (which carries all higher
+        // multipoles; the next odd term is O(α²) ≈ 0.6% here).
+        let (a, e, a_p, e_p) = (55.0, 0.4, 700.0, 0.6);
+        let gm_p = P9Params::nominal_2016().gm();
+        assert!(hierarchical_expansion_valid(a, e, a_p, e_p));
+
+        let d_analytic = coplanar_hierarchical_hamiltonian(a, e, 0.0, a_p, e_p, gm_p)
+            - coplanar_hierarchical_hamiltonian(a, e, PI, a_p, e_p, gm_p);
+        let num = |dv: f64| {
+            secular::numerical_secular_hamiltonian(a, e, 0.0, dv, 0.0, a_p, e_p, gm_p, 128, 0.0)
+        };
+        let d_numeric = num(0.0) - num(PI);
+
+        let rel = ((d_analytic - d_numeric) / d_numeric).abs();
+        assert!(
+            rel < 0.05,
+            "analytic octupole ΔH = {d_analytic:.3e} vs numerical {d_numeric:.3e} (rel {rel:.2e})"
+        );
+    }
+
+    #[test]
     fn test_octupole_breaks_aligned_antialigned_symmetry() {
-        // At quadrupole order, H(e, 0) = H(e, π) because cos²(0) = cos²(π) = 1.
-        // The octupole breaks this: cos(0) = 1 ≠ cos(π) = -1.
+        // At quadrupole order H(e, 0) = H(e, π). The octupole breaks this by
+        // an amount with a definite physical scale: |ΔH| of order
+        // ε_oct·e·|H_quad| (not merely nonzero at machine precision).
         let p9 = P9Params::nominal_2016();
         let gm_p = p9.gm();
 
-        let a = 350.0; // Larger alpha where octupole matters
+        let a = 350.0; // alpha = 0.5: numerical-average regime
         let e = 0.7;
 
-        let h_aligned = coplanar_octupole_hamiltonian(a, e, 0.0, p9.a, p9.e, gm_p);
-        let h_anti = coplanar_octupole_hamiltonian(a, e, PI, p9.a, p9.e, gm_p);
+        let h_aligned = coplanar_secular_hamiltonian(a, e, 0.0, p9.a, p9.e, gm_p);
+        let h_anti = coplanar_secular_hamiltonian(a, e, PI, p9.a, p9.e, gm_p);
+        let h_quad = secular::coplanar_quadrupole(a, e, p9.a, p9.e, gm_p);
 
-        // These should NOT be equal (unlike pure quadrupole where cos²(0) = cos²(π))
+        let scale = octupole_epsilon(a, p9.a, p9.e) * e * h_quad.abs();
+        let dh = (h_aligned - h_anti).abs();
         assert!(
-            (h_aligned - h_anti).abs() > 1e-20,
-            "Octupole should break aligned/anti-aligned symmetry: H(0) = {}, H(π) = {}",
-            h_aligned,
-            h_anti
+            dh > 0.01 * scale,
+            "Δϖ asymmetry |ΔH| = {dh:.3e} below the octupole scale {scale:.3e}"
         );
+    }
+
+    #[test]
+    fn test_dispatch_uses_numerical_outside_hierarchical_regime() {
+        // For crossing geometry the dispatcher must agree with the numerical
+        // average, not the (divergent) expansion.
+        let p9 = P9Params::nominal_2016();
+        let gm_p = p9.gm();
+        let (a, e) = (350.0, 0.7);
+        assert!(!hierarchical_expansion_valid(a, e, p9.a, p9.e));
+
+        let h = coplanar_secular_hamiltonian(a, e, 1.0, p9.a, p9.e, gm_p);
+        let h_num = secular::numerical_secular_hamiltonian(
+            a,
+            e,
+            0.0,
+            1.0,
+            0.0,
+            p9.a,
+            p9.e,
+            gm_p,
+            N_QUAD,
+            SOFTENING_FRAC * p9.a,
+        );
+        assert_eq!(h, h_num);
     }
 
     #[test]
@@ -208,17 +241,17 @@ mod tests {
         let test_axes = [50.0, 150.0, 250.0, 350.0, 450.0, 550.0];
 
         for &a in &test_axes {
-            let (e_vals, dv_vals, portrait) = octupole_phase_portrait(a, p9.a, p9.e, gm_p, 20, 40);
+            let (e_vals, dv_vals, portrait) = octupole_phase_portrait(a, p9.a, p9.e, gm_p, 8, 12);
 
-            assert_eq!(e_vals.len(), 20);
-            assert_eq!(dv_vals.len(), 40);
-            assert_eq!(portrait.len(), 20);
-            assert_eq!(portrait[0].len(), 40);
+            assert_eq!(e_vals.len(), 8);
+            assert_eq!(dv_vals.len(), 12);
+            assert_eq!(portrait.len(), 8);
+            assert_eq!(portrait[0].len(), 12);
 
-            // Hamiltonian should be finite everywhere
+            // Hamiltonian should be finite and negative (bound interaction)
             for row in &portrait {
                 for &h in row {
-                    assert!(h.is_finite(), "H not finite at a = {} AU", a);
+                    assert!(h.is_finite() && h < 0.0, "H invalid at a = {} AU", a);
                 }
             }
         }

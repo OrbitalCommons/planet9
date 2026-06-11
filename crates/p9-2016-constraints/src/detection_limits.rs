@@ -8,41 +8,26 @@
 
 use std::f64::consts::PI;
 
+use p9_core::analysis::photometry;
+use p9_core::constants::EARTH_RADIUS_KM;
 use p9_core::types::P9Params;
 
-/// Predict V-band apparent magnitude of Planet Nine at a given true anomaly.
-///
-/// Uses a simple albedo model:
-///   V = V_sun + 5*log10(r*delta/AU^2) - 2.5*log10(p * (R/r)^2 * Φ(α))
-///
-/// where:
-///   r = heliocentric distance
-///   delta = geocentric distance ≈ r (for distant objects)
-///   p = geometric albedo (assumed 0.5 for ice giant)
-///   R = physical radius
-///   Φ(α) = phase function ≈ 1 for near-opposition
-///
-/// Simplified: H = 5*log10(1329 km / (p^0.5 * D_km))
-/// then: V = H + 5*log10(r * delta)
+/// Predict V-band apparent magnitude of Planet Nine at a given true anomaly,
+/// using the shared p9-core photometry (H from diameter and albedo, then the
+/// reflected-sunlight m = H + 5 log10(r·Δ) law with Δ at opposition; the
+/// phase function is ≈ 1 near opposition at these distances).
 pub fn predicted_v_magnitude(p9: &P9Params, true_anomaly: f64, albedo: f64, radius_km: f64) -> f64 {
     let r = p9.a * (1.0 - p9.e * p9.e) / (1.0 + p9.e * true_anomaly.cos());
-    let delta = r; // Approximate: geocentric ≈ heliocentric for r >> 1 AU
-
-    // Absolute magnitude from diameter and albedo
-    let h = 5.0 * (1329.0 / (albedo.sqrt() * 2.0 * radius_km)).log10();
-
-    // Apparent magnitude
-    h + 5.0 * (r * delta).log10()
+    let h = photometry::absolute_magnitude(radius_km, albedo);
+    photometry::apparent_magnitude(h, r, photometry::opposition_delta(r))
 }
 
-/// Estimate Planet Nine's physical radius from mass using a simplified
-/// mass-radius relation for mini-Neptunes.
-///
-/// R ≈ 3.0 * R_Earth * (M/M_Earth)^0.27 for M > 1 M_Earth
-/// (Based on Rogers 2015, Chen & Kipping 2017 fits)
+/// Planet Nine's physical radius from mass, via the shared Neptune-anchored
+/// mass-radius relation (the previous local 3.0 R⊕ · M^0.27 fit made a
+/// 10 M⊕ planet larger than Neptune, ~40% too big, skewing detectability
+/// optimistic).
 pub fn estimate_radius_km(mass_earth: f64) -> f64 {
-    let r_earth_km = 6_371.0;
-    3.0 * r_earth_km * mass_earth.powf(0.27)
+    photometry::mass_radius_neptunian(mass_earth) * EARTH_RADIUS_KM
 }
 
 /// Compute the sky position (ecliptic longitude, latitude) of Planet Nine

@@ -17,8 +17,9 @@
 //! - IRAS 60 µm sensitivity: ~0.2 Jy
 //! - AKARI 90 µm sensitivity: ~0.55 Jy
 //! - Epoch separation: ~23 years
-//! - Circular-orbit proper motion: ~1.2'–1.9'/yr (eccentric orbits higher)
-//! - Angular separation window: 42'–69.6' (accounts for eccentricity)
+//! - Circular-orbit transverse rate: ~1.2'–1.9'/yr (h/r²; eccentric higher)
+//! - Angular separation window: 42'–69.6' (heliocentric motion at e ≤ 0.7
+//!   plus geocentric parallax, ±6.9' per epoch at 500 AU)
 
 pub mod candidate_search;
 pub mod orbital_constraints;

@@ -1,13 +1,24 @@
 //! Orbital pole analysis for TNO clustering.
 //!
-//! Pole vector: (i*cos(Omega), i*sin(Omega)) on the polar plane.
-//! Stable objects are misaligned 5-10 deg from Laplace plane;
-//! unstable objects are 0-2 deg from Laplace plane.
+//! A pole is represented by (i, Ω); the (i·cosΩ, i·sinΩ) plane is kept
+//! for plotting, but misalignments are computed as true spherical angular
+//! distances between pole unit vectors
+//!
+//!   n̂ = (sin i sin Ω, −sin i cos Ω, cos i),
+//!
+//! not as 2D distances in the (i cosΩ, i sinΩ) plane (which conflates a
+//! 90° node difference at i = 17° with a 90° pole separation). The
+//! reference Laplace plane is *computed* from the giant planets' total
+//! orbital angular momentum (J2000 states from p9-core) — at ETNO
+//! distances the Laplace plane asymptotes to the invariable plane.
 
 use p9_core::constants::GM_SUN;
+use p9_core::initial_conditions::planets::giant_planets_j2000;
+use p9_core::types::cartesian_to_elements;
 use serde::{Deserialize, Serialize};
 
-/// Orbital pole in the (i*cos(Omega), i*sin(Omega)) representation.
+/// Orbital pole, stored as inclination + node with the planar projection
+/// kept for plotting.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrbitalPole {
     pub name: &'static str,
@@ -35,18 +46,44 @@ impl OrbitalPole {
     pub fn omega_big(&self) -> f64 {
         self.y.atan2(self.x)
     }
+
+    /// Unit vector of the orbit normal in ecliptic coordinates:
+    /// n̂ = (sin i sin Ω, −sin i cos Ω, cos i).
+    pub fn unit_vector(&self) -> [f64; 3] {
+        let i = self.inclination();
+        let node = self.omega_big();
+        [i.sin() * node.sin(), -i.sin() * node.cos(), i.cos()]
+    }
 }
 
-/// Misalignment of an orbital pole from a reference direction (rad).
-pub fn misalignment(pole: &OrbitalPole, ref_x: f64, ref_y: f64) -> f64 {
-    let ref_mag = (ref_x * ref_x + ref_y * ref_y).sqrt();
-    let pole_mag = pole.inclination();
-    if ref_mag < 1e-10 || pole_mag < 1e-10 {
-        return 0.0;
-    }
+/// True spherical angular distance between two orbital poles (rad):
+///
+///   cos d = cos i₁ cos i₂ + sin i₁ sin i₂ cos(Ω₁ − Ω₂)
+pub fn misalignment(pole: &OrbitalPole, reference: &OrbitalPole) -> f64 {
+    let a = pole.unit_vector();
+    let b = reference.unit_vector();
+    let dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    dot.clamp(-1.0, 1.0).acos()
+}
 
-    let cos_angle = (pole.x * ref_x + pole.y * ref_y) / (pole_mag * ref_mag);
-    cos_angle.clamp(-1.0, 1.0).acos()
+/// Reference pole of the giant-planet (Laplace/invariable) plane,
+/// computed from the total orbital angular momentum L = Σ mᵢ rᵢ×vᵢ of
+/// the four giants at J2000 (p9-core DE440 states). Inclination to the
+/// ecliptic ≈ 1.58°.
+pub fn laplace_pole() -> OrbitalPole {
+    let mut l = [0.0_f64; 3];
+    for body in giant_planets_j2000() {
+        let r = body.state.pos;
+        let v = body.state.vel;
+        l[0] += body.mass * (r.y * v.z - r.z * v.y);
+        l[1] += body.mass * (r.z * v.x - r.x * v.z);
+        l[2] += body.mass * (r.x * v.y - r.y * v.x);
+    }
+    let norm = (l[0] * l[0] + l[1] * l[1] + l[2] * l[2]).sqrt();
+    let i = (l[2] / norm).clamp(-1.0, 1.0).acos();
+    // n̂ = (sin i sin Ω, −sin i cos Ω, cos i) → Ω = atan2(n_x, −n_y)
+    let omega_big = (l[0] / norm).atan2(-(l[1] / norm));
+    OrbitalPole::from_elements("Laplace plane", i, omega_big)
 }
 
 /// Compute the mean pole direction for a set of poles.
@@ -75,21 +112,24 @@ pub fn pole_scatter(poles: &[OrbitalPole]) -> f64 {
     var.sqrt()
 }
 
-/// Nodal precession rate from giant planets (rad/yr).
+/// Nodal precession rate from the giant planets (rad/yr):
 ///
-/// Omega_dot = -(3/4) * sqrt(GM_sun/a^3) * cos(i) / (1-e^2)^2 * sum_j(m_j/M_sun)(a_j/a)^2
+/// Omega_dot = -(3/4) √(GM_sun/a³) cos(i)/(1−e²)² Σ_j (m_j/M_sun)(a_j/a)²
+///
+/// Giant-planet masses and semi-major axes come from the p9-core J2000
+/// states (no local table).
 pub fn nodal_precession_rate(a: f64, e: f64, i: f64) -> f64 {
     let n = (GM_SUN / (a * a * a)).sqrt(); // rad/day
     let eta_sq = (1.0 - e * e) * (1.0 - e * e);
 
-    let giants: [(f64, f64); 4] = [
-        (9.548e-4, 5.203),
-        (2.858e-4, 9.537),
-        (4.366e-5, 19.189),
-        (5.151e-5, 30.070),
-    ];
+    let sum: f64 = giant_planets_j2000()
+        .iter()
+        .map(|body| {
+            let a_j = cartesian_to_elements(&body.state, GM_SUN).a;
+            body.mass * (a_j / a).powi(2)
+        })
+        .sum();
 
-    let sum: f64 = giants.iter().map(|(m, aj)| m * (aj / a).powi(2)).sum();
     let rate_day = -0.75 * n * i.cos() / eta_sq * sum;
     rate_day * 365.25 // Convert to rad/yr
 }
@@ -113,29 +153,67 @@ mod tests {
     }
 
     #[test]
-    fn test_misalignment_zero() {
-        let pole = OrbitalPole {
-            name: "test",
-            x: 0.3,
-            y: 0.0,
-        };
-        let mis = misalignment(&pole, 0.3, 0.0);
-        assert!(mis < 1e-10);
+    fn test_unit_vector_zero_inclination_is_z() {
+        let pole = OrbitalPole::from_elements("flat", 0.0, 1.234);
+        let n = pole.unit_vector();
+        assert!(n[0].abs() < 1e-12 && n[1].abs() < 1e-12);
+        assert!((n[2] - 1.0).abs() < 1e-12);
     }
 
     #[test]
-    fn test_misalignment_perpendicular() {
-        let pole = OrbitalPole {
-            name: "test",
-            x: 0.3,
-            y: 0.0,
-        };
-        let mis = misalignment(&pole, 0.0, 0.3);
+    fn test_misalignment_zero() {
+        let p1 = OrbitalPole::from_elements("a", 0.3, 0.7);
+        let p2 = OrbitalPole::from_elements("b", 0.3, 0.7);
+        assert!(misalignment(&p1, &p2) < 1e-10);
+    }
+
+    #[test]
+    fn test_misalignment_spherical_not_planar() {
+        // i = 0.3 rad, nodes 90° apart: the planar (i cosΩ, i sinΩ)
+        // metric wrongly gives 90°; the true spherical distance is
+        // acos(cos²i) ≈ 0.4215 rad ≈ 24.2°.
+        let p1 = OrbitalPole::from_elements("a", 0.3, 0.0);
+        let p2 = OrbitalPole::from_elements("b", 0.3, std::f64::consts::FRAC_PI_2);
+        let mis = misalignment(&p1, &p2);
+        let expected = (0.3_f64.cos().powi(2)).acos();
         assert!(
-            (mis - std::f64::consts::FRAC_PI_2).abs() < 0.01,
-            "misalignment = {} deg",
-            mis / DEG2RAD
+            (mis - expected).abs() < 1e-9,
+            "misalignment = {:.4} rad, expected {:.4}",
+            mis,
+            expected
         );
+        assert!(mis < std::f64::consts::FRAC_PI_2 * 0.5);
+    }
+
+    #[test]
+    fn test_misalignment_antipodal_inclinations() {
+        // Same node, inclinations 10° and 30° → distance exactly 20°.
+        let p1 = OrbitalPole::from_elements("a", 10.0 * DEG2RAD, 1.0);
+        let p2 = OrbitalPole::from_elements("b", 30.0 * DEG2RAD, 1.0);
+        let mis = misalignment(&p1, &p2);
+        assert!((mis - 20.0 * DEG2RAD).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_laplace_pole_near_invariable_plane() {
+        // The giant-planet angular-momentum plane is inclined ≈ 1.58° to
+        // the ecliptic.
+        let lap = laplace_pole();
+        let i_deg = lap.inclination() / DEG2RAD;
+        assert!(
+            i_deg > 1.0 && i_deg < 2.2,
+            "Laplace-plane inclination = {i_deg:.2}°, expected ≈ 1.58°"
+        );
+    }
+
+    #[test]
+    fn test_misalignment_from_laplace_plane() {
+        // A typical ETNO pole (i ≈ 20°) sits ~18–22° from the computed
+        // Laplace plane, depending on the node.
+        let lap = laplace_pole();
+        let etno = OrbitalPole::from_elements("etno", 20.0 * DEG2RAD, 2.0);
+        let mis = misalignment(&etno, &lap) / DEG2RAD;
+        assert!(mis > 17.0 && mis < 23.0, "misalignment = {mis:.1}°");
     }
 
     #[test]

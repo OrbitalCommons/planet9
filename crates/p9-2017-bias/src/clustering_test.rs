@@ -3,13 +3,19 @@
 //! Implements the Monte Carlo framework for testing whether the observed
 //! clustering of distant KBO orbital angles is statistically significant
 //! after accounting for observational bias.
+//!
+//! The null hypothesis draws each object's angles from the *bias* density
+//! (not from a uniform distribution): under "no clustering", discoveries
+//! land where the surveys could have made them, so the null must carry the
+//! full longitudinal structure of the bias.
 
 use std::f64::consts::PI;
 
+use p9_core::analysis::circular::mean_resultant_length;
 use rand::Rng;
 
-use crate::bias_function;
-use crate::kbo_sample::DistantKbo;
+use crate::bias_function::{self, BiasParams};
+use crate::kbo_sample::Etno;
 
 /// Result of a clustering test.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -28,45 +34,58 @@ pub struct ClusteringResult {
     pub n_iterations: usize,
 }
 
-/// Compute the Rayleigh z-statistic for a set of angles.
-///
-/// z = (Σ cos θ)² + (Σ sin θ)² / n
-///
-/// Higher z indicates stronger clustering.
+/// Rayleigh z-statistic z = n R̄² for a set of angles (R̄ from the shared
+/// circular-statistics module). Higher z indicates stronger clustering.
 pub fn rayleigh_z(angles: &[f64]) -> f64 {
     let n = angles.len() as f64;
-    if n == 0.0 {
-        return 0.0;
-    }
-    let cos_sum: f64 = angles.iter().map(|&a| a.cos()).sum();
-    let sin_sum: f64 = angles.iter().map(|&a| a.sin()).sum();
-    (cos_sum * cos_sum + sin_sum * sin_sum) / n
+    let r_bar = mean_resultant_length(angles);
+    n * r_bar * r_bar
 }
 
 /// Run the bias-corrected Monte Carlo clustering test.
 ///
-/// For each iteration:
-/// 1. Draw random angles from a uniform distribution in ϖ and Ω
-/// 2. Weight by observational bias
-/// 3. Compute Rayleigh z for the bias-weighted sample
-/// 4. Compare to the observed z value
+/// For each iteration, draw each object's (ϖ, ω) from its own bias density
+/// (rejection sampling against the raw bias with a true maximum bound), then
+/// compare the Rayleigh statistics of the synthetic sample to the observed
+/// ones.
 pub fn monte_carlo_clustering_test(
-    kbos: &[DistantKbo],
+    kbos: &[Etno],
     n_iterations: usize,
     seed: u64,
+) -> ClusteringResult {
+    monte_carlo_clustering_test_with_params(kbos, n_iterations, seed, &BiasParams::default())
+}
+
+/// As `monte_carlo_clustering_test`, with explicit bias-model parameters.
+pub fn monte_carlo_clustering_test_with_params(
+    kbos: &[Etno],
+    n_iterations: usize,
+    seed: u64,
+    params: &BiasParams,
 ) -> ClusteringResult {
     use rand::SeedableRng;
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
-    // Compute observed statistics
-    let observed_varpis: Vec<f64> = kbos
+    // Observed statistics
+    let observed_varpis: Vec<f64> = kbos.iter().map(|k| k.longitude_of_perihelion()).collect();
+    let observed_omegas: Vec<f64> = kbos
         .iter()
-        .map(|k| (k.elements.omega + k.elements.omega_big).rem_euclid(2.0 * PI))
+        .map(|k| k.omega_deg * p9_core::constants::DEG2RAD)
         .collect();
-    let observed_omegas: Vec<f64> = kbos.iter().map(|k| k.elements.omega).collect();
 
     let observed_z_varpi = rayleigh_z(&observed_varpis);
     let observed_z_omega = rayleigh_z(&observed_omegas);
+
+    // The brightness factor of the bias is independent of the angles, so it
+    // cancels in the per-object rejection sampling; it only gates whether the
+    // object could be in the sample at all.
+    for k in kbos {
+        assert!(
+            bias_function::detectable_fraction(k.a, k.e, k.h_mag, params.limiting_mag) > 0.0,
+            "{} is undetectable under the bias model; the null is ill-defined",
+            k.name
+        );
+    }
 
     let n = kbos.len();
     let mut count_exceed_varpi = 0usize;
@@ -74,14 +93,12 @@ pub fn monte_carlo_clustering_test(
     let mut count_exceed_both = 0usize;
 
     for _ in 0..n_iterations {
-        // Draw random orbital angles, weighted by bias
         let mut random_varpis = Vec::with_capacity(n);
         let mut random_omegas = Vec::with_capacity(n);
 
         for kbo in kbos {
-            // Draw random ϖ weighted by bias
             let (varpi, omega) =
-                draw_biased_angles(kbo.elements.a, kbo.elements.e, kbo.elements.i, &mut rng);
+                draw_biased_angles(kbo.i_deg * p9_core::constants::DEG2RAD, params, &mut rng);
             random_varpis.push(varpi);
             random_omegas.push(omega);
         }
@@ -110,26 +127,26 @@ pub fn monte_carlo_clustering_test(
     }
 }
 
-/// Draw random orbital angles (ϖ, ω) weighted by observational bias.
-///
-/// Uses rejection sampling: draw uniform ϖ, compute bias weight,
-/// accept with probability proportional to weight.
-fn draw_biased_angles<R: Rng>(a: f64, e: f64, i: f64, rng: &mut R) -> (f64, f64) {
+/// Draw random orbital angles (ϖ, ω) from the bias density by rejection
+/// sampling against the *raw, unnormalized* angular bias with the true
+/// envelope 1.0 (`angular_bias` ≤ 1 by construction; no floor or cap — the
+/// previous `min(1).max(0.01)` clamp inflated near-zero-bias directions by
+/// orders of magnitude and saturated high-bias ones). The brightness factor
+/// is independent of the angles, so it cancels from the angle density.
+fn draw_biased_angles<R: Rng>(i: f64, params: &BiasParams, rng: &mut R) -> (f64, f64) {
     loop {
         let varpi = rng.gen::<f64>() * 2.0 * PI;
         let omega = rng.gen::<f64>() * 2.0 * PI;
 
-        let weight = bias_function::bias_weight(a, e, varpi, omega, i);
-
-        // Rejection sampling
-        if rng.gen::<f64>() < weight.min(1.0).max(0.01) {
+        let bias = bias_function::angular_bias(varpi, omega, i, params);
+        if rng.gen::<f64>() < bias {
             return (varpi, omega);
         }
     }
 }
 
 /// Quick test with fewer iterations.
-pub fn quick_clustering_test(kbos: &[DistantKbo]) -> ClusteringResult {
+pub fn quick_clustering_test(kbos: &[Etno]) -> ClusteringResult {
     monte_carlo_clustering_test(kbos, 1000, 42)
 }
 
@@ -137,6 +154,7 @@ pub fn quick_clustering_test(kbos: &[DistantKbo]) -> ClusteringResult {
 mod tests {
     use super::*;
     use crate::kbo_sample;
+    use p9_core::constants::TWO_PI;
 
     #[test]
     fn test_rayleigh_z_clustered() {
@@ -154,7 +172,7 @@ mod tests {
     fn test_rayleigh_z_uniform() {
         // Evenly spaced angles → z ≈ 0
         let n = 100;
-        let angles: Vec<f64> = (0..n).map(|i| 2.0 * PI * i as f64 / n as f64).collect();
+        let angles: Vec<f64> = (0..n).map(|i| TWO_PI * i as f64 / n as f64).collect();
         let z = rayleigh_z(&angles);
         assert!(z < 0.1, "z = {:.4}, expected near 0 for uniform", z);
     }
@@ -162,10 +180,7 @@ mod tests {
     #[test]
     fn test_observed_clustering_significant() {
         let kbos = kbo_sample::paper_sample_a230();
-        let varpis: Vec<f64> = kbos
-            .iter()
-            .map(|k| (k.elements.omega + k.elements.omega_big).rem_euclid(2.0 * PI))
-            .collect();
+        let varpis = kbo_sample::longitudes_of_perihelion(&kbos);
         let z = rayleigh_z(&varpis);
 
         // The observed ϖ clustering should be detectable
@@ -182,7 +197,7 @@ mod tests {
         assert!(result.p_varpi >= 0.0 && result.p_varpi <= 1.0);
         assert!(result.p_omega >= 0.0 && result.p_omega <= 1.0);
 
-        // ϖ clustering should be significant (p < 10% with simplified bias)
+        // ϖ clustering should be significant even against the biased null
         assert!(
             result.p_varpi < 0.15,
             "p(ϖ) = {:.4} should be < 0.15",
@@ -193,10 +208,29 @@ mod tests {
     #[test]
     fn test_omega_clustering() {
         let kbos = kbo_sample::paper_sample_a230();
-        let omegas: Vec<f64> = kbos.iter().map(|k| k.elements.omega).collect();
+        let omegas = kbo_sample::arguments_of_perihelion(&kbos);
         let z = rayleigh_z(&omegas);
 
         // ω clustering should also be detectable
         assert!(z > 1.0, "Observed z_ω = {:.2} should be > 1", z);
+    }
+
+    /// Paper-number regression (Brown 2017): the combined ϖ + ω clustering
+    /// probability is 0.025% (2.5e-4). This simplified bias model is not the
+    /// paper's full MPC pointing model, so we require agreement within a
+    /// factor of ~3. Needs ≥ 10⁶ iterations to resolve p ~ 1e-4; run with
+    /// `cargo test -- --ignored`.
+    #[test]
+    #[ignore]
+    fn test_paper_combined_probability() {
+        let kbos = kbo_sample::paper_sample_a230();
+        let result = monte_carlo_clustering_test(&kbos, 1_000_000, 42);
+        let paper = 2.5e-4;
+        assert!(
+            result.p_combined > paper / 3.0 && result.p_combined < paper * 3.0,
+            "p_combined = {:.2e} not within a factor of 3 of the paper's {:.1e}",
+            result.p_combined,
+            paper
+        );
     }
 }

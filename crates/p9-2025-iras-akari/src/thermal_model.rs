@@ -3,10 +3,22 @@
 //! At 500–700 AU, Planet Nine is too far from the Sun for reflected light
 //! to dominate. Instead, its thermal emission from internal heat is the
 //! primary signal in the far-infrared. Following Phan et al. (2025), we
-//! model this as a modified blackbody with effective temperature 30–50 K,
-//! scaled by the planet's physical cross-section.
+//! model this as a blackbody with effective temperature 30–50 K, scaled by
+//! the planet's physical cross-section, with an optional grey-emissivity
+//! hook (H₂ collision-induced absorption makes ice giants deviate from a
+//! perfect blackbody near 40 K).
+//!
+//! Radius law: the Neptune-anchored mass-radius relation from
+//! `p9_core::analysis::photometry::mass_radius_neptunian`
+//! (R = 3.865 R⊕ · (M / 17.147 M⊕)^0.27, consistent with Fortney et al.
+//! 2007 ice-giant models and the Chen & Kipping 2017 Neptunian branch),
+//! giving ≈ 3.34 R⊕ at 10 M⊕. The previous local law R⊕·M^0.27 gave
+//! 1.86 R⊕ at 10 M⊕ — a ~3.2× flux underestimate that pushed the paper's
+//! whole favorable corner below the IRAS detection limit.
 
 use std::f64::consts::PI;
+
+use crate::survey_model::{AkariFisSurvey, IrasSurvey};
 
 /// Planck constant (J·s)
 const H_PLANCK: f64 = 6.626_070_15e-34;
@@ -33,13 +45,11 @@ pub struct P9ThermalParams {
 }
 
 impl P9ThermalParams {
-    /// Estimate the physical radius using a simple mass-radius relation
-    /// for sub-Neptune planets: R ≈ R_Earth * (M/M_Earth)^0.27
-    ///
-    /// This power-law approximation is consistent with the range used
-    /// in Phan et al. (2025) Table 1, giving ~3.5 R_Earth for 10 M_Earth.
+    /// Physical radius from the Neptune-anchored mass-radius relation in
+    /// `p9_core::analysis::photometry` (≈ 3.34 R⊕ at 10 M⊕; see module
+    /// docs for sources).
     pub fn radius_m(&self) -> f64 {
-        R_EARTH * self.mass_earth.powf(0.27)
+        p9_core::analysis::photometry::mass_radius_neptunian(self.mass_earth) * R_EARTH
     }
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
@@ -56,22 +66,25 @@ impl P9ThermalParams {
         C_LIGHT / wavelength_m
     }
 
-    /// Predicted flux density in Janskys at a given wavelength.
+    /// Predicted flux density in Janskys at a given wavelength for a grey
+    /// emitter of the given `emissivity` (1.0 = blackbody):
     ///
-    /// The planet is modeled as a uniform-temperature sphere radiating
-    /// as a blackbody. The flux at Earth (≈ at the Sun for d >> 1 AU) is:
+    ///   F_ν = ε · π · B_ν(T) · (R / d)²
     ///
-    ///   F_ν = π * B_ν(T) * (R / d)²
-    ///
-    /// where R is the planet's radius and d its heliocentric distance.
-    pub fn flux_density_jy(&self, wavelength_m: f64) -> f64 {
+    /// The emissivity hook accommodates H₂ collision-induced-absorption
+    /// deviations from a blackbody expected for a cold (≈40 K) ice giant.
+    pub fn flux_density_jy_with_emissivity(&self, wavelength_m: f64, emissivity: f64) -> f64 {
         let nu = Self::wavelength_to_freq(wavelength_m);
         let bnu = Self::planck_bnu(self.t_eff, nu);
         let r = self.radius_m();
         let d = self.distance_au * AU_M;
         let solid_angle = PI * (r / d).powi(2);
-        let flux_w_m2_hz = solid_angle * bnu;
-        flux_w_m2_hz / JY
+        emissivity * solid_angle * bnu / JY
+    }
+
+    /// Predicted blackbody (ε = 1) flux density in Janskys.
+    pub fn flux_density_jy(&self, wavelength_m: f64) -> f64 {
+        self.flux_density_jy_with_emissivity(wavelength_m, 1.0)
     }
 
     /// Equilibrium temperature from solar illumination alone (for comparison).
@@ -85,6 +98,16 @@ impl P9ThermalParams {
         let d_m = distance_au * AU_M;
         t_sun * (r_sun_m / (2.0 * d_m)).sqrt() * (1.0 - albedo).powf(0.25)
     }
+}
+
+/// Blackbody flux-density ratio F_60µm / F_90µm at temperature `t_eff` —
+/// the radius and distance cancel, so the ratio is a pure temperature
+/// diagnostic (0.23 at 30 K to 0.66 at 50 K). Used to derive the
+/// candidate-selection flux-ratio window from the thermal model itself.
+pub fn flux_ratio_60_90(t_eff: f64) -> f64 {
+    let nu60 = P9ThermalParams::wavelength_to_freq(60.0e-6);
+    let nu90 = P9ThermalParams::wavelength_to_freq(90.0e-6);
+    P9ThermalParams::planck_bnu(t_eff, nu60) / P9ThermalParams::planck_bnu(t_eff, nu90)
 }
 
 /// Compute flux densities across a grid of masses, distances, and temperatures.
@@ -116,14 +139,17 @@ pub fn flux_grid(
     results
 }
 
-/// Check whether a Planet Nine with given parameters would be detectable
-/// by IRAS (60 µm, ~0.2 Jy limit) and AKARI (90 µm, ~0.55 Jy limit).
-pub fn is_detectable(params: &P9ThermalParams) -> (bool, bool) {
-    let f60 = params.flux_density_jy(60.0e-6);
-    let f90 = params.flux_density_jy(90.0e-6);
-    let iras_detectable = f60 >= 0.2;
-    let akari_detectable = f90 >= 0.55;
-    (iras_detectable, akari_detectable)
+/// Whether a Planet Nine with the given parameters would be catalogued by
+/// the two surveys, using each survey's own band and sensitivity (no
+/// hard-coded duplicates of the survey limits).
+pub fn is_detectable(
+    params: &P9ThermalParams,
+    iras: &IrasSurvey,
+    akari: &AkariFisSurvey,
+) -> (bool, bool) {
+    let f_iras = params.flux_density_jy(iras.wavelength_um * 1.0e-6);
+    let f_akari = params.flux_density_jy(akari.wavelength_um * 1.0e-6);
+    (iras.is_detectable(f_iras), akari.is_detectable(f_akari))
 }
 
 #[cfg(test)]
@@ -178,16 +204,16 @@ mod tests {
     }
 
     #[test]
-    fn radius_scaling() {
+    fn radius_matches_ice_giant_models() {
+        // Fortney et al. (2007): ~3.3–3.5 R⊕ at 10 M⊕ (the old local law
+        // gave 1.86 R⊕, a ~3.2× flux underestimate).
         let params = P9ThermalParams {
             mass_earth: 10.0,
             distance_au: 600.0,
             t_eff: 40.0,
         };
         let r = params.radius_m() / R_EARTH;
-        // 10^0.27 ≈ 1.86, but super-Earths can be ~3.5 R_Earth
-        // Our power law gives ~1.86, which is conservative
-        assert!(r > 1.5 && r < 4.0, "radius ratio = {r}");
+        assert!(r > 3.0 && r < 3.6, "radius ratio = {r}");
     }
 
     #[test]
@@ -199,22 +225,77 @@ mod tests {
     }
 
     #[test]
-    fn nominal_p9_flux_order_of_magnitude() {
-        // Phan et al. Table 1: for ~10 M_Earth at 600 AU, T~40K,
-        // fluxes should be in the sub-Jy to few-Jy range at 60-90 µm.
-        // The exact value depends on assumed radius; we check order of magnitude.
+    fn favorable_corner_crosses_survey_thresholds() {
+        // The paper's premise: at the favorable corner of the grid
+        // (10 M⊕, 500 AU, warm end T = 50 K) the predicted fluxes cross
+        // both survey limits. Pinned values: F_60 ≈ 0.39 Jy ≥ 0.2 Jy
+        // (IRAS), F_90 ≈ 0.59 Jy ≥ 0.55 Jy (AKARI).
+        let params = P9ThermalParams {
+            mass_earth: 10.0,
+            distance_au: 500.0,
+            t_eff: 50.0,
+        };
+        let f60 = params.flux_density_jy(60.0e-6);
+        let f90 = params.flux_density_jy(90.0e-6);
+        assert!((0.30..0.50).contains(&f60), "f60 = {f60:.3} Jy");
+        assert!((0.50..0.70).contains(&f90), "f90 = {f90:.3} Jy");
+
+        let (iras_ok, akari_ok) =
+            is_detectable(&params, &IrasSurvey::default(), &AkariFisSurvey::default());
+        assert!(iras_ok, "IRAS should detect the favorable corner");
+        assert!(akari_ok, "AKARI should detect the favorable corner");
+    }
+
+    #[test]
+    fn unfavorable_corner_below_iras_threshold() {
+        // Cold, light, distant corner: 7 M⊕ at 700 AU, 30 K → F_60 ≈
+        // 0.007 Jy, far below the 0.2 Jy IRAS limit (detectability is
+        // marginal across the grid, as the paper notes).
+        let params = P9ThermalParams {
+            mass_earth: 7.0,
+            distance_au: 700.0,
+            t_eff: 30.0,
+        };
+        let f60 = params.flux_density_jy(60.0e-6);
+        assert!(f60 < 0.02, "f60 = {f60:.4} Jy");
+        let (iras_ok, _) =
+            is_detectable(&params, &IrasSurvey::default(), &AkariFisSurvey::default());
+        assert!(!iras_ok);
+    }
+
+    #[test]
+    fn nominal_p9_flux_pinned() {
+        // Mid-grid (10 M⊕, 600 AU, 40 K): F_60 ≈ 0.081 Jy.
         let params = P9ThermalParams {
             mass_earth: 10.0,
             distance_au: 600.0,
             t_eff: 40.0,
         };
         let f60 = params.flux_density_jy(60.0e-6);
-        let f90 = params.flux_density_jy(90.0e-6);
-        // These should be tiny — sub-mJy for a ~2 R_Earth object at 600 AU
-        assert!(f60 > 0.0);
-        assert!(f90 > 0.0);
-        assert!(f60 < 100.0, "f60 = {f60} Jy — sanity check");
-        assert!(f90 < 100.0, "f90 = {f90} Jy — sanity check");
+        assert!((0.06..0.11).contains(&f60), "f60 = {f60:.4} Jy");
+    }
+
+    #[test]
+    fn emissivity_scales_flux_linearly() {
+        let params = P9ThermalParams {
+            mass_earth: 10.0,
+            distance_au: 600.0,
+            t_eff: 40.0,
+        };
+        let full = params.flux_density_jy_with_emissivity(60.0e-6, 1.0);
+        let grey = params.flux_density_jy_with_emissivity(60.0e-6, 0.7);
+        assert!((grey / full - 0.7).abs() < 1e-12);
+        assert!((params.flux_density_jy(60.0e-6) - full).abs() < 1e-30);
+    }
+
+    #[test]
+    fn flux_ratio_matches_blackbody_range() {
+        // 30–50 K blackbody: F60/F90 from ~0.23 to ~0.66, monotonic in T.
+        let r30 = flux_ratio_60_90(30.0);
+        let r50 = flux_ratio_60_90(50.0);
+        assert!((r30 - 0.233).abs() < 0.02, "ratio(30K) = {r30:.3}");
+        assert!((r50 - 0.66).abs() < 0.03, "ratio(50K) = {r50:.3}");
+        assert!(r50 > r30);
     }
 
     #[test]
