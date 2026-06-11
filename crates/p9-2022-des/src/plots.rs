@@ -6,7 +6,7 @@
 use std::fmt::Write;
 
 use crate::color_models;
-use crate::survey_model::DesSurvey;
+use crate::survey_model::{DesBand, DesSurvey};
 
 const GRIDLINE_COLOR: &str = "silver";
 const CURVE_COLOR: &str = "steelblue";
@@ -51,7 +51,7 @@ pub fn color_model_comparison_plot(width: u32, height: u32) -> String {
     // Title
     writeln!(
         svg,
-        r#"<text x="{}" y="25" text-anchor="middle" font-size="14" font-family="sans-serif" font-weight="bold">DES Recovery Rate by Color Model</text>"#,
+        r#"<text x="{}" y="25" text-anchor="middle" font-size="14" font-family="sans-serif" font-weight="bold">DES Recovery Rate by Color Model (Table 1)</text>"#,
         width as f64 / 2.0,
     )
     .unwrap();
@@ -94,7 +94,7 @@ pub fn color_model_comparison_plot(width: u32, height: u32) -> String {
     // Bars
     for (i, model) in models.iter().enumerate() {
         let x = margin_left + bar_spacing + i as f64 * (bar_width + bar_spacing);
-        let bar_h = plot_h * model.recovery_rate;
+        let bar_h = plot_h * model.paper_recovery;
         let y = margin_top + plot_h - bar_h;
         let color = colors[i % colors.len()];
 
@@ -110,7 +110,7 @@ pub fn color_model_comparison_plot(width: u32, height: u32) -> String {
             r#"<text x="{}" y="{}" text-anchor="middle" font-size="9" font-family="sans-serif">{:.0}%</text>"#,
             x + bar_width / 2.0,
             y - 5.0,
-            model.recovery_rate * 100.0,
+            model.paper_recovery * 100.0,
         )
         .unwrap();
 
@@ -226,7 +226,7 @@ pub fn recovery_vs_magnitude_plot(width: u32, height: u32) -> String {
     let mut path = String::with_capacity(2000);
     for i in 0..=n_points {
         let mag = mag_min + mag_range * (i as f64 / n_points as f64);
-        let eff = survey.completeness(mag);
+        let eff = survey.completeness(mag, DesBand::G);
         let x = margin_left + plot_w * (mag - mag_min) / mag_range;
         let y = margin_top + plot_h * (1.0 - eff);
         if i == 0 {

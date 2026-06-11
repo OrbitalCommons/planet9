@@ -355,6 +355,7 @@ name = "p9-2022-des"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "p9-2021-orbit",
  "p9-core",
  "rand",
  "rand_distr",
@@ -391,6 +392,9 @@ name = "p9-2024-panstarrs"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "p9-2021-orbit",
+ "p9-2021-ztf",
+ "p9-2022-des",
  "p9-core",
  "rand",
  "rand_distr",

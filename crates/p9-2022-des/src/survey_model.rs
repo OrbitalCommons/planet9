@@ -1,9 +1,18 @@
-//! DES survey characteristics for the Planet Nine search.
+//! DES survey characteristics for the Planet Nine search of
+//! Belyakov, Bernardinelli & Brown (2022), AJ 163, 216 (arXiv:2203.07642).
 //!
-//! Models the Dark Energy Survey's footprint, depth, and detection
-//! completeness as used in Belyakov, Bernardinelli & Brown (2022).
+//! Models the Dark Energy Survey wide-field footprint (as a union of
+//! declination bands whose solid angle matches the surveyed ~5000 deg^2),
+//! per-band difference-imaging depths, and the paper's multi-night
+//! detection/linking requirement ("more than 7 unique nights of
+//! detections" across the 6-year baseline).
 
 use serde::{Deserialize, Serialize};
+
+use p9_core::types::OrbitalElements;
+
+use crate::color_models::BandMagnitudes;
+use crate::sky::apparent_position_deg;
 
 /// Photometric band used in DES observations.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -15,16 +24,126 @@ pub enum DesBand {
     Y,
 }
 
+/// One declination band of the footprint with a (possibly zero-wrapping)
+/// right-ascension range.
+#[derive(Debug, Clone, Copy)]
+struct FootprintBand {
+    dec_min: f64,
+    dec_max: f64,
+    /// RA range start (deg); the range runs eastward from `ra_start` to
+    /// `ra_end` and may wrap through 0.
+    ra_start: f64,
+    ra_end: f64,
+}
+
+/// Piecewise-box approximation of the DES wide footprint (Abbott et al.
+/// 2021, Fig. 1): the main SPT region at -65 < dec < -40 spanning
+/// RA 300..105 deg, a mid band, and the northern Stripe-82/connecting
+/// region reaching dec = +5. The union's solid angle is ~4980 deg^2,
+/// matching the declared 5000 deg^2 to better than 1% (asserted in tests) —
+/// the previous simple box cut covered ~9300 deg^2, nearly twice the real
+/// footprint.
+const FOOTPRINT_BANDS: [FootprintBand; 3] = [
+    FootprintBand {
+        dec_min: -65.0,
+        dec_max: -40.0,
+        ra_start: 300.0,
+        ra_end: 105.0,
+    },
+    FootprintBand {
+        dec_min: -40.0,
+        dec_max: -20.0,
+        ra_start: 335.0,
+        ra_end: 55.0,
+    },
+    FootprintBand {
+        dec_min: -20.0,
+        dec_max: 5.0,
+        ra_start: 355.0,
+        ra_end: 40.0,
+    },
+];
+
+fn ra_in_range(ra: f64, start: f64, end: f64) -> bool {
+    let ra = ra.rem_euclid(360.0);
+    if start <= end {
+        (start..end).contains(&ra)
+    } else {
+        ra >= start || ra < end
+    }
+}
+
+fn ra_span_deg(start: f64, end: f64) -> f64 {
+    (end - start).rem_euclid(360.0)
+}
+
+/// Survival probability P(X >= k) of a Poisson-binomial variable
+/// (independent Bernoulli trials with heterogeneous probabilities `probs`),
+/// computed by exact dynamic programming over the count distribution.
+pub fn poisson_binomial_tail(probs: &[f64], k: u32) -> f64 {
+    let k = k as usize;
+    if k == 0 {
+        return 1.0;
+    }
+    // dist[j] = P(exactly j successes so far) for j < k; `tail` absorbs
+    // P(>= k successes).
+    let mut dist = vec![0.0_f64; k];
+    dist[0] = 1.0;
+    let mut tail = 0.0_f64;
+    for &p in probs {
+        tail += dist[k - 1] * p;
+        for j in (1..k).rev() {
+            dist[j] = dist[j] * (1.0 - p) + dist[j - 1] * p;
+        }
+        dist[0] *= 1.0 - p;
+    }
+    tail
+}
+
 /// DES survey model parameters for Planet Nine detection.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DesSurvey {
-    /// Effective footprint area in square degrees
+    /// Declared effective footprint area in square degrees (the box-union
+    /// footprint's computed solid angle matches this to <1%; see
+    /// `solid_angle_deg2`).
     pub footprint_area: f64,
-    /// Total number of observing nights across 6 years
+    /// Total number of distinct observing nights across the 6-year survey;
+    /// per-position observing epochs are quantized onto this night grid.
     pub n_nights: u32,
-    /// Single-epoch 10-sigma depth in g-band (mag)
+    /// Distinct nights on which any given sky position is imaged *per band*
+    /// (~10 tilings of the wide survey; Diehl et al. 2016, Neilsen et al.
+    /// 2019).
+    pub nights_per_band: u32,
+    /// Detections on at least this many distinct nights are required to
+    /// form a linkable orbit: "more than 7 unique nights of detections"
+    /// (Belyakov et al. 2022, Sec. 2), i.e. >= 8.
+    pub min_nights: u32,
+    /// 50%-completeness magnitude in g: 24.1, the logit-fit m50 measured by
+    /// injecting synthetic Planet Nines into the DES difference-imaging
+    /// pipeline (Belyakov et al. 2022, Sec. 3).
     pub depth_g: f64,
-    /// Bands used in the survey
+    /// 50%-completeness magnitude in r: 23.8 (Bernardinelli et al. 2022) —
+    /// the value shared workspace-wide via
+    /// `p9_core::analysis::surveys::SURVEY_DEPTHS`.
+    pub depth_r: f64,
+    /// 50%-completeness magnitude in i: DES DR1 single-epoch depths run
+    /// g/r/i/z = 23.57/23.34/22.78/22.10 (Abbott et al. 2018); scaling the
+    /// i-g offset (-0.79) to the difference-imaging g anchor gives ~23.3.
+    pub depth_i: f64,
+    /// 50%-completeness magnitude in z: DR1 z-g offset (-1.47) scaled to
+    /// the difference-imaging g anchor gives ~22.6.
+    pub depth_z: f64,
+    /// Calibrated per-night usability probability: the chance that a given
+    /// tiling night yields a clean, linkable detection epoch for a bright
+    /// source. It lumps focal-plane fill (~20% chip gaps/masks, Morganson
+    /// et al. 2018), template contamination in difference imaging, and the
+    /// arc-length/triplet structure cuts the pipeline applies but this
+    /// model does not resolve. Calibrated (single parameter) so that the
+    /// end-to-end injection-recovery of the Brown & Batygin (2021)
+    /// reference population reproduces the paper's 87.0% recovery; see
+    /// `recovery_analysis` for the regression test.
+    pub night_usability: f64,
+    /// Bands used in the detection simulation
     pub bands: Vec<DesBand>,
 }
 
@@ -33,43 +152,134 @@ impl Default for DesSurvey {
         Self {
             footprint_area: 5000.0,
             n_nights: 575,
+            nights_per_band: 10,
+            min_nights: 8,
             depth_g: 24.1,
-            bands: vec![DesBand::G, DesBand::R, DesBand::I, DesBand::Z, DesBand::Y],
+            depth_r: p9_core::analysis::surveys::limiting_magnitude("DES")
+                .expect("DES depth in p9-core survey table"),
+            depth_i: 23.3,
+            depth_z: 22.6,
+            night_usability: 0.29,
+            bands: vec![DesBand::G, DesBand::R, DesBand::I, DesBand::Z],
         }
     }
 }
 
 impl DesSurvey {
-    /// Detection completeness as a function of apparent magnitude.
+    /// 50%-completeness magnitude for a band.
+    pub fn depth(&self, band: DesBand) -> f64 {
+        match band {
+            DesBand::G => self.depth_g,
+            DesBand::R => self.depth_r,
+            DesBand::I => self.depth_i,
+            DesBand::Z => self.depth_z,
+            // Y is shallow and unused by the detection model.
+            DesBand::Y => 21.0,
+        }
+    }
+
+    /// Single-epoch detection completeness at apparent magnitude `m` in
+    /// `band`:
     ///
-    /// Uses a logistic (logit) function:
-    ///   p(m) = c / (1 + exp(k * (m - m50)))
+    ///   p(m) = c / (1 + exp(k (m - m50)))
     ///
-    /// where c is the asymptotic completeness, k is the steepness, and
-    /// m50 is the magnitude at 50% completeness. Parameters are calibrated
-    /// to match DES transient detection pipeline performance.
-    pub fn completeness(&self, apparent_mag: f64) -> f64 {
+    /// the logit form fitted by Belyakov et al. (2022, Sec. 3) to synthetic
+    /// P9 injections, with asymptotic completeness c = 0.95, slope k = 3.0
+    /// (transition width ~0.7 mag) and m50 the band's 50%-completeness
+    /// depth.
+    pub fn completeness(&self, apparent_mag: f64, band: DesBand) -> f64 {
         let c = 0.95;
         let k = 3.0;
-        let m50 = self.depth_g - 0.5;
+        let m50 = self.depth(band);
         c / (1.0 + (k * (apparent_mag - m50)).exp())
     }
 
-    /// Simplified DES footprint check.
-    ///
-    /// DES covers approximately 5000 deg^2 of the southern sky.
-    /// This simplified model requires dec < 0 and applies a rough
-    /// RA cut to approximate the actual footprint boundaries.
+    /// Probability that a single tiling night yields a usable detection:
+    /// the magnitude completeness degraded by the calibrated per-night
+    /// usability factor.
+    pub fn night_detection_probability(&self, apparent_mag: f64, band: DesBand) -> f64 {
+        self.night_usability * self.completeness(apparent_mag, band)
+    }
+
+    /// Footprint membership (equatorial RA/dec in degrees).
     pub fn is_in_footprint(&self, ra_deg: f64, dec_deg: f64) -> bool {
-        if dec_deg > 0.0 {
-            return false;
+        FOOTPRINT_BANDS.iter().any(|b| {
+            (b.dec_min..b.dec_max).contains(&dec_deg) && ra_in_range(ra_deg, b.ra_start, b.ra_end)
+        })
+    }
+
+    /// Exact solid angle of the box-union footprint in deg^2:
+    /// sum over bands of dRA * (sin(dec_max) - sin(dec_min)) * 180/pi.
+    pub fn solid_angle_deg2(&self) -> f64 {
+        FOOTPRINT_BANDS
+            .iter()
+            .map(|b| {
+                let dsin = b.dec_max.to_radians().sin() - b.dec_min.to_radians().sin();
+                ra_span_deg(b.ra_start, b.ra_end) * dsin * (180.0 / std::f64::consts::PI)
+            })
+            .sum()
+    }
+
+    /// Observing epochs for one sky position: `nights_per_band` nights in
+    /// each band, staggered between bands and quantized onto the survey's
+    /// `n_nights`-night grid spanning the 6-year baseline. Returns
+    /// (band, time in days since survey start).
+    pub fn observing_epochs(&self) -> Vec<(DesBand, f64)> {
+        let span_days = 6.0 * p9_core::constants::YEAR_DAYS;
+        let nights = self.nights_per_band.max(1) as f64;
+        let grid = (self.n_nights.max(2) - 1) as f64;
+        let mut epochs = Vec::with_capacity(self.bands.len() * self.nights_per_band as usize);
+        for (b_idx, &band) in self.bands.iter().enumerate() {
+            let offset = b_idx as f64 / self.bands.len() as f64;
+            for j in 0..self.nights_per_band {
+                let frac = (j as f64 + offset) / nights;
+                // Snap to the discrete observing-night grid.
+                let night_index = (frac * grid).round();
+                epochs.push((band, night_index / grid * span_days));
+            }
         }
-        if dec_deg < -65.0 {
-            return false;
-        }
-        // DES wide-field footprint spans roughly RA 0-120 and 300-360
-        // with some additional coverage near the Galactic caps
-        (ra_deg < 120.0) || (ra_deg > 300.0)
+        epochs
+    }
+
+    /// Per-night detection probabilities for an orbit across all observing
+    /// epochs (D3): each tiling night contributes its magnitude
+    /// completeness in that night's band, gated by whether the object's
+    /// *apparent* position that night — including parallactic oscillation
+    /// and orbital drift — falls inside the footprint.
+    pub fn night_probabilities(&self, elem: &OrbitalElements, mags: &BandMagnitudes) -> Vec<f64> {
+        self.observing_epochs()
+            .iter()
+            .map(|&(band, t_days)| {
+                let (ra, dec, _) = apparent_position_deg(elem, t_days);
+                if self.is_in_footprint(ra, dec) {
+                    self.night_detection_probability(mags.magnitude(band), band)
+                } else {
+                    0.0
+                }
+            })
+            .collect()
+    }
+
+    /// Whether the orbit's apparent position enters the footprint on any
+    /// observing epoch (the paper's "crosses the DES footprint").
+    pub fn crosses_footprint(&self, elem: &OrbitalElements) -> bool {
+        self.observing_epochs().iter().any(|&(_, t_days)| {
+            let (ra, dec, _) = apparent_position_deg(elem, t_days);
+            self.is_in_footprint(ra, dec)
+        })
+    }
+
+    /// End-to-end probability that the orbit is detected and linked:
+    /// P(detections on >= `min_nights` distinct nights), with each night an
+    /// independent Bernoulli trial at `night_probabilities` (exact
+    /// Poisson-binomial tail).
+    pub fn detection_probability_for_orbit(
+        &self,
+        elem: &OrbitalElements,
+        mags: &BandMagnitudes,
+    ) -> f64 {
+        let probs = self.night_probabilities(elem, mags);
+        poisson_binomial_tail(&probs, self.min_nights)
     }
 }
 
@@ -82,14 +292,56 @@ mod tests {
         let survey = DesSurvey::default();
         assert!((survey.footprint_area - 5000.0).abs() < 1e-10);
         assert_eq!(survey.n_nights, 575);
+        // g-band m50 = 24.1 (Belyakov et al. 2022 logit fit).
         assert!((survey.depth_g - 24.1).abs() < 1e-10);
-        assert_eq!(survey.bands.len(), 5);
+        // r depth comes from the shared p9-core table (23.8).
+        assert!((survey.depth_r - 23.8).abs() < 1e-10);
+        // "More than 7 unique nights of detections."
+        assert_eq!(survey.min_nights, 8);
+    }
+
+    #[test]
+    fn footprint_solid_angle_matches_declared_area() {
+        // D2 regression: the footprint cut must integrate to the declared
+        // 5000 deg^2 (the old box covered ~9300 deg^2).
+        let survey = DesSurvey::default();
+        let omega = survey.solid_angle_deg2();
+        assert!(
+            (omega - survey.footprint_area).abs() / survey.footprint_area < 0.02,
+            "solid angle = {omega:.0} deg^2 vs declared {}",
+            survey.footprint_area
+        );
+    }
+
+    #[test]
+    fn footprint_solid_angle_monte_carlo_agrees() {
+        // Cross-check the analytic solid angle with uniform-sphere sampling.
+        use rand::{Rng, SeedableRng};
+        let survey = DesSurvey::default();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2022);
+        let n = 200_000;
+        let mut hits = 0u32;
+        for _ in 0..n {
+            let ra = rng.gen_range(0.0..360.0);
+            let z: f64 = rng.gen_range(-1.0..1.0);
+            let dec = z.asin().to_degrees();
+            if survey.is_in_footprint(ra, dec) {
+                hits += 1;
+            }
+        }
+        let full_sky = 4.0 * std::f64::consts::PI * (180.0 / std::f64::consts::PI).powi(2);
+        let omega_mc = full_sky * hits as f64 / n as f64;
+        assert!(
+            (omega_mc - survey.solid_angle_deg2()).abs() < 150.0,
+            "MC = {omega_mc:.0} vs analytic {:.0}",
+            survey.solid_angle_deg2()
+        );
     }
 
     #[test]
     fn bright_objects_high_completeness() {
         let survey = DesSurvey::default();
-        let p = survey.completeness(20.0);
+        let p = survey.completeness(20.0, DesBand::R);
         assert!(
             p > 0.90,
             "Bright objects should have >90% completeness, got {p}"
@@ -99,7 +351,7 @@ mod tests {
     #[test]
     fn faint_objects_low_completeness() {
         let survey = DesSurvey::default();
-        let p = survey.completeness(26.0);
+        let p = survey.completeness(26.0, DesBand::R);
         assert!(
             p < 0.10,
             "Faint objects should have <10% completeness, got {p}"
@@ -109,10 +361,10 @@ mod tests {
     #[test]
     fn completeness_monotonically_decreasing() {
         let survey = DesSurvey::default();
-        let mut prev = survey.completeness(18.0);
+        let mut prev = survey.completeness(18.0, DesBand::G);
         for mag_tenth in 185..=270 {
             let mag = mag_tenth as f64 / 10.0;
-            let p = survey.completeness(mag);
+            let p = survey.completeness(mag, DesBand::G);
             assert!(
                 p <= prev + 1e-12,
                 "Completeness should decrease with magnitude"
@@ -129,15 +381,74 @@ mod tests {
     }
 
     #[test]
-    fn footprint_accepts_southern_sky() {
+    fn footprint_accepts_spt_region() {
         let survey = DesSurvey::default();
-        assert!(survey.is_in_footprint(30.0, -30.0));
-        assert!(survey.is_in_footprint(350.0, -20.0));
+        assert!(survey.is_in_footprint(30.0, -55.0));
+        assert!(survey.is_in_footprint(350.0, -50.0));
+        assert!(survey.is_in_footprint(100.0, -45.0));
+    }
+
+    #[test]
+    fn footprint_rejects_mid_north_away_from_stripe82() {
+        let survey = DesSurvey::default();
+        // dec -30 at RA 150 is outside the wide survey.
+        assert!(!survey.is_in_footprint(150.0, -30.0));
+        // dec 0 belongs to the footprint only near RA ~ 0.
+        assert!(survey.is_in_footprint(10.0, 0.0));
+        assert!(!survey.is_in_footprint(120.0, 0.0));
     }
 
     #[test]
     fn footprint_rejects_deep_south() {
         let survey = DesSurvey::default();
         assert!(!survey.is_in_footprint(30.0, -70.0));
+    }
+
+    #[test]
+    fn band_depths_ordered() {
+        // g (difference-imaging anchor) is deepest, then r, i, z.
+        let survey = DesSurvey::default();
+        assert!(survey.depth(DesBand::G) > survey.depth(DesBand::R));
+        assert!(survey.depth(DesBand::R) > survey.depth(DesBand::I));
+        assert!(survey.depth(DesBand::I) > survey.depth(DesBand::Z));
+    }
+
+    #[test]
+    fn observing_epochs_span_survey_and_use_night_grid() {
+        let survey = DesSurvey::default();
+        let epochs = survey.observing_epochs();
+        assert_eq!(
+            epochs.len(),
+            survey.bands.len() * survey.nights_per_band as usize
+        );
+        let span = 6.0 * p9_core::constants::YEAR_DAYS;
+        for &(_, t) in &epochs {
+            assert!((0.0..=span).contains(&t));
+            // Quantized onto the n_nights grid.
+            let grid = (survey.n_nights - 1) as f64;
+            let idx = t / span * grid;
+            assert!((idx - idx.round()).abs() < 1e-9, "t = {t} off-grid");
+        }
+    }
+
+    #[test]
+    fn poisson_binomial_tail_matches_binomial() {
+        // Homogeneous case reduces to the binomial: n = 10, p = 0.5,
+        // P(X >= 6) = 386/1024.
+        let probs = vec![0.5; 10];
+        let tail = poisson_binomial_tail(&probs, 6);
+        assert!((tail - 386.0 / 1024.0).abs() < 1e-12, "tail = {tail}");
+        // Degenerate edges.
+        assert_eq!(poisson_binomial_tail(&probs, 0), 1.0);
+        assert!(poisson_binomial_tail(&probs, 11) < 1e-12);
+    }
+
+    #[test]
+    fn poisson_binomial_tail_heterogeneous() {
+        // P(X >= 1) = 1 - prod(1 - p_i).
+        let probs = [0.1, 0.4, 0.7];
+        let tail = poisson_binomial_tail(&probs, 1);
+        let expected = 1.0 - 0.9 * 0.6 * 0.3;
+        assert!((tail - expected).abs() < 1e-12);
     }
 }
