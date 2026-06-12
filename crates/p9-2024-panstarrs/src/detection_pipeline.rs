@@ -84,15 +84,22 @@ pub fn equatorial_position_with_earth_deg(
     (ra, dec)
 }
 
-/// Ephemeris-path counterpart of `detection_probability_for_orbit`.
+/// Ephemeris-path counterpart of `detection_probability_for_orbit`, with
+/// IAU H-G phase darkening (G = 0.15) applied to the zero-phase
+/// `v_magnitude`: the real Earth state yields the Sun–object–Earth phase
+/// angle, whose H-G opposition surge dims the object by up to ~0.05 mag at
+/// P9 distances.
 pub fn detection_probability_for_orbit_with_earth(
     survey: &Ps1Survey,
     elements: &OrbitalElements,
     v_magnitude: f64,
     earth_state: &EarthState,
 ) -> f64 {
+    use p9_core::analysis::photometry::{hg_phase_factor, DEFAULT_SLOPE_G};
     let (_, dec) = equatorial_position_with_earth_deg(elements, earth_state);
-    survey.detection_probability(v_magnitude, dec)
+    let alpha = p9_2022_des::sky::phase_angle_with_earth(elements, earth_state, 0.0);
+    let dm = -2.5 * hg_phase_factor(DEFAULT_SLOPE_G, alpha).log10();
+    survey.detection_probability(v_magnitude + dm, dec)
 }
 
 /// Deterministic expected number of detections for a synthetic population
