@@ -5,6 +5,7 @@ edition = "2021"
 description = "Reproduction of Pichierri & Batygin (2025) 'Measuring the Degree of Clustering and Diffusion of TNOs'"
 
 [dependencies]
+nalgebra.workspace = true
 p9-core = { path = "../p9-core" }
 rand = { workspace = true }
 rand_distr = { workspace = true }

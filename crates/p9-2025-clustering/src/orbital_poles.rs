@@ -6,13 +6,17 @@
 //!
 //!   n̂ = (sin i sin Ω, −sin i cos Ω, cos i),
 //!
-//! not as 2D distances in the (i cosΩ, i sinΩ) plane (which conflates a
-//! 90° node difference at i = 17° with a 90° pole separation). The
-//! reference Laplace plane is *computed* from the giant planets' total
-//! orbital angular momentum (J2000 states from p9-core) — at ETNO
-//! distances the Laplace plane asymptotes to the invariable plane.
+//! (via p9-core's `coords::sky::angular_distance`, i.e. starfield's
+//! `Cartesian3::angular_distance`), not as 2D distances in the
+//! (i cosΩ, i sinΩ) plane (which conflates a 90° node difference at i = 17°
+//! with a 90° pole separation). The reference Laplace plane is *computed*
+//! from the giant planets' total orbital angular momentum (J2000 states from
+//! p9-core) — at ETNO distances the Laplace plane asymptotes to the
+//! invariable plane.
 
+use nalgebra::Vector3;
 use p9_core::constants::GM_SUN;
+use p9_core::coords::sky::angular_distance;
 use p9_core::initial_conditions::planets::giant_planets_j2000;
 use p9_core::types::cartesian_to_elements;
 use serde::{Deserialize, Serialize};
@@ -49,10 +53,10 @@ impl OrbitalPole {
 
     /// Unit vector of the orbit normal in ecliptic coordinates:
     /// n̂ = (sin i sin Ω, −sin i cos Ω, cos i).
-    pub fn unit_vector(&self) -> [f64; 3] {
+    pub fn unit_vector(&self) -> Vector3<f64> {
         let i = self.inclination();
         let node = self.omega_big();
-        [i.sin() * node.sin(), -i.sin() * node.cos(), i.cos()]
+        Vector3::new(i.sin() * node.sin(), -i.sin() * node.cos(), i.cos())
     }
 }
 
@@ -60,10 +64,7 @@ impl OrbitalPole {
 ///
 ///   cos d = cos i₁ cos i₂ + sin i₁ sin i₂ cos(Ω₁ − Ω₂)
 pub fn misalignment(pole: &OrbitalPole, reference: &OrbitalPole) -> f64 {
-    let a = pole.unit_vector();
-    let b = reference.unit_vector();
-    let dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-    dot.clamp(-1.0, 1.0).acos()
+    angular_distance(&pole.unit_vector(), &reference.unit_vector())
 }
 
 /// Reference pole of the giant-planet (Laplace/invariable) plane,
@@ -71,18 +72,14 @@ pub fn misalignment(pole: &OrbitalPole, reference: &OrbitalPole) -> f64 {
 /// the four giants at J2000 (p9-core DE440 states). Inclination to the
 /// ecliptic ≈ 1.58°.
 pub fn laplace_pole() -> OrbitalPole {
-    let mut l = [0.0_f64; 3];
+    let mut l = Vector3::zeros();
     for body in giant_planets_j2000() {
-        let r = body.state.pos;
-        let v = body.state.vel;
-        l[0] += body.mass * (r.y * v.z - r.z * v.y);
-        l[1] += body.mass * (r.z * v.x - r.x * v.z);
-        l[2] += body.mass * (r.x * v.y - r.y * v.x);
+        l += body.mass * body.state.pos.cross(&body.state.vel);
     }
-    let norm = (l[0] * l[0] + l[1] * l[1] + l[2] * l[2]).sqrt();
-    let i = (l[2] / norm).clamp(-1.0, 1.0).acos();
+    let n = l.normalize();
+    let i = n.z.clamp(-1.0, 1.0).acos();
     // n̂ = (sin i sin Ω, −sin i cos Ω, cos i) → Ω = atan2(n_x, −n_y)
-    let omega_big = (l[0] / norm).atan2(-(l[1] / norm));
+    let omega_big = n.x.atan2(-n.y);
     OrbitalPole::from_elements("Laplace plane", i, omega_big)
 }
 

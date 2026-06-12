@@ -138,8 +138,9 @@ derived quantities:
   can fire at extreme states (reproduced at a = 800 AU, e = 0.95, M ≈ 5.97, dt = 4e5 d).
   p9-2021-oort-cloud sidesteps it with an element-space drift via `solve_kepler`. A proper fix
   (Stumpff-series Newton with bracketing on the universal anomaly) belongs in p9-core.
-- p9-core still lacks an ecliptic↔equatorial transform; `p9-2022-des/src/sky.rs` (shared with
-  p9-2024-panstarrs) and `p9-2021-ztf/src/sky.rs` carry local documented conversions that should
-  eventually consolidate into `p9_core::coords`.
+- ~~p9-core still lacks an ecliptic↔equatorial transform~~ — resolved: `p9_core::coords::sky`
+  wraps starfield's framelib (ECLIPJ2000/GALACTIC SPICE matrices); the local conversions in
+  `p9-2022-des/src/sky.rs`, `p9-2021-ztf/src/sky.rs`, `p9-2025-iras-akari` and the hand-rolled
+  galactic pole in `p9-core/src/forces/galactic_tide.rs` were deleted in favor of it.
 - No shared simulation snapshot driver in p9-core; the 2016-crate run loops were harmonized in
   place but remain three copies.

@@ -2,18 +2,14 @@
 //!
 //! Heliocentric ecliptic longitude/latitude come from the Cartesian state of
 //! the orbital elements (p9-core conversion); equatorial declination follows
-//! from a rotation by the obliquity of the ecliptic. For the distant-object
-//! footprint question (hundreds of AU) the parallax between heliocentric and
-//! geocentric directions is < 0.2 degrees and is neglected.
-//!
-//! (p9-core's coords module currently only provides democratic-heliocentric
-//! transforms, so the ecliptic → equatorial step lives here.)
+//! from p9-core's `coords::sky` ecliptic → equatorial transform (starfield's
+//! ECLIPJ2000 frame matrix). For the distant-object footprint question
+//! (hundreds of AU) the parallax between heliocentric and geocentric
+//! directions is < 0.2 degrees and is neglected.
 
 use p9_core::constants::{DEG2RAD, GM_SUN};
+use p9_core::coords::sky::ecliptic_vec_declination;
 use p9_core::types::OrbitalElements;
-
-/// Obliquity of the ecliptic, J2000 (radians).
-pub const OBLIQUITY: f64 = 23.439_291 * DEG2RAD;
 
 /// Heliocentric ecliptic longitude, latitude (radians) and distance (AU)
 /// for orbital elements at their stored mean anomaly.
@@ -25,21 +21,16 @@ pub fn ecliptic_position(elem: &OrbitalElements) -> (f64, f64, f64) {
     (lambda, beta, r)
 }
 
-/// Equatorial declination (radians) from ecliptic longitude/latitude:
-/// sin δ = sin β cos ε + cos β sin ε sin λ.
-pub fn declination(lambda: f64, beta: f64) -> f64 {
-    (beta.sin() * OBLIQUITY.cos() + beta.cos() * OBLIQUITY.sin() * lambda.sin()).asin()
-}
-
 /// Declination (degrees) of an orbit's current sky position.
 pub fn declination_deg(elem: &OrbitalElements) -> f64 {
-    let (lambda, beta, _) = ecliptic_position(elem);
-    declination(lambda, beta) / DEG2RAD
+    let state = elem.to_state_vector(GM_SUN);
+    ecliptic_vec_declination(&state.pos) / DEG2RAD
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use p9_core::coords::sky::ecliptic_to_equatorial;
 
     fn elem(i_deg: f64, omega_deg: f64, omega_big_deg: f64, m_deg: f64) -> OrbitalElements {
         OrbitalElements {
@@ -60,9 +51,9 @@ mod tests {
             let d = declination_deg(&elem(0.0, 0.0, 0.0, m));
             assert!(d.abs() <= 23.44 + 1e-6, "δ = {d:.2} for M = {m}");
         }
-        // λ = 90° (perihelion at omega 90 from node... use M=90 on circularish orbit)
-        let d_max = declination(90.0 * DEG2RAD, 0.0) / DEG2RAD;
-        assert!((d_max - 23.439).abs() < 1e-3);
+        // At λ = 90°, β = 0 the declination equals the obliquity.
+        let (_, dec) = ecliptic_to_equatorial(90.0 * DEG2RAD, 0.0);
+        assert!((dec / DEG2RAD - 23.439).abs() < 1e-3);
     }
 
     #[test]
