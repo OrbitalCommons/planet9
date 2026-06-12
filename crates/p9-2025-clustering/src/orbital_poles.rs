@@ -17,8 +17,8 @@
 use nalgebra::Vector3;
 use p9_core::constants::GM_SUN;
 use p9_core::coords::sky::angular_distance;
-use p9_core::initial_conditions::planets::giant_planets_j2000;
-use p9_core::types::cartesian_to_elements;
+use p9_core::initial_conditions::planets::{giant_planets_at, giant_planets_j2000, Time};
+use p9_core::types::{cartesian_to_elements, MassiveBody};
 use serde::{Deserialize, Serialize};
 
 /// Orbital pole, stored as inclination + node with the planar projection
@@ -67,13 +67,11 @@ pub fn misalignment(pole: &OrbitalPole, reference: &OrbitalPole) -> f64 {
     angular_distance(&pole.unit_vector(), &reference.unit_vector())
 }
 
-/// Reference pole of the giant-planet (Laplace/invariable) plane,
-/// computed from the total orbital angular momentum L = Σ mᵢ rᵢ×vᵢ of
-/// the four giants at J2000 (p9-core DE440 states). Inclination to the
-/// ecliptic ≈ 1.58°.
-pub fn laplace_pole() -> OrbitalPole {
+/// Pole of the plane normal to the total orbital angular momentum
+/// L = Σ mᵢ rᵢ×vᵢ of the given bodies (heliocentric states).
+fn angular_momentum_pole(bodies: &[MassiveBody]) -> OrbitalPole {
     let mut l = Vector3::zeros();
-    for body in giant_planets_j2000() {
+    for body in bodies {
         l += body.mass * body.state.pos.cross(&body.state.vel);
     }
     let n = l.normalize();
@@ -81,6 +79,25 @@ pub fn laplace_pole() -> OrbitalPole {
     // n̂ = (sin i sin Ω, −sin i cos Ω, cos i) → Ω = atan2(n_x, −n_y)
     let omega_big = n.x.atan2(-n.y);
     OrbitalPole::from_elements("Laplace plane", i, omega_big)
+}
+
+/// Reference pole of the giant-planet (Laplace/invariable) plane,
+/// computed from the total orbital angular momentum L = Σ mᵢ rᵢ×vᵢ of
+/// the four giants at J2000 (p9-core DE440 states). Inclination to the
+/// ecliptic ≈ 1.58°.
+pub fn laplace_pole() -> OrbitalPole {
+    angular_momentum_pole(&giant_planets_j2000())
+}
+
+/// Ephemeris-backed variant of [`laplace_pole`]: the same angular-momentum
+/// pole, but from DE-kernel giant-planet states at an arbitrary epoch.
+/// Because the giants carry ~98% of the planetary angular momentum, the
+/// pole is epoch-stable to a small fraction of a degree.
+///
+/// Requires a cached DE kernel (never downloads); `Err` on a hermetic
+/// machine — fall back to [`laplace_pole`].
+pub fn laplace_pole_at(t: &Time) -> Result<OrbitalPole, String> {
+    Ok(angular_momentum_pole(&giant_planets_at(t)?))
 }
 
 /// Compute the mean pole direction for a set of poles.
@@ -201,6 +218,33 @@ mod tests {
             i_deg > 1.0 && i_deg < 2.2,
             "Laplace-plane inclination = {i_deg:.2}°, expected ≈ 1.58°"
         );
+    }
+
+    #[test]
+    fn test_laplace_pole_matches_ephemeris_variant() {
+        use p9_core::initial_conditions::planets::Timescale;
+
+        let ts = Timescale::default();
+        // J2000: identical inputs up to kernel choice (de421 fallback
+        // differs from the pinned DE440 states by ≲ 3.5e-6 AU).
+        let at_j2000 = match laplace_pole_at(&ts.tdb_jd(p9_core::constants::J2000)) {
+            Ok(p) => p,
+            Err(_) => {
+                eprintln!("skipping: no DE kernel in starfield cache");
+                return;
+            }
+        };
+        let pinned = laplace_pole();
+        let sep = misalignment(&pinned, &at_j2000) / DEG2RAD;
+        assert!(sep < 0.01, "J2000 pole separation = {sep:.4}°");
+
+        // Other epochs: the invariable-plane direction is epoch-stable to
+        // a small fraction of a degree (osculating exchanges only).
+        let at_2017 = laplace_pole_at(&ts.utc((2017, 1, 1))).unwrap();
+        let sep = misalignment(&pinned, &at_2017) / DEG2RAD;
+        assert!(sep < 0.2, "2017 pole separation = {sep:.4}°");
+        let i_deg = at_2017.inclination() / DEG2RAD;
+        assert!(i_deg > 1.0 && i_deg < 2.2, "inclination = {i_deg:.2}°");
     }
 
     #[test]

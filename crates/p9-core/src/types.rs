@@ -270,6 +270,21 @@ impl SimConfig {
             bs_epsilon: 1e-11,
         }
     }
+
+    /// Pair this config with giant-planet starting bodies taken from the DE
+    /// ephemeris at `epoch`, so an integration's t = `t_start` corresponds
+    /// to a real survey/discovery epoch instead of J2000 only.
+    ///
+    /// Requires a cached DE kernel (never downloads); on a hermetic machine
+    /// this returns `Err` and callers fall back to
+    /// `initial_conditions::planets::giant_planets_j2000()`.
+    pub fn with_bodies_at_epoch(
+        self,
+        epoch: &starfield::time::Time,
+    ) -> Result<(Self, Vec<MassiveBody>), String> {
+        let bodies = crate::initial_conditions::planets::giant_planets_at(epoch)?;
+        Ok((self, bodies))
+    }
 }
 
 // ============================================================
