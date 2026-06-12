@@ -18,13 +18,30 @@
 //!
 //! Model (documented simplifications): the object moves in the ecliptic
 //! plane at its heliocentric transverse rate (radial drift over 23 yr is
-//! ≲1% of r for a ~15,000 yr orbit and is neglected); Earth is on a
-//! circular 1 AU orbit; the survey epochs sample arbitrary Earth orbital
-//! phases (both surveys scanned for ~1 yr). Eccentricities are scanned up
-//! to `E_MAX` = 0.7, the approximate upper bound of published Planet Nine
-//! orbit fits (Batygin et al. 2019; Brown & Batygin 2021).
+//! ≲1% of r for a ~15,000 yr orbit and is neglected). Eccentricities are
+//! scanned up to `E_MAX` = 0.7, the approximate upper bound of published
+//! Planet Nine orbit fits (Batygin et al. 2019; Brown & Batygin 2021).
+//!
+//! Two observer models share that target model:
+//!
+//! - **Ephemeris (primary)**: real Earth states from DE421 via
+//!   `p9_core::coords::observer::EphemerisEarth` at detection epochs
+//!   scanned inside the actual IRAS (1983-01-25..1983-11-21) and AKARI
+//!   (2006-05-08..2007-08-28) observing windows, with light-time
+//!   retardation (~3–4 days at 500–700 AU) and stellar aberration —
+//!   see `apparent_separation_ephemeris_arcmin`/`separation_window_ephemeris`.
+//! - **Circular fallback**: Earth on a circular 1 AU orbit with the two
+//!   epochs at free orbital phases and a fixed 23 yr baseline
+//!   (`apparent_separation_arcmin`/`separation_window`). A kernel-gated
+//!   test pins the two models to agree at the documented ~arcmin scale.
 
+use nalgebra::Vector3;
 use p9_core::constants::{GM_SUN, RAD2DEG, YEAR_DAYS};
+use p9_core::coords::observer::{
+    apparent_direction_from, EarthProvider, EarthState, Time, Timescale,
+};
+
+use crate::survey_model::{AkariFisSurvey, IrasSurvey};
 
 /// Upper bound on Planet Nine eccentricity scanned by the separation-window
 /// model (Batygin et al. 2019 / Brown & Batygin 2021 posteriors give
@@ -146,6 +163,135 @@ pub fn separation_window(d_au: f64, e_max: f64, baseline_years: f64) -> (f64, f6
         }
     }
     (sep_min, sep_max)
+}
+
+/// Apparent geocentric angular separation (arcmin) between detections at
+/// epochs `t1` and `t2` for an object at heliocentric distance `d_au` on
+/// an orbit (`a_au`, `e`), sitting at ecliptic longitude `lambda1`
+/// (radians) at `t1` and sweeping its heliocentric transverse rate in the
+/// ecliptic plane.
+///
+/// This is the ephemeris-grade version of `apparent_separation_arcmin`:
+/// Earth states come from `earth` (use `EphemerisEarth` for real DE421
+/// positions, `CircularEarth` as the analytic fallback), and each epoch's
+/// direction goes through the apparent chain — light-time retardation
+/// (~3–4 days at 500–700 AU, displacing the target by µ·r/c ≈ 0.5–1") and
+/// stellar aberration.
+pub fn apparent_separation_ephemeris_arcmin(
+    earth: &mut impl EarthProvider,
+    d_au: f64,
+    a_au: f64,
+    e: f64,
+    lambda1: f64,
+    t1: &Time,
+    t2: &Time,
+) -> f64 {
+    let state1 = earth.earth_state(t1);
+    let state2 = earth.earth_state(t2);
+    apparent_separation_from_states_arcmin(&state1, &state2, d_au, a_au, e, lambda1, t1, t2)
+}
+
+/// `apparent_separation_ephemeris_arcmin` with precomputed Earth states
+/// (the grid scans below reuse a handful of epochs across thousands of
+/// geometries, so kernel evaluations are hoisted out of the inner loops).
+fn apparent_separation_from_states_arcmin(
+    state1: &EarthState,
+    state2: &EarthState,
+    d_au: f64,
+    a_au: f64,
+    e: f64,
+    lambda1: f64,
+    t1: &Time,
+    t2: &Time,
+) -> f64 {
+    let mu = transverse_rate_rad_day(d_au, a_au, e); // rad/day
+    let pos_at = |lambda: f64| Vector3::new(d_au * lambda.cos(), d_au * lambda.sin(), 0.0);
+
+    let g1 = apparent_direction_from(state1, |dt| pos_at(lambda1 + mu * dt));
+    let dt_days = t2.tdb() - t1.tdb();
+    let g2 = apparent_direction_from(state2, |dt| pos_at(lambda1 + mu * (dt_days + dt)));
+    g1.angle(&g2) * ARCMIN_PER_RAD
+}
+
+/// Detection-epoch grid inside a survey observing window: catalogued
+/// sources were observed at unknown times within the window, so the
+/// separation scan samples it uniformly.
+fn window_grid(ts: &Timescale, window: (Time, Time), n: usize) -> Vec<Time> {
+    let (start, end) = window;
+    let (jd0, jd1) = (start.tt(), end.tt());
+    (0..n)
+        .map(|i| ts.tt_jd(jd0 + (jd1 - jd0) * i as f64 / (n - 1) as f64, None))
+        .collect()
+}
+
+/// Range of apparent two-epoch separations (arcmin) achievable at
+/// heliocentric distance `d_au` with real Earth ephemeris states:
+/// scans the same eccentricity branches as `separation_window`, the
+/// object's ecliptic longitude, and detection epochs inside the actual
+/// IRAS and AKARI observing windows.
+///
+/// Returns `(sep_min, sep_max)`.
+pub fn separation_window_ephemeris(
+    earth: &mut impl EarthProvider,
+    d_au: f64,
+    e_max: f64,
+) -> (f64, f64) {
+    const N_LAMBDA: usize = 24;
+    const N_EPOCH: usize = 8;
+
+    let ts = Timescale::default();
+    let t1s = window_grid(&ts, IrasSurvey::default().window(&ts), N_EPOCH);
+    let t2s = window_grid(&ts, AkariFisSurvey::default().window(&ts), N_EPOCH);
+    let states1: Vec<EarthState> = t1s.iter().map(|t| earth.earth_state(t)).collect();
+    let states2: Vec<EarthState> = t2s.iter().map(|t| earth.earth_state(t)).collect();
+
+    let branches = [
+        (d_au, 0.0),
+        (d_au / (1.0 - e_max), e_max),
+        (d_au / (1.0 + e_max), e_max),
+    ];
+
+    let mut sep_min = f64::INFINITY;
+    let mut sep_max = f64::NEG_INFINITY;
+    for &(a, e) in &branches {
+        for k in 0..N_LAMBDA {
+            let lambda1 = k as f64 * std::f64::consts::TAU / N_LAMBDA as f64;
+            for (t1, s1) in t1s.iter().zip(&states1) {
+                for (t2, s2) in t2s.iter().zip(&states2) {
+                    let s =
+                        apparent_separation_from_states_arcmin(s1, s2, d_au, a, e, lambda1, t1, t2);
+                    sep_min = sep_min.min(s);
+                    sep_max = sep_max.max(s);
+                }
+            }
+        }
+    }
+    (sep_min, sep_max)
+}
+
+/// Ephemeris-grade counterpart of `implied_distance`: the largest distance
+/// at which `sep_arcmin` is achievable within the model, with Earth states
+/// from `earth` and detection epochs scanned inside the real survey
+/// windows. Solved by bisection on the monotone-decreasing maximum of
+/// `separation_window_ephemeris`.
+pub fn implied_distance_ephemeris(earth: &mut impl EarthProvider, sep_arcmin: f64) -> f64 {
+    let mut max_sep = |d: f64| separation_window_ephemeris(earth, d, E_MAX).1;
+    let (mut lo, mut hi) = (50.0_f64, 5000.0_f64);
+    if max_sep(hi) >= sep_arcmin {
+        return hi;
+    }
+    if max_sep(lo) <= sep_arcmin {
+        return lo;
+    }
+    for _ in 0..40 {
+        let mid = 0.5 * (lo + hi);
+        if max_sep(mid) >= sep_arcmin {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    0.5 * (lo + hi)
 }
 
 /// Implied heliocentric distance for an observed two-epoch separation:
@@ -376,6 +522,100 @@ mod tests {
         assert!(
             (sep_geo - sep_helio).abs() < 1.0,
             "geo {sep_geo:.2}' vs helio {sep_helio:.2}'"
+        );
+    }
+
+    #[test]
+    fn ephemeris_and_circular_earth_agree_to_documented_error() {
+        use p9_core::coords::observer::{CircularEarth, EphemerisEarth};
+        let mut eph = match EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        let ts = Timescale::default();
+        let t1 = IrasSurvey::default().mid_epoch(&ts);
+        let t2 = AkariFisSurvey::default().mid_epoch(&ts);
+        let mut circ = CircularEarth;
+        // Identical target geometry, the two Earth models: the circular
+        // mean-longitude Earth is wrong by <= ~0.04 AU per epoch, i.e.
+        // <= ~0.3' on a 500 AU target — well inside the documented ~arcmin
+        // approximation scale.
+        let mut worst: f64 = 0.0;
+        for k in 0..12 {
+            let lambda1 = k as f64 * std::f64::consts::TAU / 12.0;
+            for &(d, e) in &[(500.0, 0.0), (700.0, 0.0), (500.0, E_MAX)] {
+                let a = if e > 0.0 { d / (1.0 - e) } else { d };
+                let s_eph =
+                    apparent_separation_ephemeris_arcmin(&mut eph, d, a, e, lambda1, &t1, &t2);
+                let s_circ =
+                    apparent_separation_ephemeris_arcmin(&mut circ, d, a, e, lambda1, &t1, &t2);
+                worst = worst.max((s_eph - s_circ).abs());
+            }
+        }
+        assert!(
+            worst < 1.0,
+            "ephemeris vs circular-Earth separation differs by {worst:.3}' (documented ~arcmin)"
+        );
+    }
+
+    #[test]
+    fn ephemeris_window_accommodates_paper_range() {
+        use p9_core::coords::observer::EphemerisEarth;
+        let mut eph = match EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        // The paper's 42'-69.6' window must stay achievable with real
+        // Earth positions and the real (23.5 yr mid-to-mid) epoch windows.
+        let (_, max_500) = separation_window_ephemeris(&mut eph, 500.0, E_MAX);
+        assert!(max_500 >= 69.6, "max sep at 500 AU = {max_500:.1}'");
+        let (min_700, max_700) = separation_window_ephemeris(&mut eph, 700.0, E_MAX);
+        assert!(
+            min_700 <= 42.0 && max_700 >= 42.0,
+            "42' not within [{min_700:.1}, {max_700:.1}] at 700 AU"
+        );
+    }
+
+    #[test]
+    fn implied_distance_ephemeris_near_circular_fallback() {
+        use p9_core::coords::observer::EphemerisEarth;
+        let mut eph = match EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        // The ephemeris inversion shifts the implied distances upward by
+        // ~3.5% relative to the 23.0 yr circular fallback (the real
+        // mid-to-mid baseline is 23.5 yr and the AKARI window extends to
+        // 2007-08): d(69.6') 511 -> 528 AU, d(42') 733 -> 758 AU. Both
+        // stay inside the paper's 500-700(+) AU interpretation.
+        let d_at_696 = implied_distance_ephemeris(&mut eph, 69.6);
+        let d_fallback_696 = implied_distance(69.6, 23.0);
+        assert!(
+            (d_at_696 - d_fallback_696).abs() / d_fallback_696 < 0.05,
+            "d(69.6') ephemeris {d_at_696:.0} vs fallback {d_fallback_696:.0}"
+        );
+        assert!(
+            d_at_696 > 480.0 && d_at_696 < 570.0,
+            "d(69.6') = {d_at_696:.0} AU"
+        );
+        let d_at_42 = implied_distance_ephemeris(&mut eph, 42.0);
+        let d_fallback_42 = implied_distance(42.0, 23.0);
+        assert!(
+            (d_at_42 - d_fallback_42).abs() / d_fallback_42 < 0.05,
+            "d(42') ephemeris {d_at_42:.0} vs fallback {d_fallback_42:.0}"
+        );
+        assert!(
+            d_at_42 > 680.0 && d_at_42 < 800.0,
+            "d(42') = {d_at_42:.0} AU"
         );
     }
 

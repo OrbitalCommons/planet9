@@ -16,6 +16,8 @@
 //! - All-sky coverage ~94%
 //! - Positional accuracy ~30" at 90 µm
 
+use p9_core::constants::YEAR_DAYS;
+use p9_core::coords::observer::{Time, Timescale};
 use serde::{Deserialize, Serialize};
 
 /// A far-infrared point source detection from either survey.
@@ -53,8 +55,6 @@ pub struct IrasSurvey {
     pub sky_coverage: f64,
     /// Positional uncertainty in arcseconds
     pub position_error_arcsec: f64,
-    /// Survey epoch (midpoint)
-    pub epoch_year: f64,
 }
 
 impl Default for IrasSurvey {
@@ -64,7 +64,6 @@ impl Default for IrasSurvey {
             sensitivity_jy: 0.2,
             sky_coverage: 0.96,
             position_error_arcsec: 20.0,
-            epoch_year: 1983.5,
         }
     }
 }
@@ -80,8 +79,6 @@ pub struct AkariFisSurvey {
     pub sky_coverage: f64,
     /// Positional uncertainty in arcseconds
     pub position_error_arcsec: f64,
-    /// Survey epoch (midpoint)
-    pub epoch_year: f64,
 }
 
 impl Default for AkariFisSurvey {
@@ -91,7 +88,6 @@ impl Default for AkariFisSurvey {
             sensitivity_jy: 0.55,
             sky_coverage: 0.94,
             position_error_arcsec: 30.0,
-            epoch_year: 2006.5,
         }
     }
 }
@@ -101,6 +97,20 @@ impl IrasSurvey {
     pub fn is_detectable(&self, flux_jy: f64) -> bool {
         flux_jy >= self.sensitivity_jy
     }
+
+    /// Observing window of the IRAS all-sky survey: 1983-01-25 (launch)
+    /// to 1983-11-21 (cryogen exhaustion). Catalogued sources were
+    /// detected at unknown epochs inside this window.
+    pub fn window(&self, ts: &Timescale) -> (Time, Time) {
+        (ts.utc((1983, 1, 25)), ts.utc((1983, 11, 21)))
+    }
+
+    /// Survey mid-epoch, 1983-06-24 ≈ 1983.48 — the real midpoint of the
+    /// observing window, refining the nominal "1983.5" quoted by
+    /// Phan et al. (2025).
+    pub fn mid_epoch(&self, ts: &Timescale) -> Time {
+        ts.utc((1983, 6, 24))
+    }
 }
 
 impl AkariFisSurvey {
@@ -108,11 +118,27 @@ impl AkariFisSurvey {
     pub fn is_detectable(&self, flux_jy: f64) -> bool {
         flux_jy >= self.sensitivity_jy
     }
+
+    /// Observing window of the AKARI FIS cryogenic all-sky survey:
+    /// 2006-05-08 to 2007-08-28 (liquid-helium boil-off). The Monthly
+    /// Unconfirmed Source List samples this window.
+    pub fn window(&self, ts: &Timescale) -> (Time, Time) {
+        (ts.utc((2006, 5, 8)), ts.utc((2007, 8, 28)))
+    }
+
+    /// Survey mid-epoch, 2006-12-31 ≈ 2007.0 — the real midpoint of the
+    /// cryogenic survey, refining the nominal "2006.5" quoted by
+    /// Phan et al. (2025).
+    pub fn mid_epoch(&self, ts: &Timescale) -> Time {
+        ts.utc((2006, 12, 31))
+    }
 }
 
-/// The epoch baseline between IRAS and AKARI in years.
+/// The epoch baseline between the IRAS and AKARI survey mid-epochs in
+/// Julian years (≈ 23.5; the paper rounds to "23 years").
 pub fn epoch_baseline(iras: &IrasSurvey, akari: &AkariFisSurvey) -> f64 {
-    akari.epoch_year - iras.epoch_year
+    let ts = Timescale::default();
+    (akari.mid_epoch(&ts).tdb() - iras.mid_epoch(&ts).tdb()) / YEAR_DAYS
 }
 
 /// Angular separation between two sky positions in arcminutes.
@@ -156,11 +182,32 @@ mod tests {
     }
 
     #[test]
-    fn epoch_baseline_is_23_years() {
+    fn epoch_baseline_is_about_23_years() {
+        // Real mid-epoch baseline 1983-06-24 → 2006-12-31 is 23.52 yr
+        // (the paper's "23 years" quote uses the nominal 1983.5/2006.5).
         let iras = IrasSurvey::default();
         let akari = AkariFisSurvey::default();
         let baseline = epoch_baseline(&iras, &akari);
-        assert!((baseline - 23.0).abs() < 0.5, "baseline = {baseline} years");
+        assert!(
+            (baseline - 23.52).abs() < 0.05,
+            "baseline = {baseline} years"
+        );
+    }
+
+    #[test]
+    fn mid_epochs_inside_observing_windows() {
+        let ts = Timescale::default();
+        let iras = IrasSurvey::default();
+        let akari = AkariFisSurvey::default();
+        for (mid, (start, end)) in [
+            (iras.mid_epoch(&ts), iras.window(&ts)),
+            (akari.mid_epoch(&ts), akari.window(&ts)),
+        ] {
+            assert!(start.tdb() < mid.tdb() && mid.tdb() < end.tdb());
+            // Mid-epoch within a week of the window's midpoint.
+            let center = 0.5 * (start.tdb() + end.tdb());
+            assert!((mid.tdb() - center).abs() < 7.0);
+        }
     }
 
     #[test]

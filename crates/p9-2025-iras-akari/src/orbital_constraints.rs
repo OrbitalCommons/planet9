@@ -260,6 +260,34 @@ mod tests {
     }
 
     #[test]
+    fn implied_distance_ephemeris_in_paper_range() {
+        use p9_core::coords::observer::EphemerisEarth;
+        let mut eph = match EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        // Real-Earth inversion of the candidate's 47.46' separation:
+        // ~694 AU, +3.4% over the circular-Earth fallback's ~675 AU
+        // (real 23.5 yr mid-to-mid baseline + the wider AKARI window),
+        // still inside the paper's 500-700(+) AU search interpretation.
+        let pair = CandidatePair::paper_candidate();
+        let c = derive_constraints(&pair);
+        let d_eph = proper_motion::implied_distance_ephemeris(&mut eph, c.separation_arcmin);
+        let d_fallback = proper_motion::implied_distance(c.separation_arcmin, c.baseline_years);
+        assert!(
+            d_eph > 500.0 && d_eph < 720.0,
+            "ephemeris implied distance = {d_eph:.0} AU"
+        );
+        assert!(
+            (d_eph - d_fallback).abs() / d_fallback < 0.05,
+            "ephemeris {d_eph:.0} vs fallback {d_fallback:.0} AU"
+        );
+    }
+
+    #[test]
     fn orbit_space_for_nominal_p9() {
         let pair = CandidatePair::paper_candidate();
         let c = derive_constraints(&pair);

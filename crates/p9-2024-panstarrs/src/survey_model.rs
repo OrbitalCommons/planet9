@@ -7,6 +7,7 @@
 //! cuts, and the measured 99.2% linking efficiency. The single-exposure
 //! depth comes from the shared `p9_core::analysis::surveys` table.
 
+use p9_core::coords::observer::{Time, Timescale};
 use serde::{Deserialize, Serialize};
 
 pub use p9_2022_des::survey_model::poisson_binomial_tail;
@@ -92,6 +93,31 @@ impl Ps1Survey {
         0.992
     }
 
+    /// Start of PS1 3-pi survey operations, 2009-06-02 (the DR2 epochs
+    /// used by the Planet Nine search span 2009-2014). Anchor for
+    /// `epoch_offsets_days`.
+    pub fn survey_start(&self, ts: &Timescale) -> Time {
+        ts.utc((2009, 6, 2))
+    }
+
+    /// End of the 3-pi imaging used by DR2 (2014-03-31).
+    pub fn survey_end(&self, ts: &Timescale) -> Time {
+        ts.utc((2014, 3, 31))
+    }
+
+    /// Day offsets of the `n_epochs` observing-epoch grid from
+    /// `survey_start`: evenly spaced across the DR2 baseline. The
+    /// detection model itself is a k-of-n binomial (per-epoch positions
+    /// are not resolved); the grid exists so callers that need apparent
+    /// positions (e.g. the ephemeris path in `detection_pipeline`) sample
+    /// real epochs instead of raw year floats.
+    pub fn epoch_offsets_days(&self) -> Vec<f64> {
+        let ts = Timescale::default();
+        let span = self.survey_end(&ts).tt() - self.survey_start(&ts).tt();
+        let n = self.n_epochs.max(2);
+        (0..n).map(|i| span * i as f64 / (n - 1) as f64).collect()
+    }
+
     /// End-to-end probability that an object of apparent magnitude `m` at
     /// declination `dec_deg` is detected and linked:
     ///
@@ -122,6 +148,20 @@ mod tests {
         assert!((survey.depth_limit - 21.5).abs() < 1e-10);
         assert!((survey.dec_limit_deg - (-30.0)).abs() < 1e-10);
         assert_eq!(survey.linking_threshold, 9);
+    }
+
+    #[test]
+    fn epoch_grid_spans_dr2_baseline() {
+        let survey = Ps1Survey::default();
+        let ts = Timescale::default();
+        let offsets = survey.epoch_offsets_days();
+        assert_eq!(offsets.len(), survey.n_epochs as usize);
+        assert_eq!(offsets[0], 0.0);
+        let span = survey.survey_end(&ts).tt() - survey.survey_start(&ts).tt();
+        // 2009-06-02 .. 2014-03-31 is ~4.8 yr.
+        assert!((span / 365.25 - 4.83).abs() < 0.02, "span = {span} days");
+        assert!((offsets.last().unwrap() - span).abs() < 1e-9);
+        assert!(offsets.windows(2).all(|w| w[1] > w[0]));
     }
 
     #[test]
