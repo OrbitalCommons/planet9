@@ -13,10 +13,11 @@ use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 use p9_2021_orbit::reference_population::{generate_reference_population, heliocentric_distance};
+use p9_core::coords::observer::{EarthProvider, EarthState};
 use p9_core::types::{OrbitalElements, P9Params};
 
 use crate::color_models::{self, ColorModel};
-use crate::survey_model::DesSurvey;
+use crate::survey_model::{DesBand, DesSurvey};
 
 /// Result of the DES recovery simulation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,6 +63,29 @@ pub fn compute_recovery_for_model(
     n_synthetic: usize,
     seed: u64,
 ) -> RecoveryResult {
+    run_recovery(model, n_synthetic, seed, None)
+}
+
+/// Ephemeris-path variant of `compute_recovery_for_model`: per-night
+/// apparent positions from real Earth states (DE421 via `EphemerisEarth`,
+/// or any other explicit `EarthProvider`). The night grid's Earth states
+/// are computed once and shared across all orbits.
+pub fn compute_recovery_for_model_with_earth(
+    model: &ColorModel,
+    n_synthetic: usize,
+    seed: u64,
+    earth: &mut impl EarthProvider,
+) -> RecoveryResult {
+    let nights = DesSurvey::default().observing_epochs_with_earth(earth);
+    run_recovery(model, n_synthetic, seed, Some(&nights))
+}
+
+fn run_recovery(
+    model: &ColorModel,
+    n_synthetic: usize,
+    seed: u64,
+    nights: Option<&[(DesBand, f64, EarthState)]>,
+) -> RecoveryResult {
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     let survey = DesSurvey::default();
 
@@ -80,7 +104,11 @@ pub fn compute_recovery_for_model(
             mean_anomaly: obj.mean_anomaly,
         };
 
-        if !survey.crosses_footprint(&elements) {
+        let crosses = match nights {
+            Some(nights) => survey.crosses_footprint_with_earth(&elements, nights),
+            None => survey.crosses_footprint(&elements),
+        };
+        if !crosses {
             continue;
         }
         n_crossing += 1;
@@ -96,7 +124,12 @@ pub fn compute_recovery_for_model(
         });
         let mags = model.band_magnitudes(obj.mass, r_au);
 
-        let p_detect = survey.detection_probability_for_orbit(&elements, &mags);
+        let p_detect = match nights {
+            Some(nights) => {
+                survey.detection_probability_for_orbit_with_earth(&elements, &mags, nights)
+            }
+            None => survey.detection_probability_for_orbit(&elements, &mags),
+        };
         if rng.gen::<f64>() < p_detect {
             n_recovered += 1;
         }
@@ -165,6 +198,47 @@ mod tests {
             (result.recovery_frac - 0.870).abs() < 0.04,
             "recovery = {:.3} vs paper 0.870",
             result.recovery_frac
+        );
+    }
+
+    /// X1/D1 regression on the ephemeris path: the 87.0% pin must also
+    /// hold with real DE421 Earth states (light-time + aberration); the
+    /// real-Earth parallax differs from the analytic circular model by
+    /// < 0.1 deg at P9 distances, so recovery moves well inside the
+    /// shared 0.04 tolerance. Kernel-gated: skips without the cache file.
+    #[test]
+    fn computed_recovery_matches_paper_with_ephemeris_earth() {
+        let mut earth = match p9_core::coords::observer::EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        let result = compute_recovery_for_model_with_earth(
+            &color_models::fiducial(),
+            6000,
+            2022,
+            &mut earth,
+        );
+        assert!(
+            result.n_crossing > 200,
+            "expected a usable crossing sample, got {}",
+            result.n_crossing
+        );
+        assert!(
+            (result.recovery_frac - 0.870).abs() < 0.04,
+            "ephemeris-path recovery = {:.3} vs paper 0.870",
+            result.recovery_frac
+        );
+        // The analytic fallback agrees closely (same seed, same
+        // population; only the Earth model differs).
+        let analytic = compute_recovery(6000, 2022);
+        assert!(
+            (result.recovery_frac - analytic.recovery_frac).abs() < 0.02,
+            "ephemeris {:.3} vs analytic {:.3}",
+            result.recovery_frac,
+            analytic.recovery_frac
         );
     }
 

@@ -14,11 +14,15 @@ use serde::{Deserialize, Serialize};
 
 use p9_2021_orbit::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_2022_des::color_models as des_colors;
-use p9_2022_des::survey_model::DesSurvey;
+use p9_2022_des::survey_model::{DesBand, DesSurvey};
 use p9_core::constants::DEG2RAD;
+use p9_core::coords::observer::{EarthProvider, EarthState};
 use p9_core::types::{OrbitalElements, P9Params};
 
-use crate::detection_pipeline::detection_probability_for_orbit;
+use crate::detection_pipeline::{
+    detection_probability_for_orbit, detection_probability_for_orbit_with_earth,
+    mid_survey_earth_state,
+};
 use crate::survey_model::Ps1Survey;
 
 /// Updated Planet Nine parameter estimates from the combined analysis
@@ -148,6 +152,29 @@ pub fn compute_combined(ztf_frac: f64, des_unique: f64, ps1_unique: f64) -> Comb
 /// so `combined = ztf_frac + des_unique + ps1_unique` exactly, per-orbit
 /// (not a declarative addition of stored numbers).
 pub fn compute_combined_from_population(n: usize, seed: u64) -> CombinedExclusion {
+    run_combined_from_population(n, seed, None)
+}
+
+/// Ephemeris-path variant of `compute_combined_from_population`: the DES
+/// per-night apparent positions and the PS1 footprint position use real
+/// Earth states (light-time + aberration) from `earth` instead of the
+/// analytic circular-Earth fallback. ZTF's model has no per-epoch
+/// geometry and is unchanged.
+pub fn compute_combined_from_population_with_earth(
+    n: usize,
+    seed: u64,
+    earth: &mut impl EarthProvider,
+) -> CombinedExclusion {
+    let des_nights = DesSurvey::default().observing_epochs_with_earth(earth);
+    let ps1_state = mid_survey_earth_state(&Ps1Survey::default(), earth);
+    run_combined_from_population(n, seed, Some((&des_nights, &ps1_state)))
+}
+
+fn run_combined_from_population(
+    n: usize,
+    seed: u64,
+    earth_geometry: Option<(&[(DesBand, f64, EarthState)], &EarthState)>,
+) -> CombinedExclusion {
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     let population = generate_reference_population(n, &mut rng);
 
@@ -187,9 +214,21 @@ pub fn compute_combined_from_population(n: usize, seed: u64) -> CombinedExclusio
             mean_anomaly: obj.mean_anomaly,
         });
         let mags = des_color.band_magnitudes(obj.mass, r_au);
-        let p_des = des.detection_probability_for_orbit(&elements, &mags);
-
-        let p_ps1 = detection_probability_for_orbit(&ps1, &elements, obj.v_magnitude);
+        let (p_des, p_ps1) = match earth_geometry {
+            Some((des_nights, ps1_state)) => (
+                des.detection_probability_for_orbit_with_earth(&elements, &mags, des_nights),
+                detection_probability_for_orbit_with_earth(
+                    &ps1,
+                    &elements,
+                    obj.v_magnitude,
+                    ps1_state,
+                ),
+            ),
+            None => (
+                des.detection_probability_for_orbit(&elements, &mags),
+                detection_probability_for_orbit(&ps1, &elements, obj.v_magnitude),
+            ),
+        };
 
         sum_ztf += p_ztf;
         sum_des_unique += p_des * (1.0 - p_ztf);
@@ -281,6 +320,57 @@ mod tests {
         // Internal consistency of the per-orbit decomposition.
         let sum = ex.ztf_frac + ex.des_unique + ex.ps1_unique;
         assert!((sum - ex.combined).abs() < 1e-9);
+    }
+
+    /// Ephemeris-path counterpart of the X1 regression: the per-orbit OR
+    /// with real DE421 Earth geometry (DES per-night apparent positions,
+    /// PS1 footprint position) must land near the same published
+    /// fractions (the 0.564/0.050/0.171 pins). Kernel-gated: skips when
+    /// the starfield cache lacks de421.bsp.
+    #[test]
+    fn per_orbit_combination_near_published_fractions_with_ephemeris() {
+        let mut earth = match p9_core::coords::observer::EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        let ex = compute_combined_from_population_with_earth(4000, 2024, &mut earth);
+        let paper = CombinedExclusion::paper_values();
+        assert!(
+            (ex.ztf_frac - paper.ztf_frac).abs() < 0.08,
+            "ZTF {:.3} vs published {:.3}",
+            ex.ztf_frac,
+            paper.ztf_frac
+        );
+        assert!(
+            (ex.des_unique - paper.des_unique).abs() < 0.04,
+            "DES unique {:.3} vs published {:.3}",
+            ex.des_unique,
+            paper.des_unique
+        );
+        assert!(
+            (ex.ps1_unique - paper.ps1_unique).abs() < 0.08,
+            "PS1 unique {:.3} vs published {:.3}",
+            ex.ps1_unique,
+            paper.ps1_unique
+        );
+        assert!(
+            (ex.combined - paper.combined).abs() < 0.10,
+            "combined {:.3} vs published {:.3}",
+            ex.combined,
+            paper.combined
+        );
+        // The analytic fallback gives nearly identical fractions: the
+        // Earth-model difference is sub-0.3 deg of apparent position.
+        let analytic = compute_combined_from_population(4000, 2024);
+        assert!(
+            (ex.combined - analytic.combined).abs() < 0.01,
+            "ephemeris {:.3} vs analytic {:.3}",
+            ex.combined,
+            analytic.combined
+        );
     }
 
     #[test]

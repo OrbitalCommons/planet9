@@ -11,7 +11,8 @@
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use p9_2022_des::sky::apparent_position_deg;
+use p9_2022_des::sky::{apparent_position_deg, apparent_position_with_earth_deg};
+use p9_core::coords::observer::{EarthProvider, EarthState, Timescale};
 use p9_core::types::OrbitalElements;
 
 use crate::survey_model::Ps1Survey;
@@ -59,6 +60,38 @@ pub fn detection_probability_for_orbit(
     v_magnitude: f64,
 ) -> f64 {
     let (_, dec) = equatorial_position_deg(elements);
+    survey.detection_probability(v_magnitude, dec)
+}
+
+/// Earth state at the middle of the PS1 observing-epoch grid (real
+/// ephemeris epochs from `Ps1Survey::survey_start`/`epoch_offsets_days`
+/// instead of raw year floats). Compute once and share across orbits.
+pub fn mid_survey_earth_state(survey: &Ps1Survey, earth: &mut impl EarthProvider) -> EarthState {
+    let ts = Timescale::default();
+    let offsets = survey.epoch_offsets_days();
+    let mid = offsets[offsets.len() / 2];
+    earth.earth_state(&ts.tt_jd(survey.survey_start(&ts).tt() + mid, None))
+}
+
+/// Ephemeris-path counterpart of `equatorial_position_deg`: apparent
+/// (light-time + aberration) equatorial position from a real Earth state
+/// (see `mid_survey_earth_state`).
+pub fn equatorial_position_with_earth_deg(
+    elements: &OrbitalElements,
+    earth_state: &EarthState,
+) -> (f64, f64) {
+    let (ra, dec, _) = apparent_position_with_earth_deg(elements, earth_state, 0.0);
+    (ra, dec)
+}
+
+/// Ephemeris-path counterpart of `detection_probability_for_orbit`.
+pub fn detection_probability_for_orbit_with_earth(
+    survey: &Ps1Survey,
+    elements: &OrbitalElements,
+    v_magnitude: f64,
+    earth_state: &EarthState,
+) -> f64 {
+    let (_, dec) = equatorial_position_with_earth_deg(elements, earth_state);
     survey.detection_probability(v_magnitude, dec)
 }
 

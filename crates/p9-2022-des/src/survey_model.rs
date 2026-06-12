@@ -9,10 +9,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::coords::observer::{EarthProvider, EarthState, Time, Timescale};
 use p9_core::types::OrbitalElements;
 
 use crate::color_models::BandMagnitudes;
-use crate::sky::apparent_position_deg;
+use crate::sky::{apparent_position_deg, apparent_position_with_earth_deg, earth_states_at};
 
 /// Photometric band used in DES observations.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -241,6 +242,32 @@ impl DesSurvey {
         epochs
     }
 
+    /// Survey-start anchor of the night grid (`sky::survey_start`,
+    /// 2013-08-31): `observing_epochs` day offsets count from this epoch.
+    pub fn survey_start(&self, ts: &Timescale) -> Time {
+        crate::sky::survey_start(ts)
+    }
+
+    /// Observing epochs with precomputed per-night Earth states from a
+    /// real ephemeris (or the analytic fallback provider). The night grid
+    /// is orbit-independent, so compute this once per recovery run and
+    /// share it across orbits.
+    pub fn observing_epochs_with_earth(
+        &self,
+        earth: &mut impl EarthProvider,
+    ) -> Vec<(DesBand, f64, EarthState)> {
+        let ts = Timescale::default();
+        let start = self.survey_start(&ts);
+        let epochs = self.observing_epochs();
+        let offsets: Vec<f64> = epochs.iter().map(|&(_, t)| t).collect();
+        let states = earth_states_at(earth, &ts, &start, &offsets);
+        epochs
+            .into_iter()
+            .zip(states)
+            .map(|((band, t), state)| (band, t, state))
+            .collect()
+    }
+
     /// Per-night detection probabilities for an orbit across all observing
     /// epochs (D3): each tiling night contributes its magnitude
     /// completeness in that night's band, gated by whether the object's
@@ -260,11 +287,46 @@ impl DesSurvey {
             .collect()
     }
 
+    /// Ephemeris-path counterpart of `night_probabilities`: per-night
+    /// apparent positions from real Earth states (parallax from the true
+    /// orbit, light-time, aberration). `nights` comes from
+    /// `observing_epochs_with_earth`.
+    pub fn night_probabilities_with_earth(
+        &self,
+        elem: &OrbitalElements,
+        mags: &BandMagnitudes,
+        nights: &[(DesBand, f64, EarthState)],
+    ) -> Vec<f64> {
+        nights
+            .iter()
+            .map(|(band, t_days, state)| {
+                let (ra, dec, _) = apparent_position_with_earth_deg(elem, state, *t_days);
+                if self.is_in_footprint(ra, dec) {
+                    self.night_detection_probability(mags.magnitude(*band), *band)
+                } else {
+                    0.0
+                }
+            })
+            .collect()
+    }
+
     /// Whether the orbit's apparent position enters the footprint on any
     /// observing epoch (the paper's "crosses the DES footprint").
     pub fn crosses_footprint(&self, elem: &OrbitalElements) -> bool {
         self.observing_epochs().iter().any(|&(_, t_days)| {
             let (ra, dec, _) = apparent_position_deg(elem, t_days);
+            self.is_in_footprint(ra, dec)
+        })
+    }
+
+    /// Ephemeris-path counterpart of `crosses_footprint`.
+    pub fn crosses_footprint_with_earth(
+        &self,
+        elem: &OrbitalElements,
+        nights: &[(DesBand, f64, EarthState)],
+    ) -> bool {
+        nights.iter().any(|(_, t_days, state)| {
+            let (ra, dec, _) = apparent_position_with_earth_deg(elem, state, *t_days);
             self.is_in_footprint(ra, dec)
         })
     }
@@ -279,6 +341,17 @@ impl DesSurvey {
         mags: &BandMagnitudes,
     ) -> f64 {
         let probs = self.night_probabilities(elem, mags);
+        poisson_binomial_tail(&probs, self.min_nights)
+    }
+
+    /// Ephemeris-path counterpart of `detection_probability_for_orbit`.
+    pub fn detection_probability_for_orbit_with_earth(
+        &self,
+        elem: &OrbitalElements,
+        mags: &BandMagnitudes,
+        nights: &[(DesBand, f64, EarthState)],
+    ) -> f64 {
+        let probs = self.night_probabilities_with_earth(elem, mags, nights);
         poisson_binomial_tail(&probs, self.min_nights)
     }
 }

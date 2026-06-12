@@ -105,7 +105,7 @@ from 1/12 to 1/9.5. If those literals trace to a published table, the source sho
 | Critical period ratio (2017 dynamics) | in 0.1–0.15 | 0.1–0.15 | `p9-2017-dynamics/src/resonance.rs` |
 | BMN21 q_crit(500 AU) | 41.4 AU | 41.4 AU | `p9-2021-stability` (exact formula identity, K(a, q_crit) = 1) |
 | Review-paper critical a (5 M⊕, 500 AU, e=0.25) | 250 AU | 200–300 AU band | `p9-2019-review/src/parameter_survey.rs` |
-| IRAS/AKARI candidate 47.46′ → distance | ~675 AU | 500–700 AU | `p9-2025-iras-akari/src/orbital_constraints.rs` |
+| IRAS/AKARI candidate 47.46′ → distance | ~694 AU (DE421 ephemeris), ~675 AU (circular fallback) | 500–700 AU | `p9-2025-iras-akari/src/orbital_constraints.rs` |
 | vZLK evolutionary timescale (nominal IOC) | > 4.5 Gyr | ≫ 4.5 Gyr | `p9-2024-oort-selfgrav/src/vzlk.rs` |
 
 ---
@@ -131,6 +131,29 @@ derived quantities:
   correlation; the crate is documented as a posterior-summary emulator, not an MCMC reproduction.
 - `p9-2024-neptune-crossing` discovery distances: documented r ≈ 1.15q approximation where the
   catalog lacks per-object discovery circumstances.
+- Circular-Earth observer model — **now a fallback, not the primary geometry**. The survey
+  models (`p9-2025-iras-akari` proper motion/parallax, `p9-2022-des`/`p9-2024-panstarrs`
+  per-night apparent positions) take an explicit `p9_core::coords::observer::EarthProvider`:
+  the primary `EphemerisEarth` uses real DE421 Earth states (via starfield) with light-time
+  retardation (~3–4 days at 500–700 AU) and stellar aberration; `CircularEarth` (mean-longitude
+  1 AU circle) remains as the documented analytic fallback for kernel-less machines and
+  speed-critical MC loops. Kernel-gated tests pin the two within the documented error
+  (≤ ~1′ for the IRAS/AKARI separations, < 0.3° of apparent position for DES/PS1 footprint
+  work). Survey epochs are starfield `Time`s: IRAS mid-epoch 1983-06-24 and AKARI FIS
+  mid-epoch 2006-12-31 (real window midpoints, refining the nominal 1983.5/2006.5; the
+  mid-to-mid baseline becomes 23.52 yr instead of 23.0), DES night grid anchored at
+  2013-08-31, PS1 epoch grid anchored at 2009-06-02.
+
+  Regression shifts from the ephemeris path (documented magnitudes):
+  - IRAS/AKARI implied distances move up ~3.4%: d(69.6′) 511 → 528 AU, d(47.46′) 675 → 694 AU,
+    d(42′) 733 → 758 AU (longer real baseline + the 16-month AKARI window); separation windows
+    widen accordingly (max at 500 AU 71.7′ → 75.3′). All pins stay inside the paper's
+    500–700(+) AU interpretation; both model paths are asserted.
+  - DES recovery and the combined ZTF/DES/PS1 exclusion are insensitive: at the seeded
+    regression scale the ephemeris path reproduces the analytic values to ≤ 1e-4
+    (recovery 0.8769 on both paths; combined exclusion 0.8090 vs 0.8091), since the
+    real-vs-circular Earth difference is < 0.3° of apparent position against multi-degree
+    footprint structure.
 
 ## Known numerical issues
 
