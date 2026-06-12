@@ -134,10 +134,23 @@ derived quantities:
 
 ## Known numerical issues
 
-- `p9-core` `kepler_drift` (universal-variable iteration): convergence-plateau debug assertion
-  can fire at extreme states (reproduced at a = 800 AU, e = 0.95, M ≈ 5.97, dt = 4e5 d).
-  p9-2021-oort-cloud sidesteps it with an element-space drift via `solve_kepler`. A proper fix
-  (Stumpff-series Newton with bracketing on the universal anomaly) belongs in p9-core.
+- ~~`p9-core` `kepler_drift` (universal-variable iteration): convergence-plateau debug
+  assertion can fire at extreme states (reproduced at a = 800 AU, e = 0.95, M ≈ 5.97,
+  dt = 4e5 d)~~ — resolved. Root cause: with multi-orbit dt the universal Kepler residual is
+  assembled from terms ~ √gm·|dt| whose rounding noise, divided by f′ = r (small near
+  perihelion at high e), exceeds the 1e-15·s step tolerance, so safeguarded Newton dithers in
+  a few-ulp limit cycle until the iteration budget runs out. Fixed in
+  `p9-core/src/integrator/kepler_step.rs` by (1) reducing dt modulo the orbital period for
+  bound orbits, bracketing the universal anomaly within one revolution; (2) capping hyperbolic
+  brackets where the Stumpff cosh would overflow and forcing bisection while the residual is
+  ≫ its target scale (Newton only creeps additively in the exponential tail); (3) accepting
+  convergence when the residual reaches its rounding-noise floor, the bracket collapses to
+  relative machine precision, or the iterate enters a bit-exact period-2 cycle.
+  Cross-validated against starfield's SPICE prop2b port in
+  `p9-core/tests/starfield_oracle.rs` (which also pins the element conversions to
+  `starfield::elementslib` as a permanent oracle). p9-2021-oort-cloud's element-space drift
+  was kept — it is exact two-body propagation and the natural representation for that secular
+  model, not a workaround.
 - ~~p9-core still lacks an ecliptic↔equatorial transform~~ — resolved: `p9_core::coords::sky`
   wraps starfield's framelib (ECLIPJ2000/GALACTIC SPICE matrices); the local conversions in
   `p9-2022-des/src/sky.rs`, `p9-2021-ztf/src/sky.rs`, `p9-2025-iras-akari` and the hand-rolled
