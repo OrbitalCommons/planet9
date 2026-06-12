@@ -89,6 +89,43 @@ from 1/12 to 1/9.5. If those literals trace to a published table, the source sho
 - See: `crates/p9-2025-perturbation/src/hansen.rs` (cross-validation tests against
   `p9_core::analysis::hansen::hansen_coefficient`).
 
+### 9. p9-2021-orbit — full inference pipeline: Reduced scale validates machinery, not the posterior
+
+The paper's models 1–4 are now implemented from scratch (issue #12): N-body simulation grid
+over (m₉, a₉, e₉, i₉) (`sim_grid.rs`), conditional KDE likelihood of the 10 vetted ETNOs with
+the paper's 5%→30% bandwidth law (`kde.rs`), Matérn-3/2 GP emulator with grid-searched
+hyperparameters and closed-form LOO cross-validation (`gp.rs`), and a Goodman–Weare
+affine-invariant ensemble sampler with R̂/ESS diagnostics (`mcmc.rs`), wired in `pipeline.rs`.
+
+**What the Reduced scale achieves** (12-point grid × 200 particles × 10 Myr; seeds 2021/777;
+measured 2026-06-12, release build, 64 cores, ~68 s wall / 12.9 CPU-min):
+
+- Pipeline health: MCMC acceptance 0.369, R̂ = [1.033, 1.038, 1.041, 1.053],
+  ESS = [688, 647, 680, 594] (32 walkers × 2000 steps), all posterior mass inside the
+  uniform prior box.
+- GP LOO relative error 0.239 (pinned < 0.35 in the `#[ignore]`d end-to-end test). The
+  paper's < 5% applies to its 121-point grid; 12 points in a 4-D box cannot reach that.
+- The grid-point log-likelihoods span only ~3.7 nats (−30.5 to −26.7): after 10 Myr the
+  secular anti-aligned clustering the inference keys on is only partially developed, so the
+  posterior is close to the prior. The published medians (6.2 M⊕, 380 AU, e = 0.21, 16°)
+  lie inside the Reduced posterior's 95% intervals — asserted as a *loose containment
+  sanity check*, explicitly not a reproduction (the intervals are nearly as wide as the
+  prior box).
+- The posterior medians consumed downstream remain the published ones via the `posterior`
+  summary module (re-documented as the published-posterior representation).
+
+**What Paper scale needs** (`PipelineConfig::paper()`, `#[ignore]`d): the 121-point grid
+surrogate (the paper's manual grid is unpublished; we use a regular grid over the same
+extent, 8 masses × 15 (a₉, e₉, i₉) combos + 1 central point) × 16,800 particles × 4 Gyr,
+plus the paper's MCMC settings (100 walkers, 20,890 steps, burn 260, thin 42 → ≈49,100
+samples). At the measured throughput (~265 ns per particle-step) that is ≈3,000 CPU-days
+(~1.5 months wall on a 64-core machine, less as removal thins the disk) — not run here.
+Documented physics reductions even at Paper scale: J+S+U as the orbit-averaged J2 field
+with Neptune+P9 direct (dt = 3000 d) instead of all four giants direct at dt = 300 d, and
+the P9 orientation angles (ϖ₉, Ω₉) profiled out of the KDE likelihood over a 15° scan
+rather than sampled as MCMC dimensions. The cluster-scattering Fréchet prior is not
+implemented (uniform prior only; needs the Batygin & Brown 2021b scattering suite).
+
 ---
 
 ## Agreements within tolerance (for completeness)

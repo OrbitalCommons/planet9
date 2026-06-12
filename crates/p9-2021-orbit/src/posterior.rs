@@ -1,12 +1,21 @@
-//! Posterior-summary *emulator* for Brown & Batygin (2021).
+//! Summary of the *published* posterior of Brown & Batygin (2021).
 //!
-//! This module is not an MCMC reproduction: the paper's likelihood (11 ETNO
-//! orbits against N-body reference populations) is not re-evaluated here.
-//! Instead the published posterior *summaries* (median with asymmetric
-//! 1-sigma intervals) are emulated with two-piece (split-normal)
-//! distributions, plus a documented correlation assumption linking a and q
-//! (and hence e) — the published corner plot shows a strong positive a–q
-//! degeneracy which independent marginal sampling would erase.
+//! This module does not re-run the inference: the published posterior
+//! summaries (median with asymmetric 1-sigma intervals) are emulated with
+//! two-piece (split-normal) distributions, plus a documented correlation
+//! assumption linking a and q (and hence e) — the published corner plot
+//! shows a strong positive a–q degeneracy which independent marginal
+//! sampling would erase. It is the stable representation of the paper's
+//! *result*, consumed by the downstream survey crates via
+//! `reference_population`.
+//!
+//! The from-scratch path (the paper's models 1-4: simulation grid -> KDE
+//! likelihood -> GP emulator -> ensemble MCMC) lives in `sim_grid`/`kde`/
+//! `gp`/`mcmc`, wired in `pipeline`. At the default reduced scale that
+//! pipeline validates machinery, not the published numbers (the
+//! `#[ignore]`d reduced end-to-end test checks the published medians fall
+//! inside its loose 95% region; full fidelity needs the paper-scale grid —
+//! see REPRODUCTION_NOTES.md).
 
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
