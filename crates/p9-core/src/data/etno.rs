@@ -10,6 +10,19 @@
 //! the JPL Small-Body Database (osculating elements; angles rounded to
 //! 0.1 deg, a to the AU). Mean anomalies are not part of the clustering
 //! analyses and are set to 0.
+//!
+//! This table deliberately pins the *paper-epoch* orbit solutions — the
+//! analyses in this workspace reproduce the 2016–2018 papers, which used the
+//! solutions available then. JPL keeps refitting as arcs lengthen, so live
+//! SBDB elements drift away from these values over time (see
+//! `data::refresh` for the live diff tooling). Live check 2026-06-12: q, i,
+//! Ω and H of all 10 objects match the current JPL solutions within
+//! tolerance; a and e have drifted along their fit degeneracy on 8 objects
+//! (a by +1.9% to +16%, e.g. Sedna 506 → 544 AU at JPL soln 51, 2013 RF98
+//! 325 → 376 AU at soln 9; 2013 RF98 ω also moved 316.5° → 312.0°). That is
+//! orbit-solution drift, not transcription error — do not "fix" these values
+//! to current JPL without re-pinning every downstream regression that
+//! depends on them.
 
 use crate::constants::{DEG2RAD, TWO_PI};
 use crate::types::OrbitalElements;

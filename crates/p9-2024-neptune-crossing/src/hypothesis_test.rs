@@ -95,17 +95,93 @@ pub fn empirical_cdf_q(footprints: &[Footprint], q: f64, r: f64) -> f64 {
     w_below / w_total
 }
 
-/// Heuristic discovery heliocentric distances (AU) — documented stand-in.
+/// Heliocentric distance (AU) at each object's first fitted observation:
+/// (table name, SBDB `first_obs` date, r at that date in AU).
 ///
-/// True discovery circumstances are not part of the SBDB orbit record. The
-/// paper (footnote 6) notes that this sample's discovery magnitudes span
+/// Fetched 2026-06-12 from the live JPL SBDB: per object, the lookup's
+/// `first_obs` epoch was propagated on the object's own osculating elements
+/// (M(t) = M₀ + n·Δt, Kepler-solved; see
+/// `p9_core::data::refresh::first_obs_distance`), replacing the previous
+/// r ≈ 1.15q heuristic with per-object geometry. Stored as a const so the
+/// default build stays offline; the feature-gated
+/// [`fetch_first_obs_distances`] recomputes it, and an `#[ignore]`d live
+/// test pins this table against the recomputation.
+///
+/// Caveat: SBDB's `first_obs` is the first observation *in the fitted arc*,
+/// which equals the discovery date except where precovery observations were
+/// later linked (then it is earlier than the discovery announcement, and r
+/// is the distance at which the object was in fact first recorded).
+pub const FIRST_OBS_DISTANCES: [(&str, &str, f64); 17] = [
+    ("54520 (2000 PJ30)", "1999-07-21", 39.031),
+    ("87269 (2000 OO67)", "2000-07-29", 21.855),
+    ("308933 (2006 SQ372)", "2005-09-13", 24.178),
+    ("353222 (2009 YD7)", "2009-11-13", 14.918),
+    ("469750 (2005 PU21)", "2000-08-26", 48.533),
+    ("523771 (2014 XP40)", "2012-01-25", 31.366),
+    ("600217 (2011 QY100)", "2010-10-09", 23.788),
+    ("767044 (2014 QW510)", "2014-08-19", 34.814),
+    ("2012 GU11", "2010-06-30", 18.766),
+    ("2013 AZ60", "2011-10-13", 10.253),
+    ("2013 GJ138", "2005-04-02", 26.349),
+    ("2013 GW141", "2012-02-20", 29.594),
+    ("2014 NV65", "2014-06-28", 22.291),
+    ("2014 RK86", "2013-09-23", 30.711),
+    ("2014 UY224", "2014-10-05", 25.184),
+    ("2015 VD168", "2014-11-17", 37.275),
+    ("2021 CP5", "2018-04-13", 12.835),
+];
+
+/// Discovery-era heliocentric distance (AU) per object: the SBDB-derived
+/// first-observation distance from [`FIRST_OBS_DISTANCES`] where compiled,
+/// falling back to the documented r ≈ 1.15q approximation
+/// ([`approximate_discovery_distances`]) for objects absent from that table.
+pub fn discovery_distances(sample: &[NeptuneCrossingTno]) -> Vec<f64> {
+    sample
+        .iter()
+        .map(|tno| {
+            FIRST_OBS_DISTANCES
+                .iter()
+                .find(|(name, _, _)| *name == tno.name)
+                .map(|&(_, _, r)| r)
+                .unwrap_or(1.15 * tno.q)
+        })
+        .collect()
+}
+
+/// Heuristic discovery heliocentric distances (AU) — the documented
+/// fallback behind [`discovery_distances`].
+///
+/// The paper (footnote 6) notes that this sample's discovery magnitudes span
 /// ~21.5-24.5 and that the steep r^-4 reflected-flux scaling biases
-/// discovery toward perihelion. We therefore approximate the discovery
-/// distance as r_disc = 1.15 * q. This is an *approximation with a stated
-/// rationale*, not data; replace with real circumstances if they are
-/// compiled.
+/// discovery toward perihelion; r_disc = 1.15q encodes that bias when no
+/// per-object circumstances are available. The primary path is now the
+/// SBDB-derived [`FIRST_OBS_DISTANCES`].
 pub fn approximate_discovery_distances(sample: &[NeptuneCrossingTno]) -> Vec<f64> {
     sample.iter().map(|tno| 1.15 * tno.q).collect()
+}
+
+/// Recompute [`FIRST_OBS_DISTANCES`] from the live JPL SBDB (network):
+/// returns (name, first_obs date, r at first_obs in AU) per object.
+#[cfg(feature = "sbdb-refresh")]
+pub fn fetch_first_obs_distances(
+    client: &p9_core::data::refresh::SbdbClient,
+) -> Result<Vec<(String, String, f64)>, String> {
+    use crate::observed_tnos::{observed_sample, sbdb_designation};
+    use p9_core::data::refresh::{fetch_live_elements, first_obs_distance};
+
+    observed_sample()
+        .iter()
+        .map(|tno| {
+            let live = fetch_live_elements(client, sbdb_designation(tno.name))?;
+            let date = live
+                .first_obs
+                .clone()
+                .ok_or_else(|| format!("SBDB returned no first_obs for {}", tno.name))?;
+            let r = first_obs_distance(&live)
+                .ok_or_else(|| format!("incomplete elements for {}", tno.name))?;
+            Ok((tno.name.to_string(), date, r))
+        })
+        .collect()
 }
 
 /// xi_j = CDF_{r_j}(q_j) for each observed object, using a simulated
@@ -293,6 +369,51 @@ mod tests {
     }
 
     #[test]
+    fn test_first_obs_distances_cover_sample_and_are_physical() {
+        let sample = observed_sample();
+        assert_eq!(FIRST_OBS_DISTANCES.len(), sample.len());
+        for tno in &sample {
+            let (_, date, r) = FIRST_OBS_DISTANCES
+                .iter()
+                .find(|(name, _, _)| *name == tno.name)
+                .unwrap_or_else(|| panic!("{} missing from FIRST_OBS_DISTANCES", tno.name));
+            assert!(date.len() == 10 && &date[4..5] == "-", "date {date}");
+            // r at first observation must lie on the orbit: within [q, Q]
+            // (small slack for live-vs-snapshot solution differences).
+            let big_q = tno.a * (1.0 + tno.e);
+            assert!(
+                (0.9 * tno.q..=1.05 * big_q).contains(r),
+                "{}: r = {r}, q = {}, Q = {big_q:.1}",
+                tno.name,
+                tno.q
+            );
+        }
+    }
+
+    #[test]
+    fn test_discovery_distances_prefer_table_with_heuristic_fallback() {
+        let sample = observed_sample();
+        let r = discovery_distances(&sample);
+        for (tno, r_j) in sample.iter().zip(&r) {
+            let (_, _, table_r) = FIRST_OBS_DISTANCES
+                .iter()
+                .find(|(name, _, _)| *name == tno.name)
+                .unwrap();
+            assert_eq!(*r_j, *table_r, "{}", tno.name);
+        }
+        // An object not in the table falls back to the documented 1.15q.
+        let stranger = NeptuneCrossingTno {
+            name: "2099 XX1",
+            a: 200.0,
+            e: 0.9,
+            i: 10.0,
+            q: 20.0,
+        };
+        let r = discovery_distances(&[stranger]);
+        assert!((r[0] - 23.0).abs() < 1e-12);
+    }
+
+    #[test]
     fn test_time_fraction_inside_limits() {
         assert_eq!(time_fraction_inside(150.0, 0.8, 20.0), 0.0); // r < q
         assert_eq!(time_fraction_inside(150.0, 0.8, 300.0), 1.0); // r > Q
@@ -349,7 +470,7 @@ mod tests {
         // simulation's perihelion CDF than with the P9-free control, which
         // at this scale produces essentially no low-q footprints.
         let sample = observed_sample();
-        let r_disc = approximate_discovery_distances(&sample);
+        let r_disc = discovery_distances(&sample);
 
         let fp_p9 = quick_test_simulation(true).selected_footprints();
         let fp_free = quick_test_simulation(false).selected_footprints();

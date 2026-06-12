@@ -182,6 +182,46 @@ pub fn observed_sample() -> Vec<NeptuneCrossingTno> {
     ]
 }
 
+/// SBDB search string (`sstr`) for a table entry: the bare number for
+/// numbered objects ("54520 (2000 PJ30)" → "54520"), the designation itself
+/// otherwise.
+pub fn sbdb_designation(name: &'static str) -> &'static str {
+    name.split(" (").next().unwrap_or(name)
+}
+
+/// The sample as snapshot rows for `p9_core::data::refresh` (only a, e, i
+/// are vetted columns of this table; q is derived and the angles are not
+/// carried).
+pub fn element_snapshots() -> Vec<p9_core::data::refresh::ElementSnapshot> {
+    observed_sample()
+        .iter()
+        .map(|t| p9_core::data::refresh::ElementSnapshot {
+            name: t.name,
+            designation: sbdb_designation(t.name),
+            a: Some(t.a),
+            e: Some(t.e),
+            i_deg: Some(t.i),
+            omega_deg: None,
+            omega_big_deg: None,
+            h_mag: None,
+        })
+        .collect()
+}
+
+/// Diff the frozen sample against the live JPL SBDB (network; see the
+/// `#[ignore]`d test in `tests/sbdb_refresh_live.rs`). Empty result = the
+/// table still matches JPL within `Tolerances::full_precision()`.
+#[cfg(feature = "sbdb-refresh")]
+pub fn refresh_from_sbdb(
+    client: &p9_core::data::refresh::SbdbClient,
+) -> Result<Vec<p9_core::data::refresh::EtnoDiff>, String> {
+    p9_core::data::refresh::refresh_table_from_sbdb(
+        client,
+        &element_snapshots(),
+        &p9_core::data::refresh::Tolerances::full_precision(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,6 +229,17 @@ mod tests {
     #[test]
     fn test_sample_size() {
         assert_eq!(observed_sample().len(), 17);
+    }
+
+    #[test]
+    fn test_sbdb_designations() {
+        assert_eq!(sbdb_designation("54520 (2000 PJ30)"), "54520");
+        assert_eq!(sbdb_designation("2012 GU11"), "2012 GU11");
+        let snaps = element_snapshots();
+        assert_eq!(snaps.len(), 17);
+        assert!(snaps
+            .iter()
+            .all(|s| !s.designation.is_empty() && !s.designation.contains('(')));
     }
 
     #[test]
