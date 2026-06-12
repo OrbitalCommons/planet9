@@ -129,8 +129,20 @@ derived quantities:
   replaces the previously invented √ρ scaling.
 - `p9-2021-orbit` posterior emulator: (a, e) sampled jointly with an assumed ρ = 0.85
   correlation; the crate is documented as a posterior-summary emulator, not an MCMC reproduction.
-- `p9-2024-neptune-crossing` discovery distances: documented r ≈ 1.15q approximation where the
-  catalog lacks per-object discovery circumstances.
+- `p9-2024-neptune-crossing` discovery distances: **now per-object data, not a heuristic.**
+  `FIRST_OBS_DISTANCES` (`hypothesis_test.rs`) stores each object's heliocentric distance at its
+  SBDB `first_obs` epoch (first observation of the fitted arc; equals the discovery date except
+  where precovery was later linked), computed 2026-06-12 by propagating the object's own SBDB
+  osculating elements (`p9_core::data::refresh::first_obs_distance`). The fetched values span
+  1.0q–1.7q (median ≈ 1.2q), so the old r ≈ 1.15q approximation was slightly low; it remains as
+  the documented fallback (`approximate_discovery_distances`) for objects absent from the table.
+  The table is offline/const; `--features sbdb-refresh` + the `#[ignore]`d live test recompute
+  and pin it. The same feature gates `p9_core::data::refresh`, which diffs the frozen element
+  tables (`data::etno::BROWN_2017_SAMPLE`, the 17-object neptune-crossing sample) against live
+  SBDB lookups with documented per-element tolerances — the guard against the fabricated-table
+  failure mode (MODELING_REVIEW.md §5 N1). Live check 2026-06-12: the neptune-crossing table
+  matches JPL exactly; the Brown-2017 table intentionally pins paper-epoch solutions and shows
+  documented a–e fit-degeneracy drift vs current JPL (see `etno.rs` module docs).
 - Circular-Earth observer model — **now a fallback, not the primary geometry**. The survey
   models (`p9-2025-iras-akari` proper motion/parallax, `p9-2022-des`/`p9-2024-panstarrs`
   per-night apparent positions) take an explicit `p9_core::coords::observer::EarthProvider`:

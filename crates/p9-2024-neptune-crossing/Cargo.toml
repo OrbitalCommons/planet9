@@ -10,3 +10,8 @@ rand_distr = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 approx = { workspace = true }
+
+[features]
+# Live JPL SBDB refresh path for the frozen sample table (see
+# `observed_tnos`); default builds and tests stay offline.
+sbdb-refresh = ["p9-core/sbdb-refresh"]

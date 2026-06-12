@@ -15,3 +15,10 @@ starfield = "0.13.0"
 
 [dev-dependencies]
 approx = { workspace = true }
+
+[features]
+# Enables the live JPL SBDB fetch helpers in `data::refresh` (the snapshot
+# diff logic itself is always compiled). No extra dependencies — starfield is
+# already a dependency — the gate only exists so that default builds and
+# `cargo test` never touch the network.
+sbdb-refresh = []
