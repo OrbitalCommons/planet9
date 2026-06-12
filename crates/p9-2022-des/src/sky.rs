@@ -100,6 +100,22 @@ pub fn apparent_position_with_earth_deg(
     (ra, dec, r_helio)
 }
 
+/// Sun–object–Earth phase angle (radians) of an orbit `t_days` after its
+/// stored epoch, observed from the given Earth state (instantaneous
+/// geometry — the few-day light-time displacement changes α by far less
+/// than the H-G law resolves at these distances). Bounded by
+/// asin(1 AU / r): below 0.35° everywhere in the BB21 reference
+/// population (minimum r ≈ 176 AU), ~0.11° at the fiducial 500 AU.
+pub fn phase_angle_with_earth(
+    elem: &OrbitalElements,
+    earth_state: &EarthState,
+    t_days: f64,
+) -> f64 {
+    let helio = heliocentric_position(elem, t_days);
+    let delta = (helio - earth_state.0).norm();
+    p9_core::analysis::photometry::phase_angle(helio.norm(), delta, earth_state.0.norm())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,6 +194,80 @@ mod tests {
                 "ephemeris vs analytic apparent position differs by {sep:.4} deg at t = {t_days}"
             );
         }
+    }
+
+    /// Issue #41: measure the phase-induced Δmag over the reference
+    /// population at the real DES observing geometry. The phase angle is
+    /// bounded by asin(1 AU/r), tiny at P9 distances, but the H-G law's
+    /// opposition surge (dΔm/dα → ∞ at α = 0) makes the darkening tens of
+    /// mmag, not the <1 mmag a linear phase law would give: measured over
+    /// 500 BB21-posterior orbits × the 40-night DES grid (DE421 Earth
+    /// states), max Δm = 0.0763 mag at max α = 0.329° (the population's
+    /// minimum heliocentric distance is 176 AU; at the fiducial 500 AU the
+    /// surge is 0.039 mag). The survey-recovery pins absorb this: a
+    /// ≤0.08 mag dimming on the ephemeris path leaves the computed DES
+    /// recovery and the combined exclusion fractions inside their existing
+    /// regression tolerances (verified — no pins re-pinned). Kernel-gated.
+    #[test]
+    fn phase_induced_dmag_small_over_reference_population() {
+        use p9_2021_orbit::reference_population::generate_reference_population;
+        use p9_core::analysis::photometry::{hg_phase_factor, DEFAULT_SLOPE_G};
+        use p9_core::coords::observer::EphemerisEarth;
+        use rand::SeedableRng;
+
+        let mut earth = match EphemerisEarth::try_new() {
+            Ok(e) => e,
+            Err(_) => {
+                eprintln!("skipping: no ephemeris kernel in starfield cache");
+                return;
+            }
+        };
+        let nights =
+            crate::survey_model::DesSurvey::default().observing_epochs_with_earth(&mut earth);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(41);
+        let population = generate_reference_population(500, &mut rng);
+
+        let mut max_dm = 0.0_f64;
+        let mut max_alpha = 0.0_f64;
+        let mut min_r = f64::INFINITY;
+        for obj in &population {
+            let elem = OrbitalElements {
+                a: obj.a,
+                e: obj.e,
+                i: obj.i,
+                omega: obj.omega,
+                omega_big: obj.omega_big,
+                mean_anomaly: obj.mean_anomaly,
+            };
+            for (_, t_days, state) in &nights {
+                let alpha = phase_angle_with_earth(&elem, state, *t_days);
+                let dm = -2.5 * hg_phase_factor(DEFAULT_SLOPE_G, alpha).log10();
+                max_alpha = max_alpha.max(alpha);
+                max_dm = max_dm.max(dm);
+                min_r = min_r.min(heliocentric_position(&elem, *t_days).norm());
+            }
+        }
+        eprintln!(
+            "max Δm = {max_dm:.4} mag, max α = {:.4}°, min r = {min_r:.1} AU",
+            max_alpha.to_degrees()
+        );
+
+        // Geometry: phase angle bounded by the annual maximum
+        // asin(1 AU / min r) = asin(1/176) = 0.326° (plus Earth's
+        // eccentricity); measured 0.329°.
+        assert!(
+            max_alpha.to_degrees() < 0.35,
+            "max phase angle = {:.4}°",
+            max_alpha.to_degrees()
+        );
+        assert!(min_r > 150.0, "min r = {min_r:.1} AU");
+        // Photometry: the opposition surge contributes a few tens of mmag
+        // (measured 0.0763 mag); it must never grow to a level that would
+        // move survey completeness materially (>0.1 mag).
+        assert!(
+            (0.03..0.10).contains(&max_dm),
+            "max phase-induced Δm = {max_dm:.4} mag"
+        );
     }
 
     #[test]

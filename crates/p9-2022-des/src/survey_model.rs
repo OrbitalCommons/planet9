@@ -289,7 +289,10 @@ impl DesSurvey {
 
     /// Ephemeris-path counterpart of `night_probabilities`: per-night
     /// apparent positions from real Earth states (parallax from the true
-    /// orbit, light-time, aberration). `nights` comes from
+    /// orbit, light-time, aberration), and per-night IAU H-G phase
+    /// darkening (G = 0.15) relative to the zero-phase `mags` — the H-G
+    /// opposition surge contributes up to ~0.05 mag at P9 distances
+    /// (α ≤ asin(1 AU/r)). `nights` comes from
     /// `observing_epochs_with_earth`.
     pub fn night_probabilities_with_earth(
         &self,
@@ -297,12 +300,15 @@ impl DesSurvey {
         mags: &BandMagnitudes,
         nights: &[(DesBand, f64, EarthState)],
     ) -> Vec<f64> {
+        use p9_core::analysis::photometry::{hg_phase_factor, DEFAULT_SLOPE_G};
         nights
             .iter()
             .map(|(band, t_days, state)| {
                 let (ra, dec, _) = apparent_position_with_earth_deg(elem, state, *t_days);
                 if self.is_in_footprint(ra, dec) {
-                    self.night_detection_probability(mags.magnitude(*band), *band)
+                    let alpha = crate::sky::phase_angle_with_earth(elem, state, *t_days);
+                    let dm = -2.5 * hg_phase_factor(DEFAULT_SLOPE_G, alpha).log10();
+                    self.night_detection_probability(mags.magnitude(*band) + dm, *band)
                 } else {
                     0.0
                 }
