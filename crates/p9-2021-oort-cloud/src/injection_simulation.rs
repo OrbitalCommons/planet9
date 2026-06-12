@@ -136,11 +136,11 @@ pub struct ParticleOutcome {
 ///
 /// Integration scheme: with no massive bodies and a static potential, the
 /// Wisdom-Holman step reduces exactly to kick(dt/2)–Kepler drift(dt)–
-/// kick(dt/2). The Kepler drift is done in element space via the
-/// safeguarded `p9_core::types::solve_kepler` (exact two-body propagation
-/// for any e < 1, robust where the universal-variable iteration in
-/// p9-core's `kepler_drift` can hit a convergence plateau at high
-/// eccentricity — a p9-core gap worked around here).
+/// kick(dt/2). The Kepler drift is performed in element space (advance the
+/// mean anomaly by n·dt) — exact two-body propagation, equivalent to
+/// `p9_core::integrator::kepler_step::kepler_drift` but the natural
+/// representation for this secular model: the conserved elements are held
+/// exactly, and the diagnostics (q(t), e, ϖ) read off directly every step.
 pub fn evolve_population(
     initial: &[OrbitalElements],
     p9: Option<&P9Params>,

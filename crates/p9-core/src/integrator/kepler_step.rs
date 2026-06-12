@@ -3,11 +3,16 @@
 //! Uses the universal variable formulation (Battin 1999) for robust propagation
 //! of elliptic, parabolic, and hyperbolic orbits.
 
+use crate::constants::TWO_PI;
 use crate::types::StateVector;
 
 /// Advance a state vector along its Keplerian orbit for time dt.
-/// Uses Stumpff function formulation with Newton-Raphson iteration on the
-/// universal variable s.
+/// Uses Stumpff function formulation with bisection-safeguarded
+/// Newton-Raphson iteration on the universal variable s. Bound orbits are
+/// reduced modulo the orbital period so the root is bracketed within one
+/// revolution of the universal anomaly; hyperbolic brackets expand outward
+/// but never past the Stumpff overflow cap. Cross-validated against
+/// starfield's SPICE prop2b port in tests/starfield_oracle.rs.
 ///
 /// `gm` is the central body GM in AU^3/day^2.
 pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
@@ -25,6 +30,30 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
     let alpha = -2.0 * energy / gm; // = 1/a (positive for elliptic)
 
     let r0_dot_v0 = r0.dot(&v0);
+
+    // Bound orbits are periodic: reduce dt by whole orbital periods so the
+    // universal anomaly stays within one revolution. Without this, multi-orbit
+    // dt makes every term of the universal Kepler equation ~ sqrt(gm)*|dt|;
+    // the rounding noise of the residual, divided by f' = r (small near
+    // perihelion at high e), then exceeds the 1e-15*s step tolerance and
+    // safeguarded Newton dithers inside a noise-width bracket forever
+    // ("convergence plateau"). Within one period every term is O(one orbit)
+    // and the noise floor sits below the tolerance.
+    let mut elliptic_period = None;
+    let dt = if alpha > 0.0 {
+        let period = TWO_PI / (gm * alpha.powi(3)).sqrt();
+        if period.is_finite() {
+            elliptic_period = Some(period);
+            dt.rem_euclid(period)
+        } else {
+            dt
+        }
+    } else {
+        dt
+    };
+    if dt == 0.0 {
+        return *state;
+    }
 
     // Initial guess for universal variable s
     let mut s = if alpha > 0.0 {
@@ -62,24 +91,52 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
             - sqrt_gm * dt
     };
 
-    // Bracket the root: f(0) = -sqrt(gm)*dt has the opposite sign of dt,
-    // expand outward from the starter until the sign changes.
-    let (mut lo, mut hi) = if dt >= 0.0 {
-        let mut hi = s.abs().max(dt / r0_mag).max(1e-8);
+    // Hyperbolic cap: |psi| = -alpha*s^2 beyond ~580^2 overflows cosh in the
+    // Stumpff terms, turning f into inf/NaN and corrupting the bracket.
+    // Physical roots sit exponentially far inside the cap (H = 580 means
+    // r ~ e^580 * |a|), so clamping loses nothing.
+    let s_cap = if alpha < 0.0 {
+        580.0 / (-alpha).sqrt()
+    } else {
+        f64::INFINITY
+    };
+
+    // Bracket the root: f(0) = -sqrt(gm)*dt has the opposite sign of dt.
+    // Elliptic: dt was reduced to [0, period), so the root lies within one
+    // revolution of the universal anomaly, s in [0, 2*pi/sqrt(alpha)]
+    // (expand only to absorb rounding at the endpoint). Hyperbolic /
+    // near-parabolic: expand outward from the starter until the sign
+    // changes, never past the overflow cap.
+    let (mut lo, mut hi) = if elliptic_period.is_some() {
+        let mut hi = TWO_PI / alpha.sqrt();
         while kepler_f(hi) < 0.0 {
-            hi *= 2.0;
+            hi *= 1.5;
+        }
+        (0.0, hi)
+    } else if dt >= 0.0 {
+        let mut hi = s.abs().max(dt / r0_mag).max(1e-8).min(s_cap);
+        while kepler_f(hi) < 0.0 && hi < s_cap {
+            hi = (hi * 2.0).min(s_cap);
         }
         (0.0, hi)
     } else {
-        let mut lo = -s.abs().max(-dt / r0_mag).max(1e-8);
-        while kepler_f(lo) > 0.0 {
-            lo *= 2.0;
+        let mut lo = (-s.abs().max(-dt / r0_mag).max(1e-8)).max(-s_cap);
+        while kepler_f(lo) > 0.0 && lo > -s_cap {
+            lo = (lo * 2.0).max(-s_cap);
         }
         (lo, 0.0)
     };
     s = s.clamp(lo, hi);
 
+    // Residual scale at the root (the constant term of the universal Kepler
+    // equation). When |f| dwarfs this, the iterate is deep in the Stumpff
+    // exponential tail where Newton only creeps additively (~1/sqrt(-alpha)
+    // per step without leaving the bracket); bisection gets there in
+    // O(log) steps instead.
+    let f_scale = sqrt_gm * dt.abs();
+
     let mut converged = false;
+    let mut s_prev = f64::NAN;
     for _ in 0..100 {
         let psi = alpha * s * s;
         let (c2, c3) = stumpff_c2c3(psi);
@@ -87,8 +144,18 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
         let s2 = s * s;
         let s3 = s2 * s;
 
-        let f_val = r0_mag * s + r0_dot_v0 / sqrt_gm * s2 * c2 + (1.0 - r0_mag * alpha) * s3 * c3
-            - sqrt_gm * dt;
+        let t1 = r0_mag * s;
+        let t2 = r0_dot_v0 / sqrt_gm * s2 * c2;
+        let t3 = (1.0 - r0_mag * alpha) * s3 * c3;
+        let f_val = t1 + t2 + t3 - sqrt_gm * dt;
+
+        // The residual cannot be resolved below the rounding noise of its
+        // constituent terms; reaching that floor is convergence.
+        let f_floor = 4.0 * f64::EPSILON * (t1.abs() + t2.abs() + t3.abs() + sqrt_gm * dt.abs());
+        if f_val.abs() <= f_floor {
+            converged = true;
+            break;
+        }
 
         if f_val > 0.0 {
             hi = s;
@@ -101,13 +168,23 @@ pub fn kepler_drift(state: &StateVector, dt: f64, gm: f64) -> StateVector {
             r0_mag + r0_dot_v0 / sqrt_gm * s * (1.0 - psi * c3) + (1.0 - r0_mag * alpha) * s2 * c2;
 
         let mut next = s - f_val / df;
-        if !(lo..=hi).contains(&next) {
+        if !(lo..=hi).contains(&next) || f_val.abs() > 1e8 * f_scale {
             next = 0.5 * (lo + hi);
         }
         let ds = (next - s).abs();
+        // A bit-exact period-2 cycle means the iterate is alternating
+        // between the two adjacent representable values that straddle the
+        // root: the residual is pure rounding noise and the answer is as
+        // accurate as f64 permits.
+        let cycled = next == s_prev;
+        s_prev = s;
         s = next;
 
-        if ds < 1e-15 * s.abs().max(1.0) {
+        // Converged when the step or the remaining bracket is at relative
+        // machine precision (the bracket collapses onto the root even when
+        // residual noise makes the Newton step dither).
+        let tol = 1e-15 * s.abs().max(1.0);
+        if ds < tol || (hi - lo) < tol || cycled {
             converged = true;
             break;
         }
