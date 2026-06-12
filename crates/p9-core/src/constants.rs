@@ -5,6 +5,11 @@ pub const G_AU3_MSUN_DAY2: f64 = 2.959122082855911e-4;
 
 /// GM values in AU^3/day^2 (heliocentric gravitational parameters)
 /// Source: JPL DE440 / Park et al. (2021)
+///
+/// Note: starfield's `GM_SUN` is in km^3/s^2 and from a slightly older
+/// determination (1.32712440042e20 vs DE440's 1.32712440041279419e20 m^3/s^2,
+/// a 5.4e-12 relative difference); p9-core keeps the DE440 value in its
+/// AU^3/day^2 convention. The agreement is pinned by a test below.
 pub const GM_SUN: f64 = 2.959122082855911e-4;
 pub const GM_MERCURY: f64 = 4.912_486_6e-11;
 pub const GM_VENUS: f64 = 7.243_452_5e-10;
@@ -50,20 +55,19 @@ pub const J4_SATURN: f64 = -9.35e-4;
 pub const J4_URANUS: f64 = -3.21e-5;
 pub const J4_NEPTUNE: f64 = -3.48e-5;
 
-/// Unit conversions
-pub const AU_M: f64 = 1.495_978_707e11;
-pub const AU_KM: f64 = 1.495_978_707e8;
-pub const DAY_S: f64 = 86_400.0;
+/// Unit conversions. AU_M, AU_KM, and DAY_S are re-exported from starfield
+/// (IAU 2012 AU = 149_597_870_700 m exactly) so the two crates cannot drift.
+pub use starfield::constants::{AU_KM, AU_M, DAY_S};
 pub const YEAR_DAYS: f64 = 365.25;
 pub const GYR_DAYS: f64 = 365.25e9;
 
-/// J2000.0 epoch (Julian Date, TT)
-pub const J2000: f64 = 2_451_545.0;
+/// J2000.0 epoch (Julian Date, TT); re-exported from starfield.
+pub use starfield::constants::J2000;
 
-/// Mathematical constants
-pub const TWO_PI: f64 = 2.0 * std::f64::consts::PI;
-pub const DEG2RAD: f64 = std::f64::consts::PI / 180.0;
-pub const RAD2DEG: f64 = 180.0 / std::f64::consts::PI;
+/// Mathematical constants; re-exported from starfield where they overlap
+/// (TAU is starfield's name for 2π).
+pub use starfield::constants::TAU as TWO_PI;
+pub use starfield::constants::{DEG2RAD, RAD2DEG};
 
 /// Neptune's semi-major axis in AU (single source for the resonance/Hansen
 /// machinery; several paper crates previously re-defined this inconsistently)
@@ -88,3 +92,34 @@ pub const PC_AU: f64 = 206_264.806;
 
 /// km/s to AU/day
 pub const KMS_TO_AUDAY: f64 = DAY_S / AU_KM;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gm_sun_au3_day2_matches_starfield_km3_s2() {
+        // starfield's GM_SUN (km^3/s^2) converted to p9-core's AU^3/day^2
+        // convention. The underlying solar GM determinations differ by
+        // 5.4e-12 (DE440 vs starfield's older value), so agreement is pinned
+        // at 1e-11 relative rather than full f64 precision.
+        let starfield_au3_day2 =
+            starfield::constants::GM_SUN * DAY_S * DAY_S / (AU_KM * AU_KM * AU_KM);
+        let rel = ((starfield_au3_day2 - GM_SUN) / GM_SUN).abs();
+        assert!(rel < 1e-11, "relative difference = {rel:e}");
+    }
+
+    #[test]
+    fn test_g_au3_msun_day2_consistent_with_gm_sun() {
+        // G in AU^3/(M_sun day^2) is numerically GM_sun in AU^3/day^2.
+        assert_eq!(G_AU3_MSUN_DAY2, GM_SUN);
+    }
+
+    #[test]
+    fn test_au_conversions_self_consistent() {
+        // Re-exported starfield values: AU_M and AU_KM describe the same
+        // IAU 2012 astronomical unit.
+        assert_eq!(AU_M, 149_597_870_700.0);
+        assert_eq!(AU_KM * 1_000.0, AU_M);
+    }
+}

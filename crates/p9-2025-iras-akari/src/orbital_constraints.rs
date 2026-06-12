@@ -188,29 +188,10 @@ pub fn explore_orbit_space(
         .collect()
 }
 
-/// Ecliptic coordinates (approximate) from RA/Dec.
-///
-/// Uses the obliquity of the ecliptic ε = 23.4393° to convert
-/// equatorial coordinates to ecliptic coordinates. (p9-core provides no
-/// equatorial↔ecliptic transform; kept local.)
-pub fn equatorial_to_ecliptic(ra_deg: f64, dec_deg: f64) -> (f64, f64) {
-    let eps = 23.4393_f64.to_radians();
-    let ra = ra_deg.to_radians();
-    let dec = dec_deg.to_radians();
-
-    let sin_lambda = ra.sin() * eps.cos() + dec.tan() * eps.sin();
-    let cos_lambda = ra.cos();
-    let lambda = sin_lambda.atan2(cos_lambda);
-
-    let sin_beta = dec.sin() * eps.cos() - dec.cos() * eps.sin() * ra.sin();
-    let beta = sin_beta.asin();
-
-    (lambda.to_degrees().rem_euclid(360.0), beta.to_degrees())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use p9_core::coords::sky::equatorial_to_ecliptic_deg;
 
     #[test]
     fn candidate_separation_matches_paper() {
@@ -324,7 +305,7 @@ mod tests {
         // Midpoint position
         let mid_ra = (pair.iras_ra_deg + pair.akari_ra_deg) / 2.0;
         let mid_dec = (pair.iras_dec_deg + pair.akari_dec_deg) / 2.0;
-        let (ecl_lon, ecl_lat) = equatorial_to_ecliptic(mid_ra, mid_dec);
+        let (ecl_lon, ecl_lat) = equatorial_to_ecliptic_deg(mid_ra, mid_dec);
         // At RA~35.5°, Dec~-48.9°, ecliptic latitude should be far from
         // the ecliptic plane (|β| >> 0), consistent with P9's predicted
         // high-inclination orbit
