@@ -18,6 +18,7 @@ members = [
     "crates/p9-2024-neptune-crossing",
     "crates/p9-2024-oort-selfgrav",
     "crates/p9-2024-panstarrs",
+    "crates/p9-2025-ps1-holman",
     "crates/p9-2025-clustering",
     "crates/p9-2025-iras-akari",
     "crates/p9-2025-perturbation",
