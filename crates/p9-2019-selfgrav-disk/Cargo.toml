@@ -1,0 +1,14 @@
+[package]
+name = "p9-2019-selfgrav-disk"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Sefilian & Touma (2019) 'Shepherding in a Self-gravitating Disk of Trans-Neptunian Objects' (arXiv:1804.06859)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

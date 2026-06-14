@@ -126,6 +126,24 @@ the P9 orientation angles (ϖ₉, Ω₉) profiled out of the KDE likelihood over
 rather than sampled as MCMC dimensions. The cluster-scattering Fréchet prior is not
 implemented (uniform prior only; needs the Batygin & Brown 2021b scattering suite).
 
+### 10. p9-2019-selfgrav-disk — forced apse aligned (Δϖ = 0), not anti-aligned
+
+Sefilian & Touma (2019) show a massive eccentric apsidally-aligned debris disk shepherds ETNOs
+into apsidal confinement. The Laplace–Lagrange operator built here (test particle vs a set of
+confocal eccentric rings, softened `b_{3/2}` coefficients) reproduces the libration island and
+the linear-in-M_disk precession rate, but with a **uniform-eccentricity** disk the forced
+equilibrium is apsidally *aligned* (Δϖ = 0), not the paper's anti-alignment. The anti-aligned
+forcing requires the disk's eccentricity/density gradients (sign of the cross-term B), which the
+minimal model omits. The shepherding-into-a-libration-island mechanism itself reproduces; the
+sign is documented rather than asserted.
+
+The ~10⁸–10⁹ yr secular period (paper Sec. 3) is recovered for a fiducial disk softening of ~0.2·a
+(a dynamically warm disk's finite radial/vertical thickness); a razor-thin disk precesses ~10×
+faster. The softening is a labelled disk-thickness parameter.
+- Pinned: `crates/p9-2019-selfgrav-disk/src/secular.rs` (linear-mass scaling, period order of
+  magnitude, libration vs shepherding); cross-checked against `p9_core::analysis::secular`
+  numerical ring averaging in `cross_check.rs` (analytic A within 5%).
+
 ---
 
 ## Agreements within tolerance (for completeness)
