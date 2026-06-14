@@ -1432,6 +1432,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2023-mond-efe"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2024-neptune-crossing"
 version = "0.1.0"
 dependencies = [
