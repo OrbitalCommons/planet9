@@ -1,0 +1,14 @@
+[package]
+name = "p9-2023-mond-efe"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Brown & Mathur (2023) 'Modified Newtonian Dynamics as an Alternative to the Planet Nine Hypothesis' (arXiv:2304.00576)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
