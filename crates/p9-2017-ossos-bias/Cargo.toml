@@ -1,0 +1,15 @@
+[package]
+name = "p9-2017-ossos-bias"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Shankman et al. (2017) 'OSSOS VI: Striking Biases in the Detection of Large Semimajor Axis TNOs'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
