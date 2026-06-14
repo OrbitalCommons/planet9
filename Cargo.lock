@@ -1488,6 +1488,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2025-new-discoveries"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2025-perturbation"
 version = "0.1.0"
 dependencies = [
