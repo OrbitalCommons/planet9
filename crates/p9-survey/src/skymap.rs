@@ -299,7 +299,7 @@ mod tests {
         let space = det
             .iter()
             .zip(&tel)
-            .find(|(_, t)| t.name.contains("Proposed"))
+            .find(|(_, t)| t.name.contains("JBT"))
             .unwrap()
             .0;
         // All detection probabilities are valid.
