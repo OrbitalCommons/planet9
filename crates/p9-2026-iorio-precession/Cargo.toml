@@ -1,0 +1,13 @@
+[package]
+name = "p9-2026-iorio-precession"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Iorio (2026) 'On the effects of a distended Planet Nine/Planet X/Planet Y on the precession of the perihelion of Saturn'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

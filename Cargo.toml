@@ -21,6 +21,7 @@ members = [
     "crates/p9-2025-clustering",
     "crates/p9-2025-iras-akari",
     "crates/p9-2025-perturbation",
+    "crates/p9-2026-iorio-precession",
     "crates/p9-review-article",
 ]
 
