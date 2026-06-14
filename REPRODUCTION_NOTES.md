@@ -89,6 +89,30 @@ from 1/12 to 1/9.5. If those literals trace to a published table, the source sho
 - See: `crates/p9-2025-perturbation/src/hansen.rs` (cross-validation tests against
   `p9_core::analysis::hansen::hansen_coefficient`).
 
+### 9b. p9-2016-cassini-ranging — favored true anomaly 135.5° (proxy) vs published 117.8°
+
+The crate computes the real differential (tidal) acceleration a 10 M⊕ P9 on the Brown & Batygin
+orbit (Fienga Table 1: a=700, e=0.6, i=30°, ω=150°, Ω=113°) exerts on Saturn vs the Sun, then
+forms the Earth–Saturn range signature ρ(t) over Saturn's REAL Cassini-epoch arc (two-body
+propagation of the DE440 J2000 state, 2004–2017) and reduces it to a pre-fit RMS (paper's Fig 2
+blue) and a post-fit RMS after removing the quadratic the INPOP orbit fit absorbs (Fig 2 red).
+The post-fit curve reproduces the paper's qualitative structure: two excluded lobes on the
+perihelion-facing arc (matching the forbidden zones [−65°,85°] ∪ [−130°,−100°]) and a low far-side
+gap. The mass scaling is exactly linear and the distance falloff is steep (~1/r³ tidal), both pinned.
+
+The honest residual: a template-free perturbation calculation places the absolute post-fit minimum
+near aphelion (the paper's "uncertainty zone", where P9 is too faint to constrain). Applying the
+paper's Fig 6 detectability logic — restrict to positions whose pre-fit signal exceeds the INPOP
+precision floor σ₀ ≈ 74.9 m, on the outbound post-perihelion arc — yields a favored ν ≈ 135.5°
+(r ≈ 783 AU), within the test's ±30° tolerance of the published v = 117.8°₋₁₀⁺¹¹ and adjacent to the
+quoted favored interval [108°, 129°]. The exact 117.8° additionally requires anti-correlating the
+induced signature with the measured Cassini O−C residual template (the data-driven mean-anomaly fit),
+which a template-free proxy cannot reproduce; the post-/pre-perihelion tie is broken by scanning the
+outbound arc, documented at the function site.
+- Pinned: `crates/p9-2016-cassini-ranging/src/perturbation.rs` (`favored_zone_near_published_true_anomaly`,
+  `perihelion_arc_is_excluded_relative_to_favored_zone`, `postfit_curve_has_two_excluded_lobes`,
+  mass/distance scaling tests).
+
 ### 9. p9-2021-orbit — full inference pipeline: Reduced scale validates machinery, not the posterior
 
 The paper's models 1–4 are now implemented from scratch (issue #12): N-body simulation grid

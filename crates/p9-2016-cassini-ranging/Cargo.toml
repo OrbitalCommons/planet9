@@ -1,0 +1,14 @@
+[package]
+name = "p9-2016-cassini-ranging"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Fienga et al. (2016) 'Constraints on the location of a possible 9th planet derived from the Cassini data'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
