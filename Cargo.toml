@@ -11,6 +11,7 @@ members = [
     "crates/p9-2019-clustering",
     "crates/p9-2019-review",
     "crates/p9-2021-oort-cloud",
+    "crates/p9-2021-napier-critique",
     "crates/p9-2021-orbit",
     "crates/p9-2021-stability",
     "crates/p9-2021-ztf",
