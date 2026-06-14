@@ -1325,9 +1325,11 @@ name = "p9-2021-orbit"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "nalgebra",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
+ "rayon",
  "serde",
  "serde_json",
 ]
@@ -1404,6 +1406,19 @@ dependencies = [
  "p9-2021-orbit",
  "p9-2021-ztf",
  "p9-2022-des",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2024-siraj-orbit"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
