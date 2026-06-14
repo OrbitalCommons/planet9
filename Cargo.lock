@@ -1256,6 +1256,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-resonance-prediction"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2017-bias"
 version = "0.1.0"
 dependencies = [
