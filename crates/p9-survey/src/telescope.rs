@@ -8,8 +8,26 @@
 //! caveat). Thermal-IR detectability of a *cold* Planet Nine is separately
 //! shown to be negligible in `p9-2018-wise-search`, so this survey stays in
 //! the reflected-light regime.
+//!
+//! JBT 0.5 m + SPENCER parameters are derived from the `focalplane` simulator
+//! (CosmicFrontierLabs): the default "Cosmic Frontier JBT .5m" telescope
+//! (0.485 m aperture, f/12.3 → 5.97 m focal length) with the SPENCER imager
+//! (4× Sony IMX455, 9568×6380 px at 3.76 µm, read noise 1.58 e⁻, dark
+//! 0.0046 e⁻/s/px). That gives a 0.130″/px plate scale, ~0.080 deg² per chip
+//! → ~0.32 deg² instantaneous field. A photon-budget SNR=5 calculation against
+//! the space/zodiacal sky (V≈22.5/arcsec²) yields V≈23.8 in a single 300 s
+//! visit, ~25 for an ~1 h per-field stack, and ~26 for a deep multi-epoch
+//! shift-stack. So the limiter is not depth (P9 is V≈19–23) but the small
+//! field: tiling the multi-thousand-deg² P9 prior is the constraint.
 
 use crate::schema::{Footprint, Telescope};
+
+/// JBT 0.5 m + SPENCER derived optics (see module docs / `focalplane`).
+pub const JBT_APERTURE_M: f64 = 0.485;
+pub const JBT_F_NUMBER: f64 = 12.3;
+pub const JBT_PLATE_SCALE_ARCSEC_PER_PX: f64 = 0.130;
+/// Instantaneous field of the 4-chip SPENCER array (deg²).
+pub const SPENCER_FIELD_DEG2: f64 = 0.32;
 
 /// The surveyed instruments: one ground baseline, two space assets.
 pub fn catalog() -> Vec<Telescope> {
@@ -45,19 +63,28 @@ pub fn catalog() -> Vec<Telescope> {
                 .to_string(),
         },
         Telescope {
-            name: "Proposed all-sky space survey".to_string(),
-            band: "optical/NIR (proxy)".to_string(),
-            limiting_mag: 26.0,
+            name: "JBT 0.5 m + SPENCER (space)".to_string(),
+            band: "broadband visible (V proxy)".to_string(),
+            // Operational per-field depth (a few stacked 300 s visits). Single
+            // 300 s visit ≈ 23.8; deep multi-epoch shift-stack ≈ 26.
+            limiting_mag: 24.5,
             footprint: Footprint {
                 dec_min_deg: -90.0,
                 dec_max_deg: 90.0,
-                galactic_lat_min_deg: 5.0,
-                coverage_fraction: 0.90,
+                galactic_lat_min_deg: 10.0,
+                // The 0.32 deg² field must tile the multi-thousand-deg² P9
+                // prior. Feasible (~months at ~0.3 deg²/visit) for a dedicated
+                // campaign over the high-probability region; this fraction is
+                // the dominant assumption — the limiter is sky coverage, not
+                // depth. Galactic-plane crowding excluded (|b| > 10°).
+                coverage_fraction: 0.70,
             },
             space_based: true,
-            note: "PLACEHOLDER specs for the upcoming mission — deep, near-all-\
-                   sky from space (only the galactic plane still hurts). Tune \
-                   limiting_mag / coverage / footprint to the real design."
+            note: "Cosmic Frontier JBT 0.5 m (0.485 m, f/12.3) + SPENCER imager \
+                   (4× Sony IMX455, 0.130″/px, ~0.32 deg² field), from the \
+                   focalplane simulator. Depth is ample (V≈24–26 stacked vs P9 \
+                   V≈19–23); detection is gated by how much of the prior region \
+                   the small field can tile (coverage_fraction)."
                 .to_string(),
         },
     ]
@@ -76,13 +103,16 @@ mod tests {
     }
 
     #[test]
-    fn space_survey_is_all_sky() {
+    fn jbt_is_space_all_sky() {
         let t = catalog()
             .into_iter()
-            .find(|t| t.name.contains("Proposed"))
+            .find(|t| t.name.contains("JBT"))
             .unwrap();
         assert!(t.space_based);
         assert!(t.footprint.accepts(80.0, 30.0)); // northern, allowed from space
-        assert!(t.footprint.coverage_fraction > 0.5);
+        assert!(!t.footprint.accepts(80.0, 5.0)); // galactic plane excluded
+                                                  // Deep enough that every surveyed P9 solution (V ≈ 19–23) is bright
+                                                  // enough; coverage of the small field is the limiter.
+        assert!(t.limiting_mag > 23.0);
     }
 }

@@ -12,7 +12,11 @@ across this workspace and asks two questions numerically —
 2. **Can a survey catch it?** Each telescope (`telescope.rs`) has a footprint
    (declination band + galactic-plane cut + coverage fraction) and a limiting
    magnitude; detection probability = P(in footprint **and** brighter than the
-   depth), integrated over the same Monte Carlo.
+   depth), integrated over the same Monte Carlo. Presets: Rubin/LSST (ground),
+   Roman (space NIR, deep but tiny field), and **JBT 0.5 m + SPENCER** — the
+   0.485 m f/12.3 telescope with the 4×IMX455 imager, with optics, plate scale
+   (0.130″/px), field (~0.32 deg²) and photon-budget depth (V≈24–26 stacked)
+   derived from the `focalplane` simulator (see `telescope.rs` module docs).
 
 Surveyed solutions (all sourced from reproduction crates, not re-typed):
 
