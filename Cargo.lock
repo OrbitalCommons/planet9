@@ -1319,6 +1319,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2019-ossos-scattering"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2019-review"
 version = "0.1.0"
 dependencies = [

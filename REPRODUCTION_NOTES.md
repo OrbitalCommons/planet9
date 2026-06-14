@@ -167,6 +167,41 @@ faster. The softening is a labelled disk-thickness parameter.
 - Pinned: `crates/p9-2019-selfgrav-disk/src/secular.rs` (linear-mass scaling, period order of
   magnitude, libration vs shepherding); cross-checked against `p9_core::analysis::secular`
   numerical ring averaging in `cross_check.rs` (analytic A within 5%).
+### 11. p9-2019-ossos-scattering — scattering/detached boundary and the P9 lift are analytic/secular, not N-body
+
+Kaib et al. (2019, OSSOS XV) constrain P9 with the observed actively-scattering TNO population.
+This crate reproduces the two pieces of physics from p9-core machinery rather than an N-body
+suite, with documented reductions:
+
+- **Scattering/detached boundary.** The divide is the Chirikov 2:j resonance-overlap criterion
+  from `p9_core::analysis::resonance` (K = 1 root, `critical_perihelion`). The honest output is
+  that the Neptune 2:j chain only overlaps (q_crit > 0) above a ≈ 226 AU; below that there is no
+  chaos at any q. q_crit(a) rises monotonically, passing the paper's q ≈ 37 AU scattering-disk
+  scale between a = 400 and 500 AU and continuing to climb (≈ 41 AU at 500, ≈ 53 AU at 800 AU).
+  The published "q ≈ 37 AU" is a single scattering-disk definition, not the a-dependent boundary;
+  it is kept as `published::SCATTERING_Q_BOUNDARY_AU` and used only as a scale cross-check.
+  Pinned: `crates/p9-2019-ossos-scattering/src/boundary.rs` (q_crit ≡ p9-core to 1e-12,
+  K(a, q_crit) = 1 to 1e-10, the 37 AU crossing between a = 400/500).
+
+- **P9 perihelion lifting.** Modelled as a coplanar test-particle secular cycle: the conserved
+  Hamiltonian is P9's numerical Gauss-ring term (`p9_core::analysis::secular`) plus the giants'
+  axisymmetric J2 precession term (`p9_core::forces::j2_secular::combined_j2_jsu`). The
+  single-perturber Gauss-ring Hamiltonian scales as GM₉, so its level-curve *amplitude* is
+  P9-mass-independent (a real property of linear secular theory — only the precession *rate*
+  scales with mass). To recover the OSSOS-relevant mass dependence the lift is **rate-limited**:
+  the secular eccentricity-forcing rate |de/dt| ∝ GM₉ (centred finite difference of ∂H/∂ϖ) drives
+  q up over a sculpting time, capped at the cycle amplitude. The baseline time
+  `SECULAR_SCULPTING_DAYS = 50 Myr` is a documented model choice (a coherent scattering episode
+  before a Neptune encounter resets the orbit), not a derived quantity; it places the nominal-P9
+  lift in the rate-limited (un-saturated) regime so the detached fraction responds monotonically
+  to P9's mass. At this scale a nominal 6.2 M⊕ P9 over-detaches the seeded large-a scattering
+  population (detached fraction → ~1.0 vs 0 with no P9), which is the qualitative OSSOS XV result:
+  such P9 configurations are disfavored because they would deplete the observed scattering
+  population. Not asserted as a quantitative reproduction — no published scalar exists for the
+  detached fraction at fixed time.
+  Pinned: `crates/p9-2019-ossos-scattering/src/planet_nine.rs` (rate ∝ GM₉ to 1e-6; lift > 0 for
+  real P9, ≈ 0 for none; heavier ≥ lighter), `src/population.rs` (P9 raises detached fraction by
+  a non-zero amount > 0.5; heavier P9 detaches ≥ as many).
 
 ---
 
