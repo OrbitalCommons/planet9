@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/p9-core",
+    "crates/p9-2020-des-isotropy",
     "crates/p9-2025-new-discoveries",
     "crates/p9-2019-selfgrav-disk",
     "crates/p9-2016-evidence",
