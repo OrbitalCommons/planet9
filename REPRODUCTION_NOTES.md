@@ -202,6 +202,23 @@ suite, with documented reductions:
   Pinned: `crates/p9-2019-ossos-scattering/src/planet_nine.rs` (rate ∝ GM₉ to 1e-6; lift > 0 for
   real P9, ≈ 0 for none; heavier ≥ lighter), `src/population.rs` (P9 raises detached fraction by
   a non-zero amount > 0.5; heavier P9 detaches ≥ as many).
+### 12. p9-2018-wise-search — at W1 (3.4 µm) a cold P9 is detected by *reflected* light, not thermal emission
+
+Meisner et al. (2018) frame the WISE/NEOWISE shift-and-stack search as a thermal-infrared one.
+Our forward model exposes a physics reality that the "thermal-IR" label obscures at W1: at the
+band's 3.4 µm and a plausible Planet Nine effective temperature of ≈40 K, hν/kT ≈ 107, so the
+blackbody thermal flux is ~10⁻⁵⁵ W/m²/Hz/sr — utterly negligible. The thermal channel only
+overtakes reflected sunlight above ≈175 K (at 15 M⊕, 400 AU), far hotter than any Planet Nine.
+So the W1 detectability this crate computes is, for a cold body, set by **reflected sunlight**;
+the thermal term is retained and would dominate for an implausibly warm planet. (The real search's
+W2 4.6 µm band is more thermally favorable; the shared survey table pins the deeper, bluer W1.)
+- Consequence for the exclusion: the reflected-light W1 reach is ≈186 AU (5 M⊕) to ≈222 AU
+  (18 M⊕), only clipping the near edge of the Brown & Batygin posterior (q ≈ 300 AU), so the
+  computed exclusion fraction over that posterior is a few percent (≈2% at 6.2 M⊕, ≈7% at 18 M⊕)
+  — far below the optical ZTF 56%. This is an honest finding, not a tuned number; it increases
+  monotonically with assumed mass as required.
+- Pinned: `crates/p9-2018-wise-search/src/thermal_model.rs` (Planck/reflected model, W1 zero
+  point 309.54 Jy), `detectability.rs` (finite max-distance bisection), `exclusion.rs`.
 
 ---
 
