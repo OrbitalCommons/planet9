@@ -126,6 +126,22 @@ the P9 orientation angles (ϖ₉, Ω₉) profiled out of the KDE likelihood over
 rather than sampled as MCMC dimensions. The cluster-scattering Fréchet prior is not
 implemented (uniform prior only; needs the Batygin & Brown 2021b scattering suite).
 
+### 10. p9-2016-sheppard-etnos — new-object ω clustering is a 2-object corroboration, not a standalone test
+
+Applying the paper's own clustering thresholds (a > 150 AU and q > 35 AU, with the outer Oort
+cloud body 2014 FE72 treated separately) to the six newly discovered objects leaves only two in
+the clustering sample: 2014 SR349 (ω = 341.3°, aligned ~1° from the published 340° center) and
+2013 FT28 (ω = 40.2°, the anti-aligned object). Two angles is too thin for a standalone Rayleigh
+test (computed p ≈ 0.25 despite R̄ = 0.87), so the headline ω/ϖ statistics are pinned on the
+combined sample (new discoveries + `p9_core::data::etno::BROWN_2017_SAMPLE`), where the new
+objects act as corroborating data points exactly as the paper frames them. The combined ω mean is
+344.4° (R̄ 0.45, Rayleigh p 0.036) and the combined ϖ mean is 41.8° (R̄ 0.43, Rayleigh p 0.048).
+Caveat documented in code: 2014 SR349 and 2013 FT28 also appear in the Brown (2017) table, so the
+16-object concatenation double-counts them; `combined_sample_dedup()` (14 objects) confirms the
+ϖ clustering and the ~340° ω center survive deduplication.
+- Pinned: `crates/p9-2016-sheppard-etnos/src/clustering.rs` (`computed_headline_values_are_pinned`,
+  `dedup_combined_still_clusters`, `combined_omega_clusters_near_published_340`).
+
 ---
 
 ## Agreements within tolerance (for completeness)
@@ -144,6 +160,8 @@ implemented (uniform prior only; needs the Batygin & Brown 2021b scattering suit
 | Review-paper critical a (5 M⊕, 500 AU, e=0.25) | 250 AU | 200–300 AU band | `p9-2019-review/src/parameter_survey.rs` |
 | IRAS/AKARI candidate 47.46′ → distance | ~694 AU (DE421 ephemeris), ~675 AU (circular fallback) | 500–700 AU | `p9-2025-iras-akari/src/orbital_constraints.rs` |
 | vZLK evolutionary timescale (nominal IOC) | > 4.5 Gyr | ≫ 4.5 Gyr | `p9-2024-oort-selfgrav/src/vzlk.rs` |
+| S&T 2016 combined ω cluster center | 344.4° | ~340° | `p9-2016-sheppard-etnos/src/clustering.rs` (within published spread) |
+| S&T 2016 combined ϖ Rayleigh p | 0.048 | significant | `p9-2016-sheppard-etnos/src/clustering.rs` (< 0.1) |
 
 ---
 
