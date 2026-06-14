@@ -1698,6 +1698,20 @@ name = "p9-review-article"
 version = "0.1.0"
 
 [[package]]
+name = "p9-survey"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-2024-siraj-orbit",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
