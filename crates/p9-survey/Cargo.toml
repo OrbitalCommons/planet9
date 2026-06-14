@@ -1,0 +1,17 @@
+[package]
+name = "p9-survey"
+version = "0.1.0"
+edition = "2021"
+description = "Cross-paper survey of Planet Nine sky-position predictions, brightness, and detectability by current/upcoming surveys"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+p9-2024-siraj-orbit = { path = "../p9-2024-siraj-orbit" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
