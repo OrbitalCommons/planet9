@@ -1,0 +1,13 @@
+[package]
+name = "p9-2016-inclination-instability"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Madigan & McCourt (2016) 'The inclination instability in the Outer Solar System' and the Das & Batygin (2023) suppression study"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
