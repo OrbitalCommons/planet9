@@ -1,0 +1,16 @@
+[package]
+name = "p9-2026-apsidal-clustering"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Siraj, Chyba & Tremaine (2026) 'Measuring Apsidal Clustering'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2025-clustering = { path = "../p9-2025-clustering" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
