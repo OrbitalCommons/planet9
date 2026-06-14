@@ -1,0 +1,13 @@
+[package]
+name = "p9-2025-new-discoveries"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of two 2025 distant-TNO discoveries (Cheng et al. 2017 OF201; Chen et al. Ammonite / 2023 KQ14) that stress the Planet Nine clustering hypothesis"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
