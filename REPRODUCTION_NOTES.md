@@ -89,7 +89,7 @@ from 1/12 to 1/9.5. If those literals trace to a published table, the source sho
 - See: `crates/p9-2025-perturbation/src/hansen.rs` (cross-validation tests against
   `p9_core::analysis::hansen::hansen_coefficient`).
 
-### 9b. p9-2016-cassini-ranging — favored true anomaly 135.5° (proxy) vs published 117.8°
+### 9. p9-2016-cassini-ranging — favored true anomaly 135.5° (proxy) vs published 117.8°
 
 The crate computes the real differential (tidal) acceleration a 10 M⊕ P9 on the Brown & Batygin
 orbit (Fienga Table 1: a=700, e=0.6, i=30°, ω=150°, Ω=113°) exerts on Saturn vs the Sun, then
@@ -113,7 +113,7 @@ outbound arc, documented at the function site.
   `perihelion_arc_is_excluded_relative_to_favored_zone`, `postfit_curve_has_two_excluded_lobes`,
   mass/distance scaling tests).
 
-### 9. p9-2021-orbit — full inference pipeline: Reduced scale validates machinery, not the posterior
+### 10. p9-2021-orbit — full inference pipeline: Reduced scale validates machinery, not the posterior
 
 The paper's models 1–4 are now implemented from scratch (issue #12): N-body simulation grid
 over (m₉, a₉, e₉, i₉) (`sim_grid.rs`), conditional KDE likelihood of the 10 vetted ETNOs with
@@ -150,7 +150,7 @@ the P9 orientation angles (ϖ₉, Ω₉) profiled out of the KDE likelihood over
 rather than sampled as MCMC dimensions. The cluster-scattering Fréchet prior is not
 implemented (uniform prior only; needs the Batygin & Brown 2021b scattering suite).
 
-### 10. p9-2019-selfgrav-disk — forced apse aligned (Δϖ = 0), not anti-aligned
+### 11. p9-2019-selfgrav-disk — forced apse aligned (Δϖ = 0), not anti-aligned
 
 Sefilian & Touma (2019) show a massive eccentric apsidally-aligned debris disk shepherds ETNOs
 into apsidal confinement. The Laplace–Lagrange operator built here (test particle vs a set of
@@ -167,7 +167,8 @@ faster. The softening is a labelled disk-thickness parameter.
 - Pinned: `crates/p9-2019-selfgrav-disk/src/secular.rs` (linear-mass scaling, period order of
   magnitude, libration vs shepherding); cross-checked against `p9_core::analysis::secular`
   numerical ring averaging in `cross_check.rs` (analytic A within 5%).
-### 11. p9-2019-ossos-scattering — scattering/detached boundary and the P9 lift are analytic/secular, not N-body
+
+### 12. p9-2019-ossos-scattering — scattering/detached boundary and the P9 lift are analytic/secular, not N-body
 
 Kaib et al. (2019, OSSOS XV) constrain P9 with the observed actively-scattering TNO population.
 This crate reproduces the two pieces of physics from p9-core machinery rather than an N-body
@@ -202,7 +203,8 @@ suite, with documented reductions:
   Pinned: `crates/p9-2019-ossos-scattering/src/planet_nine.rs` (rate ∝ GM₉ to 1e-6; lift > 0 for
   real P9, ≈ 0 for none; heavier ≥ lighter), `src/population.rs` (P9 raises detached fraction by
   a non-zero amount > 0.5; heavier P9 detaches ≥ as many).
-### 12. p9-2018-wise-search — at W1 (3.4 µm) a cold P9 is detected by *reflected* light, not thermal emission
+
+### 13. p9-2018-wise-search — at W1 (3.4 µm) a cold P9 is detected by *reflected* light, not thermal emission
 
 Meisner et al. (2018) frame the WISE/NEOWISE shift-and-stack search as a thermal-infrared one.
 Our forward model exposes a physics reality that the "thermal-IR" label obscures at W1: at the
@@ -219,7 +221,8 @@ W2 4.6 µm band is more thermally favorable; the shared survey table pins the de
   monotonically with assumed mass as required.
 - Pinned: `crates/p9-2018-wise-search/src/thermal_model.rs` (Planck/reflected model, W1 zero
   point 309.54 Jy), `detectability.rs` (finite max-distance bisection), `exclusion.rs`.
-### 13. p9-2025-planet-y — warp amplitude: sub-degree for most of the allowed box, "a few degrees" only at the Earth-mass/close corner
+
+### 14. p9-2025-planet-y — warp amplitude: sub-degree for most of the allowed box, "a few degrees" only at the Earth-mass/close corner
 
 The forced-inclination warp in the 50–80 AU band is computed from the linear Laplace-plane
 balance `tan(2 i_forced) = A_out sin(2 i_Y) / (A_in + A_out cos(2 i_Y))`, with `A_in` the
@@ -247,7 +250,8 @@ tuned; the band, mass range, and a_Y range are the paper's labelled constants in
   `test_warp_amplitude_few_degrees_for_earth_mass` (2–6° for 1 M⊕ @ 100 AU),
   `test_warp_amplitude_scales_with_mass` (∝ m_Y), `test_outer_dominates_near_planet_y`
   (crossover near a_Y, not in-band), `test_no_perturber_plane_stays_flat`.
-### 14. p9-2016-sheppard-etnos — new-object ω clustering is a 2-object corroboration, not a standalone test
+
+### 15. p9-2016-sheppard-etnos — new-object ω clustering is a 2-object corroboration, not a standalone test
 
 Applying the paper's own clustering thresholds (a > 150 AU and q > 35 AU, with the outer Oort
 cloud body 2014 FE72 treated separately) to the six newly discovered objects leaves only two in
