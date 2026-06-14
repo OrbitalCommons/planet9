@@ -219,6 +219,34 @@ W2 4.6 µm band is more thermally favorable; the shared survey table pins the de
   monotonically with assumed mass as required.
 - Pinned: `crates/p9-2018-wise-search/src/thermal_model.rs` (Planck/reflected model, W1 zero
   point 309.54 Jy), `detectability.rs` (finite max-distance bisection), `exclusion.rs`.
+### 13. p9-2025-planet-y — warp amplitude: sub-degree for most of the allowed box, "a few degrees" only at the Earth-mass/close corner
+
+The forced-inclination warp in the 50–80 AU band is computed from the linear Laplace-plane
+balance `tan(2 i_forced) = A_out sin(2 i_Y) / (A_in + A_out cos(2 i_Y))`, with `A_in` the
+giant-planet quadrupole (reusing `p9_core::forces::j2_secular::effective_j2` for JSUN) and
+`A_out` Planet Y's exterior ring torque (`¼ n (m_Y/M) α² b_{3/2}^{(1)}(α)`). Across the
+published parameter box the warp amplitude (tilt rise from 50→80 AU) is:
+
+| m_Y (M⊕) | a_Y (AU) | warp amplitude |
+|----------|----------|----------------|
+| 0.05     | 100      | 0.28°          |
+| 0.3      | 150      | 0.13°          |
+| 1.0      | 200      | 0.13°          |
+| 1.0      | 100      | 3.6°           |
+
+So the paper's "few-degree" warp is reached only at the **Earth-mass, 100 AU corner**; a
+Mercury-mass object, or an Earth-mass one out at 200 AU, warps the band by only a few tenths
+of a degree. This is the honest reason the data signal is *tentative*. It also means the
+torque crossover (`A_in = A_out`) sits at ≈ 95–180 AU — *exterior* to the 50–80 AU band — so
+within the band the warp is the small rising shoulder of the transition, not full alignment
+with Planet Y's plane. The forced tilt is strictly bounded by i_Y. No free parameter was
+tuned; the band, mass range, and a_Y range are the paper's labelled constants in
+`laplace_plane::published`.
+- Pinned: `crates/p9-2025-planet-y/src/laplace_plane.rs` —
+  `test_warp_feature_in_50_80_band` (0.01–1.0° for 0.3 M⊕ @ 150 AU),
+  `test_warp_amplitude_few_degrees_for_earth_mass` (2–6° for 1 M⊕ @ 100 AU),
+  `test_warp_amplitude_scales_with_mass` (∝ m_Y), `test_outer_dominates_near_planet_y`
+  (crossover near a_Y, not in-band), `test_no_perturber_plane_stays_flat`.
 
 ---
 
