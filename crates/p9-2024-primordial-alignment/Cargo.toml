@@ -1,0 +1,13 @@
+[package]
+name = "p9-2024-primordial-alignment"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Huang & Gladman (2024) 'Primordial Orbital Alignment of Sednoids' (arXiv:2310.20614)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

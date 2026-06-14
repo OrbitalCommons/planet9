@@ -22,6 +22,7 @@ members = [
     "crates/p9-2024-siraj-orbit",
     "crates/p9-2024-oort-selfgrav",
     "crates/p9-2024-panstarrs",
+    "crates/p9-2024-primordial-alignment",
     "crates/p9-2025-clustering",
     "crates/p9-2026-apsidal-clustering",
     "crates/p9-2025-iras-akari",
