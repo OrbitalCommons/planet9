@@ -15,6 +15,7 @@
 //! rendering of numerical outputs of the reproduced papers — nothing is drawn
 //! that the Rust side did not compute.
 
+pub mod parallax;
 pub mod schema;
 pub mod skymap;
 pub mod studies;

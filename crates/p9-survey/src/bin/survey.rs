@@ -71,6 +71,29 @@ fn main() -> ExitCode {
         );
     }
 
+    // Parallax channel: LEO (per-orbit) vs Earth's annual baseline, per study.
+    use p9_survey::parallax::{annual_parallax_arcsec, leo_parallax_arcsec, LEO_ALTITUDE_KM};
+    use p9_survey::telescope::JBT_PLATE_SCALE_ARCSEC_PER_PX as PXSCALE;
+    eprintln!(
+        "\n  parallax of P9 at its median distance — LEO ({:.0} km, per-orbit) vs annual (Earth 2 AU):",
+        LEO_ALTITUDE_KM
+    );
+    for s in &dataset.studies {
+        let d = s.dist_median_au;
+        let leo = leo_parallax_arcsec(LEO_ALTITUDE_KM, d);
+        let ann = annual_parallax_arcsec(d);
+        eprintln!(
+            "  {:44}  d={:4.0}AU  LEO {:.3}″ ({:.2} px)  | annual {:5.0}″ ({:.1}′)  | annual/LEO {:.0}×",
+            s.solution.name,
+            d,
+            leo,
+            leo / PXSCALE,
+            ann,
+            ann / 60.0,
+            ann / leo,
+        );
+    }
+
     let json = match serde_json::to_string_pretty(&dataset) {
         Ok(j) => j,
         Err(e) => return fail(&format!("serialize: {e}")),
