@@ -1,0 +1,14 @@
+[package]
+name = "p9-2025-planet-y"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Siraj et al. (2025) 'Planet Y' (arXiv:2508.14156): a Mercury-to-Earth-mass perturber warping the Kuiper belt's mean plane"
+
+[dependencies]
+nalgebra.workspace = true
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
