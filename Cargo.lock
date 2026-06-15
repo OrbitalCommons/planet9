@@ -1233,6 +1233,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-holman-payne"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-2016-cassini-ranging",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2016-inclination-instability"
 version = "0.1.0"
 dependencies = [
