@@ -1243,6 +1243,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-fortney-thermal"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2016-holman-payne"
 version = "0.1.0"
 dependencies = [
@@ -1284,6 +1294,16 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "p9-2026-iorio-precession",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2016-linder-evolution"
+version = "0.1.0"
+dependencies = [
+ "approx",
  "p9-core",
  "serde",
  "serde_json",
@@ -1601,12 +1621,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2020-tess-shiftstack"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-2025-stacking",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2021-act-mm"
 version = "0.1.0"
 dependencies = [
  "approx",
  "p9-2018-wise-search",
  "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2021-des-catalog"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
  "serde",
  "serde_json",
 ]
