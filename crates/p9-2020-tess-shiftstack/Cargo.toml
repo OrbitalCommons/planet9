@@ -1,0 +1,14 @@
+[package]
+name = "p9-2020-tess-shiftstack"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Rice & Laughlin (2020) 'Exploring Trans-Neptunian Space with TESS: A Targeted Shift-Stacking Search for Planet Nine and distant TNOs' (arXiv:2010.13791) — TESS shift-and-stack depth gain, frame counts, trial-track grid, and a Planet Nine reach comparison"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2025-stacking = { path = "../p9-2025-stacking" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
