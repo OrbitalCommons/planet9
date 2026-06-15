@@ -608,3 +608,19 @@ derived quantities:
   galactic pole in `p9-core/src/forces/galactic_tide.rs` were deleted in favor of it.
 - No shared simulation snapshot driver in p9-core; the 2016-crate run loops were harmonized in
   place but remain three copies.
+
+### 24. p9-2025-stacking — analytic matched-filter / metric reproduction, not a pixel pipeline
+
+Geringer-Sameth et al. (2025) build a full image-stacking search with an orbit-
+parameter Fisher metric. This crate reproduces the *analytic backbone*: the √N
+matched-filter SNR and 1.25·log10(N) depth gain, the leading-order rate-error
+metric g_vv = T²/(24θ²) (cross-checked against the exact Gaussian-overlap stack
+to ~1%), the resulting trial-orbit count (~10^8–10^9 for a ZTF six-year
+baseline), and the logarithmic look-elsewhere penalty (~6.5σ / ~0.3 mag for 10^9
+trials). Reductions, documented and pinned: the metric is the linear on-sky
+(rate-only) sub-block rather than the full 5–6-element bound-orbit metric, and
+the ~27th-mag reach is the √N law extrapolated to ~1.6e5 frames rather than a
+pixel-level coadd. The headline scalings and the stacking-gain-≫-trials-penalty
+conclusion reproduce; absolute trial counts depend on the adopted rate range /
+PSF / SNR tolerance, kept as labelled inputs.
+- Pinned: crates/p9-2025-stacking/src/{matched_filter,orbit_metric,significance}.rs

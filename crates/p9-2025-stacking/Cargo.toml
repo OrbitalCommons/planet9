@@ -1,0 +1,15 @@
+[package]
+name = "p9-2025-stacking"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Geringer-Sameth, Golovich & Iwabuchi (2025) 'Multi-year stacking searches for solar system bodies' — matched-filter digital tracking, the orbit-parameter metric, and the look-elsewhere trials penalty"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
