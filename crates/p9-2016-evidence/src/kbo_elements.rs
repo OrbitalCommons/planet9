@@ -1,14 +1,10 @@
-//! Orbital elements for the 6 dynamically stable KBOs from Batygin & Brown (2016),
-//! the headline joint clustering statistic, and clone-stability screening.
+//! Clone-stability screening and the headline joint clustering statistic for
+//! the 6 dynamically stable KBOs from Batygin & Brown (2016).
 //!
-//! These are the objects with q > 30 AU, a > 150 AU the paper argues remain
-//! dynamically stable over 4 Gyr with the four giant planets:
-//!   Sedna, 2012 VP113, 2004 VN112, 2010 GB174, 2000 CR105, 2010 VZ98
-//!
-//! Elements are osculating, heliocentric, ecliptic J2000.0 from JPL SBDB
-//! (epoch ~2016). The struct is data-only: published orbit-fit covariances
-//! are not transcribed here; clone generation uses the documented assumed
-//! dispersions below.
+//! The KBO table itself (`KboRecord`, `stable_kbos`, `longitude_of_perihelion`)
+//! now lives in [`p9_core::data::stable_kbos`] and is re-exported here for
+//! convenience. Clone generation uses the documented assumed dispersions
+//! below.
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
 use p9_core::constants::*;
@@ -16,92 +12,7 @@ use p9_core::forces::ExtraForce;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, SimConfig};
 
-/// A named KBO with its orbital elements.
-#[derive(Debug, Clone)]
-pub struct KboRecord {
-    pub name: &'static str,
-    pub designation: &'static str,
-    pub elements: OrbitalElements,
-}
-
-/// The 6 dynamically stable KBOs from Batygin & Brown (2016) Table 1.
-/// Elements from JPL SBDB, epoch ~2016.
-pub fn stable_kbos() -> Vec<KboRecord> {
-    vec![
-        KboRecord {
-            name: "Sedna",
-            designation: "2003 VB12",
-            elements: OrbitalElements {
-                a: 506.8,
-                e: 0.8496,
-                i: 11.93 * DEG2RAD,
-                omega: 311.46 * DEG2RAD,
-                omega_big: 144.51 * DEG2RAD,
-                mean_anomaly: 358.12 * DEG2RAD,
-            },
-        },
-        KboRecord {
-            name: "2012 VP113",
-            designation: "2012 VP113",
-            elements: OrbitalElements {
-                a: 261.0,
-                e: 0.6886,
-                i: 24.05 * DEG2RAD,
-                omega: 293.78 * DEG2RAD,
-                omega_big: 90.81 * DEG2RAD,
-                mean_anomaly: 5.63 * DEG2RAD,
-            },
-        },
-        KboRecord {
-            name: "2004 VN112",
-            designation: "2004 VN112",
-            elements: OrbitalElements {
-                a: 327.5,
-                e: 0.8527,
-                i: 25.56 * DEG2RAD,
-                omega: 327.15 * DEG2RAD,
-                omega_big: 66.01 * DEG2RAD,
-                mean_anomaly: 1.71 * DEG2RAD,
-            },
-        },
-        KboRecord {
-            name: "2010 GB174",
-            designation: "2010 GB174",
-            elements: OrbitalElements {
-                a: 371.7,
-                e: 0.8627,
-                i: 21.54 * DEG2RAD,
-                omega: 347.77 * DEG2RAD,
-                omega_big: 130.59 * DEG2RAD,
-                mean_anomaly: 2.81 * DEG2RAD,
-            },
-        },
-        KboRecord {
-            name: "2000 CR105",
-            designation: "2000 CR105",
-            elements: OrbitalElements {
-                a: 228.8,
-                e: 0.8024,
-                i: 22.75 * DEG2RAD,
-                omega: 316.74 * DEG2RAD,
-                omega_big: 128.28 * DEG2RAD,
-                mean_anomaly: 6.27 * DEG2RAD,
-            },
-        },
-        KboRecord {
-            name: "2010 VZ98",
-            designation: "2010 VZ98",
-            elements: OrbitalElements {
-                a: 153.2,
-                e: 0.7706,
-                i: 4.51 * DEG2RAD,
-                omega: 313.90 * DEG2RAD,
-                omega_big: 117.39 * DEG2RAD,
-                mean_anomaly: 7.97 * DEG2RAD,
-            },
-        },
-    ]
-}
+pub use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos, KboRecord};
 
 /// Assumed 1σ dispersions for clone generation. These are *assumptions*
 /// standing in for the per-object orbit-fit covariances (not transcribed
@@ -228,11 +139,6 @@ pub fn clone_stability_screen(
     }
 }
 
-/// Compute longitude of perihelion for an element set.
-pub fn longitude_of_perihelion(elem: &OrbitalElements) -> f64 {
-    (elem.omega + elem.omega_big).rem_euclid(TWO_PI)
-}
-
 /// Orbital pole unit vector in ecliptic coordinates.
 fn pole_vector(elem: &OrbitalElements) -> [f64; 3] {
     let (si, ci) = (elem.i.sin(), elem.i.cos());
@@ -357,43 +263,6 @@ pub fn joint_clustering_significance(n_trials: usize, seed: u64) -> JointCluster
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_six_stable_kbos() {
-        let kbos = stable_kbos();
-        assert_eq!(kbos.len(), 6);
-
-        for kbo in &kbos {
-            assert!(kbo.elements.a > 150.0, "{} a too small", kbo.name);
-            assert!(
-                kbo.elements.e > 0.0 && kbo.elements.e < 1.0,
-                "{} e invalid",
-                kbo.name
-            );
-            assert!(
-                kbo.elements.perihelion() > 30.0,
-                "{} q = {:.1} should be > 30 AU",
-                kbo.name,
-                kbo.elements.perihelion()
-            );
-        }
-    }
-
-    #[test]
-    fn test_perihelion_clustering() {
-        let kbos = stable_kbos();
-
-        // All 6 KBOs should have ω near 318 deg (between 290-350 deg)
-        for kbo in &kbos {
-            let omega_deg = kbo.elements.omega / DEG2RAD;
-            assert!(
-                omega_deg > 280.0 && omega_deg < 360.0,
-                "{}: ω = {:.1}° should cluster near 318°",
-                kbo.name,
-                omega_deg
-            );
-        }
-    }
 
     #[test]
     fn test_observed_stats_are_circular() {

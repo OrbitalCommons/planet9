@@ -9,7 +9,7 @@
 //! Circular statistics (R̄, Rayleigh p-value with the small-n correction)
 //! come from `p9_core::analysis::circular`; the observed-sample comparison
 //! values come from the vetted ETNO table (`p9_core::data::etno`) and the
-//! 6 stable B&B 2016 KBOs (`p9_2016_evidence::kbo_elements`).
+//! 6 stable B&B 2016 KBOs (`p9_core::data::stable_kbos`).
 
 use std::f64::consts::PI;
 
@@ -84,9 +84,9 @@ pub fn evaluate_clustering(
 /// headline "ϖ = 71° ± 16°" corresponds to a tighter dispersion than the
 /// full sample's circular statistics give).
 pub fn observed_six_kbo_r_bar() -> f64 {
-    let varpis: Vec<f64> = p9_2016_evidence::kbo_elements::stable_kbos()
+    let varpis: Vec<f64> = p9_core::data::stable_kbos::stable_kbos()
         .iter()
-        .map(|k| p9_2016_evidence::kbo_elements::longitude_of_perihelion(&k.elements))
+        .map(|k| p9_core::data::stable_kbos::longitude_of_perihelion(&k.elements))
         .collect();
     mean_resultant_length(&varpis)
 }

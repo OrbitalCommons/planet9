@@ -9,12 +9,13 @@
 //! (paper says ~320 per mass × 5 masses ≈ 1600; they may skip some unphysical)
 //!
 //! Each grid point is evaluated by running the planar scattered-disk
-//! simulation from p9-2016-evidence (giant planets absorbed into the
-//! J2-averaged solar quadrupole, P9 integrated directly) and comparing the
-//! surviving population's Δϖ confinement against the observed samples.
+//! simulation from `p9_core::initial_conditions::scattered_disk_sim` (giant
+//! planets absorbed into the J2-averaged solar quadrupole, P9 integrated
+//! directly) and comparing the surviving population's Δϖ confinement against
+//! the observed samples.
 
-use p9_2016_evidence::scattered_disk_sim::{run_scattered_disk, DiskSimConfig};
 use p9_core::constants::*;
+use p9_core::initial_conditions::scattered_disk_sim::{run_scattered_disk, DiskSimConfig};
 use p9_core::types::P9Params;
 use rayon::prelude::*;
 
