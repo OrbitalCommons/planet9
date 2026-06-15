@@ -39,11 +39,11 @@ use nalgebra::Vector3;
 use p9_2025_iras_akari::orbital_constraints::{
     derive_constraints, CandidatePair, TwoEpochConstraints,
 };
-use p9_2025_iras_akari::proper_motion::{
-    annual_proper_motion_circular, implied_distance_circular, transverse_rate_rad_day,
-};
 use p9_2025_iras_akari::survey_model::{AkariFisSurvey, IrasSurvey};
 use p9_core::constants::RAD2DEG;
+use p9_core::coords::candidate_pair::{
+    annual_proper_motion_circular, implied_distance_circular, transverse_rate_rad_day,
+};
 use p9_core::coords::observer::{EarthProvider, EarthState, Time, Timescale};
 
 /// Arcminutes per radian.
@@ -104,7 +104,7 @@ pub fn max_parallax_separation_arcmin(d_au: f64, e1: &Vector3<f64>, e2: &Vector3
 /// `d_au` on orbit (`a_au`, `e`), starting at ecliptic longitude `lambda1`,
 /// observed from Earth states `e1`/`e2` separated by `baseline_days`. Combines
 /// parallax (Earth geometry) and proper motion (heliocentric transverse rate
-/// reused from `p9-2025-iras-akari`) in the ecliptic plane.
+/// reused from `p9-core`) in the ecliptic plane.
 fn bound_object_separation_arcmin(
     d_au: f64,
     a_au: f64,
@@ -215,7 +215,7 @@ pub fn check(earth: &mut impl EarthProvider, d_au: f64, e_max: f64) -> Consisten
 
 /// Implied heliocentric distance (AU) from the candidate's proper motion
 /// under the circular-orbit, parallax-free inversion — the *lower bound* on
-/// distance. Reuses the `p9-2025-iras-akari` shared inversion.
+/// distance. Reuses the `p9-core` shared inversion.
 pub fn implied_circular_distance() -> f64 {
     implied_distance_circular(candidate_constraints().proper_motion_arcmin_yr)
 }

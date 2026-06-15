@@ -14,10 +14,10 @@
 //! the opposite side of its orbit, so the apparent position swings by the
 //! full *diameter* `2/d` rad. The proper motion is the heliocentric
 //! transverse orbital rate `µ = √(GM·a(1−e²))/r²` integrated over the
-//! interval — reused from `p9_2025_iras_akari::proper_motion`.
+//! interval — reused from `p9_core::coords::candidate_pair`.
 
-use p9_2025_iras_akari::proper_motion::transverse_rate_arcmin_yr;
 use p9_core::constants::RAD2DEG;
+use p9_core::coords::candidate_pair::transverse_rate_arcmin_yr;
 
 /// Arcminutes per radian.
 const ARCMIN_PER_RAD: f64 = RAD2DEG * 60.0;
