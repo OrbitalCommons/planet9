@@ -1,0 +1,14 @@
+[package]
+name = "p9-2025-parallax-search"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Socas-Navarro & Trujillo (2025): a targeted parallax search for Planet Nine"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-survey = { path = "../p9-survey" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
