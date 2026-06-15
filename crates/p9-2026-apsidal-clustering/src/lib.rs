@@ -20,9 +20,9 @@
 //! by adding 4 less-aligned stable objects DROPS the significance to ≈1.9σ —
 //! the SAME estimator on a larger, diluted sample yields lower significance.
 //!
-//! Circular summary statistics (circular mean, mean resultant length) come
-//! from `p9_core::analysis::circular`; the von Mises helpers (`bessel_i0`,
-//! `kappa_from_r_bar`) are reused from the sibling `p9-2025-clustering` crate.
+//! Circular summary statistics (circular mean, mean resultant length) and the
+//! von Mises helpers (`bessel_i0`, `kappa_from_r_bar`) come from
+//! `p9_core::analysis::circular`.
 
 pub mod estimator;
 pub mod samples;

@@ -1986,7 +1986,6 @@ name = "p9-2026-apsidal-clustering"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2025-clustering",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",

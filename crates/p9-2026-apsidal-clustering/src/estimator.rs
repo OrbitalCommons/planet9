@@ -16,8 +16,9 @@
 //! degrees of freedom (the two free parameters µ, κ of the von Mises model);
 //! [`crate::significance`] performs the χ² → p → σ conversion.
 
-use p9_2025_clustering::clustering::{bessel_i0, kappa_from_r_bar};
-use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
+use p9_core::analysis::circular::{
+    bessel_i0, circular_mean, kappa_from_r_bar, mean_resultant_length,
+};
 use serde::{Deserialize, Serialize};
 
 /// Maximum-likelihood von Mises fit of a ϖ sample plus the resulting

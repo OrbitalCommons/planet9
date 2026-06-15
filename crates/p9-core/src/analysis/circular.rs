@@ -133,6 +133,48 @@ pub fn wrap_to_pi(angle: f64) -> f64 {
     a
 }
 
+/// Modified Bessel function I_0(x) approximation.
+///
+/// Uses polynomial approximation valid for all x >= 0.
+pub fn bessel_i0(x: f64) -> f64 {
+    let ax = x.abs();
+    if ax < 3.75 {
+        let t = (x / 3.75).powi(2);
+        1.0 + t
+            * (3.5156229
+                + t * (3.0899424
+                    + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))))
+    } else {
+        let t = 3.75 / ax;
+        (ax.exp() / ax.sqrt())
+            * (0.39894228
+                + t * (0.01328592
+                    + t * (0.00225319
+                        + t * (-0.00157565
+                            + t * (0.00916281
+                                + t * (-0.02057706
+                                    + t * (0.02635537 + t * (-0.01647633 + t * 0.00392377))))))))
+    }
+}
+
+/// Maximum-likelihood κ from the mean resultant length R̄
+/// (Mardia & Jupp 2000 piecewise approximation of A⁻¹).
+pub fn kappa_from_r_bar(r_bar: f64) -> f64 {
+    let kappa = if r_bar < 0.53 {
+        2.0 * r_bar + r_bar.powi(3) + 5.0 * r_bar.powi(5) / 6.0
+    } else if r_bar < 0.85 {
+        -0.4 + 1.39 * r_bar + 0.43 / (1.0 - r_bar)
+    } else {
+        let denom = r_bar.powi(3) - 4.0 * r_bar.powi(2) + 3.0 * r_bar;
+        if denom.abs() < 1e-10 {
+            1000.0 // Very concentrated distribution
+        } else {
+            1.0 / denom
+        }
+    };
+    kappa.clamp(0.0, 1000.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -218,5 +260,24 @@ mod tests {
         assert_relative_eq!(wrap_to_pi(3.0 * PI), PI, epsilon = 1e-12);
         assert_relative_eq!(wrap_to_pi(-0.5), -0.5, epsilon = 1e-12);
         assert_relative_eq!(wrap_to_pi(TWO_PI + 0.5), 0.5, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn test_bessel_i0_at_zero() {
+        assert!((bessel_i0(0.0) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_bessel_i0_positive() {
+        for x in [0.5, 1.0, 2.0, 5.0, 10.0] {
+            assert!(bessel_i0(x) > 0.0, "I_0({}) should be positive", x);
+        }
+    }
+
+    #[test]
+    fn test_kappa_from_r_bar_monotone() {
+        assert!(kappa_from_r_bar(0.2) < kappa_from_r_bar(0.6));
+        assert!(kappa_from_r_bar(0.6) < kappa_from_r_bar(0.9));
+        assert!(kappa_from_r_bar(0.0) < 1e-9);
     }
 }
