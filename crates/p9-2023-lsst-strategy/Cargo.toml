@@ -1,0 +1,17 @@
+[package]
+name = "p9-2023-lsst-strategy"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Schwamb et al. (2023): how the LSST observing strategy (depth, visits-for-linking, footprint) drives the discoverable fraction of a Planet Nine population"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-survey = { path = "../p9-survey" }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+p9-2021-orbit = { path = "../p9-2021-orbit" }

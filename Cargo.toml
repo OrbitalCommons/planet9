@@ -55,6 +55,7 @@ members = [
     "crates/p9-2022-des",
     "crates/p9-2022-uranus-tilt",
     "crates/p9-2023-mond-efe",
+    "crates/p9-2023-lsst-strategy",
     "crates/p9-2024-neptune-crossing",
     "crates/p9-2024-siraj-orbit",
     "crates/p9-2024-oort-selfgrav",
