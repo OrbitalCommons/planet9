@@ -17,6 +17,7 @@
 
 pub mod parallax;
 pub mod plan;
+pub mod refine;
 pub mod schema;
 pub mod skymap;
 pub mod studies;
