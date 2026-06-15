@@ -3,9 +3,10 @@
 //! Run with: `cargo run -p p9-2016-cassini-ranging --example range_curve`
 
 use p9_2016_cassini_ranging::{
-    brown_batygin_orbit, favored_true_anomaly, geometry::p9_position_at_true_anomaly,
-    perturbation::prefit_amplitude, range_perturbation_amplitude,
+    favored_true_anomaly, perturbation::prefit_amplitude, range_perturbation_amplitude,
 };
+use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
+use p9_core::types::position_at_true_anomaly as p9_position_at_true_anomaly;
 
 fn main() {
     let p = brown_batygin_orbit();

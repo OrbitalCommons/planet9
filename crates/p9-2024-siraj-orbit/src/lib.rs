@@ -21,7 +21,8 @@
 //! 4. [`tension`] — the incompatibility metric (separation in σ) between the
 //!    Siraj-2024 MAP and the Brown & Batygin 2021 point.
 //!
-//! Published reference values live in [`reference`] as labelled constants.
+//! Published reference values live in
+//! [`p9_core::data::ephemeris_constraint`] as labelled constants.
 //!
 //! ## Residuals (documented honestly)
 //!
@@ -37,7 +38,6 @@
 pub mod confinement;
 pub mod forcing;
 pub mod posterior;
-pub mod reference;
 pub mod tension;
 
 use posterior::{calibrated_posterior, OrbitPoint};
@@ -64,11 +64,11 @@ pub fn infer_from_etnos(angles: &[f64]) -> OrbitPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reference::{
+    use crate::tension::tension_sigma;
+    use p9_core::data::ephemeris_constraint::{
         SIRAJ_2024_A_AU, SIRAJ_2024_A_SIGMA_AU, SIRAJ_2024_I_DEG, SIRAJ_2024_I_SIGMA_DEG,
         SIRAJ_2024_MASS_EARTH, SIRAJ_2024_MASS_SIGMA_EARTH,
     };
-    use crate::tension::tension_sigma;
     use p9_core::data::etno::longitudes_of_perihelion;
     use p9_core::types::P9Params;
 

@@ -5,11 +5,11 @@
 //! multi-year surveys. Three pieces of its method are reproduced here from
 //! first principles:
 //!
-//! - [`matched_filter`] — the matched-filter stack: co-adding N background-
+//! - [`p9_core::analysis::stacking::matched_filter`] — the matched-filter stack: co-adding N background-
 //!   limited frames along the correct track grows the signal-to-noise as √N
 //!   (limiting magnitude as 1.25·log₁₀N), turning a ~20.5-mag single ZTF
 //!   exposure into a mid-20s / ~27-mag effective depth.
-//! - [`orbit_metric`] — the heart of the paper: a trial orbit that misses the
+//! - [`p9_core::analysis::stacking::orbit_metric`] — the heart of the paper: a trial orbit that misses the
 //!   true track loses SNR *quadratically* in the parameter error, defining a
 //!   Fisher **metric** on orbit space. The metric sets the grid spacing (and
 //!   hence the **number of trial orbits**) needed to keep the SNR loss below a
@@ -25,8 +25,6 @@
 //! All computed quantities are pinned in seeded tests; the paper's headline
 //! claims (ZTF: thousands of images over six years, ~10⁹ trial orbits, ~27th
 //! magnitude reach) are kept as labelled reference constants.
-
-pub use p9_core::analysis::stacking::{matched_filter, orbit_metric};
 
 pub mod significance;
 

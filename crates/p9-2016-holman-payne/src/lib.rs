@@ -49,23 +49,6 @@ pub mod exclusion;
 pub mod signal;
 pub mod sky;
 
-use p9_core::types::P9Params;
-
-// The two papers analyze the same Brown & Batygin (2016) reference orbit and
-// the same Sun–Saturn geometry; both now live in `p9_core`. The range-residual
-// physics is still reused from the sibling `p9_2016_cassini_ranging` crate.
-pub use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
-pub use p9_core::types::{
-    position_at_true_anomaly as p9_position_at_true_anomaly, OrbitGeometry as P9Geometry,
-};
-
-/// Planet Nine on the Brown & Batygin (2016) orbit used throughout this paper.
-/// Alias of the core [`brown_batygin_orbit`]; provided so callers can build the
-/// orbit without naming core.
-pub fn holman_payne_orbit() -> P9Params {
-    brown_batygin_orbit()
-}
-
 /// Published reference values from Holman & Payne (2016), kept as labelled
 /// constants (NOT used to derive any computed quantity).
 pub mod published {

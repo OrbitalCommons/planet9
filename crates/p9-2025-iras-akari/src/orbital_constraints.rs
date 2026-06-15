@@ -12,8 +12,8 @@
 //! - Implied heliocentric distance (given assumed orbit shape)
 //! - Constraints on (a, e) pairs consistent with the observed motion
 
-use crate::proper_motion;
 use crate::survey_model::angular_separation_arcmin;
+use p9_core::coords::candidate_pair;
 
 /// The candidate pair from Phan et al. (2025) Table 2.
 pub struct CandidatePair {
@@ -129,9 +129,9 @@ pub fn derive_constraints(pair: &CandidatePair) -> TwoEpochConstraints {
 
 /// Invert the circular-orbit, parallax-free proper motion to get the
 /// implied (lower-bound) distance. Delegates to the single shared
-/// implementation in `proper_motion`.
+/// implementation in `p9_core::coords::candidate_pair`.
 pub fn implied_distance_circular(proper_motion_arcmin_yr: f64) -> f64 {
-    proper_motion::implied_distance_circular(proper_motion_arcmin_yr)
+    candidate_pair::implied_distance_circular(proper_motion_arcmin_yr)
 }
 
 /// Explore the (a, e) parameter space consistent with the observed proper
@@ -156,7 +156,7 @@ pub fn explore_orbit_space(
         .map(|&a| {
             let rate_at = |e: f64| {
                 let r = a * (1.0 - e);
-                proper_motion::transverse_rate_arcmin_yr(r, a, e)
+                candidate_pair::transverse_rate_arcmin_yr(r, a, e)
             };
             const E_LIM: f64 = 0.95;
             if rate_at(0.0) > mu_obs || rate_at(E_LIM) < mu_obs {
@@ -251,7 +251,7 @@ mod tests {
         );
         // The geocentric maximum-distance inversion lands in the paper's
         // 500–700 AU range.
-        let d_geo = proper_motion::implied_distance(c.separation_arcmin, c.baseline_years);
+        let d_geo = candidate_pair::implied_distance(c.separation_arcmin, c.baseline_years);
         assert!(
             d_geo > 500.0 && d_geo < 720.0,
             "implied geocentric distance = {d_geo:.0} AU"
@@ -275,8 +275,8 @@ mod tests {
         // still inside the paper's 500-700(+) AU search interpretation.
         let pair = CandidatePair::paper_candidate();
         let c = derive_constraints(&pair);
-        let d_eph = proper_motion::implied_distance_ephemeris(&mut eph, c.separation_arcmin);
-        let d_fallback = proper_motion::implied_distance(c.separation_arcmin, c.baseline_years);
+        let d_eph = crate::proper_motion::implied_distance_ephemeris(&mut eph, c.separation_arcmin);
+        let d_fallback = candidate_pair::implied_distance(c.separation_arcmin, c.baseline_years);
         assert!(
             d_eph > 500.0 && d_eph < 720.0,
             "ephemeris implied distance = {d_eph:.0} AU"
@@ -319,7 +319,7 @@ mod tests {
             a700.r_au
         );
         // Round trip: the solved (r, a, e) reproduces the observed rate.
-        let mu = proper_motion::transverse_rate_arcmin_yr(
+        let mu = candidate_pair::transverse_rate_arcmin_yr(
             a700.r_au,
             a700.a_au,
             a700.implied_eccentricity,

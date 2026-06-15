@@ -37,7 +37,7 @@ use p9_core::initial_conditions::planets::saturn_j2000;
 use p9_core::integrator::kepler_step::kepler_drift;
 use p9_core::types::P9Params;
 
-use crate::geometry::p9_position_at_true_anomaly;
+use p9_core::types::position_at_true_anomaly as p9_position_at_true_anomaly;
 
 /// Number of time samples along the Cassini Saturn arc.
 const SATURN_PHASE_SAMPLES: usize = 64;
@@ -357,7 +357,9 @@ pub fn range_perturbation_curve(params: &P9Params, n: usize) -> RangePerturbatio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{brown_batygin_orbit, published};
+    use p9_core::data::ephemeris_constraint::{
+        brown_batygin_orbit, PREFERRED_TRUE_ANOMALY_DEG, TRUE_ANOMALY_TOLERANCE_DEG,
+    };
 
     #[test]
     fn differential_acceleration_is_tidal_order() {
@@ -383,12 +385,12 @@ mod tests {
         // zone; it should land within tolerance of the published v = 117.8°.
         let p = brown_batygin_orbit();
         let nu_deg = favored_true_anomaly(&p, 1440).to_degrees();
-        let diff = (nu_deg - published::PREFERRED_TRUE_ANOMALY_DEG).abs();
+        let diff = (nu_deg - PREFERRED_TRUE_ANOMALY_DEG).abs();
         assert!(
-            diff <= published::TRUE_ANOMALY_TOLERANCE_DEG,
+            diff <= TRUE_ANOMALY_TOLERANCE_DEG,
             "favored ν = {nu_deg:.1}° not within ±{}° of {}°",
-            published::TRUE_ANOMALY_TOLERANCE_DEG,
-            published::PREFERRED_TRUE_ANOMALY_DEG
+            TRUE_ANOMALY_TOLERANCE_DEG,
+            PREFERRED_TRUE_ANOMALY_DEG
         );
     }
 
@@ -481,7 +483,7 @@ mod tests {
         // At the published preferred ν = 117.8°, the B&B orbit places P9 near
         // the paper's quoted ~600 AU heliocentric distance.
         let p = brown_batygin_orbit();
-        let nu = published::PREFERRED_TRUE_ANOMALY_DEG.to_radians();
+        let nu = PREFERRED_TRUE_ANOMALY_DEG.to_radians();
         let r = p9_position_at_true_anomaly(&p, nu).distance;
         // a=700, e=0.6 → r(117.8°) ≈ 620 AU; allow a band around the quote.
         assert!(

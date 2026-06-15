@@ -9,10 +9,10 @@
 
 use std::fmt::Write;
 
-use crate::kbo_elements::KboRecord;
 use crate::phase_portrait::TrajectoryPoint;
-use crate::scattered_disk_sim::DiskSnapshot;
 use p9_core::constants::*;
+use p9_core::data::stable_kbos::KboRecord;
+use p9_core::initial_conditions::scattered_disk_sim::DiskSnapshot;
 
 /// Generate Figure 1: KBO orbital angles vs semi-major axis.
 ///
@@ -254,7 +254,7 @@ pub fn scattered_disk_clustering(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kbo_elements::stable_kbos;
+    use p9_core::data::stable_kbos::stable_kbos;
     use p9_core::types::OrbitalElements;
 
     #[test]

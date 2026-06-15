@@ -4,11 +4,12 @@
 //! Run with: `cargo run -p p9-2016-holman-payne --example exclusion_map`
 
 use p9_2016_holman_payne::{
-    exclusion::ExclusionMap, favored_sky_position, holman_payne_orbit, published, range_residual_m,
+    exclusion::ExclusionMap, favored_sky_position, published, range_residual_m,
 };
+use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
 
 fn main() {
-    let p = holman_payne_orbit();
+    let p = brown_batygin_orbit();
     println!(
         "P9 (Brown & Batygin): a={} AU, e={}, m={} M⊕; Cassini precision ~{} m",
         p.a,

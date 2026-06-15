@@ -2,17 +2,15 @@
 //! the 6 dynamically stable KBOs from Batygin & Brown (2016).
 //!
 //! The KBO table itself (`KboRecord`, `stable_kbos`, `longitude_of_perihelion`)
-//! now lives in [`p9_core::data::stable_kbos`] and is re-exported here for
-//! convenience. Clone generation uses the documented assumed dispersions
-//! below.
+//! lives in [`p9_core::data::stable_kbos`]. Clone generation uses the documented
+//! assumed dispersions below.
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
 use p9_core::constants::*;
+use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos, KboRecord};
 use p9_core::forces::ExtraForce;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, SimConfig};
-
-pub use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos, KboRecord};
 
 /// Assumed 1σ dispersions for clone generation. These are *assumptions*
 /// standing in for the per-object orbit-fit covariances (not transcribed

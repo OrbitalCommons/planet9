@@ -95,12 +95,12 @@ impl ExclusionMap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::holman_payne_orbit;
+    use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
 
     #[test]
     fn close_massive_p9_is_excluded() {
         // A heavy P9 brought in close produces a residual far above precision.
-        let mut p = holman_payne_orbit();
+        let mut p = brown_batygin_orbit();
         p.mass_earth = 20.0;
         p.a = 300.0;
         assert_eq!(excluded(&p), ExclusionVerdict::Excluded);
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn distant_light_p9_is_allowed() {
         // A light P9 pushed far out drops below the Cassini precision floor.
-        let mut p = holman_payne_orbit();
+        let mut p = brown_batygin_orbit();
         p.mass_earth = 1.0;
         p.a = 2000.0;
         assert_eq!(excluded(&p), ExclusionVerdict::Allowed);
@@ -119,7 +119,7 @@ mod tests {
     fn allowed_mass_boundary_is_consistent() {
         // At the boundary mass the peak residual equals precision; just above it
         // the planet flips to excluded.
-        let template = holman_payne_orbit();
+        let template = brown_batygin_orbit();
         let a = 500.0;
         let m_max = max_allowed_mass_earth(&template, a);
         let mut at_boundary = template;
@@ -136,7 +136,7 @@ mod tests {
     fn exclusion_boundary_rises_with_distance() {
         // Farther planets need to be more massive to be detectable, so the
         // max-allowed-mass boundary increases monotonically with distance.
-        let template = holman_payne_orbit();
+        let template = brown_batygin_orbit();
         let map = ExclusionMap::build(&template, 300.0, 1500.0, 12);
         for w in map.max_allowed_mass_earth.windows(2) {
             assert!(
@@ -157,7 +157,7 @@ mod tests {
         // The 10 M⊕, a = 700 AU nominal B&B P9 sits where Cassini has leverage:
         // somewhere on its orbit it would exceed the range precision (which is
         // exactly why the data localize it rather than ignore it).
-        let p = holman_payne_orbit();
+        let p = brown_batygin_orbit();
         assert_eq!(excluded(&p), ExclusionVerdict::Excluded);
     }
 }

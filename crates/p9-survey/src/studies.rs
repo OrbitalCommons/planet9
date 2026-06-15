@@ -4,7 +4,7 @@
 //! not re-typed: the four Caltech-lineage solutions come straight from
 //! `p9_core::types::P9Params` (the paper parameter sets the whole workspace
 //! integrates), and the independent Siraj, Chyba & Tremaine (2024) solution
-//! from `p9_2024_siraj_orbit::reference`. Only the per-element 1σ spreads are
+//! from `p9_core::data::ephemeris_constraint`. Only the per-element 1σ spreads are
 //! added here, as documented assumptions standing in for each paper's stated
 //! uncertainty (the same convention as REPRODUCTION_NOTES.md's
 //! "tuned/assumed parameters").
@@ -90,7 +90,7 @@ pub fn catalog() -> Vec<OrbitSolution> {
     // e and the apsidal/node angles are not inferred by that paper, so they
     // are taken anti-aligned with the ETNO cluster (same ω, Ω as the Caltech
     // solutions) with a moderate eccentricity — documented assumption.
-    use p9_2024_siraj_orbit::reference as siraj;
+    use p9_core::data::ephemeris_constraint as siraj;
     v.push(OrbitSolution {
         name: "2024 Siraj, Chyba & Tremaine (independent)".to_string(),
         citation: "Siraj, Chyba & Tremaine 2024".to_string(),
@@ -107,7 +107,7 @@ pub fn catalog() -> Vec<OrbitSolution> {
         omega_sigma_deg: 25.0,
         omega_big_deg: 100.0,
         omega_big_sigma_deg: 25.0,
-        note: "Mass/a/i and 1σ from p9-2024-siraj-orbit::reference \
+        note: "Mass/a/i and 1σ from p9-core::data::ephemeris_constraint \
                (4.4 M⊕, 290 AU, i=6.8°); markedly closer and lower-inclination \
                than Brown & Batygin 2021. e and ω/Ω assumed (anti-aligned)."
             .to_string(),

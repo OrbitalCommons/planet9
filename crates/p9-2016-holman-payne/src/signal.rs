@@ -37,14 +37,16 @@ pub fn favored_true_anomaly(params: &P9Params, n: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{holman_payne_orbit, published};
+    use crate::published;
+    use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
+    use p9_core::types::position_at_true_anomaly;
 
     #[test]
     fn residual_scales_linearly_with_mass() {
         // amplitude ∝ GM_p9 ∝ mass, at fixed geometry.
-        let mut p10 = holman_payne_orbit();
+        let mut p10 = brown_batygin_orbit();
         p10.mass_earth = 10.0;
-        let mut p20 = holman_payne_orbit();
+        let mut p20 = brown_batygin_orbit();
         p20.mass_earth = 20.0;
         let nu = 20.0_f64.to_radians(); // perihelion-facing, high signal
         let r10 = range_residual_m(&p10, nu);
@@ -59,14 +61,14 @@ mod tests {
         // the high-signal perihelion-facing arc, where the distance ratio at
         // that phase tracks the semi-major-axis ratio.
         let nu = 20.0_f64.to_radians();
-        let mut p_close = holman_payne_orbit();
+        let mut p_close = brown_batygin_orbit();
         p_close.a = 400.0;
-        let mut p_far = holman_payne_orbit();
+        let mut p_far = brown_batygin_orbit();
         p_far.a = 800.0;
         let close = range_residual_m(&p_close, nu);
         let far = range_residual_m(&p_far, nu);
-        let r_close = crate::p9_position_at_true_anomaly(&p_close, nu).distance;
-        let r_far = crate::p9_position_at_true_anomaly(&p_far, nu).distance;
+        let r_close = position_at_true_anomaly(&p_close, nu).distance;
+        let r_far = position_at_true_anomaly(&p_far, nu).distance;
         // Effective falloff exponent from the two samples.
         let n_eff = (close / far).ln() / (r_far / r_close).ln();
         assert!(
@@ -78,7 +80,7 @@ mod tests {
     #[test]
     fn residual_is_metres_scale_of_sibling_km() {
         // Exactly 1000× the sibling km amplitude (unit conversion only).
-        let p = holman_payne_orbit();
+        let p = brown_batygin_orbit();
         let nu = 30.0_f64.to_radians();
         let km = range_perturbation_amplitude(&p, nu);
         assert!((range_residual_m(&p, nu) - km * 1000.0).abs() < 1e-12);
@@ -86,7 +88,7 @@ mod tests {
 
     #[test]
     fn favored_anomaly_near_published() {
-        let p = holman_payne_orbit();
+        let p = brown_batygin_orbit();
         let nu_deg = favored_true_anomaly(&p, 1440).to_degrees();
         let diff = (nu_deg - published::PREFERRED_TRUE_ANOMALY_DEG).abs();
         assert!(
