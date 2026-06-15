@@ -1346,6 +1346,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-wise-coadd"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-2018-wise-search",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2017-bias"
 version = "0.1.0"
 dependencies = [
