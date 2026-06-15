@@ -375,6 +375,38 @@ drives the spin near 90°.
   `crates/p9-2022-uranus-tilt/src/resonance_capture.rs` (`adiabatic_sweep_drives_high_obliquity`,
   `present_day_alpha_cannot_tilt_uranus_fully`).
 
+### 20. p9-2016-commensurabilities — angle grouping is significant; the commensurability statistic does NOT beat a random control
+
+de la Fuente Marcos, de la Fuente Marcos & Aarseth (2016) argue the ETNOs are dynamically grouped
+in their orbital angles AND near mean-motion commensurabilities. Computing both from the vetted
+`p9_core::data::etno` sample against a seeded uniform control splits the claim cleanly:
+
+- **Angle grouping reproduces and is strong.** Using `p9_core::analysis::circular`, the longitude
+  of perihelion ϖ has R̄ ≈ 0.45 and a small-n-corrected Rayleigh p ≈ 0.02; the node Ω is the
+  weaker grouping (p < 0.2). A seeded uniform-angle Monte Carlo gives an exceedance of a few
+  percent, agreeing with the analytic Rayleigh p to within a factor of ~3. This is the robust,
+  distribution-free signal.
+
+- **The commensurability statistic does NOT survive a random control.** The observed ETNO period
+  ratios sit close to small-integer ratios in absolute terms (mean pairwise distance to nearest
+  p/q ≈ 0.04 at max integer 9, planet-scan best ≈ 0.03 at a₉ ≈ 600 AU), but a uniform random
+  population drawn over the same semi-major-axis range is *at least as commensurate* ~97% of the
+  time (pairwise), and the a₉ scan finds a comparably commensurate planet for random sets too
+  (exceedance ≈ 0.53 at max integer 9, worse at low order). This is the Bailey, Brown & Batygin
+  (2018) degeneracy made quantitative: the small-integer ratio grid is dense enough that "near a
+  commensurability" is not a rare event. The tests assert the honest direction — observed small in
+  absolute terms, random control NOT beaten — rather than manufacture significance.
+
+  Resonance-location arithmetic cross-checks to 1e-9 against
+  `p9_core::analysis::resonance::resonance_semi_major_axis` (an object placed exactly in an
+  interior p:q resonance has period ratio exactly p/q and commensurability distance 0).
+- Pinned: `crates/p9-2016-commensurabilities/src/clustering.rs`
+  (`test_observed_angles_cluster_significantly`, `test_observed_beats_uniform_control`,
+  `test_mc_matches_rayleigh_order_of_magnitude`) and `src/commensurability.rs`
+  (`test_resonance_location_arithmetic_cross_checks`,
+  `test_pairwise_commensurability_does_not_beat_random_control`,
+  `test_planet_commensurability_localizes_but_not_significant`).
+
 ---
 
 ## Agreements within tolerance (for completeness)
