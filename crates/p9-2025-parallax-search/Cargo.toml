@@ -6,7 +6,6 @@ description = "Reproduction of Socas-Navarro & Trujillo (2025): a targeted paral
 
 [dependencies]
 p9-core = { path = "../p9-core" }
-p9-survey = { path = "../p9-survey" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

@@ -1,20 +1,20 @@
 //! Reflex parallax of a distant body over a chosen epoch separation.
 //!
 //! All of the geometry is the baseline/distance relation already implemented in
-//! `p9_survey::parallax`; this module only *reuses* it and re-expresses it in
+//! `p9_core::coords::parallax`; this module only *reuses* it and re-expresses it in
 //! the units the parallax search cares about (arcmin, and amplitude vs distance).
 //!
 //! Two quantities matter for the search:
 //!
 //! * the **full annual peak-to-peak** swing (Earth on opposite sides of the Sun,
-//!   a 2 AU baseline) — `p9_survey::parallax::annual_parallax_arcsec`, and
+//!   a 2 AU baseline) — `p9_core::coords::parallax::annual_parallax_arcsec`, and
 //! * the **partial-baseline** shift over an arbitrary epoch separation. For two
 //!   epochs separated by a fraction of Earth's orbit the projected baseline is
 //!   `2 AU * sin(Δθ/2)` where `Δθ = 2π * Δt / 1 yr`; a ~6-month (quadrature)
 //!   separation gives the full 2 AU, two consecutive nights give a tiny sliver.
 
-use p9_core::constants::PC_AU;
-use p9_survey::parallax::{annual_parallax_arcsec, parallax_arcsec, AU_KM};
+use p9_core::constants::{AU_KM, PC_AU};
+use p9_core::coords::parallax::{annual_parallax_arcsec, parallax_arcsec};
 
 /// Arcseconds per arcminute.
 pub const ARCSEC_PER_ARCMIN: f64 = 60.0;
@@ -39,7 +39,7 @@ pub fn half_parallax_arcmin(distance_au: f64) -> f64 {
 }
 
 /// Full annual peak-to-peak parallax in arcminutes (2 AU baseline), reusing
-/// `p9_survey::parallax::annual_parallax_arcsec`.
+/// `p9_core::coords::parallax::annual_parallax_arcsec`.
 pub fn annual_parallax_arcmin(distance_au: f64) -> f64 {
     annual_parallax_arcsec(distance_au) / ARCSEC_PER_ARCMIN
 }
