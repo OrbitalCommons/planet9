@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/p9-core",
+    "crates/p9-2016-cowan-thermal",
     "crates/p9-2016-fortney-thermal",
     "crates/p9-2025-simons-forecast",
     "crates/p9-2020-tess-shiftstack",
