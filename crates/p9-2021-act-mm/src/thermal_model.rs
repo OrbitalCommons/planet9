@@ -23,43 +23,13 @@
 use std::f64::consts::PI;
 
 use p9_2018_wise_search::thermal_model::P9Thermal;
+use p9_core::analysis::thermal::{planck_bnu, rayleigh_jeans_bnu, JY as CORE_JY};
 use p9_core::constants::AU_M;
 
-/// Planck constant (J·s).
-pub const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K).
-pub const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s).
-pub const C_LIGHT: f64 = 2.997_924_58e8;
-
 /// 1 Jansky in W/m²/Hz.
-pub const JY: f64 = 1.0e-26;
+pub const JY: f64 = CORE_JY;
 /// 1 milliJansky in W/m²/Hz.
 pub const MJY: f64 = 1.0e-29;
-
-/// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
-///
-/// This is the exact Planck law; at ACT mm frequencies and ~40 K it is well
-/// approximated by [`rayleigh_jeans_bnu`] (the two agree to a few percent).
-pub fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-    let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-    if x > 700.0 {
-        return 0.0;
-    }
-    (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
-}
-
-/// Rayleigh–Jeans brightness B_ν ≈ 2 ν² k T / c² (W/m²/Hz/sr). The low-energy
-/// (hν ≪ kT) limit of [`planck_bnu`]; explicitly ∝ ν²·T.
-pub fn rayleigh_jeans_bnu(t: f64, nu_hz: f64) -> f64 {
-    2.0 * nu_hz * nu_hz * K_BOLTZ * t / (C_LIGHT * C_LIGHT)
-}
-
-/// Dimensionless photon-energy parameter x = hν/kT. The Rayleigh–Jeans regime
-/// is x ≪ 1, the Wien regime x ≫ 1.
-pub fn photon_energy_ratio(t: f64, nu_hz: f64) -> f64 {
-    H_PLANCK * nu_hz / (K_BOLTZ * t)
-}
 
 /// A cold Planet Nine viewed at millimeter wavelengths. Wraps the WISE crate's
 /// [`P9Thermal`] (mass, distance, internal-temperature floor, Neptune-anchored
@@ -131,6 +101,7 @@ impl P9Millimeter {
 mod tests {
     use super::*;
     use p9_2018_wise_search::thermal_model::INTERNAL_TEMP_FLOOR_K;
+    use p9_core::analysis::thermal::{photon_energy_ratio, C_LIGHT};
 
     /// ACT 150 GHz in Hz.
     const NU_150: f64 = 150.0e9;

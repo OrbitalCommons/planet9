@@ -16,22 +16,12 @@
 //! 1.86 R⊕ at 10 M⊕ — a ~3.2× flux underestimate that pushed the paper's
 //! whole favorable corner below the IRAS detection limit.
 
-use std::f64::consts::PI;
+use p9_core::analysis::thermal::{planck_bnu, solar_equilibrium_temp, thermal_flux_jy, C_LIGHT};
 
 use crate::survey_model::{AkariFisSurvey, IrasSurvey};
 
-/// Planck constant (J·s)
-const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K)
-const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s)
-const C_LIGHT: f64 = 2.997_924_58e8;
 /// Earth radius (m)
 const R_EARTH: f64 = 6.371e6;
-/// 1 AU in meters
-const AU_M: f64 = 1.495_978_707e11;
-/// 1 Jansky in W/m²/Hz
-const JY: f64 = 1.0e-26;
 
 /// Physical parameters for a Planet Nine thermal model.
 #[derive(Debug, Clone, Copy)]
@@ -54,11 +44,7 @@ impl P9ThermalParams {
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
     pub fn planck_bnu(t_eff: f64, nu_hz: f64) -> f64 {
-        let x = H_PLANCK * nu_hz / (K_BOLTZ * t_eff);
-        if x > 500.0 {
-            return 0.0;
-        }
-        (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
+        planck_bnu(t_eff, nu_hz)
     }
 
     /// Wavelength in meters to frequency in Hz.
@@ -75,11 +61,7 @@ impl P9ThermalParams {
     /// deviations from a blackbody expected for a cold (≈40 K) ice giant.
     pub fn flux_density_jy_with_emissivity(&self, wavelength_m: f64, emissivity: f64) -> f64 {
         let nu = Self::wavelength_to_freq(wavelength_m);
-        let bnu = Self::planck_bnu(self.t_eff, nu);
-        let r = self.radius_m();
-        let d = self.distance_au * AU_M;
-        let solid_angle = PI * (r / d).powi(2);
-        emissivity * solid_angle * bnu / JY
+        emissivity * thermal_flux_jy(self.t_eff, self.radius_m(), self.distance_au, nu)
     }
 
     /// Predicted blackbody (ε = 1) flux density in Janskys.
@@ -93,10 +75,7 @@ impl P9ThermalParams {
     ///
     /// At 500+ AU this gives ~10–12 K, much below the 30–50 K internal heat.
     pub fn solar_equilibrium_temp(distance_au: f64, albedo: f64) -> f64 {
-        let t_sun = 5778.0;
-        let r_sun_m = 6.957e8;
-        let d_m = distance_au * AU_M;
-        t_sun * (r_sun_m / (2.0 * d_m)).sqrt() * (1.0 - albedo).powf(0.25)
+        solar_equilibrium_temp(distance_au, albedo)
     }
 }
 

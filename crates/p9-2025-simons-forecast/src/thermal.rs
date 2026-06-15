@@ -33,26 +33,13 @@
 //! the floor dominates) — the same temperature model as the WISE crate, so the
 //! two reproductions share a physical body.
 
-use std::f64::consts::PI;
-
 use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::thermal::{
+    effective_temp, planck_bnu, rayleigh_jeans_bnu, solar_equilibrium_temp, thermal_flux_jy,
+};
 
-/// Planck constant (J·s).
-const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K).
-const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s).
-const C_LIGHT: f64 = 2.997_924_58e8;
 /// Earth radius (m).
 const R_EARTH_M: f64 = 6.371e6;
-/// 1 AU in meters.
-const AU_M: f64 = 1.495_978_707e11;
-/// Solar radius (m).
-const R_SUN_M: f64 = 6.957e8;
-/// Solar effective temperature (K).
-const T_SUN: f64 = 5778.0;
-/// 1 Jansky in W/m²/Hz.
-const JY: f64 = 1.0e-26;
 
 /// Neptune-like geometric/Bond albedo, used only for the solar-equilibrium
 /// temperature term.
@@ -99,23 +86,18 @@ impl P9Thermal {
     /// Solar equilibrium temperature (K) for a fast rotator radiating from its
     /// full surface: T_eq = T_sun √(R_sun / 2d) (1 − A)^¼.
     pub fn solar_equilibrium_temp(&self) -> f64 {
-        let d_m = self.distance_au * AU_M;
-        T_SUN * (R_SUN_M / (2.0 * d_m)).sqrt() * (1.0 - self.albedo).powf(0.25)
+        solar_equilibrium_temp(self.distance_au, self.albedo)
     }
 
     /// Effective temperature: the larger of the internal-heat floor and the
     /// solar-equilibrium temperature.
     pub fn effective_temp(&self) -> f64 {
-        self.solar_equilibrium_temp().max(self.internal_temp_k)
+        effective_temp(self.distance_au, self.albedo, self.internal_temp_k)
     }
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
     pub fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-        let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-        if x > 700.0 {
-            return 0.0;
-        }
-        (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
+        planck_bnu(t, nu_hz)
     }
 
     /// Rayleigh–Jeans approximation to the Planck function (valid for x ≪ 1):
@@ -125,7 +107,7 @@ impl P9Thermal {
     /// Exposed so tests can pin that the exact Planck flux follows ∝ ν² T at
     /// the SO/ACT bands.
     pub fn rayleigh_jeans_bnu(t: f64, nu_hz: f64) -> f64 {
-        2.0 * nu_hz * nu_hz * K_BOLTZ * t / (C_LIGHT * C_LIGHT)
+        rayleigh_jeans_bnu(t, nu_hz)
     }
 
     /// Thermal flux density (Jy) at frequency `nu_hz`, a blackbody emitter of
@@ -133,11 +115,12 @@ impl P9Thermal {
     ///
     ///   F_ν = π B_ν(T) (R / d)².
     pub fn flux_jy(&self, nu_hz: f64) -> f64 {
-        let bnu = Self::planck_bnu(self.effective_temp(), nu_hz);
-        let r = self.radius_m();
-        let d = self.distance_au * AU_M;
-        let solid_angle = PI * (r / d).powi(2);
-        solid_angle * bnu / JY
+        thermal_flux_jy(
+            self.effective_temp(),
+            self.radius_m(),
+            self.distance_au,
+            nu_hz,
+        )
     }
 
     /// Thermal flux density (mJy) at frequency `nu_hz`.
@@ -156,6 +139,7 @@ pub fn flux_mjy(mass_earth: f64, distance_au: f64, nu_ghz: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::bands::SO_280;
+    use p9_core::analysis::thermal::{H_PLANCK, K_BOLTZ};
 
     #[test]
     fn cold_body_is_in_rayleigh_jeans_regime_at_280ghz() {

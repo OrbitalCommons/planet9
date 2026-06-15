@@ -16,19 +16,11 @@
 //! the thermal flux rises by a factor ~exp[(hc/kT)(1/λ₁ − 1/λ₂)]. For a 40 K
 //! body that is an enormous factor — W2 sits far less deep on the Wien tail.
 
-use std::f64::consts::PI;
-
 use p9_2018_wise_search::thermal_model::P9Thermal;
-
-/// Physical constants (mirrors of the sibling's, kept local so the band-generic
-/// Planck evaluation is self-contained).
-const H_PLANCK: f64 = 6.626_070_15e-34;
-const K_BOLTZ: f64 = 1.380_649e-23;
-const C_LIGHT: f64 = 2.997_924_58e8;
-const AU_M: f64 = 1.495_978_707e11;
-const R_SUN_M: f64 = 6.957e8;
-const T_SUN: f64 = 5778.0;
-const JY: f64 = 1.0e-26;
+use p9_core::analysis::thermal::{
+    flux_to_magnitude, reflected_flux_jy as p9_core_reflected_flux,
+    thermal_flux_jy as p9_core_thermal_flux, C_LIGHT,
+};
 
 /// A WISE photometric band: effective wavelength and Vega zero-point flux
 /// density (Wright et al. 2010, Table 1).
@@ -56,36 +48,17 @@ pub const W2: WiseBand = WiseBand {
     zero_point_jy: 171.787,
 };
 
-/// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz` (identical to the
-/// sibling's; under-/overflow guarded on the Wien tail).
-fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-    let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-    if x > 700.0 {
-        return 0.0;
-    }
-    (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
-}
-
 /// Thermal grey-body flux density (Jy) of `p9` in `band`: F_ν = π B_ν(T)(R/d)².
 pub fn thermal_flux_jy(p9: &P9Thermal, band: WiseBand) -> f64 {
     let nu = C_LIGHT / band.wavelength_m;
-    let bnu = planck_bnu(p9.effective_temp(), nu);
-    let r = p9.radius_m();
-    let d = p9.distance_au * AU_M;
-    let solid_angle = PI * (r / d).powi(2);
-    solid_angle * bnu / JY
+    p9_core_thermal_flux(p9.effective_temp(), p9.radius_m(), p9.distance_au, nu)
 }
 
 /// Reflected-sunlight flux density (Jy) of `p9` in `band`, near opposition
 /// (Δ = d − 1 AU). Same geometry as the sibling's W1 reflected channel.
 pub fn reflected_flux_jy(p9: &P9Thermal, band: WiseBand) -> f64 {
     let nu = C_LIGHT / band.wavelength_m;
-    let bnu_sun = planck_bnu(T_SUN, nu);
-    let r_p = p9.radius_m();
-    let solar_flux_at_planet = PI * bnu_sun * (R_SUN_M / (p9.distance_au * AU_M)).powi(2);
-    let delta_m = (p9.distance_au - 1.0).max(1.0) * AU_M;
-    let reflected = p9.albedo * solar_flux_at_planet * (r_p * r_p) / (4.0 * delta_m * delta_m);
-    reflected / JY
+    p9_core_reflected_flux(p9.albedo, p9.radius_m(), p9.distance_au, nu)
 }
 
 /// Total flux density (Jy) of `p9` in `band`: thermal + reflected.
@@ -96,11 +69,7 @@ pub fn total_flux_jy(p9: &P9Thermal, band: WiseBand) -> f64 {
 /// Apparent Vega magnitude of `p9` in `band` from the total flux density;
 /// +∞ for zero flux.
 pub fn magnitude(p9: &P9Thermal, band: WiseBand) -> f64 {
-    let flux = total_flux_jy(p9, band);
-    if flux <= 0.0 {
-        return f64::INFINITY;
-    }
-    -2.5 * (flux / band.zero_point_jy).log10()
+    flux_to_magnitude(total_flux_jy(p9, band), band.zero_point_jy)
 }
 
 /// Convenience: apparent `band` magnitude of a default-albedo P9 of

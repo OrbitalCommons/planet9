@@ -8,6 +8,8 @@
 //! near-Sun magnitude is brighter than the depth — the maximum detectable
 //! distance. It is found by bisection.
 
+use p9_core::analysis::thermal::max_detectable_distance as core_max_detectable_distance;
+
 use crate::survey_model::WiseSurvey;
 use crate::thermal_model::{w1_magnitude, P9Thermal};
 
@@ -23,33 +25,9 @@ pub fn is_detectable_w1(survey: &WiseSurvey, mass_earth: f64, distance_au: f64) 
 /// (`d_min`) is already fainter than the depth (the planet is undetectable at
 /// any distance in the search range).
 pub fn max_detectable_distance(survey: &WiseSurvey, mass_earth: f64) -> Option<f64> {
-    let d_min = 50.0_f64;
-    let d_max = 50_000.0_f64;
-
-    // Brightness decreases monotonically with distance: detectable at d_min,
-    // not at d_max, with a single crossing in between.
-    if !is_detectable_w1(survey, mass_earth, d_min) {
-        return None;
-    }
-    if is_detectable_w1(survey, mass_earth, d_max) {
-        // Detectable even at the far edge of the search range; report the edge.
-        return Some(d_max);
-    }
-
-    let mut lo = d_min;
-    let mut hi = d_max;
-    for _ in 0..200 {
-        let mid = 0.5 * (lo + hi);
-        if is_detectable_w1(survey, mass_earth, mid) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-        if hi - lo < 1e-4 {
-            break;
-        }
-    }
-    Some(0.5 * (lo + hi))
+    core_max_detectable_distance(50.0, 50_000.0, survey.w1_depth, |d| {
+        w1_magnitude(mass_earth, d)
+    })
 }
 
 /// Per-position W1 detection probability: the magnitude-efficiency at the

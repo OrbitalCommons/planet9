@@ -31,24 +31,14 @@
 //! is the shared Neptune-anchored mass-radius relation in
 //! `p9_core::analysis::photometry` (R ≈ 3.34 R⊕ at 10 M⊕).
 
-use std::f64::consts::PI;
-
 use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::thermal::{
+    effective_temp, flux_to_magnitude, reflected_flux_jy, solar_equilibrium_temp, thermal_flux_jy,
+    C_LIGHT,
+};
 
-/// Planck constant (J·s).
-const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K).
-const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s).
-const C_LIGHT: f64 = 2.997_924_58e8;
 /// Earth radius (m).
 const R_EARTH_M: f64 = 6.371e6;
-/// 1 AU in meters.
-const AU_M: f64 = 1.495_978_707e11;
-/// Solar radius (m).
-const R_SUN_M: f64 = 6.957e8;
-/// Solar effective temperature (K).
-const T_SUN: f64 = 5778.0;
 
 /// WISE W1 effective wavelength in meters (3.3526 µm; Wright et al. 2010).
 pub const W1_WAVELENGTH_M: f64 = 3.3526e-6;
@@ -57,9 +47,6 @@ pub const W1_WAVELENGTH_M: f64 = 3.3526e-6;
 /// has F_ν = 309.540 Jy at W1 (Wright et al. 2010, Table 1). A source of
 /// flux F has W1 = −2.5 log10(F / F_ν0).
 pub const W1_ZERO_POINT_JY: f64 = 309.540;
-
-/// 1 Jansky in W/m²/Hz.
-const JY: f64 = 1.0e-26;
 
 /// Default geometric/Bond-like albedo for the reflected-light channel
 /// (Neptune-like, used by the workspace photometry).
@@ -107,35 +94,21 @@ impl P9Thermal {
     /// Solar equilibrium temperature (K) for a fast rotator radiating from
     /// its full surface: T_eq = T_sun √(R_sun / 2d) (1 − A)^¼.
     pub fn solar_equilibrium_temp(&self) -> f64 {
-        let d_m = self.distance_au * AU_M;
-        T_SUN * (R_SUN_M / (2.0 * d_m)).sqrt() * (1.0 - self.albedo).powf(0.25)
+        solar_equilibrium_temp(self.distance_au, self.albedo)
     }
 
     /// Effective temperature: the larger of the internal-heat floor and the
     /// solar-equilibrium temperature. Beyond a few hundred AU the solar term
     /// is ~10 K, so the internal floor dominates.
     pub fn effective_temp(&self) -> f64 {
-        self.solar_equilibrium_temp().max(self.internal_temp_k)
-    }
-
-    /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
-    fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-        let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-        if x > 700.0 {
-            return 0.0;
-        }
-        (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
+        effective_temp(self.distance_au, self.albedo, self.internal_temp_k)
     }
 
     /// Thermal flux density at W1 (Jy), a grey-body emitter of unit
     /// emissivity: F_ν = π B_ν(T) (R/d)².
     pub fn thermal_flux_w1_jy(&self) -> f64 {
         let nu = C_LIGHT / W1_WAVELENGTH_M;
-        let bnu = Self::planck_bnu(self.effective_temp(), nu);
-        let r = self.radius_m();
-        let d = self.distance_au * AU_M;
-        let solid_angle = PI * (r / d).powi(2);
-        solid_angle * bnu / JY
+        thermal_flux_jy(self.effective_temp(), self.radius_m(), self.distance_au, nu)
     }
 
     /// Reflected-sunlight flux density at W1 (Jy), observed near opposition
@@ -148,13 +121,7 @@ impl P9Thermal {
     ///   F_refl = albedo · [π B_ν(T_sun) (R_sun/r)²] · (R_p² / (4 Δ²)).
     pub fn reflected_flux_w1_jy(&self) -> f64 {
         let nu = C_LIGHT / W1_WAVELENGTH_M;
-        let bnu_sun = Self::planck_bnu(T_SUN, nu);
-        let solar_flux_at_planet = PI * bnu_sun * (R_SUN_M / (self.distance_au * AU_M)).powi(2);
-        let r_p = self.radius_m();
-        let delta_m = (self.distance_au - 1.0).max(1.0) * AU_M;
-        let reflected =
-            self.albedo * solar_flux_at_planet * (r_p * r_p) / (4.0 * delta_m * delta_m);
-        reflected / JY
+        reflected_flux_jy(self.albedo, self.radius_m(), self.distance_au, nu)
     }
 
     /// Total W1 flux density (Jy): thermal + reflected.
@@ -165,11 +132,7 @@ impl P9Thermal {
     /// Apparent W1 (Vega) magnitude from the total flux density. Fainter
     /// (larger) numbers for smaller flux; +∞ when the flux is zero.
     pub fn w1_magnitude(&self) -> f64 {
-        let flux = self.total_flux_w1_jy();
-        if flux <= 0.0 {
-            return f64::INFINITY;
-        }
-        -2.5 * (flux / W1_ZERO_POINT_JY).log10()
+        flux_to_magnitude(self.total_flux_w1_jy(), W1_ZERO_POINT_JY)
     }
 }
 
