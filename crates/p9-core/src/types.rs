@@ -2,6 +2,7 @@ use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 
 use crate::constants::*;
+use crate::units::{self, GravitationalParameter, Length, Time, Velocity};
 
 /// 3D position + velocity state vector in heliocentric ecliptic J2000.
 /// Units: AU for position, AU/day for velocity.
@@ -29,6 +30,18 @@ impl StateVector {
 
     pub fn speed(&self) -> f64 {
         self.vel.norm()
+    }
+
+    /// Heliocentric distance as a dimension-checked [`Length`]. (The vector
+    /// storage stays `f64`/AU because `nalgebra`'s norm cannot carry units;
+    /// this is the typed boundary accessor.)
+    pub fn distance_typed(&self) -> Length {
+        units::au(self.distance())
+    }
+
+    /// Speed as a dimension-checked [`Velocity`] (AU/day storage).
+    pub fn speed_typed(&self) -> Velocity {
+        units::au(self.speed()) / units::days(1.0)
     }
 }
 
@@ -85,6 +98,30 @@ impl OrbitalElements {
     /// `gm` is the central body GM in AU^3/day^2.
     pub fn to_state_vector(&self, gm: f64) -> StateVector {
         elements_to_cartesian(self, gm)
+    }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        units::au(self.a)
+    }
+    /// Inclination as an [`Angle`].
+    pub fn inclination(&self) -> units::Angle {
+        units::radians(self.i)
+    }
+    /// Perihelion distance `q = a(1-e)` as a [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        units::au(self.perihelion())
+    }
+    /// Aphelion distance `Q = a(1+e)` as a [`Length`].
+    pub fn aphelion_typed(&self) -> Length {
+        units::au(self.aphelion())
+    }
+    /// Orbital period as a [`Time`]. `gm` is the central-body gravitational
+    /// parameter in AU³/day² (the workspace's native unit).
+    pub fn period_typed(&self, gm: f64) -> Time {
+        units::days(self.period(gm))
     }
 }
 
@@ -205,6 +242,29 @@ impl P9Params {
     /// Perihelion distance in AU
     pub fn perihelion(&self) -> f64 {
         self.a * (1.0 - self.e)
+    }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Planet Nine mass as a [`Mass`] (from the Earth-mass field).
+    pub fn mass(&self) -> units::Mass {
+        units::earth_masses(self.mass_earth)
+    }
+    /// Semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        units::au(self.a)
+    }
+    /// Inclination as an [`Angle`].
+    pub fn inclination(&self) -> units::Angle {
+        units::radians(self.i)
+    }
+    /// Perihelion distance as a [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        units::au(self.perihelion())
+    }
+    /// Gravitational parameter `GM` as a typed [`GravitationalParameter`].
+    pub fn gm_typed(&self) -> GravitationalParameter {
+        units::gm_from_au3_day2(self.gm())
     }
 
     /// Convert to a MassiveBody at a given mean anomaly
@@ -681,4 +741,57 @@ pub fn solve_kepler(e: f64, mean_anomaly: f64) -> f64 {
 /// Backwards-compatible internal alias.
 fn kepler_equation(e: f64, mean_anomaly: f64) -> f64 {
     solve_kepler(e, mean_anomaly)
+}
+
+#[cfg(test)]
+mod typed_accessor_tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn p9params_typed_views_match_f64_fields() {
+        let p = P9Params::nominal_2016();
+        assert_relative_eq!(
+            p.semi_major_axis().get::<astronomical_unit>(),
+            p.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.perihelion_typed().get::<astronomical_unit>(),
+            p.perihelion(),
+            epsilon = 1e-12
+        );
+        // 10 M⊕ in kilograms.
+        assert_relative_eq!(
+            p.mass().get::<kilogram>(),
+            10.0 * units::EARTH_MASS_KG,
+            epsilon = 1.0
+        );
+        // Typed GM equals the f64 GM converted to SI.
+        assert_relative_eq!(
+            p.gm_typed().value,
+            units::gm_from_au3_day2(p.gm()).value,
+            epsilon = 1e6
+        );
+    }
+
+    #[test]
+    fn statevector_typed_views_match_norms() {
+        let sv = OrbitalElements {
+            a: 30.0,
+            e: 0.1,
+            i: 0.2,
+            omega_big: 1.0,
+            omega: 2.0,
+            mean_anomaly: 0.5,
+        }
+        .to_state_vector(GM_SUN);
+        assert_relative_eq!(
+            sv.distance_typed().get::<astronomical_unit>(),
+            sv.distance(),
+            epsilon = 1e-12
+        );
+    }
 }
