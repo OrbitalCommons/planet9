@@ -2007,6 +2007,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starfield",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -2582,7 +2583,7 @@ dependencies = [
  "sgp4",
  "thiserror",
  "time",
- "uom",
+ "uom 0.37.0",
 ]
 
 [[package]]
@@ -2869,6 +2870,16 @@ name = "uom"
 version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd5cfe7d84f6774726717f358a37f5bca8fca273bed4de40604ad129d1107b49"
+dependencies = [
+ "num-traits",
+ "typenum",
+]
+
+[[package]]
+name = "uom"
+version = "0.38.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a739f83872836c82a4f2527d4e54b37007b3de68cafe7edde95fd695968bf4b9"
 dependencies = [
  "num-traits",
  "typenum",
