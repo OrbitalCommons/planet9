@@ -1,0 +1,14 @@
+[package]
+name = "p9-2016-secular-resonance"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Beust (2016) 'Orbital clustering of distant Kuiper belt objects by Planet 9 - secular resonance' (arXiv:1605.02473)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

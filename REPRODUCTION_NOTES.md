@@ -267,6 +267,41 @@ Caveat documented in code: 2014 SR349 and 2013 FT28 also appear in the Brown (20
 - Pinned: `crates/p9-2016-sheppard-etnos/src/clustering.rs` (`computed_headline_values_are_pinned`,
   `dedup_combined_still_clusters`, `combined_omega_clusters_near_published_340`).
 
+### 16. p9-2016-secular-resonance — circulation is reached by detuning, not by raising e (the resonance is broad)
+
+Beust (2016) explains the ETNO apsidal clustering as capture in a secular resonance with Planet
+Nine: where the test particle's free apsidal precession matches P9's, the relative longitude of
+perihelion Δϖ = ϖ − ϖ₉ librates rather than circulates, in an **apsidally anti-aligned** (Δϖ = π),
+**high-eccentricity** island. The crate reproduces this from the `p9_core::analysis::secular`
+Gauss-ring average: it extracts the apsidal Fourier harmonics of H(e, Δϖ) (a coherent DFT over
+Δϖ — far better conditioned than finite-differencing the angle, since the apsidal forcing c₁ is a
+~10⁻⁴ fraction of the axisymmetric bulk), builds the second-fundamental-model-of-resonance
+pendulum K(Δϖ, Γ) = a₀(Γ) − g₉·Γ + c₁*·cos Δϖ, integrates it (RK4, K conserved to ~10⁻⁶), and
+locates the anti-aligned libration island. The computed center is Δϖ = π and the resonant e sits
+in the high-e regime, matching the abstract; the resonance/island strengthens linearly with P9's
+GM (c₁ ∝ GM, pinned to a 4× ratio at fixed e). Every object in the vetted Brown (2017) sample sits
+at a semi-major axis that admits an anti-aligned island under the nominal P9.
+
+Honest finding: at the nominal P9 (10 M⊕, 700 AU, e = 0.6) the resonance is so **broad** that its
+separatrix spans essentially the entire physical eccentricity range at a fixed ETNO semi-major
+axis (the action half-width δΓ_sep corresponds to Δe ≈ 0.3 at a = 400 AU). There is therefore no
+circulating regime reachable by changing the particle's eccentricity alone — the circulating
+(non-clustered) case is the *non-commensurate* one, reached by detuning g₉ off the free-precession
+band. The crate demonstrates both routes to circulation that do exist: detuning g₉ (the physical
+non-resonant particle, `resonant_librates_detuned_circulates`) and a large-amplitude launch across
+the angle separatrix at the narrower a = 250 AU resonance (`small_amplitude_librates_large_circulates`).
+Beust's published libration *amplitude/period* numbers are configuration-specific phase-portrait
+read-offs not quoted as single scalars in the abstract, so the crate pins the qualitative
+structure (anti-aligned center, high-e island, mass scaling, libration vs circulation) and the
+self-consistency of the pendulum rather than a published amplitude figure.
+- Pinned: `crates/p9-2016-secular-resonance/src/portrait.rs`
+  (`island_exists_for_nominal_p9_and_is_anti_aligned`, `circular_perturber_has_no_island`,
+  `resonance_strengthens_with_p9_mass`, `every_etno_admits_an_anti_aligned_island`),
+  `src/libration.rs` (`resonant_librates_detuned_circulates`,
+  `small_amplitude_librates_large_circulates`, `libration_center_is_anti_aligned`,
+  `amplitude_grows_with_displacement`), `tests/cross_check.rs`
+  (`hamiltonian_matches_p9_core_ring_average` to 1e-12, `island_robust_to_quadrature_refinement`).
+
 ---
 
 ## Agreements within tolerance (for completeness)
