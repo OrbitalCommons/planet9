@@ -1921,7 +1921,6 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "p9-core",
- "p9-survey",
  "serde",
  "serde_json",
 ]

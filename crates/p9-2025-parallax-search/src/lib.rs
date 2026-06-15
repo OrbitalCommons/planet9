@@ -24,7 +24,7 @@
 //! # What this crate computes (all real, none hard-coded)
 //!
 //! - [`parallax`] — the parallactic displacement of a body at distance `d` over a
-//!   chosen epoch separation, in arcmin, reusing `p9_survey::parallax`. The
+//!   chosen epoch separation, in arcmin, reusing `p9_core::coords::parallax`. The
 //!   amplitude falls as `1/d`; the full annual peak-to-peak swing and the
 //!   half-angle ("parallax factor") are both exposed.
 //! - [`discrimination`] — the contrast ratio against a background star of given
