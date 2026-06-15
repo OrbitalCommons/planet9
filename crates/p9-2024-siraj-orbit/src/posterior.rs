@@ -22,7 +22,7 @@
 
 use crate::confinement::observed_forcing;
 use crate::forcing::forcing_strength;
-use crate::reference::{SIRAJ_2024_A_AU, SIRAJ_2024_MASS_EARTH};
+use p9_core::data::ephemeris_constraint::{SIRAJ_2024_A_AU, SIRAJ_2024_MASS_EARTH};
 
 /// A point in the (mass, semi-major axis) inference space.
 #[derive(Debug, Clone, Copy)]

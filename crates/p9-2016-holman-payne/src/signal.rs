@@ -38,6 +38,7 @@ pub fn favored_true_anomaly(params: &P9Params, n: usize) -> f64 {
 mod tests {
     use super::*;
     use crate::{holman_payne_orbit, published};
+    use p9_core::types::position_at_true_anomaly;
 
     #[test]
     fn residual_scales_linearly_with_mass() {
@@ -65,8 +66,8 @@ mod tests {
         p_far.a = 800.0;
         let close = range_residual_m(&p_close, nu);
         let far = range_residual_m(&p_far, nu);
-        let r_close = crate::p9_position_at_true_anomaly(&p_close, nu).distance;
-        let r_far = crate::p9_position_at_true_anomaly(&p_far, nu).distance;
+        let r_close = position_at_true_anomaly(&p_close, nu).distance;
+        let r_far = position_at_true_anomaly(&p_far, nu).distance;
         // Effective falloff exponent from the two samples.
         let n_eff = (close / far).ln() / (r_far / r_close).ln();
         assert!(

@@ -134,7 +134,7 @@ pub fn search_candidates(
                 continue;
             }
 
-            let d = crate::proper_motion::implied_distance(sep, baseline_years);
+            let d = p9_core::coords::candidate_pair::implied_distance(sep, baseline_years);
 
             candidates.push(CandidatePair {
                 iras_source: iras.clone(),

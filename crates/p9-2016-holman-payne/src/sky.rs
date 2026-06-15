@@ -12,7 +12,7 @@ use nalgebra::Vector3;
 
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::sky::{angular_distance, ecliptic_vec_to_equatorial_deg};
-use p9_core::types::P9Params;
+use p9_core::types::{position_at_true_anomaly, P9Params};
 
 use crate::signal::favored_true_anomaly;
 
@@ -55,7 +55,7 @@ impl SkyPosition {
 /// scanned in the selection.
 pub fn favored_sky_position(params: &P9Params, n: usize) -> SkyPosition {
     let nu = favored_true_anomaly(params, n);
-    let geom = crate::p9_position_at_true_anomaly(params, nu);
+    let geom = position_at_true_anomaly(params, nu);
     let (ra_deg, dec_deg) = ecliptic_vec_to_equatorial_deg(&geom.position);
     SkyPosition {
         ra_deg,

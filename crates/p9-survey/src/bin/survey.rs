@@ -72,7 +72,7 @@ fn main() -> ExitCode {
     }
 
     // Parallax channel: LEO (per-orbit) vs Earth's annual baseline, per study.
-    use p9_survey::parallax::{annual_parallax_arcsec, leo_parallax_arcsec, LEO_ALTITUDE_KM};
+    use p9_core::coords::parallax::{annual_parallax_arcsec, leo_parallax_arcsec, LEO_ALTITUDE_KM};
     use p9_survey::telescope::JBT_PLATE_SCALE_ARCSEC_PER_PX as PXSCALE;
     eprintln!(
         "\n  parallax of P9 at its median distance — LEO ({:.0} km, per-orbit) vs annual (Earth 2 AU):",

@@ -13,7 +13,7 @@
 //!
 //! # What this crate computes (real, no hard-coded answers)
 //!
-//! 1. [`geometry`]: the P9 heliocentric position `r_p9(ν)` as a function of its
+//! 1. P9 heliocentric position `r_p9(ν)` as a function of its
 //!    own true anomaly along the B&B orbit, using `p9_core`'s element→Cartesian
 //!    machinery. For `e ~ 0.6` the heliocentric distance `r(ν)` swings from the
 //!    perihelion `a(1-e)` to the aphelion `a(1+e)`.
@@ -43,27 +43,17 @@
 //! the planets' osculating elements (we do not). See the test module and
 //! `REPRODUCTION_NOTES.md` for the honest residual discussion.
 
-pub mod geometry;
 pub mod perturbation;
 
-// The Brown & Batygin (2016) reference orbit and the favored-ν zone now live in
-// `p9_core::data::ephemeris_constraint`; re-export the orbit so callers can
-// build it without naming core.
-pub use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
-
 /// Published reference values from Fienga et al. (2016), kept as labelled
-/// constants (NOT used to derive any computed quantity). The favored-ν zone is
-/// re-exported from [`p9_core::data::ephemeris_constraint`].
+/// constants (NOT used to derive any computed quantity). The favored-ν zone and
+/// the Brown & Batygin reference orbit live in
+/// [`p9_core::data::ephemeris_constraint`].
 pub mod published {
-    pub use p9_core::data::ephemeris_constraint::{
-        FAVORED_INTERVAL_DEG, P9_MASS_EARTH, PREFERRED_TRUE_ANOMALY_DEG, TRUE_ANOMALY_TOLERANCE_DEG,
-    };
-
     /// Approximate P9 heliocentric distance at the preferred true anomaly (AU).
     pub const PREFERRED_HELIO_DISTANCE_AU: f64 = 600.0;
 }
 
-pub use geometry::{p9_position_at_true_anomaly, P9Geometry};
 pub use perturbation::{
     differential_acceleration, favored_true_anomaly, prefit_amplitude,
     range_perturbation_amplitude, range_perturbation_curve, RangePerturbationCurve,

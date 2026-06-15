@@ -1,19 +1,11 @@
 //! Apparent sky motion of Planet Nine between the IRAS (1983) and AKARI
 //! (2006) epochs: heliocentric orbital motion plus geocentric parallax.
 //!
-//! The generic two-epoch candidate-pair geometry now lives in
-//! [`p9_core::coords::candidate_pair`] and is re-exported here. The
-//! survey-window-bound ephemeris scans below bind the IRAS/AKARI observing
-//! windows (`survey_model::IrasSurvey`/`AkariFisSurvey`) to the core scans,
-//! keeping the paper-specific epoch tables in this crate.
-
-pub use p9_core::coords::candidate_pair::{
-    annual_proper_motion_circular, apparent_separation_arcmin,
-    apparent_separation_ephemeris_arcmin, circular_velocity, distance_range_for_separation,
-    heliocentric_separation_arcmin, implied_distance, implied_distance_circular,
-    orbital_period_years, proper_motion_table, separation_window, transverse_rate_arcmin_yr,
-    transverse_rate_rad_day, vis_viva_velocity, E_MAX,
-};
+//! The generic two-epoch candidate-pair geometry lives in
+//! [`p9_core::coords::candidate_pair`]. The survey-window-bound ephemeris scans
+//! below bind the IRAS/AKARI observing windows
+//! (`survey_model::IrasSurvey`/`AkariFisSurvey`) to the core scans, keeping the
+//! paper-specific epoch tables in this crate.
 
 use p9_core::coords::candidate_pair;
 use p9_core::coords::observer::{EarthProvider, Time, Timescale};

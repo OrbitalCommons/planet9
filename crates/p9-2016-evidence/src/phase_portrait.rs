@@ -17,7 +17,7 @@ use p9_core::constants::*;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::*;
 
-use crate::scattered_disk_sim::j2_jsun_force;
+use p9_core::initial_conditions::scattered_disk_sim::j2_jsun_force;
 
 /// Result of tracing a single trajectory in (e, Δϖ) space.
 #[derive(Debug, Clone)]

@@ -9,7 +9,7 @@
 //! only *logarithmic* in the trial count: it costs a few tenths of a magnitude,
 //! against the several magnitudes the stack itself buys.
 
-use crate::matched_filter::stack_depth_gain_mag;
+use p9_core::analysis::stacking::matched_filter::stack_depth_gain_mag;
 
 /// Standard-normal quantile Φ⁻¹(p) (Acklam's rational approximation,
 /// |error| ≲ 1e-9 across the tails).

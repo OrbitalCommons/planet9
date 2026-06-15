@@ -13,4 +13,3 @@ pub mod octupole;
 pub mod phase_portrait;
 pub mod plots;
 pub mod resonance;
-pub mod scattered_disk_sim;

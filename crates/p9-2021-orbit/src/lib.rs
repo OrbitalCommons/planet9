@@ -19,11 +19,11 @@
 //!    reachable at the `#[ignore]`d paper scale (121 points x 16,800
 //!    particles x 4 Gyr — estimated CPU-days, see REPRODUCTION_NOTES.md).
 //!
-//! 2. **Published-posterior summary** ([`posterior`]): split-normal
+//! 2. **Published-posterior summary** ([`p9_core::data::posterior`]): split-normal
 //!    resampling of the published medians/intervals (with a documented a-q
 //!    correlation assumption). This is what the downstream survey crates
 //!    (p9-2021-ztf, p9-2022-des, p9-2024-panstarrs) consume via
-//!    [`reference_population`]; it represents the *published* posterior,
+//!    [`p9_core::data::reference_population`]; it represents the *published* posterior,
 //!    not the reduced-scale pipeline output.
 //!
 //! [`statistical_measures`] recomputes the clustering significance from the
@@ -36,8 +36,3 @@ pub mod pipeline;
 pub mod plots;
 pub mod sim_grid;
 pub mod statistical_measures;
-
-// The published-posterior summary and the synthetic reference population now
-// live in `p9_core::data`; re-export them here so this crate's pipeline,
-// plots, and the downstream survey crates keep their existing import paths.
-pub use p9_core::data::{posterior, reference_population};

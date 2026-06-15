@@ -25,7 +25,7 @@ Surveyed solutions (all sourced from reproduction crates, not re-typed):
 | 2016 Batygin & Brown (nominal + inclined-TNO variant) | `p9_core::types::P9Params` |
 | 2019 Batygin et al. (review best-fit) | `p9_core::types::P9Params` |
 | 2021 Brown & Batygin (MCMC median) | `p9_core::types::P9Params` |
-| 2024 Siraj, Chyba & Tremaine (independent) | `p9_2024_siraj_orbit::reference` |
+| 2024 Siraj, Chyba & Tremaine (independent) | `p9_core::data::ephemeris_constraint` |
 
 ## Regenerate the figure
 

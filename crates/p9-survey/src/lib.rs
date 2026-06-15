@@ -3,7 +3,7 @@
 //! This crate is a "survey paper" in code: it gathers the Planet Nine orbit
 //! solutions reproduced elsewhere in the workspace (the Caltech 2016–2021
 //! lineage from `p9_core::types::P9Params`, plus the independent Siraj, Chyba
-//! & Tremaine 2024 solution from `p9-2024-siraj-orbit`), and for each one
+//! & Tremaine 2024 solution from `p9_core::data::ephemeris_constraint`), and for each one
 //! computes — purely from p9-core primitives — where on the sky the planet
 //! most probably is *now* (dwell-time-weighted over the unknown orbital phase
 //! and the solution's element uncertainties), how bright it would be
@@ -16,7 +16,6 @@
 //! that the Rust side did not compute.
 
 pub mod ephemeris;
-pub mod parallax;
 pub mod plan;
 pub mod refine;
 pub mod schema;

@@ -5,8 +5,8 @@
 
 use std::fmt::Write;
 
-use crate::posterior::P9Posterior;
-use crate::reference_population::ReferenceP9;
+use p9_core::data::posterior::P9Posterior;
+use p9_core::data::reference_population::ReferenceP9;
 
 /// Generate a corner-plot style SVG showing a vs e posterior contours.
 ///
@@ -284,8 +284,8 @@ pub fn reference_population_plot(population: &[ReferenceP9], width: u32, height:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::posterior::mcmc_2021_posterior;
-    use crate::reference_population::generate_reference_population;
+    use p9_core::data::posterior::mcmc_2021_posterior;
+    use p9_core::data::reference_population::generate_reference_population;
     use rand::SeedableRng;
 
     #[test]

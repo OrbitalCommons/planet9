@@ -42,3 +42,41 @@ pub const FAVORED_INTERVAL_DEG: (f64, f64) = (108.0, 129.0);
 /// Tolerance (deg) within which an analytic-proxy favored anomaly should land
 /// of the published preferred true anomaly.
 pub const TRUE_ANOMALY_TOLERANCE_DEG: f64 = 30.0;
+
+/// Published reference values from Siraj, Chyba & Tremaine (2024),
+/// "Orbit of a Possible Planet X" (arXiv:2410.18170). This independent
+/// inference yields a markedly different perturber than Brown & Batygin (2021):
+/// a lower mass, a smaller semi-major axis, and a lower inclination.
+/// Inferred perturber mass (Earth masses).
+pub const SIRAJ_2024_MASS_EARTH: f64 = 4.4;
+
+/// Inferred perturber semi-major axis (AU).
+pub const SIRAJ_2024_A_AU: f64 = 290.0;
+
+/// Inferred perturber inclination (degrees).
+pub const SIRAJ_2024_I_DEG: f64 = 6.8;
+
+/// Approximate 1σ uncertainty on the inferred mass (Earth masses). Used as the
+/// Siraj-side scatter when computing the tension against Brown & Batygin 2021.
+pub const SIRAJ_2024_MASS_SIGMA_EARTH: f64 = 1.0;
+
+/// Approximate 1σ uncertainty on the inferred semi-major axis (AU).
+pub const SIRAJ_2024_A_SIGMA_AU: f64 = 30.0;
+
+/// Approximate 1σ uncertainty on the inferred inclination (degrees).
+pub const SIRAJ_2024_I_SIGMA_DEG: f64 = 1.7;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_siraj_2024_reference_constants() {
+        assert_eq!(SIRAJ_2024_MASS_EARTH, 4.4);
+        assert_eq!(SIRAJ_2024_A_AU, 290.0);
+        assert!((SIRAJ_2024_I_DEG - 6.8).abs() < 1e-9);
+        assert_eq!(SIRAJ_2024_MASS_SIGMA_EARTH, 1.0);
+        assert_eq!(SIRAJ_2024_A_SIGMA_AU, 30.0);
+        assert!((SIRAJ_2024_I_SIGMA_DEG - 1.7).abs() < 1e-9);
+    }
+}
