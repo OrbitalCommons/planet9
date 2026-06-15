@@ -57,19 +57,13 @@
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::analysis::secular::perturber_perihelion_precession;
 use p9_core::constants::GM_SUN;
-use p9_core::constants::YEAR_DAYS;
 
 // Reuse the 2026 sibling's perturber model and consistency check verbatim.
 pub use p9_2026_iorio_precession::{
     quadrupole_prefactor_consistency, saturn_mean_motion_rad_per_day, Perturber,
 };
-
-/// Radians per arcsecond (1 arcsec = pi/648000 rad).
-const ARCSEC_PER_RAD: f64 = 648_000.0 / std::f64::consts::PI;
-
-/// Days per Julian century.
-const DAYS_PER_CENTURY: f64 = 100.0 * YEAR_DAYS;
 
 /// A known planet whose perihelion precession we constrain, with the adopted
 /// observational bound on its *anomalous* secular apsidal rate.
@@ -175,14 +169,7 @@ pub fn bound_for(name: &str) -> Option<PlanetBound> {
 ///   G = sqrt(1 - e^2) / (1 - e_p9^2)^{3/2}.
 /// ```
 pub fn planet_perihelion_precession_arcsec_per_cy(planet: &PlanetBound, p9: &Perturber) -> f64 {
-    let n = planet.mean_motion_rad_per_day(); // rad/day
-    let mass_ratio = p9.mass_solar();
-    let alpha = planet.a_au / p9.a_au;
-    let geometry = (1.0 - planet.e * planet.e).sqrt() / (1.0 - p9.e * p9.e).powf(1.5);
-
-    let rate_rad_per_day = 0.75 * n * mass_ratio * alpha * alpha * alpha * geometry;
-
-    rate_rad_per_day * DAYS_PER_CENTURY * ARCSEC_PER_RAD
+    perturber_perihelion_precession(planet.a_au, planet.e, p9.mass_solar(), p9.a_au, p9.e)
 }
 
 /// True if this perturber's predicted precession of `planet` exceeds the

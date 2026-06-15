@@ -81,8 +81,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use p9_core::analysis::secular::coplanar_quadrupole;
-use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN, YEAR_DAYS};
+use p9_core::analysis::secular::{coplanar_quadrupole, perturber_perihelion_precession};
+use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN};
 
 /// Saturn's semi-major axis in AU (JPL mean element, J2000). Labelled here
 /// because `p9-core` does not currently carry an inner/giant-planet semi-major
@@ -104,12 +104,6 @@ pub const E_SATURN: f64 = 0.0539;
 /// (2026) uses to set his constraints; it is a *reference constant*, not a
 /// computed quantity, and tightening it only sharpens the exclusions.
 pub const SATURN_PRECESSION_BOUND_ARCSEC_PER_CY: f64 = 1.0e-3;
-
-/// Radians per arcsecond (1 arcsec = pi/648000 rad).
-const ARCSEC_PER_RAD: f64 = 648_000.0 / std::f64::consts::PI;
-
-/// Days per Julian century.
-const DAYS_PER_CENTURY: f64 = 100.0 * YEAR_DAYS;
 
 /// A candidate distant perturber: mass (in Earth masses), semi-major axis (AU)
 /// and orbital eccentricity. The three hypotheses are constructors below.
@@ -180,16 +174,7 @@ impl Perturber {
 ///   G = sqrt(1 - e_Sat^2) / (1 - e_p^2)^{3/2}.
 /// ```
 pub fn saturn_perihelion_precession_arcsec_per_cy(p: &Perturber) -> f64 {
-    let n_sat = saturn_mean_motion_rad_per_day(); // rad/day
-    let mass_ratio = p.mass_solar();
-    let alpha = A_SATURN_AU / p.a_au;
-    let geometry = (1.0 - E_SATURN * E_SATURN).sqrt() / (1.0 - p.e * p.e).powf(1.5);
-
-    // rate in rad/day
-    let rate_rad_per_day = 0.75 * n_sat * mass_ratio * alpha * alpha * alpha * geometry;
-
-    // rad/day -> arcsec/century
-    rate_rad_per_day * DAYS_PER_CENTURY * ARCSEC_PER_RAD
+    perturber_perihelion_precession(A_SATURN_AU, E_SATURN, p.mass_solar(), p.a_au, p.e)
 }
 
 /// Saturn's Keplerian mean motion n = sqrt(GM_sun / a^3) in radians/day.
@@ -255,7 +240,7 @@ pub fn critical_distance_au(p: &Perturber) -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use p9_core::constants::TWO_PI;
+    use p9_core::constants::{TWO_PI, YEAR_DAYS};
 
     #[test]
     fn test_mean_motion_matches_saturn_period() {

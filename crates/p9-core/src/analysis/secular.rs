@@ -22,6 +22,54 @@
 
 use std::f64::consts::PI;
 
+use crate::constants::{GM_SUN, YEAR_DAYS};
+
+/// Radians per arcsecond (1 arcsec = π/648000 rad).
+const ARCSEC_PER_RAD: f64 = 648_000.0 / PI;
+
+/// Days per Julian century.
+const DAYS_PER_CENTURY: f64 = 100.0 * YEAR_DAYS;
+
+/// Secular precession rate of an inner planet's longitude of perihelion induced
+/// by a coplanar external perturber, in **arcseconds per century**.
+///
+/// This is the doubly orbit-averaged quadrupole apsidal rate (Lagrange's
+/// planetary equation for ϖ in the coplanar limit applied to
+/// [`coplanar_quadrupole`]), whose closed form is
+///
+/// ```text
+///   d(ϖ)/dt = (3/4) n (m_p/M_sun) (a/a_p)^3 * G(e, e_p),
+///   G(e, e_p) = sqrt(1 - e^2) / (1 - e_p^2)^{3/2},
+/// ```
+///
+/// with `n = sqrt(GM_sun / a^3)` the planet's Keplerian mean motion. The rate
+/// scales linearly in the perturber mass and as the inverse cube of its
+/// distance (the tidal-field gradient ∝ GM_p / a_p^3), and is independent of
+/// the planet's own eccentricity to leading order.
+///
+/// * `a_au`: inner planet semi-major axis (AU)
+/// * `e`: inner planet eccentricity
+/// * `mass_p_solar`: perturber mass in solar masses
+/// * `a_p_au`: perturber semi-major axis (AU)
+/// * `e_p`: perturber eccentricity
+pub fn perturber_perihelion_precession(
+    a_au: f64,
+    e: f64,
+    mass_p_solar: f64,
+    a_p_au: f64,
+    e_p: f64,
+) -> f64 {
+    let n = (GM_SUN / a_au.powi(3)).sqrt(); // rad/day
+    let alpha = a_au / a_p_au;
+    let geometry = (1.0 - e * e).sqrt() / (1.0 - e_p * e_p).powf(1.5);
+
+    // rate in rad/day
+    let rate_rad_per_day = 0.75 * n * mass_p_solar * alpha * alpha * alpha * geometry;
+
+    // rad/day -> arcsec/century
+    rate_rad_per_day * DAYS_PER_CENTURY * ARCSEC_PER_RAD
+}
+
 /// Quadrupole coupling constant C = gm_p α² / (4 a_p (1 − e_p²)^{3/2}).
 fn coupling(a: f64, a_p: f64, e_p: f64, gm_p: f64) -> f64 {
     let alpha = a / a_p;
@@ -208,6 +256,34 @@ mod tests {
     use crate::constants::GM_SUN;
 
     const GM_P: f64 = 10.0 * 3.003489e-6 * GM_SUN; // 10 Earth masses
+
+    #[test]
+    fn test_precession_scales_linearly_with_mass() {
+        // Two masses, same a, e and perturber geometry: rate scales linearly.
+        let r1 = perturber_perihelion_precession(9.5371, 0.0, 3.0 * 3.003489e-6, 400.0, 0.0);
+        let r2 = perturber_perihelion_precession(9.5371, 0.0, 9.0 * 3.003489e-6, 400.0, 0.0);
+        assert!((r2 / r1 - 3.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_precession_scales_as_inverse_cube_of_distance() {
+        // Two perturber distances, same mass: ratio follows (a1/a2)^3.
+        let m = 5.0 * 3.003489e-6;
+        let r_near = perturber_perihelion_precession(9.5371, 0.0, m, 200.0, 0.0);
+        let r_far = perturber_perihelion_precession(9.5371, 0.0, m, 400.0, 0.0);
+        let cube = (400.0_f64 / 200.0).powi(3); // = 8
+        assert!((r_near / r_far - cube).abs() < 1e-6 * cube);
+    }
+
+    #[test]
+    fn test_eccentric_perturber_enhances_precession() {
+        // (1 - e_p^2)^{-3/2} enhancement from perturber eccentricity.
+        let m = 5.0 * 3.003489e-6;
+        let r_c = perturber_perihelion_precession(9.5371, 0.0, m, 300.0, 0.0);
+        let r_e = perturber_perihelion_precession(9.5371, 0.0, m, 300.0, 0.5);
+        let factor = (1.0 - 0.5_f64 * 0.5).powf(-1.5);
+        assert!((r_e / r_c - factor).abs() < 1e-12 * factor);
+    }
 
     #[test]
     fn test_quadrupole_has_no_apsidal_dependence() {
