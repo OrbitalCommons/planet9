@@ -34,7 +34,10 @@ pub mod kde;
 pub mod mcmc;
 pub mod pipeline;
 pub mod plots;
-pub mod posterior;
-pub mod reference_population;
 pub mod sim_grid;
 pub mod statistical_measures;
+
+// The published-posterior summary and the synthetic reference population now
+// live in `p9_core::data`; re-export them here so this crate's pipeline,
+// plots, and the downstream survey crates keep their existing import paths.
+pub use p9_core::data::{posterior, reference_population};

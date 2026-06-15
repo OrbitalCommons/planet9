@@ -1504,7 +1504,6 @@ name = "p9-2018-wise-search"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2021-orbit",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
@@ -1732,7 +1731,6 @@ name = "p9-2021-ztf"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2021-orbit",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
@@ -1746,7 +1744,6 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "nalgebra",
- "p9-2021-orbit",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
@@ -1781,7 +1778,6 @@ name = "p9-2023-lsst-strategy"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2021-orbit",
  "p9-core",
  "p9-survey",
  "rand 0.8.5",
@@ -1830,7 +1826,6 @@ name = "p9-2024-panstarrs"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2021-orbit",
  "p9-2021-ztf",
  "p9-2022-des",
  "p9-core",
@@ -1949,7 +1944,6 @@ name = "p9-2025-ps1-holman"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2021-orbit",
  "p9-2022-des",
  "p9-core",
  "rand 0.8.5",

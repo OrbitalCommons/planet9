@@ -210,9 +210,9 @@ mod tests {
     /// regression tolerances (verified — no pins re-pinned). Kernel-gated.
     #[test]
     fn phase_induced_dmag_small_over_reference_population() {
-        use p9_2021_orbit::reference_population::generate_reference_population;
         use p9_core::analysis::photometry::{hg_phase_factor, DEFAULT_SLOPE_G};
         use p9_core::coords::observer::EphemerisEarth;
+        use p9_core::data::reference_population::generate_reference_population;
         use rand::SeedableRng;
 
         let mut earth = match EphemerisEarth::try_new() {

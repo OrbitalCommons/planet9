@@ -12,4 +12,3 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 approx = { workspace = true }
-p9-2021-orbit = { path = "../p9-2021-orbit" }

@@ -21,8 +21,8 @@ use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use serde::{Deserialize, Serialize};
 
-use p9_core::constants::DEG2RAD;
-use p9_core::types::P9Params;
+use crate::constants::DEG2RAD;
+use crate::types::P9Params;
 
 /// Assumed correlation between the a and q marginals when sampling jointly.
 ///
