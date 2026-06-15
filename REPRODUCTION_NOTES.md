@@ -624,3 +624,41 @@ pixel-level coadd. The headline scalings and the stacking-gain-≫-trials-penalt
 conclusion reproduce; absolute trial counts depend on the adopted rate range /
 PSF / SNR tolerance, kept as labelled inputs.
 - Pinned: crates/p9-2025-stacking/src/{matched_filter,orbit_metric,significance}.rs
+
+### 25. p9-2023-lsst-strategy — for the *nominal-orbit* P9 population the binding LSST constraint is the footprint, not depth or linking
+
+Schwamb et al. (2023) argue that LSST's cadence/footprint tuning drives the
+discoverable fraction of slow distant movers. This crate runs a seeded
+reference Planet Nine population (the `p9-2021-orbit` posterior emulator +
+`p9_core::analysis::photometry`) through a real LSST detection model built on
+the reused `p9-survey` Rubin/LSST footprint preset (δ ∈ [−75°, +12°], |b| > 10°,
+coverage 0.85) and the shared single-visit (r ≈ 24.5) / ten-year-stack
+(r ≈ 27.0) depths kept as labelled `published::` constants. The per-orbit
+discovery probability is `footprint(δ, b) · coverage · P(link | V)`, with the
+linking probability the binomial survival of ≥ N detections out of the field's
+visits at the single-visit recovery efficiency.
+
+All four published directions reproduce as *monotone* effects: the discoverable
+fraction is in (0, 1); requiring more visits-for-linking never raises it;
+shrinking the declination extent never raises it; the ten-year co-add never
+lowers it. The honest finding behind the magnitudes: the nominal-orbit P9
+population is **bright** — V p50 ≈ 19.9, p99 ≈ 23.0 (dwell-weighted current
+positions), all brighter than the 24.5 single-visit depth — so per-visit
+ε ≈ 1 and a single LSST visit already reaches essentially every nominal
+solution. The **footprint is therefore the binding constraint** (the dec/|b|
+gate moves the fraction by tens of percent), while the depth and linking levers
+move it only at the sub-percent level on the full population because almost
+nothing sits near the per-visit limit. The depth/linking sensitivity Schwamb
+et al. emphasize is genuine but localised to the **faint distant tail**: at a
+shallow per-visit cadence (depth ≈ 21, e.g. dark time split across many
+filters) both levers bite hard (> 0.05 swings), pinned as
+`linking_lever_bites_hard_near_the_depth_limit` and
+`stack_depth_increases_discovery_near_the_limit`. No constant is tuned to a
+target fraction — there is no single published discoverable-fraction scalar to
+hit; the model reproduces the *sensitivities*, not a number.
+- Pinned: `crates/p9-2023-lsst-strategy/src/strategy.rs`
+  (`baseline_matches_published_reference_constants`,
+  `single_visit_depth_matches_p9_survey_rubin_preset`,
+  `binomial_survival_matches_known_values`, linking/depth monotonicity),
+  `src/lib.rs` headline tests (probability-in-(0,1), the four monotone levers,
+  the two faint-tail sensitivity tests, seed stability).
