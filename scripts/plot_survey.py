@@ -8,8 +8,10 @@ types don't match — so the Rust and Python sides stay in lock-step (bump
 SCHEMA_VERSION on both when the contract changes).
 
 Usage:
-    python3 scripts/plot_survey.py [DATA_JSON] [OUT_SVG]
+    python3 scripts/plot_survey.py [DATA_JSON] [OUT_SVG] [--theme dark|standard]
 Defaults: crates/p9-survey/p9_survey_data.json -> crates/p9-survey/p9_survey_sky.svg
+          --theme dark  (the Tokyo-Night palette used throughout this tooling;
+          "standard" is the conventional light/matplotlib scheme).
 """
 import json
 import sys
@@ -20,16 +22,49 @@ import numpy as np
 
 SCHEMA_VERSION = 2  # must equal p9_survey::schema::SCHEMA_VERSION
 
-# Tokyo-Night palette (portal dark background #1a1b26)
-FG, MUTE = "#c0caf5", "#565f89"
-STUDY_COLORS = {  # by substring of study name, oldest->newest
-    "2016 Batygin & Brown (nominal)": "#7dcfff",
-    "2016 Batygin & Brown (inclined-TNO variant)": "#7aa2f7",
-    "2019 Batygin et al.": "#9ece6a",
-    "2021 Brown & Batygin": "#f7768e",
-    "2024 Siraj": "#e0af68",
+# Two palettes. "dark" is the Tokyo-Night scheme this tooling uses on the
+# portal's #1a1b26 background; "standard" is a conventional light/matplotlib
+# (tab10) scheme for slides, print, or anywhere a white background is wanted.
+THEMES = {
+    "dark": {
+        "fg": "#c0caf5", "mute": "#565f89", "bg": None, "transparent": True,
+        "study": {
+            "2016 Batygin & Brown (nominal)": "#7dcfff",
+            "2016 Batygin & Brown (inclined-TNO variant)": "#7aa2f7",
+            "2019 Batygin et al.": "#9ece6a",
+            "2021 Brown & Batygin": "#f7768e",
+            "2024 Siraj": "#e0af68",
+        },
+        "tele": {"Rubin": "#7dcfff", "JBT": "#9ece6a"},
+        "arc": "#bb9af7", "rubin_line": "#c0caf5",
+        "galplane": "#9aa5ce", "ecliptic": "#c0caf5",
+        "cloud": [(0.0, (0, 0, 0, 0.0)), (0.35, (0.50, 0.52, 0.60, 0.55)),
+                  (1.0, (0.90, 0.92, 0.99, 1.0))],
+        "outline_bg": "#1a1b26", "star_edge": "white",
+    },
+    "standard": {
+        "fg": "#222222", "mute": "#555555", "bg": "white", "transparent": False,
+        "study": {
+            "2016 Batygin & Brown (nominal)": "#1f77b4",
+            "2016 Batygin & Brown (inclined-TNO variant)": "#17becf",
+            "2019 Batygin et al.": "#2ca02c",
+            "2021 Brown & Batygin": "#d62728",
+            "2024 Siraj": "#ff7f0e",
+        },
+        "tele": {"Rubin": "#1f77b4", "JBT": "#2ca02c"},
+        "arc": "#9467bd", "rubin_line": "#333333",
+        "galplane": "#888888", "ecliptic": "#aaaaaa",
+        "cloud": [(0.0, (1, 1, 1, 0.0)), (0.35, (0.55, 0.70, 0.88, 0.55)),
+                  (1.0, (0.11, 0.30, 0.55, 1.0))],
+        "outline_bg": "white", "star_edge": "black",
+    },
 }
-TELE_COLORS = {"Rubin": "#7dcfff", "JBT": "#9ece6a"}
+
+# Module globals set per-theme in main(); default to dark so the helpers below
+# (study_color) have a palette before main() runs.
+FG, MUTE = THEMES["dark"]["fg"], THEMES["dark"]["mute"]
+STUDY_COLORS = THEMES["dark"]["study"]
+TELE_COLORS = THEMES["dark"]["tele"]
 
 
 # ---- tight typed schema (mirror of crates/p9-survey/src/schema.rs) ----
@@ -182,8 +217,23 @@ def levels_68_95(h: np.ndarray) -> list:
 
 
 def main() -> None:
-    data_path = sys.argv[1] if len(sys.argv) > 1 else "crates/p9-survey/p9_survey_data.json"
-    out_path = sys.argv[2] if len(sys.argv) > 2 else "crates/p9-survey/p9_survey_sky.svg"
+    global FG, MUTE, STUDY_COLORS, TELE_COLORS
+    argv = sys.argv[1:]
+    theme_name = "dark"
+    if "--theme" in argv:
+        i = argv.index("--theme")
+        if i + 1 >= len(argv):
+            raise SystemExit("--theme needs a value (dark|standard)")
+        theme_name = argv[i + 1]
+        del argv[i:i + 2]
+    if theme_name not in THEMES:
+        raise SystemExit(f"--theme must be one of {list(THEMES)}, got {theme_name!r}")
+    th = THEMES[theme_name]
+    FG, MUTE = th["fg"], th["mute"]
+    STUDY_COLORS, TELE_COLORS = th["study"], th["tele"]
+
+    data_path = argv[0] if len(argv) > 0 else "crates/p9-survey/p9_survey_data.json"
+    out_path = argv[1] if len(argv) > 1 else "crates/p9-survey/p9_survey_sky.svg"
     d = load(data_path)
 
     import matplotlib
@@ -194,25 +244,24 @@ def main() -> None:
     from matplotlib.colors import LinearSegmentedColormap
     import matplotlib.patheffects as pe
 
-    # Neutral grey "probability cloud" so the coloured overlays read clearly on
-    # the dark background (the warm magma map fought the orange/red overlays).
-    p9_cloud = LinearSegmentedColormap.from_list(
-        "p9cloud",
-        [(0.0, (0, 0, 0, 0.0)), (0.35, (0.50, 0.52, 0.60, 0.55)),
-         (1.0, (0.90, 0.92, 0.99, 1.0))],
-    )
-    outline = [pe.Stroke(linewidth=4.0, foreground="#1a1b26"), pe.Normal()]
+    # Transparent-low "probability cloud" in the theme's hue so the coloured
+    # overlays read clearly against the background.
+    p9_cloud = LinearSegmentedColormap.from_list("p9cloud", th["cloud"])
+    outline = [pe.Stroke(linewidth=4.0, foreground=th["outline_bg"]), pe.Normal()]
 
     g = d.grid
     extent = [g.ra_min_deg, g.ra_max_deg, g.dec_min_deg, g.dec_max_deg]
     primary = next(s for s in d.studies if "2021 Brown" in s.solution.name)
 
     fig = plt.figure(figsize=(9.6, 7.4))
-    fig.patch.set_alpha(0)
+    if th["transparent"]:
+        fig.patch.set_alpha(0)
+    else:
+        fig.patch.set_facecolor(th["bg"])
     gs = GridSpec(2, 1, height_ratios=[2.4, 1.0], hspace=0.42)
 
     # ---- panel 1: sky heatmap ----
-    ax = fig.add_subplot(gs[0]); ax.set_facecolor("none")
+    ax = fig.add_subplot(gs[0]); ax.set_facecolor(th["bg"] or "none")
     H = gaussian_filter(grid_2d(primary, g), 1.2)
     im = ax.imshow(H / H.max(), origin="lower", extent=extent, aspect="auto",
                    cmap=p9_cloud, vmin=0.02, zorder=2)
@@ -224,22 +273,22 @@ def main() -> None:
             Hs = gaussian_filter(grid_2d(s, g), 1.4)
             ax.contour(xc, yc, Hs, levels=levels_68_95(Hs), colors=col,
                        linewidths=[0.9, 1.6], alpha=0.95, zorder=4)
-        ax.plot(s.peak_ra_deg, s.peak_dec_deg, "*", ms=14, mfc=col, mec="white",
+        ax.plot(s.peak_ra_deg, s.peak_dec_deg, "*", ms=14, mfc=col, mec=th["star_edge"],
                 mew=0.5, zorder=6)
         ax.plot([], [], color=col, lw=2.2,
                 label=f"{s.solution.name.split('(')[0].strip()} — V≈{s.v_median:.1f}, {s.dist_median_au:.0f} AU")
 
     gp = np.array(d.overlays.galactic_plane); ec = np.array(d.overlays.ecliptic)
-    op = np.argsort(gp[:, 0]); ax.plot(gp[op, 0], gp[op, 1], ls="--", color="#9aa5ce", lw=1.8,
+    op = np.argsort(gp[:, 0]); ax.plot(gp[op, 0], gp[op, 1], ls="--", color=th["galplane"], lw=1.8,
                                        alpha=0.9, zorder=3, path_effects=outline,
                                        label="Galactic plane (crowded zone)")
-    oe = np.argsort(ec[:, 0]); ax.plot(ec[oe, 0], ec[oe, 1], ls=":", color=FG, lw=0.9,
-                                       alpha=0.5, zorder=3, label="Ecliptic")
+    oe = np.argsort(ec[:, 0]); ax.plot(ec[oe, 0], ec[oe, 1], ls=":", color=th["ecliptic"], lw=0.9,
+                                       alpha=0.7, zorder=3, label="Ecliptic")
 
     # Search-narrowing overlays: Rubin cede line + Cassini favored-ν arc.
     c = d.constraints
     ax.axhspan(g.dec_min_deg, c.rubin_dec_max_deg, color=MUTE, alpha=0.16, zorder=1)
-    ax.axhline(c.rubin_dec_max_deg, color="#c0caf5", ls=(0, (6, 3)), lw=1.4, alpha=0.9,
+    ax.axhline(c.rubin_dec_max_deg, color=th["rubin_line"], ls=(0, (6, 3)), lw=1.4, alpha=0.9,
                zorder=5, label=f"Rubin reach (Dec < +{c.rubin_dec_max_deg:.0f}°)")
     # The favored-ν arc is a compact curve that can cross RA = 0/360; draw it as
     # connected segments (split on wrap) in a high-contrast colour with a dark
@@ -250,10 +299,10 @@ def main() -> None:
     for k in range(1, len(ra_a) + 1):
         if k == len(ra_a) or abs(ra_a[k] - ra_a[k - 1]) > 180:
             sl = slice(start, k)
-            ax.plot(ra_a[sl], dec_a[sl], color="#bb9af7", lw=2.8, zorder=8,
+            ax.plot(ra_a[sl], dec_a[sl], color=th["arc"], lw=2.8, zorder=8,
                     path_effects=outline)
             start = k
-    ax.plot([], [], color="#bb9af7", lw=2.8,
+    ax.plot([], [], color=th["arc"], lw=2.8,
             label=f"Cassini favoured-ν arc (ν {c.favored_nu_lo_deg:.0f}–{c.favored_nu_hi_deg:.0f}°, B&B orbit)")
 
     ax.set_xlim(g.ra_min_deg, g.ra_max_deg); ax.set_ylim(g.dec_min_deg, g.dec_max_deg)
@@ -273,7 +322,7 @@ def main() -> None:
     cb.ax.tick_params(colors=MUTE); plt.setp(cb.ax.get_yticklabels(), color=FG, fontsize=7)
 
     # ---- panel 2: detection probability per telescope across studies ----
-    ax2 = fig.add_subplot(gs[1]); ax2.set_facecolor("none")
+    ax2 = fig.add_subplot(gs[1]); ax2.set_facecolor(th["bg"] or "none")
     studies = [s.solution.name.split("(")[0].strip() for s in d.studies]
     x = np.arange(len(studies)); w = 0.26
     for j, t in enumerate(d.telescopes):
@@ -295,8 +344,9 @@ def main() -> None:
     ax2.legend(loc="upper right", fontsize=7.2, framealpha=0.0, labelcolor=FG)
     ax2.grid(axis="y", color=MUTE, alpha=0.25, lw=0.5)
 
-    fig.savefig(out_path, transparent=True, bbox_inches="tight")
-    print(f"wrote {out_path}  (schema v{d.schema_version}, "
+    fig.savefig(out_path, transparent=th["transparent"],
+                facecolor=("none" if th["transparent"] else th["bg"]), bbox_inches="tight")
+    print(f"wrote {out_path}  (theme={theme_name}, schema v{d.schema_version}, "
           f"{d.samples_per_study} samples/study, {len(d.studies)} studies)")
 
 

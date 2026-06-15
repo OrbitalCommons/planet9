@@ -37,6 +37,8 @@ cargo run -p p9-survey --bin survey -- \
 # 2. Python renders it (no astronomy of its own — only what Rust emitted):
 python3 scripts/plot_survey.py \
     crates/p9-survey/p9_survey_data.json crates/p9-survey/p9_survey_sky.svg
+# add `--theme standard` for a conventional light/matplotlib scheme;
+# the default `--theme dark` is the Tokyo-Night palette used throughout.
 ```
 
 The JSON is a `schema::SurveyDataset` (see `src/schema.rs`); the plotter mirrors
