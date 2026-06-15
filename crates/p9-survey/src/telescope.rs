@@ -29,7 +29,7 @@ pub const JBT_PLATE_SCALE_ARCSEC_PER_PX: f64 = 0.130;
 /// Instantaneous field of the 4-chip SPENCER array (deg²).
 pub const SPENCER_FIELD_DEG2: f64 = 0.32;
 
-/// The surveyed instruments: one ground baseline, two space assets.
+/// The surveyed instruments: the Rubin/LSST ground baseline and JBT/SPENCER.
 pub fn catalog() -> Vec<Telescope> {
     vec![
         Telescope {
@@ -45,21 +45,6 @@ pub fn catalog() -> Vec<Telescope> {
             space_based: false,
             note: "8.4 m, ~18,000 deg² southern main survey; deep 10-yr stack \
                    reaches r≈27 but plane-avoiding. Ground comparison point."
-                .to_string(),
-        },
-        Telescope {
-            name: "Roman (space, NIR, pointed)".to_string(),
-            band: "F146 (NIR proxy)".to_string(),
-            limiting_mag: 26.0,
-            footprint: Footprint {
-                dec_min_deg: -90.0,
-                dec_max_deg: 90.0,
-                galactic_lat_min_deg: 0.0,
-                coverage_fraction: 0.02,
-            },
-            space_based: true,
-            note: "2.4 m, very deep but a tiny 0.28 deg² field — superb depth, \
-                   negligible blind-survey sky coverage for a wide P9 search."
                 .to_string(),
         },
         Telescope {

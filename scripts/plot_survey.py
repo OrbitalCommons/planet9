@@ -29,7 +29,7 @@ STUDY_COLORS = {  # by substring of study name, oldest->newest
     "2021 Brown & Batygin": "#f7768e",
     "2024 Siraj": "#e0af68",
 }
-TELE_COLORS = {"Rubin": "#7dcfff", "Roman": "#bb9af7", "Proposed": "#9ece6a"}
+TELE_COLORS = {"Rubin": "#7dcfff", "JBT": "#9ece6a"}
 
 
 # ---- tight typed schema (mirror of crates/p9-survey/src/schema.rs) ----
