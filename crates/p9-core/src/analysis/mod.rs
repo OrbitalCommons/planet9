@@ -4,6 +4,7 @@ pub mod hansen;
 pub mod photometry;
 pub mod resonance;
 pub mod secular;
+pub mod stacking;
 pub mod surveys;
 
 /// Snapshot of orbital elements for all active particles at a given time.

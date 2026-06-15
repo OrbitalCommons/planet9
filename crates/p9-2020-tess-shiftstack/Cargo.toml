@@ -6,7 +6,6 @@ description = "Reproduction of Rice & Laughlin (2020) 'Exploring Trans-Neptunian
 
 [dependencies]
 p9-core = { path = "../p9-core" }
-p9-2025-stacking = { path = "../p9-2025-stacking" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

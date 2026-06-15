@@ -15,10 +15,10 @@
 //! reach V < 21 on its own; reaching it is a multi-sector / per-track deep
 //! co-add, which the [`sectors_to_reach_depth`] inversion makes explicit.
 
-use p9_2025_stacking::matched_filter::{
+use p9_core::analysis::photometry::planet_apparent_magnitude;
+use p9_core::analysis::stacking::matched_filter::{
     frames_to_reach_depth, stack_depth_gain_mag, stacked_limiting_mag,
 };
-use p9_core::analysis::photometry::planet_apparent_magnitude;
 use p9_core::types::P9Params;
 
 use crate::tess;
