@@ -1280,6 +1280,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-obliquity-lai"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-2016-obliquity",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2016-resonance-prediction"
 version = "0.1.0"
 dependencies = [
@@ -1343,6 +1355,27 @@ dependencies = [
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2017-resonance-hopping"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2018-bp519"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-core",
  "serde",
  "serde_json",
 ]
@@ -1491,6 +1524,30 @@ name = "p9-2020-resonance-hopping"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2020-secular-octupole"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2021-detached-inclinations"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
  "p9-core",
  "rand 0.8.5",
  "rand_distr",
