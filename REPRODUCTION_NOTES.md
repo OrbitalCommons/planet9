@@ -624,3 +624,27 @@ pixel-level coadd. The headline scalings and the stacking-gain-≫-trials-penalt
 conclusion reproduce; absolute trial counts depend on the adopted rate range /
 PSF / SNR tolerance, kept as labelled inputs.
 - Pinned: crates/p9-2025-stacking/src/{matched_filter,orbit_metric,significance}.rs
+
+### 25. p9-2022-iras-candidate — chance-association count and the back-derived candidate flux
+
+Rowan-Robinson (2022) publishes the *fitted* candidate distance (225 ± 15 AU)
+and mass (3–5 M⊕) but no explicit candidate flux in Jy, and does not tabulate
+the subset sizes used in the cross-match. Two honest residuals follow:
+
+1. **Back-derived flux.** The reference 60/100 µm fluxes (≈0.35 / 0.86 Jy) are
+   the values *self-consistent* with the published 225 AU / 4 M⊕ under this
+   crate's blackbody + inverse-square model at an assumed T_eff = 40 K (a cold
+   internally-heated ice giant; solar equilibrium at 225 AU is only ~17 K). They
+   are labelled as back-derived, not quoted from the paper. The test pins the
+   round-trip (flux → 225 AU → flux) and that the implied distance lands within
+   the published ±15 AU, not a flux the paper never stated.
+2. **Chance-association count.** The all-FSC-against-all-FSC Poisson estimate
+   runs to ~10⁵–10⁶ (a loose upper bound, pinned). Restricting to the
+   ~3000 unidentified 60 µm primaries cross-matched against the sparse
+   single-HCON Reject File (~5×10⁴ sources) over the 2–35 arcmin window gives
+   ~4×10³ raw geometric coincidences — the right order for the paper's "several
+   hundred candidate associations", which are those *after* Scanpi vetting. The
+   subset sizes are order-of-magnitude reference values, so the test pins the
+   order of magnitude (hundreds to a few thousand), not a precise count.
+- Pinned: crates/p9-2022-iras-candidate/src/{distance.rs,chance.rs}; reference
+  constants in src/lib.rs (`REF_CANDIDATE`).
