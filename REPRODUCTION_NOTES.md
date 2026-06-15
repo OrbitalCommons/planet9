@@ -267,6 +267,35 @@ Caveat documented in code: 2014 SR349 and 2013 FT28 also appear in the Brown (20
 - Pinned: `crates/p9-2016-sheppard-etnos/src/clustering.rs` (`computed_headline_values_are_pinned`,
   `dedup_combined_still_clusters`, `combined_omega_clusters_near_published_340`).
 
+### 16. p9-2017-resonance-hopping — the analytic n:1 chain overlaps only near P9; hopping at 300–500 AU is an N-body/penetration effect
+
+Becker, Adams et al. (2017) integrate distant TNOs with the nominal Planet Nine (a₉ = 700 AU,
+m₉ = 10 M⊕) and find the objects hop between adjacent P9 mean-motion resonances rather than
+staying locked in one, because neighbouring resonances overlap. This crate reproduces the
+analytic backbone with `p9_core::analysis::resonance`: the n:1 / n:2 resonance locations
+(`a = a₉(q/p)^{2/3}`, exact to 1e-9), each resonance's pendulum libration half-width, and the
+Chirikov overlap parameter `K = Σδa / Δa` between neighbours.
+
+The honest scale finding: for a **nominal 10 M⊕ P9** the widely-spaced n:1 (and n:2) resonances
+out in the 200–500 AU TNO band do **not** overlap (K plateaus at ≈ 0.08 at the 3:1; asserted
+isolated in `n_over_1_resonances_isolated_for_nominal_p9`). The neighbour overlap parameter
+crosses K = 1 only on the **first-order p:(p−1) chain that crowds toward P9** — the α/(1−α)
+Laplace amplitude diverges as a → a₉ — at a computed inner edge `a_hop ≈ 590 AU` (between the
+4:3 and 3:2 resonances), the Wisdom (1980) resonance-overlap zone. So the hopping Becker+ see
+at smaller a is not adjacent n:1 resonances literally touching; it is the highly eccentric
+(e ≈ 0.9) TNOs whose orbits **penetrate** the near-P9 overlap zone at aphelion during their
+secular cycles, sampling the chaotic web — which their full N-body integration captures and a
+static pendulum-width chain does not. The crate classifies an ETNO as a hopper when its aphelion
+Q = a(1+e) reaches a_hop; 2007 TG422, 2013 RF98 and Sedna all qualify, matching the paper's
+migrating class. No constant is tuned to a target a_hop — the strength `S = α·α/(1−α)·e` is the
+bare leading Laplace/eccentric scaling, and K ∝ √μ exactly.
+- Pinned: `crates/p9-2017-resonance-hopping/src/chain.rs`
+  (`resonance_locations_match_kepler_relation` to 1e-9,
+  `overlap_rises_monotonically_and_crosses_hopping_threshold`,
+  `below_threshold_isolated_above_overlapping`, `n_over_1_resonances_isolated_for_nominal_p9`,
+  `overlap_a_exponent_brackets_validated_chirikov_slope` cross-check vs the validated core
+  Chirikov), `src/tno.rs` (`eccentric_distant_tnos_penetrate_overlap_zone`).
+
 ---
 
 ## Agreements within tolerance (for completeness)
