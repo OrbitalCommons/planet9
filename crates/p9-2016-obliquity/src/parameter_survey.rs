@@ -4,9 +4,9 @@
 //! required to produce the observed 6° solar obliquity.
 
 use p9_core::constants::*;
+use p9_core::initial_conditions::giant_planets;
 
 use crate::secular_hamiltonian::{integrate_obliquity, SecularParams, SpinOrbitState};
-use crate::solar_model;
 
 /// Result of a parameter survey point.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -73,8 +73,8 @@ pub fn find_required_inclination(
 
 /// Create an initial state for given P9 parameters.
 fn make_initial_state(m9_solar: f64, a9: f64, e9: f64, i9: f64) -> SpinOrbitState {
-    let l_gp_mag = solar_model::giant_planet_angular_momentum();
-    let l_9_mag = solar_model::p9_angular_momentum(m9_solar, a9, e9);
+    let l_gp_mag = giant_planets::giant_planet_angular_momentum();
+    let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, a9, e9);
     SpinOrbitState::from_inclinations(i9, std::f64::consts::PI, l_gp_mag, l_9_mag)
 }
 

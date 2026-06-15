@@ -4,8 +4,9 @@
 //! ## Physical picture
 //!
 //! We treat the four giant planets as a single rigid "wire" of orbital
-//! angular momentum L_p (reusing the per-planet model in the sibling crate's
-//! `solar_model`), and Planet Nine as an outer wire of angular momentum L_9.
+//! angular momentum L_p (reusing the per-planet wire set in
+//! `p9_core::initial_conditions::giant_planets`), and Planet Nine as an outer
+//! wire of angular momentum L_9.
 //! The two wires interact through the quadrupole secular Hamiltonian. The
 //! total angular momentum
 //!
@@ -39,8 +40,8 @@
 
 use std::f64::consts::PI;
 
-use p9_2016_obliquity::solar_model;
 use p9_core::constants::*;
+use p9_core::initial_conditions::giant_planets;
 
 /// Parameters of the Gomes precession model.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -80,12 +81,12 @@ impl GomesParams {
 
 /// Giant-planet orbital angular momentum magnitude (M_sun·AU²/day).
 pub fn l_planets() -> f64 {
-    solar_model::giant_planet_angular_momentum()
+    giant_planets::giant_planet_angular_momentum()
 }
 
 /// Planet Nine orbital angular momentum magnitude (M_sun·AU²/day).
 pub fn l_p9(p: &GomesParams) -> f64 {
-    solar_model::p9_angular_momentum(p.m9_solar(), p.a9, p.e9)
+    giant_planets::p9_angular_momentum(p.m9_solar(), p.a9, p.e9)
 }
 
 /// Total angular-momentum magnitude with the two wires inclined by `i_mutual`.
@@ -121,10 +122,10 @@ fn coupling_constant(m1: f64, m2: f64, a_inner: f64, a_outer: f64, epsilon_outer
 }
 
 /// Total giant-planet ↔ Planet Nine quadrupole coupling, summed per planet
-/// (∝ Σ mᵢ aᵢ²), reusing the giant-planet wire set from the sibling crate.
+/// (∝ Σ mᵢ aᵢ²), reusing the giant-planet wire set from p9-core.
 pub fn coupling_planets_p9(p: &GomesParams) -> f64 {
     let eps9 = p.epsilon_9();
-    solar_model::GIANT_PLANETS
+    giant_planets::GIANT_PLANETS
         .iter()
         .map(|&(m_i, a_i)| coupling_constant(m_i, p.m9_solar(), a_i, p.a9, eps9))
         .sum()
