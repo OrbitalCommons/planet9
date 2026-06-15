@@ -12,11 +12,11 @@
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
-use p9_2021_orbit::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_2022_des::color_models as des_colors;
 use p9_2022_des::survey_model::{DesBand, DesSurvey};
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::observer::{EarthProvider, EarthState};
+use p9_core::data::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_core::types::{OrbitalElements, P9Params};
 
 use crate::detection_pipeline::{

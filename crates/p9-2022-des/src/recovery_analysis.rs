@@ -12,8 +12,8 @@
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use p9_2021_orbit::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_core::coords::observer::{EarthProvider, EarthState};
+use p9_core::data::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_core::types::{OrbitalElements, P9Params};
 
 use crate::color_models::{self, ColorModel};

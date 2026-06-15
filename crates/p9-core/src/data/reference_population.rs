@@ -13,10 +13,9 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use p9_core::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
-use p9_core::types::{solve_kepler, P9Params};
-
-use crate::posterior::{mcmc_2021_posterior, sample_from_posterior, P9Posterior};
+use crate::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
+use crate::data::posterior::{mcmc_2021_posterior, sample_from_posterior, P9Posterior};
+use crate::types::{solve_kepler, P9Params};
 
 /// A single synthetic Planet Nine realization with observable properties.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,7 +97,7 @@ pub fn heliocentric_distance(params: &P9Params) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use p9_core::constants::DEG2RAD;
+    use crate::constants::DEG2RAD;
     use rand::SeedableRng;
 
     #[test]

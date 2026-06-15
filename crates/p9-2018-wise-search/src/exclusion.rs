@@ -71,7 +71,7 @@ pub fn compute_exclusion(survey: &WiseSurvey, population: &[ReferenceP9]) -> Exc
 mod tests {
     use super::*;
     use crate::thermal_model::w1_magnitude;
-    use p9_2021_orbit::reference_population::{
+    use p9_core::data::reference_population::{
         generate_reference_population, heliocentric_distance,
     };
     use p9_core::types::P9Params;

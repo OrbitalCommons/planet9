@@ -64,8 +64,8 @@ pub fn compute_exclusion(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use p9_2021_orbit::reference_population::generate_reference_population;
     use p9_core::constants::DEG2RAD;
+    use p9_core::data::reference_population::generate_reference_population;
     use rand::SeedableRng;
 
     /// H3 regression against the published number: a seeded reference

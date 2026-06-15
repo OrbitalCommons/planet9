@@ -42,7 +42,7 @@ pub use strategy::{binomial_survival, LsstStrategy};
 #[cfg(test)]
 mod headline_tests {
     use super::*;
-    use p9_2021_orbit::reference_population::generate_reference_population;
+    use p9_core::data::reference_population::generate_reference_population;
     use p9_core::types::OrbitalElements;
     use rand::SeedableRng;
 

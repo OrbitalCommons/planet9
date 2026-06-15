@@ -10,5 +10,4 @@ rand_distr = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 approx = { workspace = true }
-p9-2021-orbit = { version = "0.1.0", path = "../p9-2021-orbit" }
 nalgebra.workspace = true

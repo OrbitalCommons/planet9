@@ -14,8 +14,8 @@
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use p9_2021_orbit::reference_population::generate_reference_population;
 use p9_2022_des::sky::apparent_position_deg;
+use p9_core::data::reference_population::generate_reference_population;
 use p9_core::types::OrbitalElements;
 
 use crate::survey_model::Ps1StackSurvey;
@@ -135,7 +135,7 @@ mod tests {
         // of a P9 of fixed assumed mass at the orbit's heliocentric distance.
         // More massive => brighter => larger excluded fraction.
         use crate::photometry::apparent_r_magnitude;
-        use p9_2021_orbit::reference_population::heliocentric_distance;
+        use p9_core::data::reference_population::heliocentric_distance;
         use p9_core::types::P9Params;
         use rand::SeedableRng;
 
