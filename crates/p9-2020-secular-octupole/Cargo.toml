@@ -1,0 +1,14 @@
+[package]
+name = "p9-2020-secular-octupole"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Kohne & Batygin (2020) 'Secular dynamics of distant Kuiper belt objects under Planet Nine' (octupole-level theory)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

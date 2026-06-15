@@ -1420,6 +1420,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2020-secular-octupole"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2021-napier-critique"
 version = "0.1.0"
 dependencies = [
