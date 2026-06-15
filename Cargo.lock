@@ -2026,7 +2026,6 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "nalgebra",
- "p9-2016-cassini-ranging",
  "p9-2024-siraj-orbit",
  "p9-core",
  "rand 0.8.5",

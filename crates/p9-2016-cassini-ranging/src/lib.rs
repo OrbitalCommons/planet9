@@ -46,47 +46,21 @@
 pub mod geometry;
 pub mod perturbation;
 
-use p9_core::constants::DEG2RAD;
-use p9_core::types::P9Params;
-
-/// Planet Nine on the Brown & Batygin (2016) orbit, exactly as tabulated by
-/// Fienga et al. (2016), Table 1: `a = 700 AU`, `e = 0.6`, `i = 30°`,
-/// `ω = 150°`, `Ω = 113°` (IERS ecliptic). The mean anomaly is irrelevant here
-/// — the analysis sweeps the true anomaly explicitly. Note `Ω = 113°` differs
-/// from `P9Params::nominal_2016()` (`Ω = 100°`), so this paper-specific orbit
-/// is built directly.
-pub fn brown_batygin_orbit() -> P9Params {
-    P9Params {
-        mass_earth: published::P9_MASS_EARTH,
-        a: 700.0,
-        e: 0.6,
-        i: 30.0 * DEG2RAD,
-        omega: 150.0 * DEG2RAD,
-        omega_big: 113.0 * DEG2RAD,
-        mean_anomaly: 0.0,
-    }
-}
+// The Brown & Batygin (2016) reference orbit and the favored-ν zone now live in
+// `p9_core::data::ephemeris_constraint`; re-export the orbit so callers can
+// build it without naming core.
+pub use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
 
 /// Published reference values from Fienga et al. (2016), kept as labelled
-/// constants (NOT used to derive any computed quantity).
+/// constants (NOT used to derive any computed quantity). The favored-ν zone is
+/// re-exported from [`p9_core::data::ephemeris_constraint`].
 pub mod published {
-    /// Planet Nine mass assumed by the paper, in Earth masses.
-    pub const P9_MASS_EARTH: f64 = 10.0;
-
-    /// Most-probable true anomaly of P9 that REDUCES the Cassini Earth–Saturn
-    /// range residuals (degrees): `v = 117.8°₋₁₀⁺¹¹` (Fienga et al. 2016, §4).
-    pub const PREFERRED_TRUE_ANOMALY_DEG: f64 = 117.8;
-
-    /// Favored interval for the true anomaly (degrees): `v ∈ [108°, 129°]`
-    /// (Fienga et al. 2016, Conclusions / Fig 6 green zone).
-    pub const FAVORED_INTERVAL_DEG: (f64, f64) = (108.0, 129.0);
+    pub use p9_core::data::ephemeris_constraint::{
+        FAVORED_INTERVAL_DEG, P9_MASS_EARTH, PREFERRED_TRUE_ANOMALY_DEG, TRUE_ANOMALY_TOLERANCE_DEG,
+    };
 
     /// Approximate P9 heliocentric distance at the preferred true anomaly (AU).
     pub const PREFERRED_HELIO_DISTANCE_AU: f64 = 600.0;
-
-    /// Tolerance (deg) within which our analytic-proxy favored anomaly should
-    /// land of the published preferred true anomaly.
-    pub const TRUE_ANOMALY_TOLERANCE_DEG: f64 = 30.0;
 }
 
 pub use geometry::{p9_position_at_true_anomaly, P9Geometry};

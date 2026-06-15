@@ -7,20 +7,19 @@
 //! today — i.e. a prior on the current true anomaly — which directly cuts the
 //! sky RA range, not just the declination.
 //!
-//! The favored interval and tolerance are sourced from the reproduction crate
-//! `p9_2016_cassini_ranging::published`; here we turn them into (1) a smooth
+//! The favored interval and tolerance are sourced from
+//! `p9_core::data::ephemeris_constraint`; here we turn them into (1) a smooth
 //! ν-weight to reweight the otherwise-uniform orbital phase, and (2) the
 //! favored-ν sky arc for plotting.
 
 use nalgebra::Vector3;
-use p9_2016_cassini_ranging::geometry::p9_position_at_true_anomaly;
-use p9_2016_cassini_ranging::published::{FAVORED_INTERVAL_DEG, TRUE_ANOMALY_TOLERANCE_DEG};
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::sky::ecliptic_vec_to_equatorial_deg;
-use p9_core::types::P9Params;
+use p9_core::data::ephemeris_constraint::{FAVORED_INTERVAL_DEG, TRUE_ANOMALY_TOLERANCE_DEG};
+use p9_core::types::{position_at_true_anomaly, P9Params};
 
-/// Favored true-anomaly interval (deg), from Fienga et al. 2016 via the
-/// cassini-ranging crate.
+/// Favored true-anomaly interval (deg), from Fienga et al. 2016 via
+/// `p9_core::data::ephemeris_constraint`.
 pub fn favored_interval_deg() -> (f64, f64) {
     FAVORED_INTERVAL_DEG
 }
@@ -64,7 +63,7 @@ pub fn favored_arc(orbit: &P9Params, n: usize) -> Vec<[f64; 2]> {
     (0..n)
         .map(|k| {
             let nu = (a + (b - a) * k as f64 / (n.max(2) - 1) as f64) * DEG2RAD;
-            let pos: Vector3<f64> = p9_position_at_true_anomaly(orbit, nu).position;
+            let pos: Vector3<f64> = position_at_true_anomaly(orbit, nu).position;
             let (ra, dec) = ecliptic_vec_to_equatorial_deg(&pos);
             [ra, dec]
         })

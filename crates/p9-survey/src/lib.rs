@@ -79,7 +79,10 @@ pub fn run_survey(n_samples: usize, seed: u64) -> SurveyDataset {
         favored_nu_hi_deg: nu_hi,
         // The favored-ν zone belongs to the orbit Fienga et al. actually fit
         // (the Brown & Batygin geometry), so map it through that orbit.
-        favored_arc: ephemeris::favored_arc(&p9_2016_cassini_ranging::brown_batygin_orbit(), 64),
+        favored_arc: ephemeris::favored_arc(
+            &p9_core::data::ephemeris_constraint::brown_batygin_orbit(),
+            64,
+        ),
     };
 
     SurveyDataset {
