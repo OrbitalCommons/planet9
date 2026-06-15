@@ -407,6 +407,35 @@ in their orbital angles AND near mean-motion commensurabilities. Computing both 
   `test_pairwise_commensurability_does_not_beat_random_control`,
   `test_planet_commensurability_localizes_but_not_significant`).
 
+### 21. p9-2020-secular-octupole — coplanar octupole libration center is aligned, not anti-aligned; K_OCT calibrated to the ring average
+
+Köhne & Batygin (2020) extend the orbit-averaged ETNO–P9 secular theory to octupole order. This
+crate reproduces the MECHANISM on top of `p9_core::analysis::secular`: the coplanar quadrupole
+(reused `coplanar_quadrupole`) is a function of `e` alone (apsidal circulation, no Δϖ structure),
+and adding the octupole term `+C_oct e e₉ cos Δϖ` opens a Δϖ libration island. The headline test
+shows the SAME initial condition circulating under quadrupole-only and librating once the octupole
+is on. The dimensionless octupole strength ε_oct = 4·K_OCT·α·e₉/(1−e₉²) is ≈ 1.4 for the prototype
+ETNO (a = 250 AU, e₉ = 0.6), confirming the octupole is not a small correction for the relevant
+orbits.
+
+Two honest residuals:
+- **Libration center is APSIDALLY ALIGNED (Δϖ = 0), not anti-aligned.** The coplanar octupole
+  elliptic fixed point is at Δϖ = 0, e* = ε_oct/3 (where −3C_quad e balances the octupole slope).
+  The observed ETNOs are ANTI-aligned with Planet Nine; that sign requires the inclined /
+  perihelion-detached / resonant dynamics, not the coplanar secular fixed point. Documented as out
+  of reach of the coplanar reduction (the same caveat as p9-2019-selfgrav-disk §11).
+- **K_OCT = 1.05 is calibrated, not textbook.** The analytic octupole coefficient is anchored to
+  the cos(Δϖ) Fourier amplitude of `p9_core`'s EXACT numerical ring average at small α (the
+  convergent regime): the fit gives K_OCT ≈ 1.05 in the e→0, e₉→0 limit, with the e₉ dependence
+  captured exactly by (1−e₉²)^(−5/2). The textbook pure-octupole multipole coefficient is 15/16 =
+  0.9375; the ~12% excess is the hexadecapole-and-higher contribution to the same harmonic that the
+  exact ring average folds in. Analytic vs ring-average agree to <6% at α ≈ 0.03 (the residual is
+  the O(e²) correction to the leading-in-e amplitude).
+- Pinned: `crates/p9-2020-secular-octupole/src/octupole.rs`
+  (`analytic_octupole_crosschecks_ring_average_at_small_alpha`, strength/scaling tests),
+  `src/libration.rs` (`octupole_produces_libration_island`, `quadrupole_only_circulates`,
+  `libration_center_is_aligned_apse`), `src/precession.rs` (quad-vs-octupole precession).
+
 ---
 
 ## Agreements within tolerance (for completeness)
