@@ -1,0 +1,16 @@
+[package]
+name = "p9-2021-detached-inclinations"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Anderson & Kaib (2021) 'The effect of Planet Nine on the inclinations of the detached Kuiper belt'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
