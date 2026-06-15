@@ -1625,7 +1625,6 @@ name = "p9-2020-tess-shiftstack"
 version = "0.1.0"
 dependencies = [
  "approx",
- "p9-2025-stacking",
  "p9-core",
  "serde",
  "serde_json",

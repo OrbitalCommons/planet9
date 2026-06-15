@@ -13,7 +13,7 @@
 //! multi-year arcsec-PSF survey (ZTF) demands. Stacking across more sectors
 //! lengthens the baseline and grows the count as T².
 
-use p9_2025_stacking::orbit_metric::{
+use p9_core::analysis::stacking::orbit_metric::{
     n_trial_orbits, p9_orbital_sky_rate, rate_resolution, snr_retained_exact,
 };
 use p9_core::types::P9Params;

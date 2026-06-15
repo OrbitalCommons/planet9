@@ -26,8 +26,8 @@
 //! claims (ZTF: thousands of images over six years, ~10⁹ trial orbits, ~27th
 //! magnitude reach) are kept as labelled reference constants.
 
-pub mod matched_filter;
-pub mod orbit_metric;
+pub use p9_core::analysis::stacking::{matched_filter, orbit_metric};
+
 pub mod significance;
 
 /// Labelled reference numbers from the paper (for regression comparison only;
