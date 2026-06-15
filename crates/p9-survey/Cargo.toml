@@ -8,6 +8,7 @@ description = "Cross-paper survey of Planet Nine sky-position predictions, brigh
 p9-core = { path = "../p9-core" }
 nalgebra = { workspace = true }
 p9-2024-siraj-orbit = { path = "../p9-2024-siraj-orbit" }
+p9-2016-cassini-ranging = { path = "../p9-2016-cassini-ranging" }
 rand = { workspace = true }
 rand_distr = { workspace = true }
 serde = { workspace = true }

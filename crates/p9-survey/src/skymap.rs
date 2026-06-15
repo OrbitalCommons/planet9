@@ -20,7 +20,7 @@ use p9_core::coords::sky::{
     ecliptic_to_equatorial_matrix, ecliptic_vec_to_equatorial_deg, equatorial_to_galactic_matrix,
     galactic_to_ecliptic_matrix,
 };
-use p9_core::types::{elements_to_cartesian, OrbitalElements};
+use p9_core::types::{elements_to_cartesian, solve_kepler, OrbitalElements};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal, Uniform};
@@ -182,6 +182,66 @@ pub fn run_study(
         v_p84: percentile(&vmags, 0.84),
     };
     (result, detections)
+}
+
+/// Position-probability grid with the orbital phase reweighted by an ephemeris
+/// prior on the current true anomaly `nu` (degrees). Same sampling as
+/// [`run_study`], but each draw contributes `nu_weight(ν)` instead of 1, then
+/// the grid is renormalized to sum 1 — i.e. P(sky position | ephemeris phase
+/// constraint). Use it in place of the uniform-phase prior to fold in the
+/// Cassini/Iorio favored-ν zone.
+pub fn ephemeris_weighted_grid(
+    sol: &OrbitSolution,
+    grid: &SkyGrid,
+    n_samples: usize,
+    seed: u64,
+    nu_weight: &dyn Fn(f64) -> f64,
+) -> Vec<f64> {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let na = Normal::new(sol.a_au, sol.a_sigma_au).unwrap();
+    let ne = Normal::new(sol.e, sol.e_sigma).unwrap();
+    let ni = Normal::new(sol.i_deg, sol.i_sigma_deg).unwrap();
+    let nom = Normal::new(sol.omega_deg, sol.omega_sigma_deg).unwrap();
+    let nbom = Normal::new(sol.omega_big_deg, sol.omega_big_sigma_deg).unwrap();
+    let um = Uniform::new(0.0, std::f64::consts::TAU);
+
+    let mut prob = vec![0.0_f64; grid.len()];
+    for _ in 0..n_samples {
+        let a = na.sample(&mut rng).clamp(150.0, 1500.0);
+        let e = ne.sample(&mut rng).clamp(0.01, 0.9);
+        let i = ni.sample(&mut rng).clamp(0.0, 60.0) * DEG2RAD;
+        let omega = nom.sample(&mut rng) * DEG2RAD;
+        let omega_big = nbom.sample(&mut rng) * DEG2RAD;
+        let m = um.sample(&mut rng);
+
+        // True anomaly from the sampled mean anomaly.
+        let ea = solve_kepler(e, m);
+        let nu =
+            2.0 * ((1.0 + e).sqrt() * (ea / 2.0).sin()).atan2((1.0 - e).sqrt() * (ea / 2.0).cos());
+        let w = nu_weight(nu.to_degrees().rem_euclid(360.0));
+        if w <= 0.0 {
+            continue;
+        }
+
+        let elem = OrbitalElements {
+            a,
+            e,
+            i,
+            omega,
+            omega_big,
+            mean_anomaly: m,
+        };
+        let pos = elements_to_cartesian(&elem, GM_SUN).pos;
+        let (ra, dec) = ecliptic_vec_to_equatorial_deg(&pos);
+        prob[grid.index(ra, dec)] += w;
+    }
+    let total: f64 = prob.iter().sum();
+    if total > 0.0 {
+        for p in prob.iter_mut() {
+            *p /= total;
+        }
+    }
+    prob
 }
 
 /// Precompute sky overlays (galactic plane and ecliptic) as RA/Dec polylines,

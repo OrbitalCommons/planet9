@@ -49,3 +49,18 @@ in.
 The brightness here is reflected-light optical/NIR; thermal-IR detectability of
 a *cold* Planet Nine is treated (and shown negligible at WISE W1) in
 `p9-2018-wise-search`.
+
+## Planning binaries
+
+- `cargo run -p p9-survey --bin plan` — convert a time budget into coverable
+  area + stacked depth and report the captured probability (≈ detection chance)
+  per orbit solution; shows wide-shallow beats deep-narrow for this instrument.
+- `cargo run -p p9-survey --bin refine` — narrow JBT's target by (1) ceding
+  Rubin's southern sky (Dec ≤ +12°), (2) surviving the prior optical surveys
+  (`refine.rs`: real ZTF/PS1/DES footprints incl. the galactic plane, with a
+  crowding/extinction depth degradation rather than a hard hole), and (3) the
+  Cassini/Iorio ephemeris favored-ν phase prior (`ephemeris.rs`, sourced from
+  `p9-2016-cassini-ranging`). The favored-ν arc and the Rubin line are emitted
+  in the dataset `constraints` block and drawn on the figure. Note the model
+  surfaces a real tension: the Cassini favored-ν zone lands *south* of +12°, in
+  Rubin's sky — so it argues against, not for, JBT's northern niche.

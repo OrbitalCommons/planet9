@@ -15,6 +15,7 @@
 //! rendering of numerical outputs of the reproduced papers — nothing is drawn
 //! that the Rust side did not compute.
 
+pub mod ephemeris;
 pub mod parallax;
 pub mod plan;
 pub mod refine;
@@ -23,7 +24,7 @@ pub mod skymap;
 pub mod studies;
 pub mod telescope;
 
-use schema::{SkyGrid, SurveyDataset, TelescopeResult, SCHEMA_VERSION};
+use schema::{Constraints, SkyGrid, SurveyDataset, TelescopeResult, SCHEMA_VERSION};
 
 /// The fixed RA/Dec grid used for every probability map: full RA, ±60° Dec, 3°
 /// cells (P9's declination never leaves this band for any surveyed solution).
@@ -71,6 +72,14 @@ pub fn run_survey(n_samples: usize, seed: u64) -> SurveyDataset {
         })
         .collect();
 
+    let (nu_lo, nu_hi) = ephemeris::favored_interval_deg();
+    let constraints = Constraints {
+        rubin_dec_max_deg: refine::RUBIN_DEC_MAX_DEG,
+        favored_nu_lo_deg: nu_lo,
+        favored_nu_hi_deg: nu_hi,
+        favored_arc: ephemeris::favored_arc(&p9_core::types::P9Params::mcmc_2021(), 64),
+    };
+
     SurveyDataset {
         schema_version: SCHEMA_VERSION,
         generated_by: "p9-survey".to_string(),
@@ -80,6 +89,7 @@ pub fn run_survey(n_samples: usize, seed: u64) -> SurveyDataset {
         studies: studies_out,
         telescopes: telescopes_out,
         overlays: skymap::overlays(360),
+        constraints,
     }
 }
 
