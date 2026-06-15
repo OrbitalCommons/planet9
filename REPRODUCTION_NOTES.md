@@ -267,6 +267,38 @@ Caveat documented in code: 2014 SR349 and 2013 FT28 also appear in the Brown (20
 - Pinned: `crates/p9-2016-sheppard-etnos/src/clustering.rs` (`computed_headline_values_are_pinned`,
   `dedup_combined_still_clusters`, `combined_omega_clusters_near_published_340`).
 
+### 16. p9-2018-bp519 — secular inclination pumping reaches BP519's i from a moderately-excited start, not from genuinely low i
+
+Becker et al. (2018) argue that 2015 BP519 (i ≈ 54°, e ≈ 0.92, a ≈ 449 AU) is naturally produced
+by an inclined Planet Nine that secularly pumps the inclination of scattered objects. This crate
+reproduces the pumping with a single-perturber doubly-averaged secular model: P9 as a numerical
+Gauss ring (`p9_core::analysis::secular::numerical_secular_hamiltonian`), the test particle's
+(e, i, ω, Ω) advanced by RK4 under Hamilton's equations in Delaunay variables (∂H by finite
+difference). An inclined P9 drives a secular (Kozai-Lidov/octupole) cycle that pumps a high-e detached
+particle's inclination from a mutual i₀ = 40° **up to ≈ 56°** — squarely in BP519's band — while
+the orbit stays prograde and detached (e < 1); without P9 (giant-planet J2 ring only, which has no
+inclination torque) the inclination is exactly flat. At this reduced scale (N_QUAD = 12, ~70 Myr)
+the inclination is lifted largely through the node/octupole channel with the eccentricity nearly
+unchanged over the recorded window, rather than the textbook quadrupole e–i anti-correlation.
+
+The honest residual: the **single-perturber secular average cannot pump from a *genuinely* low
+inclination** (i ≲ 20°). Kozai libration only raises i for mutual inclinations near/above the
+critical angle (≈ 39°, where Θ = √(1−e²)cos i is small enough), and within a cycle the inclination
+is bounded — starting below critical, i only oscillates downward. Reproduced exhaustively in
+calibration: low-i (5–20°) starts stay low at every (a, e, ω, P9-mass) tried. So the demonstration
+starts the particle at a *moderately excited* mutual inclination (i₀ = 40°, representing an
+ecliptic-plane scattered object seen in the frame of a P9 tilted by i₉ ≈ 40°, plus prior
+excitation), from which P9 carries it to BP519-like values. Bridging genuinely-low to 54° is the
+Gyr-scale resonant + Neptune-scattering N-body process of Batygin & Brown (2016), beyond a clean
+single-perturber secular average. A second modelling consequence: because the Gauss-ring
+Hamiltonian uses P9's plane as the reference, the particle's `i` argument *is* the mutual
+inclination, so varying P9's own `i` field has no effect — the sin(i₉) dependence is encoded as
+the initial mutual inclination i₀ ≈ i₉, and the test varies that.
+- Pinned: `crates/p9-2018-bp519/src/pumping.rs` (`p9_pumps_inclination_to_bp519_like` ≥ 50°,
+  `no_p9_control_leaves_inclination_flat` range < 2°, `pumping_grows_with_p9_inclination`,
+  `pumping_rate_grows_with_p9_mass`, `pumping_is_kozai_e_i_exchange`); BP519 elements pinned in
+  `src/bp519.rs`; ϖ-cluster context in `src/clustering.rs`.
+
 ---
 
 ## Agreements within tolerance (for completeness)

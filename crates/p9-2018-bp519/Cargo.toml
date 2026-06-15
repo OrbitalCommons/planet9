@@ -1,0 +1,14 @@
+[package]
+name = "p9-2018-bp519"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Becker et al. (2018) 'Discovery and Dynamical Analysis of 2015 BP519', a high-inclination ETNO"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
