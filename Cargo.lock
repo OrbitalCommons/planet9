@@ -1257,6 +1257,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-iorio-precession"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-2026-iorio-precession",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2016-obliquity"
 version = "0.1.0"
 dependencies = [

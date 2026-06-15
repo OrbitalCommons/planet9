@@ -56,6 +56,7 @@ members = [
     "crates/p9-2025-akari-refutation",
     "crates/p9-2025-perturbation",
     "crates/p9-2026-iorio-precession",
+    "crates/p9-2016-iorio-precession",
     "crates/p9-review-article",
 ]
 
