@@ -1543,6 +1543,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2021-des-catalog"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "rand 0.8.5",
+ "rand_distr",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2021-detached-inclinations"
 version = "0.1.0"
 dependencies = [

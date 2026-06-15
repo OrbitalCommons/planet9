@@ -42,6 +42,7 @@ members = [
     "crates/p9-2021-detached-inclinations",
     "crates/p9-2021-stability",
     "crates/p9-2021-ztf",
+    "crates/p9-2021-des-catalog",
     "crates/p9-2022-des",
     "crates/p9-2022-uranus-tilt",
     "crates/p9-2023-mond-efe",
