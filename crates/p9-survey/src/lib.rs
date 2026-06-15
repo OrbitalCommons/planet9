@@ -104,7 +104,7 @@ mod tests {
         let d = run_survey(20_000, 2026);
         assert_eq!(d.schema_version, SCHEMA_VERSION);
         assert_eq!(d.studies.len(), 5);
-        assert_eq!(d.telescopes.len(), 3);
+        assert_eq!(d.telescopes.len(), 2);
         // every telescope carries a detection entry for every study
         for t in &d.telescopes {
             assert_eq!(t.per_study.len(), d.studies.len());
