@@ -6,7 +6,6 @@ description = "Reproduction of Brown & Batygin (2016) 'Observational Constraints
 
 [dependencies]
 p9-core = { path = "../p9-core" }
-p9-2016-evidence = { path = "../p9-2016-evidence" }
 nalgebra = { workspace = true }
 rand = { workspace = true }
 rand_distr = { workspace = true }

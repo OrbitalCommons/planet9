@@ -2,3 +2,4 @@
 
 pub mod etno;
 pub mod refresh;
+pub mod stable_kbos;
