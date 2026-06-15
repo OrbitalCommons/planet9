@@ -191,6 +191,17 @@ def main() -> None:
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
     from scipy.ndimage import gaussian_filter
+    from matplotlib.colors import LinearSegmentedColormap
+    import matplotlib.patheffects as pe
+
+    # Neutral grey "probability cloud" so the coloured overlays read clearly on
+    # the dark background (the warm magma map fought the orange/red overlays).
+    p9_cloud = LinearSegmentedColormap.from_list(
+        "p9cloud",
+        [(0.0, (0, 0, 0, 0.0)), (0.35, (0.50, 0.52, 0.60, 0.55)),
+         (1.0, (0.90, 0.92, 0.99, 1.0))],
+    )
+    outline = [pe.Stroke(linewidth=4.0, foreground="#1a1b26"), pe.Normal()]
 
     g = d.grid
     extent = [g.ra_min_deg, g.ra_max_deg, g.dec_min_deg, g.dec_max_deg]
@@ -204,7 +215,7 @@ def main() -> None:
     ax = fig.add_subplot(gs[0]); ax.set_facecolor("none")
     H = gaussian_filter(grid_2d(primary, g), 1.2)
     im = ax.imshow(H / H.max(), origin="lower", extent=extent, aspect="auto",
-                   cmap="magma", vmin=0.04, alpha=0.92, zorder=2)
+                   cmap=p9_cloud, vmin=0.02, zorder=2)
     xc = (np.arange(g.n_ra) + 0.5) * (g.ra_max_deg - g.ra_min_deg) / g.n_ra + g.ra_min_deg
     yc = (np.arange(g.n_dec) + 0.5) * (g.dec_max_deg - g.dec_min_deg) / g.n_dec + g.dec_min_deg
     for s in d.studies:
@@ -219,19 +230,31 @@ def main() -> None:
                 label=f"{s.solution.name.split('(')[0].strip()} — V≈{s.v_median:.1f}, {s.dist_median_au:.0f} AU")
 
     gp = np.array(d.overlays.galactic_plane); ec = np.array(d.overlays.ecliptic)
-    op = np.argsort(gp[:, 0]); ax.plot(gp[op, 0], gp[op, 1], ls="--", color=MUTE, lw=2,
-                                       alpha=0.9, zorder=3, label="Galactic plane (hard zone)")
+    op = np.argsort(gp[:, 0]); ax.plot(gp[op, 0], gp[op, 1], ls="--", color="#9aa5ce", lw=1.8,
+                                       alpha=0.9, zorder=3, path_effects=outline,
+                                       label="Galactic plane (crowded zone)")
     oe = np.argsort(ec[:, 0]); ax.plot(ec[oe, 0], ec[oe, 1], ls=":", color=FG, lw=0.9,
                                        alpha=0.5, zorder=3, label="Ecliptic")
 
     # Search-narrowing overlays: Rubin cede line + Cassini favored-ν arc.
     c = d.constraints
-    ax.axhspan(g.dec_min_deg, c.rubin_dec_max_deg, color=MUTE, alpha=0.10, zorder=1)
-    ax.axhline(c.rubin_dec_max_deg, color="#f7768e", ls="-.", lw=1.2, alpha=0.85, zorder=3,
-               label=f"Rubin limit Dec +{c.rubin_dec_max_deg:.0f}° (JBT keeps north)")
+    ax.axhspan(g.dec_min_deg, c.rubin_dec_max_deg, color=MUTE, alpha=0.16, zorder=1)
+    ax.axhline(c.rubin_dec_max_deg, color="#c0caf5", ls=(0, (6, 3)), lw=1.4, alpha=0.9,
+               zorder=5, label=f"Rubin reach (Dec < +{c.rubin_dec_max_deg:.0f}°)")
+    # The favored-ν arc is a compact curve that can cross RA = 0/360; draw it as
+    # connected segments (split on wrap) in a high-contrast colour with a dark
+    # outline so it reads on the grey cloud.
     arc = np.array(c.favored_arc)
-    ax.scatter(arc[:, 0], arc[:, 1], s=10, c="#e0af68", marker="D", edgecolors="none",
-               zorder=7, label=f"Cassini favored-ν arc (ν {c.favored_nu_lo_deg:.0f}–{c.favored_nu_hi_deg:.0f}°)")
+    ra_a, dec_a = arc[:, 0], arc[:, 1]
+    start = 0
+    for k in range(1, len(ra_a) + 1):
+        if k == len(ra_a) or abs(ra_a[k] - ra_a[k - 1]) > 180:
+            sl = slice(start, k)
+            ax.plot(ra_a[sl], dec_a[sl], color="#bb9af7", lw=2.8, zorder=8,
+                    path_effects=outline)
+            start = k
+    ax.plot([], [], color="#bb9af7", lw=2.8,
+            label=f"Cassini favoured-ν arc (ν {c.favored_nu_lo_deg:.0f}–{c.favored_nu_hi_deg:.0f}°, B&B orbit)")
 
     ax.set_xlim(g.ra_min_deg, g.ra_max_deg); ax.set_ylim(g.dec_min_deg, g.dec_max_deg)
     ax.invert_xaxis()
