@@ -20,7 +20,8 @@
 //! shift-stack. So the limiter is not depth (P9 is V≈19–23) but the small
 //! field: tiling the multi-thousand-deg² P9 prior is the constraint.
 
-use crate::schema::{Footprint, Telescope};
+use crate::schema::Telescope;
+use p9_core::analysis::surveys::Footprint;
 
 /// JBT 0.5 m + SPENCER derived optics (see module docs / `focalplane`).
 pub const JBT_APERTURE_M: f64 = 0.485;

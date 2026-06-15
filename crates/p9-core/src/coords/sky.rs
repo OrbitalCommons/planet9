@@ -19,7 +19,9 @@ use starfield::framelib::inertial::{Ecliptic, Equatorial, Galactic};
 use starfield::framelib::{Frame, ECLIPJ2000_MATRIX, ECLIPJ2000_MATRIX_INV, GALACTIC};
 use starfield::time::Timescale;
 
-use crate::constants::{J2000, RAD2DEG};
+use crate::constants::{GM_SUN, J2000, RAD2DEG, YEAR_DAYS};
+use crate::coords::observer::{apparent_direction_from, EarthState};
+use crate::types::OrbitalElements;
 
 /// Equatorial (ICRF/J2000) → galactic rotation, from starfield's SPICE
 /// `GALACTIC` frame (static; the epoch argument is ignored by the frame).
@@ -117,6 +119,67 @@ pub fn ecliptic_vec_declination(v: &Vector3<f64>) -> f64 {
 /// (any common frame), via starfield's `Cartesian3::angular_distance`.
 pub fn angular_distance(a: &Vector3<f64>, b: &Vector3<f64>) -> f64 {
     Cartesian3::from_vector3(*a).angular_distance(&Cartesian3::from_vector3(*b))
+}
+
+/// Heliocentric ecliptic position (AU) of an orbit `t_days` after its
+/// stored epoch (mean anomaly advanced at the mean motion).
+fn heliocentric_position(elem: &OrbitalElements, t_days: f64) -> Vector3<f64> {
+    let n = (GM_SUN / (elem.a * elem.a * elem.a)).sqrt(); // rad/day
+    let mut advanced = *elem;
+    advanced.mean_anomaly = (elem.mean_anomaly + n * t_days).rem_euclid(std::f64::consts::TAU);
+    advanced.to_state_vector(GM_SUN).pos
+}
+
+/// Apparent geocentric equatorial (RA, dec) in degrees of an orbit
+/// `t_days` after its stored epoch, plus the heliocentric distance (AU).
+///
+/// The object's mean anomaly is advanced by its mean motion; Earth is
+/// modeled on a circular coplanar 1-AU orbit (phase zero at t = 0), which is
+/// accurate to ~0.03 deg in parallax — ample for footprint membership.
+pub fn apparent_position_deg(elem: &OrbitalElements, t_days: f64) -> (f64, f64, f64) {
+    let pos = heliocentric_position(elem, t_days);
+    let r_helio = pos.norm();
+
+    let theta = std::f64::consts::TAU * t_days / YEAR_DAYS;
+    let (sin_t, cos_t) = theta.sin_cos();
+    let geo = pos - Vector3::new(cos_t, sin_t, 0.0);
+
+    let (ra, dec) = ecliptic_vec_to_equatorial_deg(&geo);
+    (ra, dec, r_helio)
+}
+
+/// Ephemeris-grade apparent geocentric equatorial (RA, dec) in degrees of
+/// an orbit `t_days` after its stored epoch, observed from the given Earth
+/// state, plus the heliocentric distance (AU).
+///
+/// Unlike the analytic `apparent_position_deg`, this uses a real Earth
+/// position and the full apparent chain: light-time retardation (~2-4 days
+/// at P9 distances) and stellar aberration.
+pub fn apparent_position_with_earth_deg(
+    elem: &OrbitalElements,
+    earth_state: &EarthState,
+    t_days: f64,
+) -> (f64, f64, f64) {
+    let r_helio = heliocentric_position(elem, t_days).norm();
+    let geo = apparent_direction_from(earth_state, |dt| heliocentric_position(elem, t_days + dt));
+    let (ra, dec) = ecliptic_vec_to_equatorial_deg(&geo);
+    (ra, dec, r_helio)
+}
+
+/// Sun–object–Earth phase angle (radians) of an orbit `t_days` after its
+/// stored epoch, observed from the given Earth state (instantaneous
+/// geometry — the few-day light-time displacement changes α by far less
+/// than the H-G law resolves at these distances). Bounded by
+/// asin(1 AU / r): below 0.35° everywhere in the BB21 reference
+/// population (minimum r ≈ 176 AU), ~0.11° at the fiducial 500 AU.
+pub fn phase_angle_with_earth(
+    elem: &OrbitalElements,
+    earth_state: &EarthState,
+    t_days: f64,
+) -> f64 {
+    let helio = heliocentric_position(elem, t_days);
+    let delta = (helio - earth_state.0).norm();
+    crate::analysis::photometry::phase_angle(helio.norm(), delta, earth_state.0.norm())
 }
 
 #[cfg(test)]
@@ -256,5 +319,32 @@ mod tests {
             epsilon = 1e-12
         );
         assert_relative_eq!(angular_distance(&x, &x), 0.0, epsilon = 1e-15);
+    }
+
+    #[test]
+    fn test_parallax_amplitude_scales_inversely_with_distance() {
+        // Over one year the apparent RA of a distant object oscillates with
+        // amplitude ~ (1 AU / r) radians.
+        let elem = OrbitalElements {
+            a: 400.0,
+            e: 0.0,
+            i: 0.0,
+            omega: 0.0,
+            omega_big: 0.0,
+            mean_anomaly: 90.0 * DEG2RAD,
+        };
+        let mut ra_min = f64::INFINITY;
+        let mut ra_max = f64::NEG_INFINITY;
+        for k in 0..=24 {
+            let (ra, _, _) = apparent_position_deg(&elem, k as f64 * YEAR_DAYS / 24.0);
+            ra_min = ra_min.min(ra);
+            ra_max = ra_max.max(ra);
+        }
+        let half_amplitude = (ra_max - ra_min) / 2.0;
+        let expected = (1.0_f64 / 400.0).asin() / DEG2RAD; // ~0.143 deg
+        assert!(
+            (half_amplitude - expected).abs() < 0.05,
+            "parallax half-amplitude = {half_amplitude:.3} deg, expected ~{expected:.3}"
+        );
     }
 }

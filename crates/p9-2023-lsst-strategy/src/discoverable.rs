@@ -8,7 +8,7 @@
 //!
 //! where
 //!   * `footprint(δ, b)` is the Rubin/LSST declination band and Galactic-plane
-//!     cut (reusing `p9_survey::schema::Footprint::accepts`), with the
+//!     cut (reusing `p9_core::analysis::surveys::Footprint::accepts`), with the
 //!     equatorial declination and Galactic latitude of the current sky
 //!     position computed by `p9_core::coords::sky` from the orbit's
 //!     heliocentric ecliptic state;
@@ -24,10 +24,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::analysis::surveys::Footprint;
 use p9_core::constants::{DEG2RAD, GM_SUN, RAD2DEG};
 use p9_core::coords::sky::{ecliptic_vec_to_equatorial_deg, equatorial_to_galactic};
 use p9_core::types::OrbitalElements;
-use p9_survey::schema::Footprint;
 
 use crate::strategy::LsstStrategy;
 
@@ -53,7 +53,7 @@ pub struct DiscoverableResult {
 }
 
 impl LsstStrategy {
-    /// The footprint of this strategy as a reusable `p9_survey` `Footprint`.
+    /// The footprint of this strategy as a reusable `p9_core` `Footprint`.
     pub fn footprint(&self) -> Footprint {
         Footprint {
             dec_min_deg: self.dec_min_deg,
