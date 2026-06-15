@@ -1,0 +1,13 @@
+[package]
+name = "p9-2018-chaotic-dynamics"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Hadden, Li, Payne & Holman (2018) 'Chaotic dynamics of trans-Neptunian objects perturbed by Planet Nine'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
