@@ -1816,6 +1816,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2025-simons-forecast"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2025-stacking"
 version = "0.1.0"
 dependencies = [
