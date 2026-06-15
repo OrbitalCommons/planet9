@@ -16,6 +16,7 @@
 //! 1.86 R⊕ at 10 M⊕ — a ~3.2× flux underestimate that pushed the paper's
 //! whole favorable corner below the IRAS detection limit.
 
+use p9_core::analysis::photometry::mass_radius_neptunian;
 use p9_core::analysis::thermal::{planck_bnu, solar_equilibrium_temp, thermal_flux_jy, C_LIGHT};
 
 use crate::survey_model::{AkariFisSurvey, IrasSurvey};
@@ -39,7 +40,7 @@ impl P9ThermalParams {
     /// `p9_core::analysis::photometry` (≈ 3.34 R⊕ at 10 M⊕; see module
     /// docs for sources).
     pub fn radius_m(&self) -> f64 {
-        p9_core::analysis::photometry::mass_radius_neptunian(self.mass_earth) * R_EARTH
+        mass_radius_neptunian(self.mass_earth) * R_EARTH
     }
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.

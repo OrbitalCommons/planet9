@@ -42,6 +42,7 @@
 
 use crate::disk::DiskProfile;
 use crate::laplace::softened_laplace;
+use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::GM_SUN;
 use std::f64::consts::PI;
 
@@ -71,7 +72,7 @@ impl SecularSolution {
     /// Forced Delta varpi relative to the disk apse (radians, wrapped to
     /// (-pi, pi]). 0 means aligned with the disk apse, +-pi anti-aligned.
     pub fn forced_delta_varpi(&self) -> f64 {
-        p9_core::analysis::circular::wrap_to_pi(self.varpi_forced - self.varpi_disk)
+        wrap_to_pi(self.varpi_forced - self.varpi_disk)
     }
 }
 

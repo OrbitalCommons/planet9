@@ -49,7 +49,8 @@ pub fn earth_states_at(
 mod tests {
     use super::*;
     use p9_core::coords::sky::{
-        apparent_position_deg, apparent_position_with_earth_deg, phase_angle_with_earth,
+        angular_distance, apparent_position_deg, apparent_position_with_earth_deg,
+        phase_angle_with_earth,
     };
     use p9_core::types::OrbitalElements;
 
@@ -84,7 +85,7 @@ mod tests {
             let (ra_a, dec_a, r_a) = apparent_position_deg(&elem, t_days);
             let (ra_e, dec_e, r_e) = apparent_position_with_earth_deg(&elem, state, t_days);
             assert!((r_a - r_e).abs() < 1e-9);
-            let sep = p9_core::coords::sky::angular_distance(
+            let sep = angular_distance(
                 &Vector3::new(
                     dec_a.to_radians().cos() * ra_a.to_radians().cos(),
                     dec_a.to_radians().cos() * ra_a.to_radians().sin(),

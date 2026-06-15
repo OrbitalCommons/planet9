@@ -22,7 +22,7 @@
 //! Reference: Napier, Gerdes, Lin et al. (2021), PSJ 2, 59
 //! (arXiv:2102.05601).
 
-use p9_core::analysis::circular::mean_resultant_length;
+use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -181,7 +181,7 @@ pub fn run_critique<R: Rng>(
     CritiqueResult {
         n: angles.len(),
         r_bar_observed: mean_resultant_length(angles),
-        rayleigh_p: p9_core::analysis::circular::rayleigh_p_value(angles),
+        rayleigh_p: rayleigh_p_value(angles),
         consistency_p: consistency_p_value(angles, sel, n_mc, rng),
     }
 }
@@ -215,7 +215,7 @@ mod tests {
         // Headline pin (1): against the WRONG (pure-uniform) null, the
         // observed ETNO sample looks significantly clustered.
         let varpis = longitudes_of_perihelion();
-        let p = p9_core::analysis::circular::rayleigh_p_value(&varpis);
+        let p = rayleigh_p_value(&varpis);
         assert!(p < 0.05, "naive Rayleigh p = {p:.4} (expected < 0.05)");
     }
 

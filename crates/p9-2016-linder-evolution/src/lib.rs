@@ -101,6 +101,7 @@ pub fn is_detectable(mag: f64, limiting_mag: f64) -> bool {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use p9_core::analysis::surveys::limiting_magnitude;
 
     #[test]
     fn ten_earth_mass_at_700au_matches_published_v() {
@@ -153,7 +154,7 @@ mod tests {
         // A fainter (lower-mass, more-distant) Planet Nine quickly drops below
         // optical survey limits. PS1 3pi reaches r ≈ 21.5; a 5 M⊕ body at
         // 1000 AU is far fainter in reflected light.
-        let ps1 = p9_core::analysis::surveys::limiting_magnitude("PS1 3pi").unwrap();
+        let ps1 = limiting_magnitude("PS1 3pi").unwrap();
         let v = reflected_v_magnitude(5.0, 1000.0);
         assert!(
             !is_detectable(v, ps1),
@@ -161,7 +162,7 @@ mod tests {
         );
         // ... while the nominal 10 M⊕ at 700 AU sits near the deepest optical
         // limit (DES r ≈ 23.8), illustrating how marginal optical detection is.
-        let des = p9_core::analysis::surveys::limiting_magnitude("DES").unwrap();
+        let des = limiting_magnitude("DES").unwrap();
         let v_nom = reflected_v_magnitude(10.0, 700.0);
         assert!(
             is_detectable(v_nom, des),

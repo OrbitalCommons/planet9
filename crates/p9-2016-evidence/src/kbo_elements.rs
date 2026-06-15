@@ -9,6 +9,7 @@ use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
 use p9_core::constants::*;
 use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos, KboRecord};
 use p9_core::forces::ExtraForce;
+use p9_core::initial_conditions::planets::neptune_only_j2000;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, SimConfig};
 
@@ -91,7 +92,7 @@ pub fn clone_stability_screen(
     let mut particles: Vec<_> = clones.iter().map(|c| c.to_state_vector(GM_SUN)).collect();
     let mut active = vec![true; particles.len()];
 
-    let mut bodies = p9_core::initial_conditions::planets::neptune_only_j2000();
+    let mut bodies = neptune_only_j2000();
     let integrator = WhmIntegrator::with_extra_forces(vec![ExtraForce::J2Jsu]);
 
     let config = SimConfig {

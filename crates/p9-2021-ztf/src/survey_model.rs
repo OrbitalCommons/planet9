@@ -5,6 +5,7 @@
 //! used in Brown & Batygin (2021). The depth limit comes from the shared
 //! survey table in `p9_core::analysis::surveys`.
 
+use p9_core::analysis::surveys::limiting_magnitude;
 use serde::{Deserialize, Serialize};
 
 /// ZTF survey model parameters for Planet Nine detection.
@@ -24,8 +25,7 @@ pub struct ZtfSurvey {
 impl Default for ZtfSurvey {
     fn default() -> Self {
         Self {
-            depth_limit: p9_core::analysis::surveys::limiting_magnitude("ZTF")
-                .expect("ZTF in shared survey table"),
+            depth_limit: limiting_magnitude("ZTF").expect("ZTF in shared survey table"),
             efficiency_steepness: 4.0,
             dec_limit_deg: -30.0,
         }

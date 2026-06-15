@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use p9_core::analysis::surveys::poisson_binomial_tail;
+use p9_core::analysis::surveys::{limiting_magnitude, poisson_binomial_tail};
 use p9_core::coords::observer::{EarthProvider, EarthState, Time, Timescale};
 use p9_core::coords::sky::{
     apparent_position_deg, apparent_position_with_earth_deg, phase_angle_with_earth,
@@ -137,8 +137,7 @@ impl Default for DesSurvey {
             nights_per_band: 10,
             min_nights: 8,
             depth_g: 24.1,
-            depth_r: p9_core::analysis::surveys::limiting_magnitude("DES")
-                .expect("DES depth in p9-core survey table"),
+            depth_r: limiting_magnitude("DES").expect("DES depth in p9-core survey table"),
             depth_i: 23.3,
             depth_z: 22.6,
             night_usability: 0.29,
