@@ -267,6 +267,36 @@ Caveat documented in code: 2014 SR349 and 2013 FT28 also appear in the Brown (20
 - Pinned: `crates/p9-2016-sheppard-etnos/src/clustering.rs` (`computed_headline_values_are_pinned`,
   `dedup_combined_still_clusters`, `combined_omega_clusters_near_published_340`).
 
+### 16. p9-2018-secular-dynamics — critical a ≈ 218 AU vs the paper's a ≳ 250 AU libration threshold
+
+Li, Hadden, Payne & Holman (2018) give a semianalytic secular theory in which a test ETNO's
+longitude of perihelion librates (anti-aligned apsidal confinement) above a critical semi-major
+axis (their abstract: pericenter libration is maintained for a ≳ 250 AU at q ≈ 30–80 AU). This
+crate builds the coplanar conserved secular Hamiltonian as the giants' orbit-averaged J2
+quadrupole (`p9_core::forces::j2_secular::combined_j2_jsu`) plus P9's exact numerical Gauss-ring
+average (`p9_core::analysis::secular::numerical_secular_hamiltonian` — never re-implemented), then
+linearises it in the eccentricity vector to read off the forcing `B` (∝ GM₉·e₉) and the giants'
+free precession `A`. The headline results reproduce cleanly:
+
+- Forced eccentricity `e_forced = |B/A|` rises monotonically with α = a/a₉ and **exactly linearly
+  with P9's mass** (B ∝ GM₉, A mass-independent) — pinned at a = 100 AU over 2→20 M⊕.
+- The apse circulates below and librates (anti-aligned, B < 0) above a computed `a_crit ≈ 218 AU`.
+
+The honest residual: `a_crit ≈ 218 AU` falls ~30 AU short of the paper's ≳ 250 AU. Two documented
+reductions account for it: (1) the model is the **coplanar (i = 0)** sector of Li et al.'s theory
+(it omits the inclination/Kozai coupling that the full paper also treats), and (2) the free-
+precession denominator `A` is the **giants' J2 term alone** — P9's own axisymmetric quadrupole
+curvature is a small, quadrature-noisy contribution at the linearisation eccentricity and is
+excluded from `A` (it is retained in the full `hamiltonian`). Neither tolerance was tuned; the
+nominal P9 (10 M⊕, a₉ = 500 AU, e₉ = 0.6) is the paper's labelled favoured box. The analytic
+secular forcing is cross-checked against the exact ring average to ~1% (the hexadecapole O(α²)
+truncation residual), and the giants' precession against the closed form (3/2) n J2 (R/a)² (1−e²)⁻²
+to ~1e-8.
+- Pinned: `crates/p9-2018-secular-dynamics/src/secular_model.rs`
+  (`test_critical_semimajor_axis_separates_regimes` — a_crit within 80 AU of 250;
+  `test_forced_eccentricity_increases_with_mass`/`_with_alpha`;
+  `test_analytic_quadrupole_matches_numerical_ring`; `test_free_precession_matches_closed_form`).
+
 ---
 
 ## Agreements within tolerance (for completeness)
