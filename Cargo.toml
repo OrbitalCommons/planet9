@@ -57,6 +57,7 @@ members = [
     "crates/p9-2026-apsidal-clustering",
     "crates/p9-2025-iras-akari",
     "crates/p9-2025-akari-refutation",
+    "crates/p9-2022-iras-candidate",
     "crates/p9-2025-perturbation",
     "crates/p9-2026-iorio-precession",
     "crates/p9-2016-iorio-precession",

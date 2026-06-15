@@ -1694,6 +1694,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2022-iras-candidate"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-2025-iras-akari",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2022-uranus-tilt"
 version = "0.1.0"
 dependencies = [
