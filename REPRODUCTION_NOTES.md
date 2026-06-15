@@ -267,6 +267,33 @@ Caveat documented in code: 2014 SR349 and 2013 FT28 also appear in the Brown (20
 - Pinned: `crates/p9-2016-sheppard-etnos/src/clustering.rs` (`computed_headline_values_are_pinned`,
   `dedup_combined_still_clusters`, `combined_omega_clusters_near_published_340`).
 
+### 16. p9-2021-perihelion-gap — gap statistic reproduced, debiased completeness is not
+
+Oldroyd & Trujillo (2021) report a deficit in the perihelion distribution of distant TNOs at
+q ≈ 50–65 AU separating the Neptune-coupled scattering ETNOs (low q) from the detached
+inner-Oort-cloud Sednoids (high q). The crate bins the perihelia of the vetted
+`p9_core::data::etno::BROWN_2017_SAMPLE` plus a documented `EXTENDED_DISTANT_TNOS` table and
+computes a dip statistic (gap-window count density ÷ mean flank density). The observed sample
+shows a deep deficit: dip ratio ≈ 0.10 (gap density 0.067 obj/AU vs flank densities 1.08 low /
+0.20 high), and the minimum-density interior bin lands at q = 52.5 AU, inside the published
+50–65 AU window (centre 57.5 AU, within tolerance). A seeded two-population synthetic draw
+reproduces the same gap (dip ratio < 0.6) while a single continuous uniform control does not
+(dip ratio ≈ 1) — concretizing the paper's "two populations, not one continuous distribution"
+argument. The high-q scattering edge is tied to `p9_core::analysis::resonance::critical_perihelion`
+(q_crit(a) stays below the gap top for ETNO semi-major axes and reaches 50 AU only at a > 700 AU),
+and the detached IOC onset to q ≳ 65 AU.
+
+This is partly observational: the published gap is established after inverting survey detection
+biases against faint, distant, high-q objects, which this reduced model does not do. We reproduce
+the *gap statistic* (a real deficit at the published q and a two-vs-one-population contrast), not
+the full debiased completeness argument, and we do not assert the paper's ∼20% relative-abundance
+prediction as a computed number (kept as `published::GAP_RELATIVE_ABUNDANCE` for reference).
+- Pinned: `crates/p9-2021-perihelion-gap/src/distribution.rs`
+  (`observed_sample_has_a_perihelion_deficit_at_50_to_65`,
+  `observed_gap_center_matches_published_window`), `src/synthetic.rs`
+  (`two_population_shows_a_gap`, `single_continuous_population_has_no_gap`), `src/boundaries.rs`
+  (`scattering_boundary_sits_below_the_gap`).
+
 ---
 
 ## Agreements within tolerance (for completeness)
