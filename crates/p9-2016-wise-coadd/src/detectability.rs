@@ -10,6 +10,7 @@
 //! brighter for a cold planet.
 
 use p9_2018_wise_search::thermal_model::P9Thermal;
+use p9_core::analysis::thermal::max_detectable_distance as core_max_detectable_distance;
 
 use crate::band::{band_magnitude, WiseBand};
 
@@ -23,30 +24,9 @@ pub fn is_detectable(band: WiseBand, depth: f64, mass_earth: f64, distance_au: f
 /// `depth` in `band`, by bisection on the monotone magnitude–distance relation.
 /// `None` if undetectable even at the near edge of the search range.
 pub fn max_detectable_distance(band: WiseBand, depth: f64, mass_earth: f64) -> Option<f64> {
-    let d_min = 50.0_f64;
-    let d_max = 50_000.0_f64;
-
-    if !is_detectable(band, depth, mass_earth, d_min) {
-        return None;
-    }
-    if is_detectable(band, depth, mass_earth, d_max) {
-        return Some(d_max);
-    }
-
-    let mut lo = d_min;
-    let mut hi = d_max;
-    for _ in 0..200 {
-        let mid = 0.5 * (lo + hi);
-        if is_detectable(band, depth, mass_earth, mid) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-        if hi - lo < 1e-4 {
-            break;
-        }
-    }
-    Some(0.5 * (lo + hi))
+    core_max_detectable_distance(50.0, 50_000.0, depth, |d| {
+        band_magnitude(mass_earth, d, band)
+    })
 }
 
 /// Detectability of a fully specified planet against a band depth (uses the

@@ -16,10 +16,11 @@
 
 use p9_2018_wise_search::detectability::max_detectable_distance as wise_max_distance;
 use p9_2018_wise_search::survey_model::WiseSurvey;
+use p9_core::analysis::thermal::planck_bnu;
 use p9_core::constants::AU_M;
 
 use crate::survey_model::ActSurvey;
-use crate::thermal_model::{planck_bnu, P9Millimeter, MJY};
+use crate::thermal_model::{P9Millimeter, MJY};
 
 /// Whether a P9 of `mass_earth` at `distance_au` is at or above the ACT flux
 /// limit at the survey frequency.

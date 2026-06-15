@@ -30,27 +30,13 @@
 //! body "could be as faint as 1 mJy at 1 mm". We keep these as labelled
 //! reference constants and document the residual against our computed value.
 
-use std::f64::consts::PI;
-
 use p9_core::analysis::photometry::mass_radius_neptunian;
-use p9_core::constants::AU_M;
+use p9_core::analysis::thermal::{planck_bnu, reflected_flux_jy, thermal_flux_jy, C_LIGHT, JY};
 
-/// Planck constant (J·s).
-pub const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K).
-pub const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s).
-pub const C_LIGHT: f64 = 2.997_924_58e8;
 /// Wien displacement-law constant b for the wavelength of peak B_λ (m·K).
 pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
 /// Earth radius (m).
 pub const R_EARTH_M: f64 = 6.371e6;
-/// Solar radius (m).
-pub const R_SUN_M: f64 = 6.957e8;
-/// Solar effective temperature (K).
-pub const T_SUN: f64 = 5778.0;
-/// 1 Jansky in W/m²/Hz.
-pub const JY: f64 = 1.0e-26;
 
 /// Effective temperature adopted by Cowan et al. (2016) (K).
 pub const COWAN_TEMP_K: f64 = 40.0;
@@ -131,11 +117,7 @@ impl P9Sed {
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
     pub fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-        let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-        if x > 700.0 {
-            return 0.0;
-        }
-        (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
+        planck_bnu(t, nu_hz)
     }
 
     /// Wavelength of peak spectral radiance B_λ via the Wien displacement law:
@@ -148,10 +130,7 @@ impl P9Sed {
     /// unit emissivity: F_ν = π B_ν(T) (R/d)².
     pub fn thermal_flux_si(&self, lambda_m: f64) -> f64 {
         let nu = C_LIGHT / lambda_m;
-        let bnu = Self::planck_bnu(self.temp_k, nu);
-        let r = self.radius_m();
-        let d = self.distance_au * AU_M;
-        PI * bnu * (r / d).powi(2)
+        thermal_flux_jy(self.temp_k, self.radius_m(), self.distance_au, nu) * JY
     }
 
     /// Reflected-sunlight flux density at wavelength `lambda_m` (W/m²/Hz),
@@ -163,12 +142,7 @@ impl P9Sed {
     ///   F_refl = albedo · [π B_ν(T_sun) (R_sun/r)²] · (R_p² / (4 Δ²)).
     pub fn reflected_flux_si(&self, lambda_m: f64) -> f64 {
         let nu = C_LIGHT / lambda_m;
-        let bnu_sun = Self::planck_bnu(T_SUN, nu);
-        let r_m = self.distance_au * AU_M;
-        let solar_flux_at_planet = PI * bnu_sun * (R_SUN_M / r_m).powi(2);
-        let r_p = self.radius_m();
-        let delta_m = (self.distance_au - 1.0).max(1.0) * AU_M;
-        self.albedo * solar_flux_at_planet * (r_p * r_p) / (4.0 * delta_m * delta_m)
+        reflected_flux_jy(self.albedo, self.radius_m(), self.distance_au, nu) * JY
     }
 
     /// Thermal flux density at `lambda_m` in milli-Jansky.
@@ -229,6 +203,7 @@ impl P9Sed {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use p9_core::analysis::thermal::{H_PLANCK, K_BOLTZ};
 
     /// WISE W1 effective wavelength (m).
     const W1_M: f64 = 3.3526e-6;

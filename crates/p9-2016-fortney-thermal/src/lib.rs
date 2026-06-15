@@ -51,26 +51,19 @@
 use std::f64::consts::PI;
 
 use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
+use p9_core::analysis::thermal::{planck_bnu, thermal_flux_jy, C_LIGHT};
 use p9_core::constants::AU_M;
 
 pub mod published;
 
 /// Stefan-Boltzmann constant (W / m² / K⁴), 2018 CODATA.
 pub const SIGMA_SB: f64 = 5.670_374_419e-8;
-/// Planck constant (J·s).
-pub const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K).
-pub const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s).
-pub const C_LIGHT: f64 = 2.997_924_58e8;
 /// Wien displacement constant b = h c / (4.965114231 k) (m·K).
 pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
 /// Earth radius (m); matches the photometry mass-radius anchor.
 pub const R_EARTH_M: f64 = 6.371e6;
 /// Solar luminosity (W).
 pub const L_SUN_W: f64 = 3.828e26;
-/// 1 Jansky in W/m²/Hz.
-pub const JY: f64 = 1.0e-26;
 
 /// WISE W2 effective wavelength (4.6 µm); the redder of the two short WISE
 /// bands and the one the Meisner et al. (2018) shift-and-stack search uses.
@@ -173,11 +166,7 @@ impl P9Thermal {
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
     pub fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-        let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-        if x > 700.0 {
-            return 0.0;
-        }
-        (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
+        planck_bnu(t, nu_hz)
     }
 
     /// Thermal (blackbody) flux density at `wavelength_m` in Jansky, observed
@@ -185,11 +174,7 @@ impl P9Thermal {
     /// emitter gives F_ν = π B_ν(T) (R/d)².
     pub fn flux_density_jy(&self, wavelength_m: f64) -> f64 {
         let nu = C_LIGHT / wavelength_m;
-        let bnu = Self::planck_bnu(self.effective_temp(), nu);
-        let r = self.radius_m();
-        let d = self.distance_au * AU_M;
-        let solid_angle = PI * (r / d).powi(2);
-        solid_angle * bnu / JY
+        thermal_flux_jy(self.effective_temp(), self.radius_m(), self.distance_au, nu)
     }
 
     /// Far-IR (350 µm) flux density in Jansky.
@@ -218,6 +203,7 @@ pub fn effective_temp(mass_earth: f64, distance_au: f64) -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use p9_core::analysis::thermal::{H_PLANCK, K_BOLTZ};
 
     #[test]
     fn nominal_p9_effective_temp_in_published_band() {

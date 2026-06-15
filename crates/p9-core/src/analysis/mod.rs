@@ -6,6 +6,7 @@ pub mod resonance;
 pub mod secular;
 pub mod stacking;
 pub mod surveys;
+pub mod thermal;
 
 /// Snapshot of orbital elements for all active particles at a given time.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -32,19 +32,9 @@
 //! (mid/far-IR beats optical for the cold body) is reproduced where the model
 //! is most trustworthy.
 
-use std::f64::consts::PI;
-
 use p9_core::analysis::photometry::mass_radius_neptunian;
-use p9_core::constants::{AU_M, EARTH_RADIUS_KM};
-
-/// Planck constant (J·s).
-const H_PLANCK: f64 = 6.626_070_15e-34;
-/// Boltzmann constant (J/K).
-const K_BOLTZ: f64 = 1.380_649e-23;
-/// Speed of light (m/s).
-const C_LIGHT: f64 = 2.997_924_58e8;
-/// 1 Jansky in W/m²/Hz.
-const JY: f64 = 1.0e-26;
+use p9_core::analysis::thermal::{flux_to_magnitude, thermal_flux_jy, C_LIGHT};
+use p9_core::constants::EARTH_RADIUS_KM;
 
 /// Earth radius in meters (from the shared `EARTH_RADIUS_KM`).
 const R_EARTH_M: f64 = EARTH_RADIUS_KM * 1.0e3;
@@ -138,33 +128,21 @@ impl P9 {
         T_FLOOR_10ME_K * (self.mass_earth / 10.0).powf(T_FLOOR_MASS_EXPONENT)
     }
 
-    /// Planck function B_ν(T) in W/m²/Hz/sr.
-    fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
-        let x = H_PLANCK * nu_hz / (K_BOLTZ * t);
-        if x > 700.0 {
-            return 0.0;
-        }
-        (2.0 * H_PLANCK * nu_hz.powi(3) / (C_LIGHT * C_LIGHT)) / (x.exp() - 1.0)
-    }
-
     /// Intrinsic thermal flux density in `band` (Jy): a grey body of unit
     /// emissivity, F_ν = π B_ν(T_eff) (R/d)².
     pub fn thermal_flux_jy(&self, band: Band) -> f64 {
-        let bnu = Self::planck_bnu(self.effective_temperature(), band.frequency_hz());
-        let r = self.radius_m();
-        let d = self.distance_au * AU_M;
-        let solid_angle = PI * (r / d).powi(2);
-        solid_angle * bnu / JY
+        thermal_flux_jy(
+            self.effective_temperature(),
+            self.radius_m(),
+            self.distance_au,
+            band.frequency_hz(),
+        )
     }
 
     /// Apparent Vega-system magnitude in `band` from the intrinsic thermal
     /// flux. Returns +∞ when the flux underflows to zero (deep Wien tail).
     pub fn thermal_magnitude(&self, band: Band) -> f64 {
-        let flux = self.thermal_flux_jy(band);
-        if flux <= 0.0 {
-            return f64::INFINITY;
-        }
-        -2.5 * (flux / band.zero_point_jy()).log10()
+        flux_to_magnitude(self.thermal_flux_jy(band), band.zero_point_jy())
     }
 
     /// The band (among `bands`) in which the planet is intrinsically brightest
