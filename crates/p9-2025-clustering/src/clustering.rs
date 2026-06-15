@@ -9,7 +9,9 @@
 //! documented longitude-dependent selection weighting with a seeded
 //! resampling Monte Carlo.
 
-use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
+use p9_core::analysis::circular::{
+    bessel_i0, circular_mean, kappa_from_r_bar, mean_resultant_length,
+};
 use p9_core::constants::DEG2RAD;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -34,30 +36,6 @@ pub struct BimodalVonMises {
     pub comp2: VonMisesParams,
 }
 
-/// Modified Bessel function I_0(x) approximation.
-///
-/// Uses polynomial approximation valid for all x >= 0.
-pub fn bessel_i0(x: f64) -> f64 {
-    let ax = x.abs();
-    if ax < 3.75 {
-        let t = (x / 3.75).powi(2);
-        1.0 + t
-            * (3.5156229
-                + t * (3.0899424
-                    + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))))
-    } else {
-        let t = 3.75 / ax;
-        (ax.exp() / ax.sqrt())
-            * (0.39894228
-                + t * (0.01328592
-                    + t * (0.00225319
-                        + t * (-0.00157565
-                            + t * (0.00916281
-                                + t * (-0.02057706
-                                    + t * (0.02635537 + t * (-0.01647633 + t * 0.00392377))))))))
-    }
-}
-
 /// Von Mises probability density function.
 pub fn von_mises_pdf(theta: f64, mu: f64, kappa: f64) -> f64 {
     (kappa * (theta - mu).cos()).exp() / (std::f64::consts::TAU * bessel_i0(kappa))
@@ -67,24 +45,6 @@ pub fn von_mises_pdf(theta: f64, mu: f64, kappa: f64) -> f64 {
 pub fn bimodal_pdf(theta: f64, params: &BimodalVonMises) -> f64 {
     params.w * von_mises_pdf(theta, params.comp1.mu, params.comp1.kappa)
         + (1.0 - params.w) * von_mises_pdf(theta, params.comp2.mu, params.comp2.kappa)
-}
-
-/// Maximum-likelihood κ from the mean resultant length R̄
-/// (Mardia & Jupp 2000 piecewise approximation of A⁻¹).
-pub fn kappa_from_r_bar(r_bar: f64) -> f64 {
-    let kappa = if r_bar < 0.53 {
-        2.0 * r_bar + r_bar.powi(3) + 5.0 * r_bar.powi(5) / 6.0
-    } else if r_bar < 0.85 {
-        -0.4 + 1.39 * r_bar + 0.43 / (1.0 - r_bar)
-    } else {
-        let denom = r_bar.powi(3) - 4.0 * r_bar.powi(2) + 3.0 * r_bar;
-        if denom.abs() < 1e-10 {
-            1000.0 // Very concentrated distribution
-        } else {
-            1.0 / denom
-        }
-    };
-    kappa.clamp(0.0, 1000.0)
 }
 
 /// Fit a single von Mises distribution to a sample of angles via maximum
@@ -267,18 +227,6 @@ mod tests {
     use rand_distr::{Distribution, Normal};
 
     #[test]
-    fn test_bessel_i0_at_zero() {
-        assert!((bessel_i0(0.0) - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn test_bessel_i0_positive() {
-        for x in [0.5, 1.0, 2.0, 5.0, 10.0] {
-            assert!(bessel_i0(x) > 0.0, "I_0({}) should be positive", x);
-        }
-    }
-
-    #[test]
     fn test_von_mises_pdf_normalizes() {
         // Numerical integration should be ~1
         let n = 1000;
@@ -367,13 +315,6 @@ mod tests {
         let angles: Vec<f64> = (0..10).map(|_| draw(&mut rng)).collect();
         let p = bias_resampled_p_value(&angles, &default_selection_weight, 500, &mut rng);
         assert!(p > 0.05, "p = {p} — null sample flagged as clustered");
-    }
-
-    #[test]
-    fn test_kappa_from_r_bar_monotone() {
-        assert!(kappa_from_r_bar(0.2) < kappa_from_r_bar(0.6));
-        assert!(kappa_from_r_bar(0.6) < kappa_from_r_bar(0.9));
-        assert!(kappa_from_r_bar(0.0) < 1e-9);
     }
 
     #[test]

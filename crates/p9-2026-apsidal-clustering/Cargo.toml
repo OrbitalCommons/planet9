@@ -6,7 +6,6 @@ description = "Reproduction of Siraj, Chyba & Tremaine (2026) 'Measuring Apsidal
 
 [dependencies]
 p9-core = { path = "../p9-core" }
-p9-2025-clustering = { path = "../p9-2025-clustering" }
 rand = { workspace = true }
 rand_distr = { workspace = true }
 serde = { workspace = true }
