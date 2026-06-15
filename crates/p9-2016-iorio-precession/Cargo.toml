@@ -1,0 +1,14 @@
+[package]
+name = "p9-2016-iorio-precession"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Iorio (2016) 'Constraints on Planet Nine from the anomalous perihelion precession of the planets' (arXiv:1512.05288)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2026-iorio-precession = { path = "../p9-2026-iorio-precession" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
