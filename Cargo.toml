@@ -21,6 +21,7 @@ members = [
     "crates/p9-2016-evidence",
     "crates/p9-2016-constraints", "crates/p9-2016-obliquity", "crates/p9-2016-obliquity-gomes", "crates/p9-2016-inclined-tnos",
     "crates/p9-2016-cassini-ranging",
+    "crates/p9-2016-holman-payne",
     "crates/p9-2016-secular-resonance",
     "crates/p9-2017-bias",
     "crates/p9-2017-ossos-bias",

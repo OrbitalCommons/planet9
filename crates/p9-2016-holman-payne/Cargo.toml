@@ -1,0 +1,15 @@
+[package]
+name = "p9-2016-holman-payne"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Holman & Payne (2016) 'Observational constraints on Planet Nine: Cassini range observations of Saturn' (arXiv:1603.09008, 1604.03180)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2016-cassini-ranging = { path = "../p9-2016-cassini-ranging" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
