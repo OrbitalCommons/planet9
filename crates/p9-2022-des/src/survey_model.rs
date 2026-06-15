@@ -9,11 +9,15 @@
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::analysis::surveys::poisson_binomial_tail;
 use p9_core::coords::observer::{EarthProvider, EarthState, Time, Timescale};
+use p9_core::coords::sky::{
+    apparent_position_deg, apparent_position_with_earth_deg, phase_angle_with_earth,
+};
 use p9_core::types::OrbitalElements;
 
 use crate::color_models::BandMagnitudes;
-use crate::sky::{apparent_position_deg, apparent_position_with_earth_deg, earth_states_at};
+use crate::sky::earth_states_at;
 
 /// Photometric band used in DES observations.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -76,29 +80,6 @@ fn ra_in_range(ra: f64, start: f64, end: f64) -> bool {
 
 fn ra_span_deg(start: f64, end: f64) -> f64 {
     (end - start).rem_euclid(360.0)
-}
-
-/// Survival probability P(X >= k) of a Poisson-binomial variable
-/// (independent Bernoulli trials with heterogeneous probabilities `probs`),
-/// computed by exact dynamic programming over the count distribution.
-pub fn poisson_binomial_tail(probs: &[f64], k: u32) -> f64 {
-    let k = k as usize;
-    if k == 0 {
-        return 1.0;
-    }
-    // dist[j] = P(exactly j successes so far) for j < k; `tail` absorbs
-    // P(>= k successes).
-    let mut dist = vec![0.0_f64; k];
-    dist[0] = 1.0;
-    let mut tail = 0.0_f64;
-    for &p in probs {
-        tail += dist[k - 1] * p;
-        for j in (1..k).rev() {
-            dist[j] = dist[j] * (1.0 - p) + dist[j - 1] * p;
-        }
-        dist[0] *= 1.0 - p;
-    }
-    tail
 }
 
 /// DES survey model parameters for Planet Nine detection.
@@ -306,7 +287,7 @@ impl DesSurvey {
             .map(|(band, t_days, state)| {
                 let (ra, dec, _) = apparent_position_with_earth_deg(elem, state, *t_days);
                 if self.is_in_footprint(ra, dec) {
-                    let alpha = crate::sky::phase_angle_with_earth(elem, state, *t_days);
+                    let alpha = phase_angle_with_earth(elem, state, *t_days);
                     let dm = -2.5 * hg_phase_factor(DEFAULT_SLOPE_G, alpha).log10();
                     self.night_detection_probability(mags.magnitude(*band) + dm, *band)
                 } else {
@@ -508,26 +489,5 @@ mod tests {
             let idx = t / span * grid;
             assert!((idx - idx.round()).abs() < 1e-9, "t = {t} off-grid");
         }
-    }
-
-    #[test]
-    fn poisson_binomial_tail_matches_binomial() {
-        // Homogeneous case reduces to the binomial: n = 10, p = 0.5,
-        // P(X >= 6) = 386/1024.
-        let probs = vec![0.5; 10];
-        let tail = poisson_binomial_tail(&probs, 6);
-        assert!((tail - 386.0 / 1024.0).abs() < 1e-12, "tail = {tail}");
-        // Degenerate edges.
-        assert_eq!(poisson_binomial_tail(&probs, 0), 1.0);
-        assert!(poisson_binomial_tail(&probs, 11) < 1e-12);
-    }
-
-    #[test]
-    fn poisson_binomial_tail_heterogeneous() {
-        // P(X >= 1) = 1 - prod(1 - p_i).
-        let probs = [0.1, 0.4, 0.7];
-        let tail = poisson_binomial_tail(&probs, 1);
-        let expected = 1.0 - 0.9 * 0.6 * 0.3;
-        assert!((tail - expected).abs() < 1e-12);
     }
 }

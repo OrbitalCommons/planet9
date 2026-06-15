@@ -14,7 +14,7 @@
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use p9_2022_des::sky::apparent_position_deg;
+use p9_core::coords::sky::apparent_position_deg;
 use p9_core::data::reference_population::generate_reference_population;
 use p9_core::types::OrbitalElements;
 
@@ -41,7 +41,8 @@ pub struct ExclusionResult {
 }
 
 /// Equatorial declination (deg) of an orbit at its stored epoch, via the
-/// shared `p9-2022-des` ecliptic->equatorial apparent-position conversion.
+/// shared `p9_core::coords::sky` ecliptic->equatorial apparent-position
+/// conversion.
 pub fn declination_deg(elements: &OrbitalElements) -> f64 {
     let (_, dec, _) = apparent_position_deg(elements, 0.0);
     dec

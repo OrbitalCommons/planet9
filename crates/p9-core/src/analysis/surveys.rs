@@ -104,6 +104,51 @@ pub fn limiting_magnitude(survey: &str) -> Option<f64> {
         .map(|d| d.limiting_mag)
 }
 
+/// Survival probability P(X >= k) of a Poisson-binomial variable
+/// (independent Bernoulli trials with heterogeneous probabilities `probs`),
+/// computed by exact dynamic programming over the count distribution.
+pub fn poisson_binomial_tail(probs: &[f64], k: u32) -> f64 {
+    let k = k as usize;
+    if k == 0 {
+        return 1.0;
+    }
+    // dist[j] = P(exactly j successes so far) for j < k; `tail` absorbs
+    // P(>= k successes).
+    let mut dist = vec![0.0_f64; k];
+    dist[0] = 1.0;
+    let mut tail = 0.0_f64;
+    for &p in probs {
+        tail += dist[k - 1] * p;
+        for j in (1..k).rev() {
+            dist[j] = dist[j] * (1.0 - p) + dist[j - 1] * p;
+        }
+        dist[0] *= 1.0 - p;
+    }
+    tail
+}
+
+/// A survey/telescope footprint: a declination band, an optional galactic-
+/// latitude exclusion, and the fraction of that band actually imaged to depth.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Footprint {
+    pub dec_min_deg: f64,
+    pub dec_max_deg: f64,
+    /// Require |galactic latitude| ≥ this (0 = no plane cut).
+    pub galactic_lat_min_deg: f64,
+    /// Fraction of the in-footprint sky surveyed to the limiting depth.
+    pub coverage_fraction: f64,
+}
+
+impl Footprint {
+    /// Does a sample at this equatorial position and galactic latitude fall in
+    /// the imaged footprint (geometry only; coverage applied separately)?
+    pub fn accepts(&self, dec_deg: f64, galactic_lat_deg: f64) -> bool {
+        dec_deg >= self.dec_min_deg
+            && dec_deg <= self.dec_max_deg
+            && galactic_lat_deg.abs() >= self.galactic_lat_min_deg
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,5 +189,43 @@ mod tests {
         for s in &EXCLUSION_FRACTIONS {
             assert!((0.0..=1.0).contains(&s.unique_fraction), "{}", s.survey);
         }
+    }
+
+    #[test]
+    fn poisson_binomial_tail_matches_binomial() {
+        // Homogeneous case reduces to the binomial: n = 10, p = 0.5,
+        // P(X >= 6) = 386/1024.
+        let probs = vec![0.5; 10];
+        let tail = poisson_binomial_tail(&probs, 6);
+        assert!((tail - 386.0 / 1024.0).abs() < 1e-12, "tail = {tail}");
+        // Degenerate edges.
+        assert_eq!(poisson_binomial_tail(&probs, 0), 1.0);
+        assert!(poisson_binomial_tail(&probs, 11) < 1e-12);
+    }
+
+    #[test]
+    fn poisson_binomial_tail_heterogeneous() {
+        // P(X >= 1) = 1 - prod(1 - p_i).
+        let probs = [0.1, 0.4, 0.7];
+        let tail = poisson_binomial_tail(&probs, 1);
+        let expected = 1.0 - 0.9 * 0.6 * 0.3;
+        assert!((tail - expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn footprint_accepts_dec_band_and_galactic_cut() {
+        let fp = Footprint {
+            dec_min_deg: -30.0,
+            dec_max_deg: 60.0,
+            galactic_lat_min_deg: 10.0,
+            coverage_fraction: 0.8,
+        };
+        assert!(fp.accepts(0.0, 25.0));
+        assert!(fp.accepts(0.0, -25.0));
+        // Outside declination band.
+        assert!(!fp.accepts(-45.0, 25.0));
+        assert!(!fp.accepts(70.0, 25.0));
+        // Inside the galactic plane cut.
+        assert!(!fp.accepts(0.0, 5.0));
     }
 }

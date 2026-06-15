@@ -9,7 +9,6 @@ rand = { workspace = true }
 rand_distr = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-p9-2022-des = { version = "0.1.0", path = "../p9-2022-des" }
 
 [dev-dependencies]
 approx = { workspace = true }

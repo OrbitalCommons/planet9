@@ -12,6 +12,7 @@
 //! angles are degrees, distances AU, areas square degrees, magnitudes V (or
 //! the telescope's stated band, treated as a reflected-light proxy).
 
+use p9_core::analysis::surveys::Footprint;
 use serde::{Deserialize, Serialize};
 
 /// Schema version. The Python loader asserts the file matches this exactly.
@@ -110,28 +111,6 @@ pub struct StudyResult {
     pub v_p16: f64,
     pub v_median: f64,
     pub v_p84: f64,
-}
-
-/// A survey/telescope footprint: a declination band, an optional galactic-
-/// latitude exclusion, and the fraction of that band actually imaged to depth.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Footprint {
-    pub dec_min_deg: f64,
-    pub dec_max_deg: f64,
-    /// Require |galactic latitude| ≥ this (0 = no plane cut).
-    pub galactic_lat_min_deg: f64,
-    /// Fraction of the in-footprint sky surveyed to the limiting depth.
-    pub coverage_fraction: f64,
-}
-
-impl Footprint {
-    /// Does a sample at this equatorial position and galactic latitude fall in
-    /// the imaged footprint (geometry only; coverage applied separately)?
-    pub fn accepts(&self, dec_deg: f64, galactic_lat_deg: f64) -> bool {
-        dec_deg >= self.dec_min_deg
-            && dec_deg <= self.dec_max_deg
-            && galactic_lat_deg.abs() >= self.galactic_lat_min_deg
-    }
 }
 
 /// A telescope/survey: a limiting magnitude in some band plus a footprint.

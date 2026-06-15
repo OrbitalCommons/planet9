@@ -7,10 +7,9 @@
 //! cuts, and the measured 99.2% linking efficiency. The single-exposure
 //! depth comes from the shared `p9_core::analysis::surveys` table.
 
+use p9_core::analysis::surveys::poisson_binomial_tail;
 use p9_core::coords::observer::{Time, Timescale};
 use serde::{Deserialize, Serialize};
-
-pub use p9_2022_des::survey_model::poisson_binomial_tail;
 
 /// Quality-cut thresholds applied to PS1 detections.
 #[derive(Debug, Clone, Serialize, Deserialize)]

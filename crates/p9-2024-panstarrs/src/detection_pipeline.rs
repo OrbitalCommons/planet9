@@ -11,8 +11,10 @@
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
-use p9_2022_des::sky::{apparent_position_deg, apparent_position_with_earth_deg};
 use p9_core::coords::observer::{EarthProvider, EarthState, Timescale};
+use p9_core::coords::sky::{
+    apparent_position_deg, apparent_position_with_earth_deg, phase_angle_with_earth,
+};
 use p9_core::types::OrbitalElements;
 
 use crate::survey_model::Ps1Survey;
@@ -46,7 +48,7 @@ impl Ps1Result {
 
 /// Equatorial (RA, dec) in degrees of an orbit's current apparent sky
 /// position (geocentric, at the orbit's stored epoch), via the shared
-/// ecliptic -> equatorial conversion in `p9_2022_des::sky`.
+/// ecliptic -> equatorial conversion in `p9_core::coords::sky`.
 pub fn equatorial_position_deg(elements: &OrbitalElements) -> (f64, f64) {
     let (ra, dec, _) = apparent_position_deg(elements, 0.0);
     (ra, dec)
@@ -97,7 +99,7 @@ pub fn detection_probability_for_orbit_with_earth(
 ) -> f64 {
     use p9_core::analysis::photometry::{hg_phase_factor, DEFAULT_SLOPE_G};
     let (_, dec) = equatorial_position_with_earth_deg(elements, earth_state);
-    let alpha = p9_2022_des::sky::phase_angle_with_earth(elements, earth_state, 0.0);
+    let alpha = phase_angle_with_earth(elements, earth_state, 0.0);
     let dm = -2.5 * hg_phase_factor(DEFAULT_SLOPE_G, alpha).log10();
     survey.detection_probability(v_magnitude + dm, dec)
 }
