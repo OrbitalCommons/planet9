@@ -1257,6 +1257,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2016-linder-evolution"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2016-obliquity"
 version = "0.1.0"
 dependencies = [
