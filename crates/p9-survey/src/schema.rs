@@ -15,7 +15,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Schema version. The Python loader asserts the file matches this exactly.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// One paper's Planet Nine orbit solution and the (documented, assumed)
 /// 1σ spreads used to turn it into a sky-position probability cloud.
@@ -172,6 +172,19 @@ pub struct Overlays {
     pub ecliptic: Vec<[f64; 2]>,
 }
 
+/// Search-narrowing constraints for the plotter to overlay: the Rubin cede
+/// line and the Cassini/Iorio ephemeris favored-ν sky arc.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Constraints {
+    /// Rubin/LSST northern limit (deg); JBT cedes everything at/below it.
+    pub rubin_dec_max_deg: f64,
+    /// Favored true-anomaly interval (deg) from the Cassini ephemeris fit.
+    pub favored_nu_lo_deg: f64,
+    pub favored_nu_hi_deg: f64,
+    /// Favored-ν zone mapped onto the sky (RA, Dec deg) for the 2021 orbit.
+    pub favored_arc: Vec<[f64; 2]>,
+}
+
 /// The complete dataset written to JSON and read by the plotter.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SurveyDataset {
@@ -184,4 +197,5 @@ pub struct SurveyDataset {
     pub studies: Vec<StudyResult>,
     pub telescopes: Vec<TelescopeResult>,
     pub overlays: Overlays,
+    pub constraints: Constraints,
 }

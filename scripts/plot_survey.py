@@ -18,7 +18,7 @@ from typing import Any, get_args, get_origin
 
 import numpy as np
 
-SCHEMA_VERSION = 1  # must equal p9_survey::schema::SCHEMA_VERSION
+SCHEMA_VERSION = 2  # must equal p9_survey::schema::SCHEMA_VERSION
 
 # Tokyo-Night palette (portal dark background #1a1b26)
 FG, MUTE = "#c0caf5", "#565f89"
@@ -92,6 +92,13 @@ class Overlays:
 
 
 @dataclass
+class Constraints:
+    rubin_dec_max_deg: float
+    favored_nu_lo_deg: float; favored_nu_hi_deg: float
+    favored_arc: list
+
+
+@dataclass
 class SurveyDataset:
     schema_version: int; generated_by: str
     samples_per_study: int; rng_seed: int
@@ -99,6 +106,7 @@ class SurveyDataset:
     studies: list[StudyResult]
     telescopes: list[TelescopeResult]
     overlays: Overlays
+    constraints: Constraints
 
 
 def _coerce(value: Any, typ: Any, path: str) -> Any:
@@ -215,6 +223,15 @@ def main() -> None:
                                        alpha=0.9, zorder=3, label="Galactic plane (hard zone)")
     oe = np.argsort(ec[:, 0]); ax.plot(ec[oe, 0], ec[oe, 1], ls=":", color=FG, lw=0.9,
                                        alpha=0.5, zorder=3, label="Ecliptic")
+
+    # Search-narrowing overlays: Rubin cede line + Cassini favored-ν arc.
+    c = d.constraints
+    ax.axhspan(g.dec_min_deg, c.rubin_dec_max_deg, color=MUTE, alpha=0.10, zorder=1)
+    ax.axhline(c.rubin_dec_max_deg, color="#f7768e", ls="-.", lw=1.2, alpha=0.85, zorder=3,
+               label=f"Rubin limit Dec +{c.rubin_dec_max_deg:.0f}° (JBT keeps north)")
+    arc = np.array(c.favored_arc)
+    ax.scatter(arc[:, 0], arc[:, 1], s=10, c="#e0af68", marker="D", edgecolors="none",
+               zorder=7, label=f"Cassini favored-ν arc (ν {c.favored_nu_lo_deg:.0f}–{c.favored_nu_hi_deg:.0f}°)")
 
     ax.set_xlim(g.ra_min_deg, g.ra_max_deg); ax.set_ylim(g.dec_min_deg, g.dec_max_deg)
     ax.invert_xaxis()
