@@ -16,6 +16,7 @@
 //! that the Rust side did not compute.
 
 pub mod parallax;
+pub mod plan;
 pub mod schema;
 pub mod skymap;
 pub mod studies;
