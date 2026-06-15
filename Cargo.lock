@@ -1543,6 +1543,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2020-tess-shiftstack"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-2025-stacking",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2021-detached-inclinations"
 version = "0.1.0"
 dependencies = [
