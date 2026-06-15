@@ -1,0 +1,15 @@
+[package]
+name = "p9-2016-obliquity-gomes"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Gomes, Deienno & Morbidelli (2016) 'The inclination of the planetary system relative to the solar equator may be explained by the presence of Planet 9'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2016-obliquity = { path = "../p9-2016-obliquity" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
