@@ -1326,7 +1326,6 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "nalgebra",
- "p9-2016-obliquity",
  "p9-core",
  "serde",
  "serde_json",
@@ -1338,7 +1337,6 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "nalgebra",
- "p9-2016-obliquity",
  "p9-core",
  "serde",
  "serde_json",

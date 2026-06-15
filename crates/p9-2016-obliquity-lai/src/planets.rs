@@ -2,13 +2,14 @@
 //! sums over for the total orbital angular momentum `L`, the P9-forced
 //! precession rate `Ω_L`, and the solar spin precession `Ω★ps`.
 //!
-//! The four giants reuse [`p9_2016_obliquity::solar_model::GIANT_PLANETS`]; the
-//! four terrestrials are added here (they contribute < 0.1% of `L` and `Ω_L`
-//! but matter at the percent level for `Ω★ps ∝ Σ mⱼ/aⱼ³`, which is weighted
-//! toward the inner planets relative to the angular-momentum sums).
+//! The four giants reuse
+//! [`p9_core::initial_conditions::giant_planets::GIANT_PLANETS`]; the four
+//! terrestrials are added here (they contribute < 0.1% of `L` and `Ω_L` but
+//! matter at the percent level for `Ω★ps ∝ Σ mⱼ/aⱼ³`, which is weighted toward
+//! the inner planets relative to the angular-momentum sums).
 
-use p9_2016_obliquity::solar_model::GIANT_PLANETS;
 use p9_core::constants::*;
+use p9_core::initial_conditions::giant_planets::GIANT_PLANETS;
 
 /// Terrestrial planet (mass in M_sun, semi-major axis in AU). Masses from
 /// JPL DE440 GM ratios; semi-major axes are mean osculating values.

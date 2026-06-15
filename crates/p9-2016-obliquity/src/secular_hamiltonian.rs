@@ -14,6 +14,7 @@
 //!   dL̂_i/dt = (3/L_i) Σ_j C_ij (L̂_i · L̂_j) (L̂_i × L̂_j)
 
 use p9_core::constants::*;
+use p9_core::initial_conditions::giant_planets;
 
 use crate::solar_model;
 
@@ -117,7 +118,7 @@ fn coupling_constant(m1: f64, m2: f64, a_inner: f64, a_outer: f64, epsilon_outer
 /// systematic in the spin-orbit coupling that shifts the required-i₉
 /// contours.
 fn coupling_gp_9(m9_solar: f64, a9: f64, epsilon_9: f64) -> f64 {
-    solar_model::GIANT_PLANETS
+    giant_planets::GIANT_PLANETS
         .iter()
         .map(|&(m_i, a_i)| coupling_constant(m_i, m9_solar, a_i, a9, epsilon_9))
         .sum()
@@ -126,7 +127,7 @@ fn coupling_gp_9(m9_solar: f64, a9: f64, epsilon_9: f64) -> f64 {
 /// Solar-spin-ring ↔ giant-planet coupling, summed planet by planet
 /// (∝ Σ mᵢ/aᵢ³; the collapsed ring underestimates this by ~42%).
 fn coupling_sun_gp(m_sun_eff: f64, a_tilde: f64) -> f64 {
-    solar_model::GIANT_PLANETS
+    giant_planets::GIANT_PLANETS
         .iter()
         .map(|&(m_i, a_i)| coupling_constant(m_sun_eff, m_i, a_tilde, a_i, 1.0))
         .sum()
@@ -269,9 +270,9 @@ pub fn integrate_obliquity(
     let dt = params.dt;
     let n_steps = (t_age / dt).ceil() as usize;
 
-    let l_gp_mag = solar_model::giant_planet_angular_momentum();
+    let l_gp_mag = giant_planets::giant_planet_angular_momentum();
     let epsilon_9 = params.epsilon_9();
-    let l_9_mag = solar_model::p9_angular_momentum(params.m9_solar, params.a9, params.e9);
+    let l_9_mag = giant_planets::p9_angular_momentum(params.m9_solar, params.a9, params.e9);
 
     // Giant planet ↔ Planet Nine coupling (constant, per-planet sum)
     let c_gp_9 = coupling_gp_9(params.m9_solar, params.a9, epsilon_9);
@@ -384,8 +385,8 @@ mod tests {
         // H6 regression: the collapsed L-conserving ring (m_total at a_eff
         // with L = m_total √(GM a_eff)) underestimates both coupling sums
         // by ~40-45%; the per-planet sums must be substantially larger.
-        let m_total: f64 = solar_model::GIANT_PLANETS.iter().map(|&(m, _)| m).sum();
-        let l_total = solar_model::giant_planet_angular_momentum();
+        let m_total: f64 = giant_planets::GIANT_PLANETS.iter().map(|&(m, _)| m).sum();
+        let l_total = giant_planets::giant_planet_angular_momentum();
         let a_eff = (l_total / m_total).powi(2) / G_AU3_MSUN_DAY2;
 
         let m9 = 10.0 * EARTH_MASS_SOLAR;
@@ -419,8 +420,8 @@ mod tests {
         // must match the analytic frequency.
         let m9_solar = 10.0 * EARTH_MASS_SOLAR;
         let (a9, e9) = (700.0, 0.6);
-        let l_gp_mag = solar_model::giant_planet_angular_momentum();
-        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, a9, e9);
+        let l_gp_mag = giant_planets::giant_planet_angular_momentum();
+        let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, a9, e9);
 
         let initial = SpinOrbitState::from_inclinations(20.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
         let theta = initial.mutual_inclination();
@@ -466,8 +467,8 @@ mod tests {
         // for truncation error to dominate roundoff.
         let m9_solar = 10.0 * EARTH_MASS_SOLAR;
         let (a9, e9) = (70.0, 0.6);
-        let l_gp_mag = solar_model::giant_planet_angular_momentum();
-        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, a9, e9);
+        let l_gp_mag = giant_planets::giant_planet_angular_momentum();
+        let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, a9, e9);
         let initial = SpinOrbitState::from_inclinations(30.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
 
         let t_total = 1e7 * YEAR_DAYS;
@@ -510,9 +511,9 @@ mod tests {
     #[test]
     fn test_no_obliquity_without_p9_inclination() {
         // With i_9 = 0, all vectors are aligned → no obliquity excitation
-        let l_gp_mag = solar_model::giant_planet_angular_momentum();
+        let l_gp_mag = giant_planets::giant_planet_angular_momentum();
         let m9_solar = 10.0 * EARTH_MASS_SOLAR;
-        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, 700.0, 0.6);
+        let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, 700.0, 0.6);
 
         let initial = SpinOrbitState::from_inclinations(0.001, PI, l_gp_mag, l_9_mag);
 
@@ -537,8 +538,8 @@ mod tests {
     #[test]
     fn test_obliquity_excited_by_inclined_p9() {
         let m9_solar = 15.0 * EARTH_MASS_SOLAR;
-        let l_gp_mag = solar_model::giant_planet_angular_momentum();
-        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, 500.0, 0.5);
+        let l_gp_mag = giant_planets::giant_planet_angular_momentum();
+        let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, 500.0, 0.5);
 
         let initial = SpinOrbitState::from_inclinations(30.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
 
@@ -565,8 +566,8 @@ mod tests {
     #[test]
     fn test_mutual_inclination_roughly_conserved() {
         let m9_solar = 10.0 * EARTH_MASS_SOLAR;
-        let l_gp_mag = solar_model::giant_planet_angular_momentum();
-        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, 700.0, 0.6);
+        let l_gp_mag = giant_planets::giant_planet_angular_momentum();
+        let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, 700.0, 0.6);
 
         let initial = SpinOrbitState::from_inclinations(20.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
 
@@ -597,8 +598,8 @@ mod tests {
     #[test]
     fn test_integration_produces_snapshots() {
         let m9_solar = 10.0 * EARTH_MASS_SOLAR;
-        let l_gp_mag = solar_model::giant_planet_angular_momentum();
-        let l_9_mag = solar_model::p9_angular_momentum(m9_solar, 700.0, 0.6);
+        let l_gp_mag = giant_planets::giant_planet_angular_momentum();
+        let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, 700.0, 0.6);
 
         let initial = SpinOrbitState::from_inclinations(20.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
 

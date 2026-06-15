@@ -6,7 +6,6 @@ description = "Reproduction of Gomes, Deienno & Morbidelli (2016) 'The inclinati
 
 [dependencies]
 p9-core = { path = "../p9-core" }
-p9-2016-obliquity = { path = "../p9-2016-obliquity" }
 nalgebra = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

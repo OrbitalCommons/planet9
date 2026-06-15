@@ -1,7 +1,7 @@
 //! Reproduction of Lai (2016)
 //! "Solar Obliquity Induced by Planet Nine: Analytic Theory" (arXiv:1608.01421).
 //!
-//! Where the sibling crate [`p9_2016_obliquity`] integrates the full vector
+//! Where the sibling `p9-2016-obliquity` crate integrates the full vector
 //! secular Hamiltonian numerically, Lai (2016) writes down a *closed-form*
 //! analytic theory for the same physics and this crate reproduces it.
 //!
@@ -21,8 +21,8 @@
 //! and Lai's published coefficients (87.5 Gyr, 55.8 Gyr, 462 AU prefactor)
 //! are kept as labelled constants and pinned against the computation in tests.
 //!
-//! The planet angular momenta reuse the sibling crate's
-//! [`p9_2016_obliquity::solar_model`] giant-planet table and angular-momentum
+//! The planet angular momenta reuse the
+//! `p9_core::initial_conditions::giant_planets` table and angular-momentum
 //! helper; the solar J₂ and masses come from `p9_core::constants`.
 
 pub mod planets;
