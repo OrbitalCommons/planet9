@@ -21,6 +21,7 @@ members = [
     "crates/p9-2018-chaotic-dynamics",
     "crates/p9-2018-kuiper-belt",
     "crates/p9-2018-resonance",
+    "crates/p9-2018-secular-dynamics",
     "crates/p9-2018-wise-search",
     "crates/p9-2019-clustering",
     "crates/p9-2019-ossos-scattering",

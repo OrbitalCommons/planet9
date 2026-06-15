@@ -1,0 +1,14 @@
+[package]
+name = "p9-2018-secular-dynamics"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Li, Hadden, Payne & Holman (2018) 'The secular dynamics of TNOs and Planet Nine' (arXiv:1806.06867)"
+
+[dependencies]
+nalgebra = { workspace = true }
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
