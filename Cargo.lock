@@ -1325,6 +1325,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2018-chaotic-dynamics"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2018-kuiper-belt"
 version = "0.1.0"
 dependencies = [
