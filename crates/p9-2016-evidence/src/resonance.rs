@@ -15,6 +15,7 @@
 //! so the angle circulated at n₉(p² − q²)/q even for an exactly resonant
 //! orbit and `is_librating` could never fire.)
 
+use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::analysis::resonance as core_resonance;
 use p9_core::constants::*;
 use p9_core::types::OrbitalElements;
@@ -88,7 +89,7 @@ pub fn resonant_angle(
     // Interior particle: exchange roles in p9-core's exterior convention,
     // i.e. core's (p, q, λ, λ_planet, ϖ) ← (q, p, λ, λ₉, ϖ).
     let phi = core_resonance::resonant_angle(q, p, lambda_part, lambda_p9, varpi_part);
-    p9_core::analysis::circular::wrap_to_pi(phi)
+    wrap_to_pi(phi)
 }
 
 /// Check if a series of resonant angles indicates libration (resonance

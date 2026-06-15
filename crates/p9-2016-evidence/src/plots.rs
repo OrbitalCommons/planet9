@@ -10,6 +10,7 @@
 use std::fmt::Write;
 
 use crate::phase_portrait::TrajectoryPoint;
+use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::*;
 use p9_core::data::stable_kbos::KboRecord;
 use p9_core::initial_conditions::scattered_disk_sim::DiskSnapshot;
@@ -210,7 +211,7 @@ pub fn scattered_disk_clustering(
         }
 
         let varpi = elem.omega + elem.omega_big;
-        let dv = p9_core::analysis::circular::wrap_to_pi(varpi - varpi_p9);
+        let dv = wrap_to_pi(varpi - varpi_p9);
 
         let px = margin + (elem.a - a_min) / a_range * plot_w;
         let py = margin + (1.0 - (dv + std::f64::consts::PI) / TWO_PI) * plot_h;

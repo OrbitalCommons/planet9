@@ -13,6 +13,7 @@
 //! Detection probability is a logistic roll-off centered on `m_eff`,
 //! gated by the declination > -30 deg 3-pi footprint.
 
+use p9_core::analysis::surveys::limiting_magnitude;
 use serde::{Deserialize, Serialize};
 
 use crate::published;
@@ -36,7 +37,7 @@ pub struct Ps1StackSurvey {
 impl Default for Ps1StackSurvey {
     fn default() -> Self {
         Self {
-            single_epoch_depth: p9_core::analysis::surveys::limiting_magnitude("PS1 3pi")
+            single_epoch_depth: limiting_magnitude("PS1 3pi")
                 .expect("PS1 3pi in shared survey table"),
             stack_depth_gain: published::SHIFT_STACK_DEPTH_GAIN_MAG,
             dec_limit_deg: published::PS1_DEC_LIMIT_DEG,
@@ -84,12 +85,7 @@ mod tests {
         let s = Ps1StackSurvey::default();
         // PINNED: PS1 3-pi single-epoch r depth == 21.5 from p9-core.
         assert!((s.single_epoch_depth - 21.5).abs() < 1e-12);
-        assert!(
-            (s.single_epoch_depth
-                - p9_core::analysis::surveys::limiting_magnitude("PS1 3pi").unwrap())
-            .abs()
-                < 1e-12
-        );
+        assert!((s.single_epoch_depth - limiting_magnitude("PS1 3pi").unwrap()).abs() < 1e-12);
     }
 
     #[test]

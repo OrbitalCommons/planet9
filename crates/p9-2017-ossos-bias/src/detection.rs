@@ -28,6 +28,7 @@
 //!    isotropic parent into an apparently clustered detected sample.
 
 use p9_core::analysis::photometry::{apparent_magnitude, opposition_delta};
+use p9_core::analysis::surveys::limiting_magnitude;
 use p9_core::constants::{DEG2RAD, GM_SUN, TWO_PI};
 use p9_core::coords::sky::ecliptic_vec_declination;
 use p9_core::types::OrbitalElements;
@@ -72,7 +73,7 @@ impl Default for SurveyModel {
     fn default() -> Self {
         // Depth: use the deepest tabulated wide-field survey (DES, r ≈ 23.8)
         // from the shared survey table.
-        let limiting_mag = p9_core::analysis::surveys::limiting_magnitude("DES").unwrap_or(23.8);
+        let limiting_mag = limiting_magnitude("DES").unwrap_or(23.8);
 
         // Discovery-longitude windows. OSSOS observed a handful of blocks at
         // specific ecliptic longitudes; combined with the other wide-field

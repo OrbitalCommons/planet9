@@ -12,6 +12,7 @@
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
+use p9_core::analysis::surveys::combined_unique_exclusion;
 use p9_core::coords::observer::{EarthProvider, EarthState};
 use p9_core::data::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_core::types::{OrbitalElements, P9Params};
@@ -168,7 +169,7 @@ pub fn combined_ztf_des() -> f64 {
         .find(|s| s.survey == "ZTF")
         .expect("ZTF in shared exclusion table")
         .unique_fraction;
-    p9_core::analysis::surveys::combined_unique_exclusion(&[ztf, unique_exclusion()])
+    combined_unique_exclusion(&[ztf, unique_exclusion()])
 }
 
 #[cfg(test)]

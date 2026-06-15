@@ -13,6 +13,7 @@
 //! The equations of motion in vector form are:
 //!   dL̂_i/dt = (3/L_i) Σ_j C_ij (L̂_i · L̂_j) (L̂_i × L̂_j)
 
+use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::*;
 use p9_core::initial_conditions::giant_planets;
 
@@ -355,7 +356,7 @@ fn make_snapshot(state: &SpinOrbitState, t: f64) -> ObliquitySnapshot {
     let _i_sun = state.l_sun[2].clamp(-1.0, 1.0).acos();
     let omega_big_sun = state.l_sun[1].atan2(state.l_sun[0]);
 
-    let delta = p9_core::analysis::circular::wrap_to_pi(omega_big_sun - omega_big_9);
+    let delta = wrap_to_pi(omega_big_sun - omega_big_9);
 
     ObliquitySnapshot {
         t,

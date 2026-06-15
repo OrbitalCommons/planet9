@@ -7,6 +7,7 @@
 //! shared with `p9_core::analysis::surveys` where available.
 
 use p9_core::analysis::photometry;
+use p9_core::analysis::surveys::limiting_magnitude;
 use p9_core::constants::*;
 use p9_core::types::P9Params;
 
@@ -87,13 +88,11 @@ pub fn survey_limits() -> Vec<SurveyLimit> {
     vec![
         SurveyLimit {
             name: "Pan-STARRS",
-            v_limit: p9_core::analysis::surveys::limiting_magnitude("PS1 3pi")
-                .expect("PS1 in shared table"),
+            v_limit: limiting_magnitude("PS1 3pi").expect("PS1 in shared table"),
         },
         SurveyLimit {
             name: "DECam/DES",
-            v_limit: p9_core::analysis::surveys::limiting_magnitude("DES")
-                .expect("DES in shared table"),
+            v_limit: limiting_magnitude("DES").expect("DES in shared table"),
         },
         SurveyLimit {
             name: "Subaru HSC",

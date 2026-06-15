@@ -12,6 +12,7 @@
 //!
 //! The paper finds 13 pairs after step 4, and 1 good candidate after step 6.
 
+use p9_core::coords::candidate_pair::implied_distance;
 use serde::{Deserialize, Serialize};
 
 use crate::survey_model::{angular_separation_arcmin, FirSource};
@@ -134,7 +135,7 @@ pub fn search_candidates(
                 continue;
             }
 
-            let d = p9_core::coords::candidate_pair::implied_distance(sep, baseline_years);
+            let d = implied_distance(sep, baseline_years);
 
             candidates.push(CandidatePair {
                 iras_source: iras.clone(),

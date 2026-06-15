@@ -215,7 +215,8 @@ pub fn element_snapshots() -> Vec<p9_core::data::refresh::ElementSnapshot> {
 pub fn refresh_from_sbdb(
     client: &p9_core::data::refresh::SbdbClient,
 ) -> Result<Vec<p9_core::data::refresh::EtnoDiff>, String> {
-    p9_core::data::refresh::refresh_table_from_sbdb(
+    use p9_core::data::refresh::refresh_table_from_sbdb;
+    refresh_table_from_sbdb(
         client,
         &element_snapshots(),
         &p9_core::data::refresh::Tolerances::full_precision(),

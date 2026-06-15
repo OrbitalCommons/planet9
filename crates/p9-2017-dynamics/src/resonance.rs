@@ -13,6 +13,7 @@
 //! with its (P, Q) = (q, p) exterior convention).
 
 use p9_core::analysis::hansen::{hansen_coefficient, mean_to_true_anomaly};
+use p9_core::analysis::resonance::resonant_angle;
 use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN, TWO_PI};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
@@ -40,13 +41,7 @@ impl Resonance {
     /// Resonant angle φ = q λ − p λ₉ + (p − q) ϖ for this p:q resonance
     /// (single workspace convention via `p9_core::analysis::resonance`).
     pub fn resonant_angle(&self, lambda: f64, lambda_9: f64, varpi: f64) -> f64 {
-        p9_core::analysis::resonance::resonant_angle(
-            self.q as u32,
-            self.p as u32,
-            lambda,
-            lambda_9,
-            varpi,
-        )
+        resonant_angle(self.q as u32, self.p as u32, lambda, lambda_9, varpi)
     }
 
     /// Quadrupole-limit pendulum half-width (AU) of the p:q resonance, via

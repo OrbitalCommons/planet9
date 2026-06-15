@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{DEG2RAD, TWO_PI};
+use p9_core::data::etno::longitudes_of_perihelion;
 
 /// Result of the clustering confidence analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,7 +154,7 @@ pub fn clustering_significance_mc(
 /// full bias treatment; this vetted 10-object table with the analytic
 /// Rayleigh test lands within a point of that.
 pub fn paper_clustering_confidence() -> ClusteringConfidence {
-    let varpis = p9_core::data::etno::longitudes_of_perihelion();
+    let varpis = longitudes_of_perihelion();
     compute_clustering_significance(&varpis)
 }
 
@@ -195,7 +196,7 @@ mod tests {
     /// The seeded uniform-null MC agrees with the analytic Rayleigh p-value.
     #[test]
     fn test_mc_uniform_null_matches_analytic() {
-        let varpis = p9_core::data::etno::longitudes_of_perihelion();
+        let varpis = longitudes_of_perihelion();
         let analytic = compute_clustering_significance(&varpis);
         let mc = clustering_significance_mc(&varpis, 50_000, 42, NullModel::Uniform);
         assert!(
@@ -211,7 +212,7 @@ mod tests {
     /// p-value cannot decrease.
     #[test]
     fn test_bias_aware_null_is_more_conservative() {
-        let varpis = p9_core::data::etno::longitudes_of_perihelion();
+        let varpis = longitudes_of_perihelion();
         let uniform = clustering_significance_mc(&varpis, 20_000, 7, NullModel::Uniform);
         let biased = clustering_significance_mc(&varpis, 20_000, 7, NullModel::SurveyBias);
         assert!(

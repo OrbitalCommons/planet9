@@ -18,6 +18,7 @@
 //! These are the scalings the paper's 225 AU / 3–5 M⊕ inference rests on.
 
 use p9_2025_iras_akari::thermal_model::P9ThermalParams;
+use p9_core::analysis::photometry::mass_radius_neptunian;
 
 /// 1 AU in metres (matches `p9_2025_iras_akari::thermal_model`).
 const AU_M: f64 = 1.495_978_707e11;
@@ -29,7 +30,7 @@ const JY: f64 = 1.0e-26;
 /// Physical radius (m) of a body of `mass_earth` Earth masses, from the
 /// shared Neptune-anchored mass-radius relation in `p9-core`.
 pub fn radius_m(mass_earth: f64) -> f64 {
-    p9_core::analysis::photometry::mass_radius_neptunian(mass_earth) * R_EARTH_M
+    mass_radius_neptunian(mass_earth) * R_EARTH_M
 }
 
 /// Implied heliocentric distance (AU) of a blackbody of effective

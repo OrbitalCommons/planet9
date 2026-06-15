@@ -15,6 +15,8 @@ use std::f64::consts::PI;
 
 use p9_core::analysis::circular::{mean_resultant_length, wrap_to_pi};
 use p9_core::constants::*;
+use p9_core::data::etno::longitudes_of_perihelion;
+use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos};
 use p9_core::types::OrbitalElements;
 
 /// Sedna-like "high perihelion" threshold (AU). Detached objects lifted to
@@ -84,9 +86,9 @@ pub fn evaluate_clustering(
 /// headline "ϖ = 71° ± 16°" corresponds to a tighter dispersion than the
 /// full sample's circular statistics give).
 pub fn observed_six_kbo_r_bar() -> f64 {
-    let varpis: Vec<f64> = p9_core::data::stable_kbos::stable_kbos()
+    let varpis: Vec<f64> = stable_kbos()
         .iter()
-        .map(|k| p9_core::data::stable_kbos::longitude_of_perihelion(&k.elements))
+        .map(|k| longitude_of_perihelion(&k.elements))
         .collect();
     mean_resultant_length(&varpis)
 }
@@ -95,7 +97,7 @@ pub fn observed_six_kbo_r_bar() -> f64 {
 /// 10-object Brown (2017) ETNO sample (the workspace's vetted observational
 /// table, `p9_core::data::etno`).
 pub fn observed_etno_r_bar() -> f64 {
-    mean_resultant_length(&p9_core::data::etno::longitudes_of_perihelion())
+    mean_resultant_length(&longitudes_of_perihelion())
 }
 
 /// Compute confinement probability for a subsample.

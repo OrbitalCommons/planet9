@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use p9_2022_des::color_models as des_colors;
 use p9_2022_des::survey_model::{DesBand, DesSurvey};
+use p9_core::analysis::surveys::combined_unique_exclusion;
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::observer::{EarthProvider, EarthState};
 use p9_core::data::reference_population::{generate_reference_population, heliocentric_distance};
@@ -121,7 +122,7 @@ impl CombinedExclusion {
             ztf_frac: ztf,
             des_unique: des,
             ps1_unique: ps1,
-            combined: p9_core::analysis::surveys::combined_unique_exclusion(&[ztf, des, ps1]),
+            combined: combined_unique_exclusion(&[ztf, des, ps1]),
         }
     }
 }
@@ -129,8 +130,7 @@ impl CombinedExclusion {
 /// Combine *published unique* exclusion fractions (already disjoint by
 /// construction) via the shared p9-core helper.
 pub fn compute_combined(ztf_frac: f64, des_unique: f64, ps1_unique: f64) -> CombinedExclusion {
-    let combined =
-        p9_core::analysis::surveys::combined_unique_exclusion(&[ztf_frac, des_unique, ps1_unique]);
+    let combined = combined_unique_exclusion(&[ztf_frac, des_unique, ps1_unique]);
     CombinedExclusion {
         ztf_frac,
         des_unique,
