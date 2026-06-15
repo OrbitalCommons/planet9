@@ -68,13 +68,14 @@ pub fn favored_sky_position(params: &P9Params, n: usize) -> SkyPosition {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{holman_payne_orbit, published};
+    use crate::published;
+    use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
 
     #[test]
     fn favored_position_is_on_near_side_at_few_hundred_au() {
         // The favored zone is the near (post-perihelion) arc, well inside
         // aphelion (a(1+e) = 1120 AU), and consistent with the ~600 AU zone.
-        let p = holman_payne_orbit();
+        let p = brown_batygin_orbit();
         let sky = favored_sky_position(&p, 1440);
         let nu_deg = sky.true_anomaly.to_degrees();
         assert!(
@@ -90,7 +91,7 @@ mod tests {
 
     #[test]
     fn ra_dec_are_well_formed() {
-        let p = holman_payne_orbit();
+        let p = brown_batygin_orbit();
         let sky = favored_sky_position(&p, 720);
         assert!((0.0..360.0).contains(&sky.ra_deg), "RA = {}", sky.ra_deg);
         assert!(
@@ -109,7 +110,7 @@ mod tests {
         // documented tolerance, and the orbit node is the literature B&B value
         // rather than the paper's own best-fit orientation, so we do not expect
         // a tight match — only a bounded, recorded offset.
-        let p = holman_payne_orbit();
+        let p = brown_batygin_orbit();
         let sky = favored_sky_position(&p, 1440);
         let sep = sky.separation_deg(published::PREFERRED_RA_DEG, published::PREFERRED_DEC_DEG);
         // Honest bound: the computed direction lands within ~one orbit-quadrant
