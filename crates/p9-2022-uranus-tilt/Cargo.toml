@@ -1,0 +1,14 @@
+[package]
+name = "p9-2022-uranus-tilt"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Lu & Laughlin (2022) 'The Primordial Spin-Orbit Resonance Origin of Uranus' Obliquity'"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
