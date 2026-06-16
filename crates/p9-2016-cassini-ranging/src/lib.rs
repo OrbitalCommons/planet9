@@ -50,8 +50,15 @@ pub mod perturbation;
 /// the Brown & Batygin reference orbit live in
 /// [`p9_core::data::ephemeris_constraint`].
 pub mod published {
+    use p9_core::units::{au, Length};
+
     /// Approximate P9 heliocentric distance at the preferred true anomaly (AU).
     pub const PREFERRED_HELIO_DISTANCE_AU: f64 = 600.0;
+
+    /// [`PREFERRED_HELIO_DISTANCE_AU`] as a typed [`Length`].
+    pub fn preferred_helio_distance() -> Length {
+        au(PREFERRED_HELIO_DISTANCE_AU)
+    }
 }
 
 pub use perturbation::{

@@ -9,6 +9,7 @@
 
 use p9_core::constants::*;
 use p9_core::types::P9Params;
+use p9_core::units::{radians, Angle};
 
 /// Inclination survey grid point.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -17,6 +18,18 @@ pub struct InclinationGridPoint {
     pub i_p9: f64,
     /// Planet Nine argument of perihelion (radians)
     pub omega_p9: f64,
+}
+
+impl InclinationGridPoint {
+    /// Planet Nine inclination as a typed [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        radians(self.i_p9)
+    }
+
+    /// Planet Nine argument of perihelion as a typed [`Angle`].
+    pub fn argument_of_perihelion(&self) -> Angle {
+        radians(self.omega_p9)
+    }
 }
 
 /// Generate the inclination survey grid.
@@ -156,6 +169,25 @@ mod tests {
         assert!((p9.i - 30.0 * DEG2RAD).abs() < 1e-10);
         assert!((p9.omega - 150.0 * DEG2RAD).abs() < 1e-10);
         assert!((p9.mass_earth - 10.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_grid_point_typed_angles_match_f64() {
+        use approx::assert_relative_eq;
+        let point = InclinationGridPoint {
+            i_p9: 30.0 * DEG2RAD,
+            omega_p9: 150.0 * DEG2RAD,
+        };
+        assert_relative_eq!(
+            (point.inclination() / radians(1.0)).value,
+            point.i_p9,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (point.argument_of_perihelion() / radians(1.0)).value,
+            point.omega_p9,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

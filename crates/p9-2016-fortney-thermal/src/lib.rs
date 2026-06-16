@@ -53,6 +53,7 @@ use std::f64::consts::PI;
 use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
 use p9_core::analysis::thermal::{planck_bnu, thermal_flux_jy, C_LIGHT};
 use p9_core::constants::AU_M;
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 pub mod published;
 
@@ -123,6 +124,21 @@ impl P9Thermal {
         mass_radius_neptunian(self.mass_earth) * R_EARTH_M
     }
 
+    /// Mass as a typed [`Mass`] (from the Earth-mass field).
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+
+    /// Physical radius as a typed [`Length`].
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
+    }
+
     /// Internal luminosity (W) at this mass: the reference value scaled by
     /// `(M / M_ref)^L_INT_MASS_INDEX`.
     pub fn internal_luminosity_w(&self) -> f64 {
@@ -162,6 +178,11 @@ impl P9Thermal {
     /// temperature: λ_peak = b / T.
     pub fn sed_peak_wavelength_m(&self) -> f64 {
         WIEN_B_M_K / self.effective_temp()
+    }
+
+    /// SED peak wavelength as a typed [`Length`].
+    pub fn sed_peak_wavelength(&self) -> Length {
+        meters(self.sed_peak_wavelength_m())
     }
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
@@ -311,6 +332,31 @@ mod tests {
         let l_rad = 4.0 * PI * r * r * SIGMA_SB * p.effective_temp().powi(4);
         let l_tot = p.internal_luminosity_w() + p.absorbed_sunlight_w();
         assert_relative_eq!(l_rad, l_tot, max_relative = 1e-12);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        let p = P9Thermal::new(10.0, 500.0);
+        assert_relative_eq!(
+            (p.mass() / earth_masses(1.0)).value,
+            p.mass_earth,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.distance() / au(1.0)).value,
+            p.distance_au,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.radius() / meters(1.0)).value,
+            p.radius_m(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.sed_peak_wavelength() / meters(1.0)).value,
+            p.sed_peak_wavelength_m(),
+            max_relative = 1e-12
+        );
     }
 
     #[test]

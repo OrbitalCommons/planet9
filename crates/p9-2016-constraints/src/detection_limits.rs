@@ -11,6 +11,7 @@ use std::f64::consts::PI;
 use p9_core::analysis::photometry;
 use p9_core::constants::EARTH_RADIUS_KM;
 use p9_core::types::P9Params;
+use p9_core::units::{km, Length};
 
 /// Predict V-band apparent magnitude of Planet Nine at a given true anomaly,
 /// using the shared p9-core photometry (H from diameter and albedo, then the
@@ -28,6 +29,12 @@ pub fn predicted_v_magnitude(p9: &P9Params, true_anomaly: f64, albedo: f64, radi
 /// optimistic).
 pub fn estimate_radius_km(mass_earth: f64) -> f64 {
     photometry::mass_radius_neptunian(mass_earth) * EARTH_RADIUS_KM
+}
+
+/// Planet Nine's physical radius as a typed [`Length`] (the [`estimate_radius_km`]
+/// value, in kilometers).
+pub fn estimate_radius(mass_earth: f64) -> Length {
+    km(estimate_radius_km(mass_earth))
 }
 
 /// Compute the sky position (ecliptic longitude, latitude) of Planet Nine
@@ -128,6 +135,18 @@ mod tests {
             "Perihelion V={:.1} out of expected range",
             v_peri
         );
+    }
+
+    #[test]
+    fn test_estimate_radius_typed_matches_km() {
+        use approx::assert_relative_eq;
+        for &m in &[1.0, 10.0, 20.0] {
+            assert_relative_eq!(
+                (estimate_radius(m) / km(1.0)).value,
+                estimate_radius_km(m),
+                max_relative = 1e-12
+            );
+        }
     }
 
     #[test]

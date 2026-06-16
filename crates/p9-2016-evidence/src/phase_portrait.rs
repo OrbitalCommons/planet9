@@ -16,6 +16,7 @@ use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::*;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::*;
+use p9_core::units::{au, days, radians, Angle, Length, Time};
 
 use p9_core::initial_conditions::scattered_disk_sim::j2_jsun_force;
 
@@ -26,6 +27,23 @@ pub struct TrajectoryPoint {
     pub e: f64,
     pub delta_varpi: f64,
     pub a: f64,
+}
+
+impl TrajectoryPoint {
+    /// Sample time as a typed [`Time`] (days).
+    pub fn time(&self) -> Time {
+        days(self.t)
+    }
+
+    /// Apsidal offset Δϖ from Planet Nine as a typed [`Angle`].
+    pub fn delta_varpi_typed(&self) -> Angle {
+        radians(self.delta_varpi)
+    }
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
 }
 
 /// Run an N-body phase-space portrait for a single semi-major axis.
@@ -245,6 +263,28 @@ mod tests {
         let _ = nbody_phase_portrait(250.0, &p9, &mut bodies, 2, 1e5, 300.0, 5e4, 1);
         // bodies restored
         assert!(bodies.is_empty());
+    }
+
+    #[test]
+    fn test_trajectory_point_typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        let p = TrajectoryPoint {
+            t: 1.234e6,
+            e: 0.5,
+            delta_varpi: 2.5,
+            a: 300.0,
+        };
+        assert_relative_eq!((p.time() / days(1.0)).value, p.t, max_relative = 1e-12);
+        assert_relative_eq!(
+            (p.delta_varpi_typed() / radians(1.0)).value,
+            p.delta_varpi,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.semi_major_axis() / au(1.0)).value,
+            p.a,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

@@ -13,6 +13,7 @@ use nalgebra::Vector3;
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::sky::{angular_distance, ecliptic_vec_to_equatorial_deg};
 use p9_core::types::{position_at_true_anomaly, P9Params};
+use p9_core::units::{au, degrees, radians, Angle, Length};
 
 use crate::signal::favored_true_anomaly;
 
@@ -46,6 +47,26 @@ impl SkyPosition {
             distance_au: 1.0,
         };
         angular_distance(&self.unit_vector(), &other.unit_vector()).to_degrees()
+    }
+
+    /// Right ascension as a typed [`Angle`].
+    pub fn right_ascension(&self) -> Angle {
+        degrees(self.ra_deg)
+    }
+
+    /// Declination as a typed [`Angle`].
+    pub fn declination(&self) -> Angle {
+        degrees(self.dec_deg)
+    }
+
+    /// True anomaly of P9 as a typed [`Angle`].
+    pub fn true_anomaly_typed(&self) -> Angle {
+        radians(self.true_anomaly)
+    }
+
+    /// Heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
     }
 }
 
@@ -86,6 +107,33 @@ mod tests {
             (300.0..900.0).contains(&sky.distance_au),
             "favored distance {:.0} AU not in the expected few-hundred-AU zone",
             sky.distance_au
+        );
+    }
+
+    #[test]
+    fn typed_sky_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        let p = brown_batygin_orbit();
+        let sky = favored_sky_position(&p, 720);
+        assert_relative_eq!(
+            (sky.right_ascension() / degrees(1.0)).value,
+            sky.ra_deg,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (sky.declination() / degrees(1.0)).value,
+            sky.dec_deg,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (sky.true_anomaly_typed() / radians(1.0)).value,
+            sky.true_anomaly,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (sky.distance() / au(1.0)).value,
+            sky.distance_au,
+            max_relative = 1e-12
         );
     }
 

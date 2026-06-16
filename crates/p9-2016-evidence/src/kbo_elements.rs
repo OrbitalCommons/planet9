@@ -12,6 +12,7 @@ use p9_core::forces::ExtraForce;
 use p9_core::initial_conditions::planets::neptune_only_j2000;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, SimConfig};
+use p9_core::units::{days, Time};
 
 /// Assumed 1σ dispersions for clone generation. These are *assumptions*
 /// standing in for the per-object orbit-fit covariances (not transcribed
@@ -63,6 +64,13 @@ pub struct CloneStabilityResult {
     pub seed: u64,
     /// Integration horizon (days).
     pub t_total: f64,
+}
+
+impl CloneStabilityResult {
+    /// Integration horizon as a typed [`Time`] (days).
+    pub fn integration_time(&self) -> Time {
+        days(self.t_total)
+    }
 }
 
 /// Stability screen: a clone counts as stable when its semi-major axis
@@ -325,6 +333,18 @@ mod tests {
             result.p_joint > 5e-6 && result.p_joint < 1e-3,
             "p_joint = {:.2e} (paper ~7e-5)",
             result.p_joint
+        );
+    }
+
+    #[test]
+    fn test_integration_time_typed_matches_f64() {
+        use approx::assert_relative_eq;
+        let kbos = stable_kbos();
+        let result = clone_stability_screen(&kbos[0], 2, 1e5 * YEAR_DAYS, 3000.0, 11);
+        assert_relative_eq!(
+            (result.integration_time() / days(1.0)).value,
+            result.t_total,
+            max_relative = 1e-12
         );
     }
 

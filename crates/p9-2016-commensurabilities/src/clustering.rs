@@ -14,6 +14,7 @@ use rand_distr::{Distribution, Uniform};
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{RAD2DEG, TWO_PI};
 use p9_core::data::etno::BROWN_2017_SAMPLE;
+use p9_core::units::{radians, Angle as UnitAngle};
 
 /// Which orbital angle to test for grouping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,6 +38,13 @@ pub struct GroupingResult {
     pub rayleigh_p: f64,
     /// Number of objects.
     pub n: usize,
+}
+
+impl GroupingResult {
+    /// Mean direction of the grouped angle as a typed [`uom`] angle.
+    pub fn mean_direction_typed(&self) -> UnitAngle {
+        radians(self.mean_direction)
+    }
 }
 
 /// Collect one orbital angle (radians) for every object in the vetted sample.
@@ -181,6 +189,18 @@ mod tests {
             p_mc,
             obs.rayleigh_p,
             ratio
+        );
+    }
+
+    /// The typed mean-direction accessor matches its f64 (radian) source.
+    #[test]
+    fn test_mean_direction_typed_matches_f64() {
+        use approx::assert_relative_eq;
+        let g = observed_grouping(Angle::LongitudeOfPerihelion);
+        assert_relative_eq!(
+            (g.mean_direction_typed() / radians(1.0)).value,
+            g.mean_direction,
+            max_relative = 1e-12
         );
     }
 

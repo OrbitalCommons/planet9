@@ -9,6 +9,7 @@
 //! excluded, distant or light ones survive.
 
 use p9_core::types::P9Params;
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 use crate::published::CASSINI_RANGE_PRECISION_M;
 use crate::signal::range_residual_m;
@@ -29,6 +30,12 @@ pub fn peak_range_residual_m(params: &P9Params) -> f64 {
         peak = peak.max(range_residual_m(params, nu));
     }
     peak
+}
+
+/// The strongest range residual P9 can produce anywhere on its orbit, as a
+/// typed [`Length`] — the [`peak_range_residual_m`] value in metres.
+pub fn peak_range_residual(params: &P9Params) -> Length {
+    meters(peak_range_residual_m(params))
 }
 
 /// Verdict for a candidate Planet Nine.
@@ -64,6 +71,12 @@ pub fn max_allowed_mass_earth(template: &P9Params, a_au: f64) -> f64 {
     CASSINI_RANGE_PRECISION_M / peak_per_earth_mass
 }
 
+/// Largest allowed P9 mass at semi-major axis `a_au` as a typed [`Mass`] — the
+/// [`max_allowed_mass_earth`] value in Earth masses.
+pub fn max_allowed_mass(template: &P9Params, a_au: f64) -> Mass {
+    earth_masses(max_allowed_mass_earth(template, a_au))
+}
+
 /// A sampled mass–distance exclusion map over a grid of semi-major axes.
 #[derive(Debug, Clone)]
 pub struct ExclusionMap {
@@ -89,6 +102,19 @@ impl ExclusionMap {
             a_au,
             max_allowed_mass_earth,
         }
+    }
+
+    /// Sampled semi-major axes as typed [`Length`]s.
+    pub fn semi_major_axes(&self) -> Vec<Length> {
+        self.a_au.iter().map(|&a| au(a)).collect()
+    }
+
+    /// The exclusion-boundary masses as typed [`Mass`]es.
+    pub fn max_allowed_masses(&self) -> Vec<Mass> {
+        self.max_allowed_mass_earth
+            .iter()
+            .map(|&m| earth_masses(m))
+            .collect()
     }
 }
 
@@ -150,6 +176,38 @@ mod tests {
         let lo = map.max_allowed_mass_earth.first().copied().unwrap();
         let hi = map.max_allowed_mass_earth.last().copied().unwrap();
         assert!(hi / lo > 10.0, "boundary growth too weak: {}", hi / lo);
+    }
+
+    #[test]
+    fn typed_exclusion_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        let template = brown_batygin_orbit();
+        assert_relative_eq!(
+            (peak_range_residual(&template) / meters(1.0)).value,
+            peak_range_residual_m(&template),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (max_allowed_mass(&template, 500.0) / earth_masses(1.0)).value,
+            max_allowed_mass_earth(&template, 500.0),
+            max_relative = 1e-12
+        );
+        let map = ExclusionMap::build(&template, 300.0, 1500.0, 5);
+        let axes = map.semi_major_axes();
+        let masses = map.max_allowed_masses();
+        for (k, (&a, &m)) in map
+            .a_au
+            .iter()
+            .zip(map.max_allowed_mass_earth.iter())
+            .enumerate()
+        {
+            assert_relative_eq!((axes[k] / au(1.0)).value, a, max_relative = 1e-12);
+            assert_relative_eq!(
+                (masses[k] / earth_masses(1.0)).value,
+                m,
+                max_relative = 1e-12
+            );
+        }
     }
 
     #[test]

@@ -32,6 +32,7 @@
 
 use p9_core::analysis::photometry::mass_radius_neptunian;
 use p9_core::analysis::thermal::{planck_bnu, reflected_flux_jy, thermal_flux_jy, C_LIGHT, JY};
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Wien displacement-law constant b for the wavelength of peak B_λ (m·K).
 pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
@@ -115,6 +116,21 @@ impl P9Sed {
         mass_radius_neptunian(self.mass_earth) * R_EARTH_M
     }
 
+    /// Mass as a typed [`Mass`] (from the Earth-mass field).
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+
+    /// Physical radius as a typed [`Length`].
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
+    }
+
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
     pub fn planck_bnu(t: f64, nu_hz: f64) -> f64 {
         planck_bnu(t, nu_hz)
@@ -124,6 +140,11 @@ impl P9Sed {
     /// λ_peak = b / T (metres).
     pub fn wien_peak_wavelength_m(&self) -> f64 {
         WIEN_B_M_K / self.temp_k
+    }
+
+    /// Wavelength of peak spectral radiance as a typed [`Length`].
+    pub fn wien_peak_wavelength(&self) -> Length {
+        meters(self.wien_peak_wavelength_m())
     }
 
     /// Thermal flux density at wavelength `lambda_m` (W/m²/Hz), a blackbody of
@@ -191,6 +212,12 @@ impl P9Sed {
         Some((lo * hi).sqrt())
     }
 
+    /// Crossover wavelength as a typed [`Length`], when one exists (see
+    /// [`crossover_wavelength_m`](Self::crossover_wavelength_m)).
+    pub fn crossover_wavelength(&self) -> Option<Length> {
+        self.crossover_wavelength_m().map(meters)
+    }
+
     /// Detectability margin in a band: flux density (mJy) divided by a
     /// representative point-source sensitivity (mJy). >1 means detectable; a
     /// larger value is "more favorable relative to the limit".
@@ -207,6 +234,39 @@ mod tests {
 
     /// WISE W1 effective wavelength (m).
     const W1_M: f64 = 3.3526e-6;
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        let p = P9Sed::cowan_fiducial();
+        assert_relative_eq!(
+            (p.mass() / earth_masses(1.0)).value,
+            p.mass_earth,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.distance() / au(1.0)).value,
+            p.distance_au,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.radius() / meters(1.0)).value,
+            p.radius_m(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.wien_peak_wavelength() / meters(1.0)).value,
+            p.wien_peak_wavelength_m(),
+            max_relative = 1e-12
+        );
+        let xover = p
+            .crossover_wavelength()
+            .expect("crossover exists for a cold body");
+        assert_relative_eq!(
+            (xover / meters(1.0)).value,
+            p.crossover_wavelength_m().unwrap(),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn radius_is_ice_giant_scale() {

@@ -17,6 +17,7 @@
 use p9_core::constants::*;
 use p9_core::initial_conditions::scattered_disk_sim::{run_scattered_disk, DiskSimConfig};
 use p9_core::types::P9Params;
+use p9_core::units::{au, earth_masses, Length, Mass};
 use rayon::prelude::*;
 
 use crate::clustering_metric::{evaluate_clustering, observed_etno_r_bar};
@@ -31,6 +32,21 @@ pub struct GridPoint {
 }
 
 impl GridPoint {
+    /// Planet Nine mass as a typed [`Mass`] (from the Earth-mass field).
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion)
+    }
+
     pub fn to_p9_params(&self) -> P9Params {
         P9Params {
             mass_earth: self.mass_earth,
@@ -291,6 +307,32 @@ mod tests {
         assert!(!evaluate_acceptance(r_obs - 0.2, 0.1, 10));
         // No detached production
         assert!(!evaluate_acceptance(r_obs + 0.05, 0.0, 10));
+    }
+
+    #[test]
+    fn test_grid_point_typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        let point = GridPoint {
+            mass_earth: 10.0,
+            a: 700.0,
+            e: 0.6,
+            perihelion: 280.0,
+        };
+        assert_relative_eq!(
+            (point.mass() / earth_masses(1.0)).value,
+            point.mass_earth,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (point.semi_major_axis() / au(1.0)).value,
+            point.a,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (point.perihelion_typed() / au(1.0)).value,
+            point.perihelion,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

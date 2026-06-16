@@ -36,6 +36,7 @@ use p9_core::constants::{AU_KM, GM_SUN, TWO_PI};
 use p9_core::initial_conditions::planets::saturn_j2000;
 use p9_core::integrator::kepler_step::kepler_drift;
 use p9_core::types::P9Params;
+use p9_core::units::{km, radians, Angle, Length};
 
 use p9_core::types::position_at_true_anomaly as p9_position_at_true_anomaly;
 
@@ -332,6 +333,21 @@ impl RangePerturbationCurve {
             .copied()
             .fold(f64::NEG_INFINITY, f64::max)
     }
+
+    /// True anomaly that minimizes the range perturbation, as a typed [`Angle`].
+    pub fn argmin_true_anomaly_typed(&self) -> Angle {
+        radians(self.argmin_true_anomaly())
+    }
+
+    /// Minimum range-perturbation amplitude as a typed [`Length`].
+    pub fn min_amplitude(&self) -> Length {
+        km(self.min_amplitude_km())
+    }
+
+    /// Maximum range-perturbation amplitude as a typed [`Length`].
+    pub fn max_amplitude(&self) -> Length {
+        km(self.max_amplitude_km())
+    }
 }
 
 /// Compute the range-perturbation curve over `n` uniform samples of true
@@ -476,6 +492,28 @@ mod tests {
         // Doubling a roughly doubles distance → tidal ~1/r³ → factor several.
         let ratio = max_close / max_far;
         assert!(ratio > 4.0, "distance falloff too weak: ratio = {ratio:.2}");
+    }
+
+    #[test]
+    fn typed_curve_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        let p = brown_batygin_orbit();
+        let curve = range_perturbation_curve(&p, 64);
+        assert_relative_eq!(
+            (curve.min_amplitude() / km(1.0)).value,
+            curve.min_amplitude_km(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (curve.max_amplitude() / km(1.0)).value,
+            curve.max_amplitude_km(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (curve.argmin_true_anomaly_typed() / radians(1.0)).value,
+            curve.argmin_true_anomaly(),
+            max_relative = 1e-12
+        );
     }
 
     #[test]

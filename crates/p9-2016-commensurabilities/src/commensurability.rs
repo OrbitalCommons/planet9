@@ -30,6 +30,7 @@ use rand::SeedableRng;
 use rand_distr::{Distribution, Uniform};
 
 use p9_core::data::etno::semi_major_axes;
+use p9_core::units::{julian_year, Time};
 
 /// Highest integer considered on either side of a small-integer period ratio
 /// p/q. de la Fuente Marcos et al. emphasize low-order commensurabilities.
@@ -41,6 +42,12 @@ pub const DEFAULT_MAX_INTEGER: u32 = 9;
 /// argument.
 pub fn orbital_period_years(a_au: f64) -> f64 {
     a_au.powf(1.5)
+}
+
+/// Heliocentric orbital period as a typed [`Time`] from semi-major axis (AU):
+/// the [`orbital_period_years`] value scaled into Julian years.
+pub fn orbital_period(a_au: f64) -> Time {
+    julian_year() * orbital_period_years(a_au)
 }
 
 /// Distance of a period ratio `ratio` (≥ 1) to the nearest small-integer ratio
@@ -356,6 +363,18 @@ mod tests {
         let p2 =
             pairwise_control_exceedance(obs, a.len(), 228.0, 506.0, 5000, 99, DEFAULT_MAX_INTEGER);
         assert_eq!(p1, p2);
+    }
+
+    #[test]
+    fn test_orbital_period_typed_matches_f64() {
+        // The typed period (Julian years) matches the f64 Kepler value.
+        for &a in &[300.0, 500.0, 700.0] {
+            assert_relative_eq!(
+                (orbital_period(a) / julian_year()).value,
+                orbital_period_years(a),
+                max_relative = 1e-12
+            );
+        }
     }
 
     #[test]

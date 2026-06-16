@@ -8,6 +8,7 @@
 //! units Holman & Payne use (metres) and expose the favored-zone selection.
 
 use p9_core::types::P9Params;
+use p9_core::units::{meters, Length};
 
 use p9_2016_cassini_ranging::perturbation::{
     favored_true_anomaly as sibling_favored, range_perturbation_amplitude,
@@ -25,6 +26,13 @@ const M_PER_KM: f64 = 1_000.0;
 /// with P9 heliocentric distance — the two scalings Holman & Payne emphasize.
 pub fn range_residual_m(params: &P9Params, nu: f64) -> f64 {
     range_perturbation_amplitude(params, nu) * M_PER_KM
+}
+
+/// Post-fit Earth–Saturn range-residual amplitude as a typed [`Length`], for P9
+/// at true anomaly `nu` (radians) on the orbit `params` — the [`range_residual_m`]
+/// value in metres.
+pub fn range_residual(params: &P9Params, nu: f64) -> Length {
+    meters(range_residual_m(params, nu))
 }
 
 /// The favored true anomaly (radians) on the near (post-perihelion) arc — the
@@ -84,6 +92,18 @@ mod tests {
         let nu = 30.0_f64.to_radians();
         let km = range_perturbation_amplitude(&p, nu);
         assert!((range_residual_m(&p, nu) - km * 1000.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn typed_range_residual_matches_metres() {
+        use approx::assert_relative_eq;
+        let p = brown_batygin_orbit();
+        let nu = 30.0_f64.to_radians();
+        assert_relative_eq!(
+            (range_residual(&p, nu) / meters(1.0)).value,
+            range_residual_m(&p, nu),
+            max_relative = 1e-12
+        );
     }
 
     #[test]
