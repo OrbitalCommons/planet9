@@ -8,6 +8,7 @@
 //! sensitivity, which grows with assumed mass.
 
 use p9_core::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
+use p9_core::units::{au, Length};
 
 use crate::survey_model::Ps1StackSurvey;
 
@@ -49,6 +50,11 @@ pub fn max_detectable_distance(survey: &Ps1StackSurvey, mass_earth: f64) -> f64 
     0.5 * (lo + hi)
 }
 
+/// [`max_detectable_distance`] as a dimension-checked [`Length`].
+pub fn max_detectable_distance_typed(survey: &Ps1StackSurvey, mass_earth: f64) -> Length {
+    au(max_detectable_distance(survey, mass_earth))
+}
+
 /// Inner bound of the bisection bracket (AU). Objects closer than the giant
 /// planets are outside the P9 search regime.
 pub const R_MIN_AU: f64 = 30.0;
@@ -85,6 +91,17 @@ mod tests {
             "m(r_max) = {:.3} vs depth {:.3}",
             apparent_r_magnitude(6.0, r),
             s.effective_depth()
+        );
+    }
+
+    #[test]
+    fn typed_distance_matches_f64() {
+        use uom::si::length::astronomical_unit;
+        let s = Ps1StackSurvey::default();
+        assert_relative_eq!(
+            max_detectable_distance_typed(&s, 6.0).get::<astronomical_unit>(),
+            max_detectable_distance(&s, 6.0),
+            epsilon = 1e-12
         );
     }
 

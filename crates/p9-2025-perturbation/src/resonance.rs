@@ -19,6 +19,7 @@
 use p9_core::analysis::hansen::{hansen_coefficient, hansen_x_neg3_2_neptune_chain};
 use p9_core::analysis::resonance::resonance_semi_major_axis;
 use p9_core::constants::{A_NEPTUNE_AU, MASS_NEPTUNE_SOLAR};
+use p9_core::units::{au, Length};
 use serde::{Deserialize, Serialize};
 
 /// A resonance in the m:j chain with Neptune.
@@ -34,6 +35,18 @@ pub struct Resonance {
     pub a_nominal: f64,
     /// Resonance half-width (AU)
     pub delta_a: f64,
+}
+
+impl Resonance {
+    /// Nominal semi-major axis as a dimension-checked [`Length`] (AU storage).
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_nominal)
+    }
+
+    /// Resonance half-width as a dimension-checked [`Length`] (AU storage).
+    pub fn half_width(&self) -> Length {
+        au(self.delta_a)
+    }
 }
 
 /// Nominal semi-major axis for an m:j resonance (n/n_N = m/j):
@@ -239,5 +252,23 @@ mod tests {
     fn test_resonance_width_positive() {
         let w = resonance_width(200.0, 2, 0.75, 0.1);
         assert!(w > 0.0);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_fields() {
+        use approx::assert_relative_eq;
+        use uom::si::length::astronomical_unit;
+
+        let r = &build_2j_chain(10, 10, 35.0)[0];
+        assert_relative_eq!(
+            r.semi_major_axis().get::<astronomical_unit>(),
+            r.a_nominal,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            r.half_width().get::<astronomical_unit>(),
+            r.delta_a,
+            epsilon = 1e-12
+        );
     }
 }

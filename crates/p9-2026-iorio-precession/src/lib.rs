@@ -83,6 +83,10 @@ use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::secular::{coplanar_quadrupole, perturber_perihelion_precession};
 use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN};
+use p9_core::units::{
+    arcseconds, au, days, earth_masses, gm_from_au3_day2, julian_centuries, radians,
+    AngularVelocity, GravitationalParameter, Length, Mass,
+};
 
 /// Saturn's semi-major axis in AU (JPL mean element, J2000). Labelled here
 /// because `p9-core` does not currently carry an inner/giant-planet semi-major
@@ -128,6 +132,20 @@ impl Perturber {
     /// GM in AU^3/day^2.
     pub fn gm(&self) -> f64 {
         self.mass_solar() * GM_SUN
+    }
+
+    /// Mass as a dimension-checked [`Mass`] (Earth-mass storage).
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Semi-major axis as a dimension-checked [`Length`] (AU storage).
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+    /// Gravitational parameter as a dimension-checked
+    /// [`GravitationalParameter`] (AU³/day² storage).
+    pub fn gm_typed(&self) -> GravitationalParameter {
+        gm_from_au3_day2(self.gm())
     }
 
     /// Planet Nine, Batygin/Brown-class nominal: ~6 Earth masses at ~460 AU,
@@ -177,9 +195,26 @@ pub fn saturn_perihelion_precession_arcsec_per_cy(p: &Perturber) -> f64 {
     perturber_perihelion_precession(A_SATURN_AU, E_SATURN, p.mass_solar(), p.a_au, p.e)
 }
 
+/// [`saturn_perihelion_precession_arcsec_per_cy`] as a dimension-checked
+/// [`AngularVelocity`] (arcsecond-per-century storage).
+pub fn saturn_perihelion_precession(p: &Perturber) -> AngularVelocity {
+    (arcseconds(saturn_perihelion_precession_arcsec_per_cy(p)) / julian_centuries(1.0)).into()
+}
+
+/// The adopted ephemeris bound as a dimension-checked [`AngularVelocity`].
+pub fn saturn_precession_bound() -> AngularVelocity {
+    (arcseconds(SATURN_PRECESSION_BOUND_ARCSEC_PER_CY) / julian_centuries(1.0)).into()
+}
+
 /// Saturn's Keplerian mean motion n = sqrt(GM_sun / a^3) in radians/day.
 pub fn saturn_mean_motion_rad_per_day() -> f64 {
     (GM_SUN / A_SATURN_AU.powi(3)).sqrt()
+}
+
+/// [`saturn_mean_motion_rad_per_day`] as a dimension-checked
+/// [`AngularVelocity`] (radian-per-day storage).
+pub fn saturn_mean_motion() -> AngularVelocity {
+    (radians(saturn_mean_motion_rad_per_day()) / days(1.0)).into()
 }
 
 /// True if this perturber's predicted Saturn precession exceeds the adopted
@@ -234,6 +269,11 @@ pub fn hypotheses() -> [Perturber; 3] {
 pub fn critical_distance_au(p: &Perturber) -> f64 {
     let rate = saturn_perihelion_precession_arcsec_per_cy(p).abs();
     p.a_au * (rate / SATURN_PRECESSION_BOUND_ARCSEC_PER_CY).cbrt()
+}
+
+/// [`critical_distance_au`] as a dimension-checked [`Length`] (AU storage).
+pub fn critical_distance(p: &Perturber) -> Length {
+    au(critical_distance_au(p))
 }
 
 #[cfg(test)]
@@ -374,6 +414,57 @@ mod tests {
             let ratio = quadrupole_prefactor_consistency(&p);
             assert_relative_eq!(ratio, 1.0, max_relative = 1e-12);
         }
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        use uom::si::angle::radian;
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        use uom::si::time::second;
+
+        let p = Perturber::planet_x();
+
+        assert_relative_eq!(
+            p.mass().get::<kilogram>(),
+            earth_masses(p.mass_earth).get::<kilogram>(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            p.semi_major_axis().get::<astronomical_unit>(),
+            p.a_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.gm_typed().value,
+            gm_from_au3_day2(p.gm()).value,
+            max_relative = 1e-12
+        );
+
+        // Mean motion rad/day -> rad/s.
+        let n_rad_s = saturn_mean_motion().get::<radian_per_second>();
+        assert_relative_eq!(
+            n_rad_s * 86_400.0,
+            saturn_mean_motion_rad_per_day(),
+            max_relative = 1e-12
+        );
+
+        // Perihelion precession arcsec/century -> rad/s.
+        let arcsec_rad = arcseconds(1.0).get::<radian>();
+        let century_s = julian_centuries(1.0).get::<second>();
+        let rate_rad_s = saturn_perihelion_precession(&p).get::<radian_per_second>();
+        assert_relative_eq!(
+            rate_rad_s * century_s / arcsec_rad,
+            saturn_perihelion_precession_arcsec_per_cy(&p),
+            max_relative = 1e-9
+        );
+
+        assert_relative_eq!(
+            critical_distance(&p).get::<astronomical_unit>(),
+            critical_distance_au(&p),
+            epsilon = 1e-9
+        );
     }
 
     #[test]

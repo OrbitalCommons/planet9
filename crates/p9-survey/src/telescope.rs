@@ -22,9 +22,15 @@
 
 use crate::schema::Telescope;
 use p9_core::analysis::surveys::Footprint;
+use p9_core::units::{meters, Length};
 
 /// JBT 0.5 m + SPENCER derived optics (see module docs / `focalplane`).
 pub const JBT_APERTURE_M: f64 = 0.485;
+
+/// [`JBT_APERTURE_M`] as a dimension-checked [`Length`].
+pub fn jbt_aperture() -> Length {
+    meters(JBT_APERTURE_M)
+}
 pub const JBT_F_NUMBER: f64 = 12.3;
 pub const JBT_PLATE_SCALE_ARCSEC_PER_PX: f64 = 0.130;
 /// Instantaneous field of the 4-chip SPENCER array (deg²).

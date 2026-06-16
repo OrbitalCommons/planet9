@@ -37,6 +37,7 @@ use p9_core::analysis::photometry::mass_radius_neptunian;
 use p9_core::analysis::thermal::{
     effective_temp, planck_bnu, rayleigh_jeans_bnu, solar_equilibrium_temp, thermal_flux_jy,
 };
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Earth radius (m).
 const R_EARTH_M: f64 = 6.371e6;
@@ -81,6 +82,19 @@ impl P9Thermal {
     /// Physical radius in meters (Neptune-anchored mass–radius relation).
     pub fn radius_m(&self) -> f64 {
         mass_radius_neptunian(self.mass_earth) * R_EARTH_M
+    }
+
+    /// Mass as a dimension-checked [`Mass`] (Earth-mass storage).
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Heliocentric distance as a dimension-checked [`Length`] (AU storage).
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+    /// Physical radius as a dimension-checked [`Length`] (meter storage).
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
     }
 
     /// Solar equilibrium temperature (K) for a fast rotator radiating from its
@@ -139,7 +153,31 @@ pub fn flux_mjy(mass_earth: f64, distance_au: f64, nu_ghz: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::bands::SO_280;
+    use approx::assert_relative_eq;
     use p9_core::analysis::thermal::{H_PLANCK, K_BOLTZ};
+
+    #[test]
+    fn typed_accessors_match_f64_fields() {
+        use uom::si::length::{astronomical_unit, meter};
+        use uom::si::mass::kilogram;
+
+        let p = P9Thermal::new(5.0, 500.0);
+        assert_relative_eq!(
+            p.mass().get::<kilogram>(),
+            earth_masses(p.mass_earth).get::<kilogram>(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            p.distance().get::<astronomical_unit>(),
+            p.distance_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.radius().get::<meter>(),
+            p.radius_m(),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn cold_body_is_in_rayleigh_jeans_regime_at_280ghz() {

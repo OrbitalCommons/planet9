@@ -13,6 +13,8 @@
 //! 3. The detectable fraction of a reference mass–distance box lies in (0, 1)
 //!    and is larger for SO than for ACT.
 
+use p9_core::units::{au, earth_masses, Length, Mass};
+
 use crate::bands::MmSensitivity;
 use crate::thermal::P9Thermal;
 
@@ -44,6 +46,11 @@ pub fn max_detectable_distance(mass_earth: f64, sens: &MmSensitivity) -> f64 {
         }
     }
     0.5 * (lo + hi)
+}
+
+/// [`max_detectable_distance`] as a dimension-checked [`Length`].
+pub fn max_detectable_distance_typed(mass_earth: f64, sens: &MmSensitivity) -> Length {
+    au(max_detectable_distance(mass_earth, sens))
 }
 
 /// Expected detection significance (signal-to-noise ratio) of a Planet Nine of
@@ -89,6 +96,23 @@ impl ReferenceBox {
     /// points whose flux exceeds the sensitivity threshold, by a uniform grid
     /// quadrature. In (0, 1) for a sensitivity that detects part but not all
     /// of the box.
+    /// Lower mass bound as a dimension-checked [`Mass`] (Earth-mass storage).
+    pub fn mass_min(&self) -> Mass {
+        earth_masses(self.mass_min_earth)
+    }
+    /// Upper mass bound as a dimension-checked [`Mass`] (Earth-mass storage).
+    pub fn mass_max(&self) -> Mass {
+        earth_masses(self.mass_max_earth)
+    }
+    /// Lower distance bound as a dimension-checked [`Length`] (AU storage).
+    pub fn dist_min(&self) -> Length {
+        au(self.dist_min_au)
+    }
+    /// Upper distance bound as a dimension-checked [`Length`] (AU storage).
+    pub fn dist_max(&self) -> Length {
+        au(self.dist_max_au)
+    }
+
     pub fn detectable_fraction(&self, sens: &MmSensitivity) -> f64 {
         let n = 200usize;
         let mut detected = 0usize;
@@ -111,6 +135,30 @@ impl ReferenceBox {
 mod tests {
     use super::*;
     use crate::bands::{ACT_SENSITIVITY, SO_SENSITIVITY, SO_SENSITIVITY_SHALLOW};
+
+    #[test]
+    fn typed_boundary_matches_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+
+        assert_relative_eq!(
+            max_detectable_distance_typed(5.0, &SO_SENSITIVITY).get::<astronomical_unit>(),
+            max_detectable_distance(5.0, &SO_SENSITIVITY),
+            epsilon = 1e-9
+        );
+        let bx = ReferenceBox::nominal();
+        assert_relative_eq!(
+            bx.dist_min().get::<astronomical_unit>(),
+            bx.dist_min_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            bx.mass_max().get::<kilogram>(),
+            earth_masses(bx.mass_max_earth).get::<kilogram>(),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn reach_increases_with_mass() {
