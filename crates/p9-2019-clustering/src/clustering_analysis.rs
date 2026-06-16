@@ -26,6 +26,7 @@ use crate::poincare_variables::*;
 
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::types::OrbitalElements;
+use p9_core::units::{radians, Angle};
 
 /// Null hypothesis model for the angle draws.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +61,18 @@ pub struct ClusteringResult {
     pub p_combined: f64,
     /// Number of Monte Carlo iterations
     pub n_iterations: usize,
+}
+
+impl ClusteringResult {
+    /// Mean perihelion-longitude clustering direction as a typed [`Angle`].
+    pub fn mean_varpi_angle(&self) -> Angle {
+        radians(self.mean_varpi)
+    }
+
+    /// Mean pole (longitude-of-node) clustering direction as a typed [`Angle`].
+    pub fn mean_omega_angle(&self) -> Angle {
+        radians(self.mean_omega)
+    }
 }
 
 /// Ecliptic longitude and latitude (radians) of the perihelion direction
@@ -221,6 +234,15 @@ mod tests {
         // Observed clustering should be positive (non-zero)
         assert!(r_peri > 0.0, "Perihelion clustering = {:.3}", r_peri);
         assert!(r_pole > 0.0, "Pole clustering = {:.3}", r_pole);
+    }
+
+    #[test]
+    fn test_mean_direction_typed_accessors_match_f64() {
+        use uom::si::angle::radian;
+        let kbos = kbo_sample::paper_sample_a230();
+        let result = monte_carlo_clustering(&kbos, 100, 42, NullModel::Uniform);
+        assert!((result.mean_varpi_angle().get::<radian>() - result.mean_varpi).abs() < 1e-12);
+        assert!((result.mean_omega_angle().get::<radian>() - result.mean_omega).abs() < 1e-12);
     }
 
     #[test]

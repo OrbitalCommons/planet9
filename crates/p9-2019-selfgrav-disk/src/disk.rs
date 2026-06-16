@@ -7,6 +7,7 @@
 //! prescribed eccentricity profile e_d(a). Such a disk is what the paper shows
 //! can SHEPHERD test ETNOs into apsidal anti-alignment without a planet.
 
+use p9_core::units::{au, radians, solar_masses, Angle, Length, Mass};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
@@ -80,6 +81,26 @@ impl DiskProfile {
         self.mass_solar / p9_core::constants::EARTH_MASS_SOLAR
     }
 
+    /// Inner edge as a typed [`Length`].
+    pub fn inner_radius(&self) -> Length {
+        au(self.a_in)
+    }
+
+    /// Outer edge as a typed [`Length`].
+    pub fn outer_radius(&self) -> Length {
+        au(self.a_out)
+    }
+
+    /// Total disk mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        solar_masses(self.mass_solar)
+    }
+
+    /// Disk longitude of perihelion as a typed [`Angle`].
+    pub fn varpi_disk_angle(&self) -> Angle {
+        radians(self.varpi_disk)
+    }
+
     /// A single confocal eccentric ring of the discretized disk.
     fn ring(&self, k: usize) -> Ring {
         // Log-spaced ring semi-major axes (the disk spans a decade in a).
@@ -129,6 +150,23 @@ pub struct Ring {
     pub mass_solar: f64,
 }
 
+impl Ring {
+    /// Ring semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Ring apse as a typed [`Angle`].
+    pub fn varpi_angle(&self) -> Angle {
+        radians(self.varpi)
+    }
+
+    /// Ring mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        solar_masses(self.mass_solar)
+    }
+}
+
 /// Disk surface density Sigma(a) (solar masses / AU^2), for documentation/plots.
 pub fn surface_density(profile: &DiskProfile, a: f64) -> f64 {
     if a < profile.a_in || a > profile.a_out {
@@ -155,6 +193,45 @@ mod tests {
         let d = DiskProfile::fiducial(10.0);
         let total: f64 = d.rings().iter().map(|r| r.mass_solar).sum();
         assert_relative_eq!(total, d.mass_solar, epsilon = 1e-12 * d.mass_solar);
+    }
+
+    #[test]
+    fn test_typed_accessors_match_f64() {
+        use uom::si::angle::radian;
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let d = DiskProfile::fiducial(10.0);
+        assert_relative_eq!(
+            d.inner_radius().get::<astronomical_unit>(),
+            d.a_in,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            d.outer_radius().get::<astronomical_unit>(),
+            d.a_out,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            d.mass().get::<kilogram>(),
+            d.mass_solar * p9_core::units::SOLAR_MASS_KG,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            d.varpi_disk_angle().get::<radian>(),
+            d.varpi_disk,
+            epsilon = 1e-12
+        );
+        let r = d.rings()[0];
+        assert_relative_eq!(
+            r.semi_major_axis().get::<astronomical_unit>(),
+            r.a,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            r.mass().get::<kilogram>(),
+            r.mass_solar * p9_core::units::SOLAR_MASS_KG,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

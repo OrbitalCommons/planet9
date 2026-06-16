@@ -1509,6 +1509,7 @@ dependencies = [
  "rand_distr",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1521,6 +1522,7 @@ dependencies = [
  "rand_distr",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1533,6 +1535,7 @@ dependencies = [
  "rand_distr",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1545,6 +1548,7 @@ dependencies = [
  "rand_distr",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1556,6 +1560,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1568,6 +1573,7 @@ dependencies = [
  "rand_distr",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1579,6 +1585,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]

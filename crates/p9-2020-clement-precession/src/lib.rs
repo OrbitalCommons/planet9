@@ -22,6 +22,9 @@
 pub mod precession;
 pub mod resonance;
 
+use p9_core::constants::GYR_DAYS;
+use p9_core::units::{au, days, radians, AngularVelocity, Length, Time};
+
 /// Convenience summary of the two headline results for a test ETNO and a
 /// nominal Planet Nine. Returned as plain numbers so callers (and the binary
 /// report below) can serialize or print them.
@@ -41,6 +44,35 @@ pub struct Summary {
     pub combined_period_gyr: f64,
     /// Nearest-resonance matches for the clustered sample.
     pub matches: Vec<resonance::EtnoResonance>,
+}
+
+impl Summary {
+    /// Test ETNO semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Giant-planet-induced apsidal precession rate as a typed
+    /// [`AngularVelocity`] (from rad/day).
+    pub fn giant_precession_rate(&self) -> AngularVelocity {
+        (radians(self.giant_rate) / days(1.0)).into()
+    }
+
+    /// Combined giant-planet + P9 apsidal precession rate as a typed
+    /// [`AngularVelocity`] (from rad/day).
+    pub fn combined_precession_rate(&self) -> AngularVelocity {
+        (radians(self.combined_rate) / days(1.0)).into()
+    }
+
+    /// Giant-planet precession period as a typed [`Time`] (from Gyr).
+    pub fn giant_period(&self) -> Time {
+        days(self.giant_period_gyr * GYR_DAYS)
+    }
+
+    /// Combined precession period as a typed [`Time`] (from Gyr).
+    pub fn combined_period(&self) -> Time {
+        days(self.combined_period_gyr * GYR_DAYS)
+    }
 }
 
 /// Build the [`Summary`] for an ETNO at (a, e) and a Planet Nine.
@@ -76,6 +108,44 @@ mod tests {
         assert_eq!(
             s.matches.len(),
             p9_core::data::etno::BROWN_2017_SAMPLE.len()
+        );
+    }
+
+    #[test]
+    fn test_typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use p9_core::constants::{DAY_S, GYR_DAYS};
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::length::astronomical_unit;
+        use uom::si::time::day;
+
+        let a = 250.0;
+        let e = 1.0 - 40.0 / a;
+        let s = summarize(a, e, &P9Params::nominal_2016());
+        assert_relative_eq!(
+            s.semi_major_axis().get::<astronomical_unit>(),
+            s.a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            s.giant_precession_rate().get::<radian_per_second>(),
+            s.giant_rate / DAY_S,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            s.combined_precession_rate().get::<radian_per_second>(),
+            s.combined_rate / DAY_S,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            s.giant_period().get::<day>(),
+            s.giant_period_gyr * GYR_DAYS,
+            epsilon = 1e-3
+        );
+        assert_relative_eq!(
+            s.combined_period().get::<day>(),
+            s.combined_period_gyr * GYR_DAYS,
+            epsilon = 1e-3
         );
     }
 }

@@ -40,12 +40,25 @@ use p9_core::constants::{
     YEAR_DAYS,
 };
 use p9_core::types::P9Params;
+use p9_core::units::{au, solar_masses, Length, Mass};
 
 /// An interior perturbing ring: semi-major axis (AU) and mass (solar masses).
 #[derive(Debug, Clone, Copy)]
 pub struct Perturber {
     pub a_au: f64,
     pub mass_solar: f64,
+}
+
+impl Perturber {
+    /// Perturber semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Perturber mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        solar_masses(self.mass_solar)
+    }
 }
 
 /// The four known giant planets as interior secular perturbers.
@@ -176,6 +189,23 @@ mod tests {
 
     fn e_test() -> f64 {
         1.0 - Q_TEST / A_TEST
+    }
+
+    #[test]
+    fn test_perturber_typed_accessors_match_f64() {
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let neptune = giant_planets()[3];
+        assert_relative_eq!(
+            neptune.semi_major_axis().get::<astronomical_unit>(),
+            neptune.a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            neptune.mass().get::<kilogram>(),
+            neptune.mass_solar * p9_core::units::SOLAR_MASS_KG,
+            epsilon = 1e15
+        );
     }
 
     #[test]
