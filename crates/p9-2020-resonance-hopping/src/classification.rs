@@ -31,6 +31,7 @@
 //! exist, so an object there sits in an isolated island and can STICK.
 
 use p9_core::analysis::resonance::resonance_semi_major_axis;
+use p9_core::units::{au, Length};
 
 /// Greatest common divisor (for reducing p:q to lowest terms).
 fn gcd(a: u32, b: u32) -> u32 {
@@ -61,6 +62,12 @@ impl Mmr {
     /// the single workspace resonance-location convention.
     pub fn semimajor_axis(&self, a_p9: f64) -> f64 {
         resonance_semi_major_axis(self.q, self.p, a_p9)
+    }
+
+    /// Semimajor axis of this interior resonance as a typed [`Length`], for a
+    /// Planet Nine at `a_p9` (AU).
+    pub fn semi_major_axis_typed(&self, a_p9: f64) -> Length {
+        au(self.semimajor_axis(a_p9))
     }
 
     /// Order of the resonance, |p − q|.
@@ -132,6 +139,11 @@ impl ResonanceLandscape {
             spectrum,
             simple,
         }
+    }
+
+    /// Planet Nine semimajor axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_p9)
     }
 
     /// Nearest SIMPLE (n:1 / n:2) resonance to `a` (AU): (resonance, centre,
@@ -299,6 +311,24 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::analysis::resonance::resonance_semi_major_axis;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_semi_major_axis_matches_f64() {
+        let a_p9 = 500.0;
+        let mmr = Mmr { p: 3, q: 1 };
+        assert_relative_eq!(
+            mmr.semi_major_axis_typed(a_p9).get::<astronomical_unit>(),
+            mmr.semimajor_axis(a_p9),
+            epsilon = 1e-12
+        );
+        let land = ResonanceLandscape::new(a_p9, 100.0, 600.0, 5);
+        assert_relative_eq!(
+            land.semi_major_axis().get::<astronomical_unit>(),
+            land.a_p9,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn resonance_location_matches_analytic_relation() {

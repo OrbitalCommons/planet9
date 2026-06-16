@@ -29,6 +29,7 @@
 
 use p9_core::constants::DEG2RAD;
 use p9_core::types::P9Params;
+use p9_core::units::{au, radians, Angle, Length};
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
@@ -62,6 +63,22 @@ impl DetachedParticle {
         let cos_i = i_forced.cos() * self.i_free.cos()
             + i_forced.sin() * self.i_free.sin() * self.phase.cos();
         cos_i.clamp(-1.0, 1.0).acos()
+    }
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
+    }
+
+    /// Observed inclination as a typed [`Angle`] (dimension-checked view of
+    /// [`observed_inclination`](Self::observed_inclination)).
+    pub fn observed_inclination_typed(&self, i_forced: f64) -> Angle {
+        radians(self.observed_inclination(i_forced))
     }
 }
 
@@ -193,6 +210,34 @@ mod tests {
 
     fn nominal() -> P9Params {
         P9Params::nominal_2016()
+    }
+
+    #[test]
+    fn typed_particle_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::radian;
+        use uom::si::length::astronomical_unit;
+        let p = DetachedParticle {
+            a: 400.0,
+            e: 0.7,
+            i_free: 0.2,
+            phase: 0.5,
+        };
+        assert_relative_eq!(
+            p.semi_major_axis().get::<astronomical_unit>(),
+            p.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.perihelion_typed().get::<astronomical_unit>(),
+            p.perihelion(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.observed_inclination_typed(0.3).get::<radian>(),
+            p.observed_inclination(0.3),
+            epsilon = 1e-12
+        );
     }
 
     #[test]
