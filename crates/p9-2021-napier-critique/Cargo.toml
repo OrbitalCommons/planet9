@@ -13,3 +13,4 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 approx = { workspace = true }
+uom = "0.38.0"

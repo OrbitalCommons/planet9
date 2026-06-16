@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::resonance::chirikov_overlap_parameter;
 use p9_core::constants::{A_NEPTUNE_AU, GM_SUN, MASS_NEPTUNE_SOLAR};
+use p9_core::units::{days, Time};
 
 use crate::chirikov::OVERLAP_GLOBAL_CHAOS;
 
@@ -47,6 +48,12 @@ pub fn classify(a: f64, q: f64) -> StabilityClass {
 /// Units: days (using GM_SUN in AU^3/day^2).
 pub fn lyapunov_time_days(a: f64) -> f64 {
     std::f64::consts::TAU * (a * a * a / GM_SUN).sqrt()
+}
+
+/// Lyapunov time as a dimension-checked [`Time`] for the semi-major axis `a`
+/// (in AU). Typed sibling of [`lyapunov_time_days`].
+pub fn lyapunov_time(a: f64) -> Time {
+    days(lyapunov_time_days(a))
 }
 
 /// Semi-major axis diffusion coefficient (AU^2/yr).
@@ -107,7 +114,18 @@ impl StabilityMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::analysis::resonance::{critical_perihelion, is_chaotic};
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_lyapunov_time_matches_f64() {
+        assert_relative_eq!(
+            lyapunov_time(500.0).get::<day>(),
+            lyapunov_time_days(500.0),
+            epsilon = 1e-6
+        );
+    }
 
     #[test]
     fn test_chaotic_near_neptune() {

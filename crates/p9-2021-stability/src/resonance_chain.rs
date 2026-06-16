@@ -13,6 +13,7 @@
 
 use p9_core::analysis::hansen::hansen_x_neg3_2_neptune_chain;
 use p9_core::constants::{A_NEPTUNE_AU, GM_SUN, MASS_NEPTUNE_SOLAR};
+use p9_core::units::{au, Length};
 use serde::{Deserialize, Serialize};
 
 /// A single 2:j resonance with Neptune.
@@ -26,6 +27,17 @@ pub struct NeptuneResonance {
     pub delta_a: f64,
     /// Hansen coefficient X_j^{-3,2}
     pub hansen_coeff: f64,
+}
+
+impl NeptuneResonance {
+    /// Nominal semi-major axis as a [`Length`].
+    pub fn nominal_semi_major_axis(&self) -> Length {
+        au(self.a_nominal)
+    }
+    /// Resonance half-width in semi-major axis as a [`Length`].
+    pub fn half_width(&self) -> Length {
+        au(self.delta_a)
+    }
 }
 
 /// Compute the nominal semi-major axis for a 2:j resonance with Neptune.
@@ -89,7 +101,24 @@ pub fn pendulum_hamiltonian(phi: f64, phi_tilde: f64, j: i64, q: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::analysis::resonance::chirikov_overlap_parameter;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_resonance_accessors_match_f64() {
+        let res = build_resonance_chain(3, 3, 40.0)[0].clone();
+        assert_relative_eq!(
+            res.nominal_semi_major_axis().get::<astronomical_unit>(),
+            res.a_nominal,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            res.half_width().get::<astronomical_unit>(),
+            res.delta_a,
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn test_resonance_semimajor_j2() {

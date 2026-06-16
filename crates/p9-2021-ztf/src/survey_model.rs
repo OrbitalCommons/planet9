@@ -6,6 +6,7 @@
 //! survey table in `p9_core::analysis::surveys`.
 
 use p9_core::analysis::surveys::limiting_magnitude;
+use p9_core::units::{degrees, Angle};
 use serde::{Deserialize, Serialize};
 
 /// ZTF survey model parameters for Planet Nine detection.
@@ -45,6 +46,12 @@ impl ZtfSurvey {
         dec_deg > self.dec_limit_deg
     }
 
+    /// Southern declination limit of the footprint as a dimension-checked
+    /// [`Angle`].
+    pub fn dec_limit(&self) -> Angle {
+        degrees(self.dec_limit_deg)
+    }
+
     /// Tracklet-linking efficiency measured from known asteroid recoveries.
     ///
     /// Brown & Batygin (2021) report 99.66% linking efficiency for objects
@@ -57,12 +64,24 @@ impl ZtfSurvey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::degree;
 
     #[test]
     fn default_matches_shared_survey_table() {
         let survey = ZtfSurvey::default();
         assert!((survey.depth_limit - 20.5).abs() < 1e-10);
         assert!((survey.dec_limit_deg - (-30.0)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn typed_dec_limit_matches_f64() {
+        let survey = ZtfSurvey::default();
+        assert_relative_eq!(
+            survey.dec_limit().get::<degree>(),
+            survey.dec_limit_deg,
+            epsilon = 1e-12
+        );
     }
 
     #[test]

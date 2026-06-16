@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use p9_core::constants::*;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{au, days, radians, solar_masses, Angle, Length, Mass, Time, Velocity};
 
 /// Birth cluster parameters for IOC generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,6 +78,45 @@ impl OortCloudConfig {
         let r_au = self.cluster_radius_pc * PC_AU;
         let sigma_v = self.velocity_dispersion_au_day();
         r_au / sigma_v
+    }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Total cluster mass as a [`Mass`].
+    pub fn cluster_mass(&self) -> Mass {
+        solar_masses(self.cluster_mass_msun)
+    }
+    /// Plummer characteristic radius as a [`Length`].
+    pub fn cluster_radius(&self) -> Length {
+        au(self.cluster_radius_pc * PC_AU)
+    }
+    /// Minimum IOC semi-major axis as a [`Length`].
+    pub fn min_semi_major_axis(&self) -> Length {
+        au(self.a_min)
+    }
+    /// Maximum IOC semi-major axis as a [`Length`].
+    pub fn max_semi_major_axis(&self) -> Length {
+        au(self.a_max)
+    }
+    /// Minimum perihelion distance as a [`Length`].
+    pub fn min_perihelion(&self) -> Length {
+        au(self.q_min)
+    }
+    /// Maximum perihelion distance as a [`Length`].
+    pub fn max_perihelion(&self) -> Length {
+        au(self.q_max)
+    }
+    /// Inclination dispersion as an [`Angle`].
+    pub fn inclination_dispersion(&self) -> Angle {
+        radians(self.sigma_i)
+    }
+    /// Cluster velocity dispersion as a [`Velocity`].
+    pub fn velocity_dispersion(&self) -> Velocity {
+        au(self.velocity_dispersion_au_day()) / days(1.0)
+    }
+    /// Encounter timescale as a [`Time`].
+    pub fn encounter_timescale(&self) -> Time {
+        days(self.encounter_timescale_days())
     }
 }
 
@@ -172,8 +212,65 @@ pub fn generate_scattered_disk<R: Rng>(n: usize, rng: &mut R) -> Vec<OrbitalElem
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use uom::si::angle::radian;
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+    use uom::si::time::day;
+    use uom::si::velocity::meter_per_second;
+
+    #[test]
+    fn typed_config_accessors_match_f64() {
+        let c = OortCloudConfig::nominal();
+        assert_relative_eq!(
+            c.cluster_mass().get::<kilogram>(),
+            solar_masses(c.cluster_mass_msun).get::<kilogram>(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            c.cluster_radius().get::<astronomical_unit>(),
+            c.cluster_radius_pc * PC_AU,
+            epsilon = 1e-6
+        );
+        assert_relative_eq!(
+            c.min_semi_major_axis().get::<astronomical_unit>(),
+            c.a_min,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            c.max_semi_major_axis().get::<astronomical_unit>(),
+            c.a_max,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            c.min_perihelion().get::<astronomical_unit>(),
+            c.q_min,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            c.max_perihelion().get::<astronomical_unit>(),
+            c.q_max,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            c.inclination_dispersion().get::<radian>(),
+            c.sigma_i,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            c.encounter_timescale().get::<day>(),
+            c.encounter_timescale_days(),
+            epsilon = 1e-6
+        );
+        let v_expected = au(c.velocity_dispersion_au_day()) / days(1.0);
+        assert_relative_eq!(
+            c.velocity_dispersion().get::<meter_per_second>(),
+            v_expected.get::<meter_per_second>(),
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn test_nominal_config() {

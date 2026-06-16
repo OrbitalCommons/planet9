@@ -24,6 +24,7 @@
 
 use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{DEG2RAD, TWO_PI};
+use p9_core::units::{radians, Angle};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -97,6 +98,16 @@ impl SelectionFunction {
         let w =
             1.0 + self.a1 * (varpi - self.phi1).cos() + self.a2 * (2.0 * (varpi - self.phi2)).cos();
         w.max(0.0)
+    }
+
+    /// First-harmonic phase ϕ₁ as a dimension-checked [`Angle`].
+    pub fn phi1_angle(&self) -> Angle {
+        radians(self.phi1)
+    }
+
+    /// Second-harmonic phase ϕ₂ as a dimension-checked [`Angle`].
+    pub fn phi2_angle(&self) -> Angle {
+        radians(self.phi2)
     }
 
     /// Maximum of w over the circle, used as the rejection-sampling
@@ -189,9 +200,18 @@ pub fn run_critique<R: Rng>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::data::etno::longitudes_of_perihelion;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use uom::si::angle::radian;
+
+    #[test]
+    fn typed_phase_accessors_match_f64() {
+        let sel = SelectionFunction::default();
+        assert_relative_eq!(sel.phi1_angle().get::<radian>(), sel.phi1, epsilon = 1e-12);
+        assert_relative_eq!(sel.phi2_angle().get::<radian>(), sel.phi2, epsilon = 1e-12);
+    }
 
     #[test]
     fn test_selection_weight_positive_and_normalizable() {

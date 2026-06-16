@@ -49,6 +49,7 @@ use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{
     cartesian_to_elements, OrbitalElements, P9Params, SimConfig as CoreSimConfig, StateVector,
 };
+use p9_core::units::{au, days, degrees, earth_masses, radians, Angle, Length, Mass, Time};
 
 /// The paper's Planet Nine mass grid (Earth masses), Brown & Batygin (2021)
 /// Section 2.
@@ -123,6 +124,21 @@ impl GridPoint {
             mean_anomaly: 0.0,
         }
     }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Planet Nine mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.m9)
+    }
+    /// Planet Nine semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a9)
+    }
+    /// Planet Nine inclination as an [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        degrees(self.i9_deg)
+    }
 }
 
 /// Configuration for the simulation grid (Model 1).
@@ -185,6 +201,33 @@ impl SimGridConfig {
     /// `#[ignore]`d entry point only — estimated CPU-days.
     pub fn paper() -> Self {
         Self::base(GridScale::Paper, 16_800, 4.0, 10.0)
+    }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Integration time as a [`Time`].
+    pub fn integration_time(&self) -> Time {
+        days(self.t_gyr * GYR_DAYS)
+    }
+    /// Integration timestep as a [`Time`].
+    pub fn timestep(&self) -> Time {
+        days(self.dt_days)
+    }
+    /// Interval between pooled element snapshots as a [`Time`].
+    pub fn snapshot_interval(&self) -> Time {
+        days(self.snapshot_interval_days)
+    }
+    /// Maximum initial-disk inclination as an [`Angle`].
+    pub fn max_disk_inclination(&self) -> Angle {
+        degrees(self.disk_i_max_deg)
+    }
+    /// Inner removal boundary as a [`Length`].
+    pub fn inner_removal_radius(&self) -> Length {
+        au(self.r_remove_inner)
+    }
+    /// Outer removal boundary as a [`Length`].
+    pub fn outer_removal_radius(&self) -> Length {
+        au(self.r_remove_outer)
     }
 
     /// The grid points for this scale (deterministic, no RNG involved).
@@ -270,6 +313,25 @@ pub struct ElementSample {
     pub delta_varpi: f64,
     /// Omega_particle - Omega_P9, wrapped to [0, 2 pi)
     pub delta_omega_big: f64,
+}
+
+impl ElementSample {
+    /// Semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+    /// Inclination as an [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        radians(self.i)
+    }
+    /// Apsidal offset Δϖ relative to Planet Nine as an [`Angle`].
+    pub fn delta_varpi_angle(&self) -> Angle {
+        radians(self.delta_varpi)
+    }
+    /// Nodal offset ΔΩ relative to Planet Nine as an [`Angle`].
+    pub fn delta_omega_big_angle(&self) -> Angle {
+        radians(self.delta_omega_big)
+    }
 }
 
 /// Result of integrating one grid point.
@@ -413,6 +475,90 @@ pub fn run_grid(config: &SimGridConfig) -> Vec<GridPointResult> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::{degree, radian};
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_grid_point_accessors_match_f64() {
+        let gp = GridPoint {
+            m9: 6.2,
+            a9: 380.0,
+            e9: 0.2,
+            i9_deg: 16.0,
+        };
+        assert_relative_eq!(
+            gp.mass().get::<kilogram>(),
+            earth_masses(gp.m9).get::<kilogram>(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            gp.semi_major_axis().get::<astronomical_unit>(),
+            gp.a9,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(gp.inclination().get::<degree>(), gp.i9_deg, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn typed_config_accessors_match_f64() {
+        let c = SimGridConfig::reduced();
+        assert_relative_eq!(
+            c.integration_time().get::<day>(),
+            c.t_gyr * GYR_DAYS,
+            epsilon = 1e-6
+        );
+        assert_relative_eq!(c.timestep().get::<day>(), c.dt_days, epsilon = 1e-6);
+        assert_relative_eq!(
+            c.snapshot_interval().get::<day>(),
+            c.snapshot_interval_days,
+            epsilon = 1e-6
+        );
+        assert_relative_eq!(
+            c.max_disk_inclination().get::<degree>(),
+            c.disk_i_max_deg,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            c.inner_removal_radius().get::<astronomical_unit>(),
+            c.r_remove_inner,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            c.outer_removal_radius().get::<astronomical_unit>(),
+            c.r_remove_outer,
+            epsilon = 1e-9
+        );
+    }
+
+    #[test]
+    fn typed_element_sample_accessors_match_f64() {
+        let s = ElementSample {
+            a: 250.0,
+            e: 0.3,
+            i: 0.4,
+            delta_varpi: 1.2,
+            delta_omega_big: 2.4,
+        };
+        assert_relative_eq!(
+            s.semi_major_axis().get::<astronomical_unit>(),
+            s.a,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(s.inclination().get::<radian>(), s.i, epsilon = 1e-12);
+        assert_relative_eq!(
+            s.delta_varpi_angle().get::<radian>(),
+            s.delta_varpi,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            s.delta_omega_big_angle().get::<radian>(),
+            s.delta_omega_big,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn test_grid_point_counts() {
