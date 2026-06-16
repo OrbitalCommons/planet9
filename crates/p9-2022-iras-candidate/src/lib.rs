@@ -49,6 +49,8 @@
 pub mod chance;
 pub mod distance;
 
+use p9_core::units::{au, earth_masses, Length, Mass};
+
 /// Labelled reference quantities for the surviving IRAS candidate from
 /// Rowan-Robinson (2022). The distance and mass are the paper's *fitted*
 /// values; the flux and temperature are the self-consistent inputs that
@@ -92,7 +94,68 @@ pub const REF_CANDIDATE: CandidateReference = CandidateReference {
     flux_100um_jy: 0.858,
 };
 
+impl CandidateReference {
+    /// Fitted heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+    /// 1-σ distance uncertainty as a typed [`Length`].
+    pub fn distance_err(&self) -> Length {
+        au(self.distance_err_au)
+    }
+    /// Fitted mass midpoint as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Lower fitted mass as a typed [`Mass`].
+    pub fn mass_lo(&self) -> Mass {
+        earth_masses(self.mass_lo_earth)
+    }
+    /// Upper fitted mass as a typed [`Mass`].
+    pub fn mass_hi(&self) -> Mass {
+        earth_masses(self.mass_hi_earth)
+    }
+}
+
 /// IRAS 60 µm wavelength in metres.
 pub const LAMBDA_60UM_M: f64 = 60.0e-6;
 /// IRAS 100 µm wavelength in metres.
 pub const LAMBDA_100UM_M: f64 = 100.0e-6;
+
+#[cfg(test)]
+mod typed_tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn candidate_reference_typed_accessors_match_f64() {
+        let c = REF_CANDIDATE;
+        assert_relative_eq!(
+            c.distance().get::<astronomical_unit>(),
+            c.distance_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            c.distance_err().get::<astronomical_unit>(),
+            c.distance_err_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            c.mass().get::<kilogram>(),
+            earth_masses(c.mass_earth).get::<kilogram>(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            c.mass_lo().get::<kilogram>(),
+            earth_masses(c.mass_lo_earth).get::<kilogram>(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            c.mass_hi().get::<kilogram>(),
+            earth_masses(c.mass_hi_earth).get::<kilogram>(),
+            epsilon = 1.0
+        );
+    }
+}

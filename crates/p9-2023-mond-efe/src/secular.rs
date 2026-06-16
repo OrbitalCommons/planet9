@@ -30,6 +30,7 @@ use std::f64::consts::{PI, TAU};
 use nalgebra::Vector3;
 
 use p9_core::constants::GM_SUN;
+use p9_core::units::{days, radians, AngularVelocity};
 
 use crate::efe::efe_potential;
 
@@ -110,6 +111,11 @@ pub fn averaged_disturbing(
 /// Mean motion n = sqrt(GM_sun / a³) (rad/day).
 pub fn mean_motion(a: f64) -> f64 {
     (GM_SUN / (a * a * a)).sqrt()
+}
+
+/// Mean motion as a typed [`AngularVelocity`] (rad per day).
+pub fn mean_motion_typed(a: f64) -> AngularVelocity {
+    (radians(mean_motion(a)) / days(1.0)).into()
 }
 
 /// Secular apsidal precession rate dϖ/dt (rad/day) from Lagrange's planetary
@@ -259,6 +265,18 @@ mod tests {
     /// directly comparable quantity.
     fn ecliptic_plane() -> PlaneGeometry {
         PlaneGeometry::from_normal(Vector3::new(0.0, 0.0, 1.0))
+    }
+
+    #[test]
+    fn typed_mean_motion_matches_f64() {
+        use uom::si::angular_velocity::radian_per_second;
+        let a = 500.0;
+        // rad/day read back as rad/s matches mean_motion / seconds-per-day.
+        assert_relative_eq!(
+            mean_motion_typed(a).get::<radian_per_second>(),
+            mean_motion(a) / 86_400.0,
+            max_relative = 1e-9
+        );
     }
 
     #[test]

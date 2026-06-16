@@ -28,8 +28,15 @@
 
 use std::f64::consts::PI;
 
+use p9_core::units::{julian_year, radians, Angle, AngularVelocity, Time};
+
 /// arcsec/yr → rad/yr.
 pub const ARCSEC_PER_YR_TO_RAD: f64 = PI / (180.0 * 3600.0);
+
+/// Angular velocity (rad per Julian year) as a typed [`AngularVelocity`].
+fn rad_per_year(rate: f64) -> AngularVelocity {
+    (radians(rate) / julian_year()).into()
+}
 
 /// Snapshot of the Colombo-top state during the integration.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -44,6 +51,25 @@ pub struct SpinSnapshot {
     pub g: f64,
     /// Resonance ratio α/|g|.
     pub ratio: f64,
+}
+
+impl SpinSnapshot {
+    /// Time as a typed [`Time`] (Julian years).
+    pub fn time(&self) -> Time {
+        julian_year() * self.t
+    }
+    /// Obliquity θ as a typed [`Angle`].
+    pub fn obliquity(&self) -> Angle {
+        radians(self.obliquity)
+    }
+    /// Precession phase ψ as a typed [`Angle`].
+    pub fn psi(&self) -> Angle {
+        radians(self.psi)
+    }
+    /// Nodal-precession frequency g as a typed [`AngularVelocity`].
+    pub fn g(&self) -> AngularVelocity {
+        rad_per_year(self.g)
+    }
 }
 
 /// Configuration for an adiabatic-sweep capture run.
@@ -64,6 +90,33 @@ pub struct SweepConfig {
     pub t_total: f64,
     /// Time step (yr).
     pub dt: f64,
+}
+
+impl SweepConfig {
+    /// Spin-axis precession constant α as a typed [`AngularVelocity`].
+    pub fn alpha(&self) -> AngularVelocity {
+        rad_per_year(self.alpha)
+    }
+    /// Orbital inclination I as a typed [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        radians(self.inclination)
+    }
+    /// Initial nodal frequency g₀ as a typed [`AngularVelocity`].
+    pub fn g_initial(&self) -> AngularVelocity {
+        rad_per_year(self.g_initial)
+    }
+    /// Final nodal frequency g_f as a typed [`AngularVelocity`].
+    pub fn g_final(&self) -> AngularVelocity {
+        rad_per_year(self.g_final)
+    }
+    /// Total sweep time as a typed [`Time`] (Julian years).
+    pub fn t_total(&self) -> Time {
+        julian_year() * self.t_total
+    }
+    /// Time step as a typed [`Time`] (Julian years).
+    pub fn dt(&self) -> Time {
+        julian_year() * self.dt
+    }
 }
 
 /// Residual of the ψ = π Cassini condition α cos θ sin θ + g sin(θ − I)
@@ -234,6 +287,50 @@ mod tests {
 
     fn deg(theta: f64) -> f64 {
         theta * RAD2DEG
+    }
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::radian;
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::time::second;
+        let sec_per_yr = 365.25 * 86_400.0;
+        let cfg = uranus_sweep(5.0);
+        let snaps = run_sweep(&cfg, cfg.t_total / 20.0);
+        let s = snaps.last().unwrap();
+        assert_relative_eq!(s.obliquity().get::<radian>(), s.obliquity, epsilon = 1e-12);
+        assert_relative_eq!(s.psi().get::<radian>(), s.psi, epsilon = 1e-12);
+        assert_relative_eq!(
+            s.time().get::<second>(),
+            s.t * sec_per_yr,
+            max_relative = 1e-9
+        );
+        assert_relative_eq!(
+            s.g().get::<radian_per_second>(),
+            s.g / sec_per_yr,
+            max_relative = 1e-9
+        );
+        assert_relative_eq!(
+            cfg.alpha().get::<radian_per_second>(),
+            cfg.alpha / sec_per_yr,
+            max_relative = 1e-9
+        );
+        assert_relative_eq!(
+            cfg.inclination().get::<radian>(),
+            cfg.inclination,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            cfg.t_total().get::<second>(),
+            cfg.t_total * sec_per_yr,
+            max_relative = 1e-9
+        );
+        assert_relative_eq!(
+            cfg.dt().get::<second>(),
+            cfg.dt * sec_per_yr,
+            max_relative = 1e-9
+        );
     }
 
     #[test]
