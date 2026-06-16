@@ -1271,6 +1271,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1285,6 +1286,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1296,6 +1298,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1306,6 +1309,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1317,6 +1321,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1328,6 +1333,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]
@@ -1339,6 +1345,7 @@ dependencies = [
  "p9-core",
  "serde",
  "serde_json",
+ "uom 0.38.0",
 ]
 
 [[package]]

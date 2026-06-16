@@ -35,6 +35,7 @@
 use p9_core::analysis::photometry::mass_radius_neptunian;
 use p9_core::analysis::thermal::{flux_to_magnitude, thermal_flux_jy, C_LIGHT};
 use p9_core::constants::EARTH_RADIUS_KM;
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Earth radius in meters (from the shared `EARTH_RADIUS_KM`).
 const R_EARTH_M: f64 = EARTH_RADIUS_KM * 1.0e3;
@@ -87,6 +88,11 @@ impl Band {
         micron * 1.0e-6
     }
 
+    /// Effective wavelength as a typed [`Length`].
+    pub fn wavelength(self) -> Length {
+        meters(self.wavelength_m())
+    }
+
     /// Vega-system zero-point flux density in Jansky (a 0.0-mag source).
     pub fn zero_point_jy(self) -> f64 {
         match self {
@@ -119,6 +125,21 @@ impl P9 {
     /// shared with the reflected-light channel).
     pub fn radius_m(&self) -> f64 {
         mass_radius_neptunian(self.mass_earth) * R_EARTH_M
+    }
+
+    // ---- typed (uom) boundary: dimension-checked views ----
+
+    /// Planet mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Heliocentric distance as a [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+    /// Physical radius as a typed [`Length`].
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
     }
 
     /// Post-evolution effective temperature (K): the internal-heat floor scaled
@@ -160,6 +181,29 @@ impl P9 {
 mod tests {
     use super::*;
     use crate::reference;
+    use approx::assert_relative_eq;
+    use p9_core::units::EARTH_MASS_KG;
+    use uom::si::length::{astronomical_unit, meter};
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let p = P9 {
+            mass_earth: 10.0,
+            distance_au: 700.0,
+        };
+        assert_relative_eq!(
+            p.mass().get::<kilogram>(),
+            10.0 * EARTH_MASS_KG,
+            epsilon = 1.0
+        );
+        assert_relative_eq!(p.distance().get::<astronomical_unit>(), p.distance_au);
+        assert_relative_eq!(p.radius().get::<meter>(), p.radius_m(), epsilon = 1e-3);
+        assert_relative_eq!(
+            Band::W4.wavelength().get::<meter>(),
+            Band::W4.wavelength_m()
+        );
+    }
 
     fn nominal() -> P9 {
         P9 {

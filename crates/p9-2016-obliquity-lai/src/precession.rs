@@ -5,6 +5,7 @@
 use std::f64::consts::PI;
 
 use p9_core::constants::*;
+use p9_core::units::{au, days, earth_masses, radians, Angle, AngularVelocity, Length, Mass};
 
 use crate::planets;
 
@@ -71,6 +72,25 @@ impl PlanetNine {
     pub fn angular_momentum(&self) -> f64 {
         planets::orbital_angular_momentum(self.mass_solar(), self.a_tilde_au())
     }
+
+    // ---- typed (uom) boundary: dimension-checked views ----
+
+    /// Planet Nine mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Planet Nine semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+    /// Planet Nine inclination as an [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        radians(self.inclination_rad)
+    }
+    /// Effective semi-major axis ãₚ as a typed [`Length`].
+    pub fn a_tilde(&self) -> Length {
+        au(self.a_tilde_au())
+    }
 }
 
 /// Differential nodal precession rate Ω_jp that P9 induces on canonical planet
@@ -99,6 +119,11 @@ pub fn omega_l(p9: &PlanetNine) -> f64 {
     num / l_total
 }
 
+/// [`omega_l`] as a typed [`AngularVelocity`].
+pub fn omega_l_typed(p9: &PlanetNine) -> AngularVelocity {
+    (radians(omega_l(p9)) / days(1.0)).into()
+}
+
 /// Solar spin-axis precession frequency Ω★ps driven by the planetary torques
 /// on the solar rotational bulge (Lai Eq. 7), in rad/day:
 ///
@@ -112,6 +137,11 @@ pub fn omega_spin_precession(spin_period_days: f64) -> f64 {
         .iter()
         .map(|&(m, a)| coeff * (m / 1.0) * (RADIUS_SUN_AU / a).powi(3) * omega_star)
         .sum()
+}
+
+/// [`omega_spin_precession`] as a typed [`AngularVelocity`].
+pub fn omega_spin_precession_typed(spin_period_days: f64) -> AngularVelocity {
+    (radians(omega_spin_precession(spin_period_days)) / days(1.0)).into()
 }
 
 /// The two precession frequencies of the spin equation in the frame
@@ -135,6 +165,18 @@ pub fn corotating_frequencies(p9: &PlanetNine, spin_period_days: f64) -> (f64, f
     (omega_y, omega_z)
 }
 
+/// [`corotating_frequencies`] as typed [`AngularVelocity`] pair `(Ω_y, Ω_z)`.
+pub fn corotating_frequencies_typed(
+    p9: &PlanetNine,
+    spin_period_days: f64,
+) -> (AngularVelocity, AngularVelocity) {
+    let (omega_y, omega_z) = corotating_frequencies(p9, spin_period_days);
+    (
+        (radians(omega_y) / days(1.0)).into(),
+        (radians(omega_z) / days(1.0)).into(),
+    )
+}
+
 /// The analytic solar obliquity θsl at time `t` (Lai Eq. 15), in radians:
 ///
 ///   θsl ≃ |(2 Ω_y / Ω_z) sin(Ω_z t / 2)|
@@ -151,6 +193,11 @@ pub fn solar_obliquity_rad(p9: &PlanetNine, spin_period_days: f64, t_gyr: f64) -
     ((2.0 * omega_y / omega_z) * (omega_z * t / 2.0).sin()).abs()
 }
 
+/// [`solar_obliquity_rad`] as a typed [`Angle`].
+pub fn solar_obliquity_typed(p9: &PlanetNine, spin_period_days: f64, t_gyr: f64) -> Angle {
+    radians(solar_obliquity_rad(p9, spin_period_days, t_gyr))
+}
+
 /// Convenience: obliquity in degrees at 4.5 Gyr.
 pub fn solar_obliquity_deg(p9: &PlanetNine, spin_period_days: f64) -> f64 {
     solar_obliquity_rad(p9, spin_period_days, 4.5) * RAD2DEG
@@ -159,6 +206,36 @@ pub fn solar_obliquity_deg(p9: &PlanetNine, spin_period_days: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::radian;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let p9 = nominal_p9();
+        assert_relative_eq!(p9.semi_major_axis().get::<astronomical_unit>(), p9.a_au);
+        assert_relative_eq!(p9.inclination().get::<radian>(), p9.inclination_rad);
+        assert_relative_eq!(p9.a_tilde().get::<astronomical_unit>(), p9.a_tilde_au());
+        assert_relative_eq!(
+            omega_l_typed(&p9).get::<radian_per_second>(),
+            omega_l(&p9) / 86_400.0,
+            epsilon = 1e-40
+        );
+        assert_relative_eq!(
+            omega_spin_precession_typed(10.0).get::<radian_per_second>(),
+            omega_spin_precession(10.0) / 86_400.0,
+            epsilon = 1e-40
+        );
+        let (y, z) = corotating_frequencies(&p9, 20.0);
+        let (yt, zt) = corotating_frequencies_typed(&p9, 20.0);
+        assert_relative_eq!(yt.get::<radian_per_second>(), y / 86_400.0, epsilon = 1e-40);
+        assert_relative_eq!(zt.get::<radian_per_second>(), z / 86_400.0, epsilon = 1e-40);
+        assert_relative_eq!(
+            solar_obliquity_typed(&p9, 20.0, 4.5).get::<radian>(),
+            solar_obliquity_rad(&p9, 20.0, 4.5)
+        );
+    }
 
     /// A nominal P9: 10 m⊕, ãₚ = 400 AU (set via a, e), θₚ = 20°.
     fn nominal_p9() -> PlanetNine {

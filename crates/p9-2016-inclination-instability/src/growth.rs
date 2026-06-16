@@ -29,6 +29,7 @@
 
 use p9_core::constants::{GM_SUN, GYR_DAYS, TWO_PI, YEAR_DAYS};
 use p9_core::types::OrbitalElements;
+use p9_core::units::{days, radians, AngularVelocity, Time};
 
 /// Dimensionless secular-eigenvalue prefactor in gamma = (M_d/M_sun) n /
 /// C_GROWTH, equivalently tau = (C_GROWTH/2pi) * t_sec with t_sec = (M_sun/M_d)P.
@@ -95,10 +96,80 @@ pub fn efolding_time_gyr(m_disk_solar: f64, a: f64) -> f64 {
     efolding_time_days(m_disk_solar, a) / GYR_DAYS
 }
 
+// ---- typed (uom) boundary: dimension-checked views of the rates/times above ----
+
+/// Mean motion [`n`](mean_motion) as a typed [`AngularVelocity`].
+pub fn mean_motion_typed(a: f64) -> AngularVelocity {
+    (radians(mean_motion(a)) / days(1.0)).into()
+}
+
+/// Orbital period [`P`](orbital_period) as a typed [`Time`].
+pub fn orbital_period_typed(a: f64) -> Time {
+    days(orbital_period(a))
+}
+
+/// Disc secular precession frequency [`omega_sec`](secular_frequency) as a
+/// typed [`AngularVelocity`].
+pub fn secular_frequency_typed(m_disk_solar: f64, a: f64) -> AngularVelocity {
+    (radians(secular_frequency(m_disk_solar, a)) / days(1.0)).into()
+}
+
+/// Disc secular time [`t_sec`](secular_time_days) as a typed [`Time`].
+pub fn secular_time_typed(m_disk_solar: f64, a: f64) -> Time {
+    days(secular_time_days(m_disk_solar, a))
+}
+
+/// Linear-theory growth rate [`gamma`](growth_rate) as a typed
+/// [`AngularVelocity`].
+pub fn growth_rate_typed(m_disk_solar: f64, a: f64) -> AngularVelocity {
+    (radians(growth_rate(m_disk_solar, a)) / days(1.0)).into()
+}
+
+/// E-folding time [`tau`](efolding_time_days) as a typed [`Time`].
+pub fn efolding_time_typed(m_disk_solar: f64, a: f64) -> Time {
+    days(efolding_time_days(m_disk_solar, a))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::constants::EARTH_MASS_SOLAR;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let m = 20.0 * EARTH_MASS_SOLAR;
+        let a = 250.0;
+        // rates: rad/day -> compare in rad/s
+        let per_day_to_per_s = 1.0 / 86_400.0;
+        assert_relative_eq!(
+            mean_motion_typed(a).get::<radian_per_second>(),
+            mean_motion(a) * per_day_to_per_s,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            secular_frequency_typed(m, a).get::<radian_per_second>(),
+            secular_frequency(m, a) * per_day_to_per_s,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            growth_rate_typed(m, a).get::<radian_per_second>(),
+            growth_rate(m, a) * per_day_to_per_s,
+            epsilon = 1e-30
+        );
+        // times: days
+        assert_relative_eq!(orbital_period_typed(a).get::<day>(), orbital_period(a));
+        assert_relative_eq!(
+            secular_time_typed(m, a).get::<day>(),
+            secular_time_days(m, a)
+        );
+        assert_relative_eq!(
+            efolding_time_typed(m, a).get::<day>(),
+            efolding_time_days(m, a)
+        );
+    }
 
     /// Madigan & McCourt's fiducial disc: ~tens of Earth masses spread over
     /// a few hundred AU. We use 20 M_earth at a = 250 AU as a fiducial massive

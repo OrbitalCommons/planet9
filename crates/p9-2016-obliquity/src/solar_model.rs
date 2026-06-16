@@ -9,6 +9,7 @@
 use std::f64::consts::PI;
 
 use p9_core::constants::*;
+use p9_core::units::{au, days, radians, AngularVelocity, Length};
 
 /// Dimensionless moment of inertia for n=3 polytrope (Table 1 of Bailey+2016).
 pub const I_HAT: f64 = 0.08;
@@ -31,6 +32,11 @@ pub const P_SUN_INITIAL_DAYS: f64 = 10.0;
 /// Angular velocity of the Sun from rotation period (rad/day).
 pub fn omega_sun(period_days: f64) -> f64 {
     2.0 * PI / period_days
+}
+
+/// [`omega_sun`] as a typed [`AngularVelocity`].
+pub fn omega_sun_typed(period_days: f64) -> AngularVelocity {
+    (radians(omega_sun(period_days)) / days(1.0)).into()
 }
 
 /// Skumanich spin-down: ω(t) = ω₀ * (t₀/t)^{1/2}, capped at the initial
@@ -56,6 +62,11 @@ pub fn solar_omega_at_time(t: f64, t_age: f64) -> f64 {
     (omega_present * (t_age / t).sqrt()).min(omega_initial)
 }
 
+/// [`solar_omega_at_time`] as a typed [`AngularVelocity`].
+pub fn solar_omega_at_time_typed(t: f64, t_age: f64) -> AngularVelocity {
+    (radians(solar_omega_at_time(t, t_age)) / days(1.0)).into()
+}
+
 /// Spin angular momentum of the Sun: L = I_hat * M * R² * ω
 ///
 /// Returns value in units of M_sun * AU² / day.
@@ -76,9 +87,37 @@ pub fn solar_ring_semimajor_axis(omega: f64) -> f64 {
     (numerator / denominator).powf(1.0 / 3.0)
 }
 
+/// [`solar_ring_semimajor_axis`] as a typed [`Length`].
+pub fn solar_ring_semimajor_axis_typed(omega: f64) -> Length {
+    au(solar_ring_semimajor_axis(omega))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let t_age = 4.5 * GYR_DAYS;
+        let omega = omega_sun(P_SUN_PRESENT_DAYS);
+        assert_relative_eq!(
+            omega_sun_typed(P_SUN_PRESENT_DAYS).get::<radian_per_second>(),
+            omega / 86_400.0,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            solar_omega_at_time_typed(t_age, t_age).get::<radian_per_second>(),
+            solar_omega_at_time(t_age, t_age) / 86_400.0,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            solar_ring_semimajor_axis_typed(omega).get::<astronomical_unit>(),
+            solar_ring_semimajor_axis(omega)
+        );
+    }
 
     #[test]
     fn test_skumanich_spindown() {

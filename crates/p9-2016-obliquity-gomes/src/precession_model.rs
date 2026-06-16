@@ -42,6 +42,7 @@ use std::f64::consts::PI;
 
 use p9_core::constants::*;
 use p9_core::initial_conditions::giant_planets;
+use p9_core::units::{au, days, earth_masses, radians, Angle, AngularVelocity, Length, Mass, Time};
 
 /// Parameters of the Gomes precession model.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -77,6 +78,21 @@ impl GomesParams {
     pub fn epsilon_9(&self) -> f64 {
         (1.0 - self.e9 * self.e9).sqrt()
     }
+
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Planet Nine mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.m9_earth)
+    }
+    /// Planet Nine semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a9)
+    }
+    /// Planet Nine inclination as an [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        radians(self.i9)
+    }
 }
 
 /// Giant-planet orbital angular momentum magnitude (M_sun·AU²/day).
@@ -109,6 +125,11 @@ pub fn forced_inclination(p: &GomesParams) -> f64 {
     let l9 = l_p9(p);
     let ltot = l_total(p);
     ((l9 / ltot) * p.i9.sin()).clamp(-1.0, 1.0).asin()
+}
+
+/// [`forced_inclination`] as a typed [`Angle`].
+pub fn forced_inclination_typed(p: &GomesParams) -> Angle {
+    radians(forced_inclination(p))
 }
 
 /// Quadrupole secular coupling constant of two coplanar wires of mass m1, m2
@@ -149,9 +170,19 @@ pub fn precession_rate(p: &GomesParams) -> f64 {
     (3.0 * c * p.i9.cos() * ltot / (lp * l9)).abs()
 }
 
+/// [`precession_rate`] as a typed [`AngularVelocity`].
+pub fn precession_rate_typed(p: &GomesParams) -> AngularVelocity {
+    (radians(precession_rate(p)) / days(1.0)).into()
+}
+
 /// Precession period of the planetary plane about L_tot (days).
 pub fn precession_period(p: &GomesParams) -> f64 {
     2.0 * PI / precession_rate(p)
+}
+
+/// [`precession_period`] as a typed [`Time`].
+pub fn precession_period_typed(p: &GomesParams) -> Time {
+    days(precession_period(p))
 }
 
 /// Solar obliquity induced at time `t` (days), given a fixed primordial solar
@@ -171,6 +202,11 @@ pub fn obliquity_at_time(p: &GomesParams, t: f64) -> f64 {
     2.0 * i_p * (PI * t / t_prec).sin().abs()
 }
 
+/// [`obliquity_at_time`] as a typed [`Angle`].
+pub fn obliquity_at_time_typed(p: &GomesParams, t: f64) -> Angle {
+    radians(obliquity_at_time(p, t))
+}
+
 /// Maximum solar obliquity achievable over a full precession cycle (radians).
 ///
 /// As the planetary plane precesses about L_tot on a cone of half-angle i_p
@@ -183,6 +219,11 @@ pub fn max_obliquity(p: &GomesParams) -> f64 {
     2.0 * forced_inclination(p)
 }
 
+/// [`max_obliquity`] as a typed [`Angle`].
+pub fn max_obliquity_typed(p: &GomesParams) -> Angle {
+    radians(max_obliquity(p))
+}
+
 /// Maximum achievable solar obliquity in degrees.
 pub fn max_obliquity_deg(p: &GomesParams) -> f64 {
     max_obliquity(p) * RAD2DEG
@@ -192,6 +233,11 @@ pub fn max_obliquity_deg(p: &GomesParams) -> f64 {
 pub fn obliquity_over_age(p: &GomesParams) -> f64 {
     let t_age = crate::reference::SOLAR_SYSTEM_AGE_GYR * GYR_DAYS;
     obliquity_at_time(p, t_age)
+}
+
+/// [`obliquity_over_age`] as a typed [`Angle`].
+pub fn obliquity_over_age_typed(p: &GomesParams) -> Angle {
+    radians(obliquity_over_age(p))
 }
 
 /// Convenience: solar obliquity over the age of the Solar System in degrees.
@@ -206,6 +252,17 @@ pub struct ObliquitySample {
     pub t: f64,
     /// Induced solar obliquity (radians).
     pub obliquity: f64,
+}
+
+impl ObliquitySample {
+    /// Time since formation as a [`Time`].
+    pub fn time(&self) -> Time {
+        days(self.t)
+    }
+    /// Induced solar obliquity as an [`Angle`].
+    pub fn obliquity_typed(&self) -> Angle {
+        radians(self.obliquity)
+    }
 }
 
 /// Sample the induced obliquity at `n` evenly spaced times over `[0, t_max]`.
@@ -225,6 +282,45 @@ pub fn obliquity_series(p: &GomesParams, t_max: f64, n: usize) -> Vec<ObliquityS
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use uom::si::angle::radian;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::length::astronomical_unit;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let p = GomesParams::nominal();
+        assert_relative_eq!(p.semi_major_axis().get::<astronomical_unit>(), p.a9);
+        assert_relative_eq!(p.inclination().get::<radian>(), p.i9);
+        assert_relative_eq!(
+            forced_inclination_typed(&p).get::<radian>(),
+            forced_inclination(&p)
+        );
+        assert_relative_eq!(
+            precession_rate_typed(&p).get::<radian_per_second>(),
+            precession_rate(&p) / 86_400.0,
+            epsilon = 1e-40
+        );
+        assert_relative_eq!(
+            precession_period_typed(&p).get::<day>(),
+            precession_period(&p)
+        );
+        assert_relative_eq!(max_obliquity_typed(&p).get::<radian>(), max_obliquity(&p));
+        assert_relative_eq!(
+            obliquity_over_age_typed(&p).get::<radian>(),
+            obliquity_over_age(&p)
+        );
+        let s = ObliquitySample {
+            t: 1.0e9,
+            obliquity: 0.1,
+        };
+        assert_relative_eq!(s.time().get::<day>(), s.t);
+        assert_relative_eq!(s.obliquity_typed().get::<radian>(), s.obliquity);
+        assert_relative_eq!(
+            crate::reference::observed_solar_obliquity().get::<radian>(),
+            crate::reference::observed_solar_obliquity_rad()
+        );
+    }
 
     /// The headline result: a nominal Planet Nine is capable of exciting a
     /// solar obliquity in the published 5-10° band, matching the observed

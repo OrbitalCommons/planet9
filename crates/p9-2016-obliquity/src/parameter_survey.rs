@@ -5,6 +5,7 @@
 
 use p9_core::constants::*;
 use p9_core::initial_conditions::giant_planets;
+use p9_core::units::{au, degrees, earth_masses, radians, Angle, Length, Mass};
 
 use crate::secular_hamiltonian::{integrate_obliquity, SecularParams, SpinOrbitState};
 
@@ -18,6 +19,27 @@ pub struct SurveyResult {
     pub required_i9: Option<f64>,
     /// Final obliquity achieved (deg)
     pub final_obliquity_deg: f64,
+}
+
+impl SurveyResult {
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Planet Nine mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Planet Nine semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a9)
+    }
+    /// Required Planet Nine inclination as an [`Angle`], if a solution exists.
+    pub fn required_inclination(&self) -> Option<Angle> {
+        self.required_i9.map(radians)
+    }
+    /// Final achieved solar obliquity as an [`Angle`].
+    pub fn final_obliquity(&self) -> Angle {
+        degrees(self.final_obliquity_deg)
+    }
 }
 
 /// Find the Planet Nine inclination that produces a target obliquity.
@@ -165,6 +187,32 @@ pub fn quick_survey() -> Vec<SurveyResult> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::{degree, radian};
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn typed_survey_accessors_match_f64_fields() {
+        let r = SurveyResult {
+            mass_earth: 10.0,
+            a9: 700.0,
+            e9: 0.6,
+            required_i9: Some(20.0 * DEG2RAD),
+            final_obliquity_deg: 6.0,
+        };
+        assert_relative_eq!(
+            r.mass().get::<kilogram>(),
+            r.mass_earth * p9_core::units::EARTH_MASS_KG,
+            epsilon = 1.0
+        );
+        assert_relative_eq!(r.semi_major_axis().get::<astronomical_unit>(), r.a9);
+        assert_relative_eq!(
+            r.required_inclination().unwrap().get::<radian>(),
+            r.required_i9.unwrap()
+        );
+        assert_relative_eq!(r.final_obliquity().get::<degree>(), r.final_obliquity_deg);
+    }
 
     #[test]
     fn test_quick_survey_runs() {

@@ -6,6 +6,8 @@
 
 use std::f64::consts::PI;
 
+use p9_core::units::{au, Length};
+
 use crate::precession::{self, published, PlanetNine};
 
 /// Lai Eq. (19) auxiliary quantities for a target ΔΩ (the relative longitude
@@ -38,6 +40,11 @@ impl NodeGeometry {
 pub fn required_a_tilde(mass_earth: f64, theta_p_rad: f64, geom: &NodeGeometry) -> f64 {
     let inner = (mass_earth / 10.0) * (2.0 * theta_p_rad).sin() / (geom.theta_sl_hat * geom.f);
     published::A_TILDE_PREFACTOR_AU * inner.powf(1.0 / 3.0)
+}
+
+/// [`required_a_tilde`] as a typed [`Length`].
+pub fn required_a_tilde_typed(mass_earth: f64, theta_p_rad: f64, geom: &NodeGeometry) -> Length {
+    au(required_a_tilde(mass_earth, theta_p_rad, geom))
 }
 
 /// Brute-force inversion of the full analytic theory: find the effective
@@ -108,7 +115,18 @@ pub fn eq18_rhs_l_over_lp(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::constants::DEG2RAD;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_required_a_tilde_matches_f64() {
+        let geom = NodeGeometry::new(6.0, 45.0 * DEG2RAD);
+        assert_relative_eq!(
+            required_a_tilde_typed(10.0, 20.0 * DEG2RAD, &geom).get::<astronomical_unit>(),
+            required_a_tilde(10.0, 20.0 * DEG2RAD, &geom)
+        );
+    }
 
     #[test]
     fn eq17_prefactor_lands_in_published_band() {
