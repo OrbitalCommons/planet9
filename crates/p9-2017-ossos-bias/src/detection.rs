@@ -32,6 +32,7 @@ use p9_core::analysis::surveys::limiting_magnitude;
 use p9_core::constants::{DEG2RAD, GM_SUN, TWO_PI};
 use p9_core::coords::sky::ecliptic_vec_declination;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{radians, Angle};
 
 use crate::population::SyntheticEtno;
 
@@ -45,6 +46,16 @@ pub struct LongitudeWindow {
 }
 
 impl LongitudeWindow {
+    /// Window centre as a dimension-checked [`Angle`].
+    pub fn center_typed(&self) -> Angle {
+        radians(self.center)
+    }
+
+    /// Half-width as a dimension-checked [`Angle`].
+    pub fn half_width_typed(&self) -> Angle {
+        radians(self.half_width)
+    }
+
     fn contains(&self, lon: f64) -> bool {
         let mut d = (lon - self.center).rem_euclid(TWO_PI);
         if d > std::f64::consts::PI {
@@ -67,6 +78,18 @@ pub struct SurveyModel {
     pub ecliptic_lat_band: f64,
     /// Covered discovery-longitude windows in ecliptic longitude.
     pub windows: Vec<LongitudeWindow>,
+}
+
+impl SurveyModel {
+    /// Declination floor as a dimension-checked [`Angle`].
+    pub fn dec_min_typed(&self) -> Angle {
+        radians(self.dec_min)
+    }
+
+    /// Ecliptic-latitude half-band as a dimension-checked [`Angle`].
+    pub fn ecliptic_lat_band_typed(&self) -> Angle {
+        radians(self.ecliptic_lat_band)
+    }
 }
 
 impl Default for SurveyModel {
@@ -171,8 +194,30 @@ pub fn detected_subsample(pop: &[SyntheticEtno], model: &SurveyModel) -> Vec<Syn
 mod tests {
     use super::*;
     use crate::population::{generate_population, PopulationParams};
+    use approx::assert_relative_eq;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+
+    #[test]
+    fn typed_survey_angles_match_f64() {
+        let m = SurveyModel::default();
+        assert_relative_eq!(
+            (m.dec_min_typed() / radians(1.0)).value,
+            m.dec_min,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (m.ecliptic_lat_band_typed() / radians(1.0)).value,
+            m.ecliptic_lat_band,
+            max_relative = 1e-12
+        );
+        let w = &m.windows[0];
+        assert_relative_eq!(
+            (w.half_width_typed() / radians(1.0)).value,
+            w.half_width,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_faint_distant_object_rejected() {

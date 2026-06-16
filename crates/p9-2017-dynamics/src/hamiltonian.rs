@@ -25,6 +25,10 @@ use p9_core::constants::{
     EARTH_MASS_SOLAR, GM_SUN, MASS_JUPITER_SOLAR, MASS_NEPTUNE_SOLAR, MASS_SATURN_SOLAR,
     MASS_URANUS_SOLAR, TWO_PI, YEAR_DAYS,
 };
+use p9_core::units::{
+    au, days, gm_from_au3_day2, radians, solar_masses, AngularVelocity, GravitationalParameter,
+    Length, Mass,
+};
 use serde::{Deserialize, Serialize};
 
 /// Parameters for the doubly-averaged secular Hamiltonian.
@@ -69,6 +73,28 @@ impl SecularHamiltonianParams {
     /// Planet Nine GM in AU³/day².
     pub fn gm9(&self) -> f64 {
         self.m9_solar * GM_SUN
+    }
+
+    /// Planet Nine semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a9)
+    }
+
+    /// Planet Nine mass as a dimension-checked [`Mass`] (stored in solar masses).
+    pub fn mass(&self) -> Mass {
+        solar_masses(self.m9_solar)
+    }
+
+    /// Planet Nine gravitational parameter as a dimension-checked
+    /// [`GravitationalParameter`] (AU³/day² source).
+    pub fn gm9_typed(&self) -> GravitationalParameter {
+        gm_from_au3_day2(self.gm9())
+    }
+
+    /// Planet Nine apsidal precession rate as a dimension-checked
+    /// [`AngularVelocity`] (the stored value is in rad/day).
+    pub fn precession_rate_9_typed(&self) -> AngularVelocity {
+        (radians(self.precession_rate_9) / days(1.0)).into()
     }
 }
 
@@ -175,7 +201,28 @@ pub fn high_inclination_action(e: f64, i: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::constants::DEG2RAD;
+
+    #[test]
+    fn typed_secular_param_accessors_match_f64() {
+        let p = SecularHamiltonianParams::default_paper();
+        assert_relative_eq!(
+            (p.semi_major_axis() / au(1.0)).value,
+            p.a9,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.mass() / solar_masses(1.0)).value,
+            p.m9_solar,
+            max_relative = 1e-9
+        );
+        assert_relative_eq!(
+            (p.gm9_typed() / gm_from_au3_day2(1.0)).value,
+            p.gm9(),
+            max_relative = 1e-9
+        );
+    }
 
     #[test]
     fn test_j2_effective_positive() {

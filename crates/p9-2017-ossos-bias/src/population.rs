@@ -28,6 +28,7 @@
 
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::types::OrbitalElements;
+use p9_core::units::{au, radians, Angle, Length};
 use rand::Rng;
 use rand_distr::{Distribution, Exp};
 
@@ -44,6 +45,11 @@ impl SyntheticEtno {
     pub fn longitude_of_perihelion(&self) -> f64 {
         (self.elements.omega_big + self.elements.omega).rem_euclid(TWO_PI)
     }
+
+    /// Longitude of perihelion as a dimension-checked [`Angle`].
+    pub fn longitude_of_perihelion_typed(&self) -> Angle {
+        radians(self.longitude_of_perihelion())
+    }
 }
 
 /// Parameters of the intrinsic population.
@@ -59,6 +65,23 @@ pub struct PopulationParams {
     pub h_scale: f64,
     /// Bright-end cutoff of the H distribution.
     pub h_min: f64,
+}
+
+impl PopulationParams {
+    /// Semi-major-axis range as dimension-checked [`Length`]s.
+    pub fn a_range_typed(&self) -> (Length, Length) {
+        (au(self.a_range.0), au(self.a_range.1))
+    }
+
+    /// Perihelion-distance range as dimension-checked [`Length`]s.
+    pub fn q_range_typed(&self) -> (Length, Length) {
+        (au(self.q_range.0), au(self.q_range.1))
+    }
+
+    /// Inclination-distribution 1σ as a dimension-checked [`Angle`].
+    pub fn i_sigma_typed(&self) -> Angle {
+        radians(self.i_sigma)
+    }
 }
 
 impl Default for PopulationParams {
@@ -125,9 +148,32 @@ pub fn longitudes_of_perihelion(pop: &[SyntheticEtno]) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+
+    #[test]
+    fn typed_population_accessors_match_f64() {
+        let p = PopulationParams::default();
+        assert_relative_eq!(
+            (p.i_sigma_typed() / radians(1.0)).value,
+            p.i_sigma,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.a_range_typed().1 / au(1.0)).value,
+            p.a_range.1,
+            max_relative = 1e-12
+        );
+        let mut rng = StdRng::seed_from_u64(7);
+        let o = generate_population(1, &p, &mut rng)[0];
+        assert_relative_eq!(
+            (o.longitude_of_perihelion_typed() / radians(1.0)).value,
+            o.longitude_of_perihelion(),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_population_within_ranges() {

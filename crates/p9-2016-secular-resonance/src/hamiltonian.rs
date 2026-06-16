@@ -29,6 +29,7 @@
 use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::{GM_SUN, TWO_PI};
 use p9_core::types::P9Params;
+use p9_core::units::{au, gm_from_au3_day2, GravitationalParameter, Length};
 
 /// A coplanar secular model: a fixed test-particle semi-major axis under a
 /// fixed (eccentric) Planet Nine. The perturber defines the reference frame,
@@ -67,6 +68,22 @@ impl SecularModel {
     pub fn with_gm_p(mut self, gm_p: f64) -> Self {
         self.gm_p = gm_p;
         self
+    }
+
+    /// Test-particle semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Planet Nine semi-major axis as a dimension-checked [`Length`].
+    pub fn perturber_semi_major_axis(&self) -> Length {
+        au(self.a_p)
+    }
+
+    /// Planet Nine gravitational parameter as a dimension-checked
+    /// [`GravitationalParameter`] (the stored value is in AU³/day²).
+    pub fn gm_p_typed(&self) -> GravitationalParameter {
+        gm_from_au3_day2(self.gm_p)
     }
 
     /// The conserved secular Hamiltonian `H(e, Δϖ)` (AU²/day², up to the
@@ -152,6 +169,26 @@ mod tests {
     use super::*;
     use crate::published;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn typed_secular_model_accessors_match_f64() {
+        let m = SecularModel::new(250.0, &published::nominal_p9());
+        assert_relative_eq!(
+            (m.semi_major_axis() / au(1.0)).value,
+            m.a,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (m.perturber_semi_major_axis() / au(1.0)).value,
+            m.a_p,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (m.gm_p_typed() / gm_from_au3_day2(1.0)).value,
+            m.gm_p,
+            max_relative = 1e-9
+        );
+    }
 
     #[test]
     fn action_is_monotone_and_invertible() {

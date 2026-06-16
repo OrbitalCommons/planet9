@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use p9_2018_wise_search::sky::galactic_latitude_deg;
 use p9_2018_wise_search::survey_model::WiseSurvey;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{au, earth_masses, Length, Mass};
 
 use crate::band::{band_magnitude, WiseBand};
 use crate::coadd::{coadd_depth, single_frame_depth};
@@ -29,6 +30,18 @@ pub struct ReferenceP9 {
     pub elements: OrbitalElements,
     pub mass_earth: f64,
     pub distance_au: f64,
+}
+
+impl ReferenceP9 {
+    /// Planet Nine mass as a dimension-checked [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Current heliocentric distance as a dimension-checked [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
 }
 
 /// Result of the coadd exclusion analysis.
@@ -99,6 +112,7 @@ pub fn compute_exclusion(
 mod tests {
     use super::*;
     use crate::band::{W1, W2};
+    use approx::assert_relative_eq;
     use p9_core::constants::DEG2RAD;
 
     /// A seeded synthetic reference population spread over mass/distance and
@@ -135,6 +149,21 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn typed_reference_accessors_match_f64() {
+        let p9 = &population(1, 2016)[0];
+        assert_relative_eq!(
+            (p9.mass() / earth_masses(1.0)).value,
+            p9.mass_earth,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p9.distance() / au(1.0)).value,
+            p9.distance_au,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

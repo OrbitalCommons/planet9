@@ -13,6 +13,7 @@ use p9_core::analysis::circular::{
 };
 use p9_core::constants::{DEG2RAD, RAD2DEG};
 use p9_core::data::etno::{Etno, BROWN_2017_SAMPLE};
+use p9_core::units::{degrees, Angle};
 
 use crate::discoveries::{clustering_subset, SHEPPARD_2016_DISCOVERIES};
 
@@ -29,6 +30,19 @@ pub struct ClusterStats {
     pub std_deg: f64,
     /// Rayleigh test p-value (vs uniformity, small-n corrected).
     pub rayleigh_p: f64,
+}
+
+impl ClusterStats {
+    /// Circular mean as a dimension-checked [`Angle`]. `None` when the
+    /// resultant vanishes (mirrors [`ClusterStats::mean_deg`]).
+    pub fn mean(&self) -> Option<Angle> {
+        self.mean_deg.map(degrees)
+    }
+
+    /// Circular standard deviation as a dimension-checked [`Angle`].
+    pub fn std(&self) -> Angle {
+        degrees(self.std_deg)
+    }
 }
 
 /// Compute the circular summary of a set of angles given in radians.
@@ -139,6 +153,21 @@ mod tests {
         }
         // The outer Oort cloud body is excluded even though its q > 35 AU.
         assert!(!names.contains(&OUTER_OORT_NAME));
+    }
+
+    #[test]
+    fn typed_cluster_stats_accessors_match_f64() {
+        let stats = headline().omega_combined;
+        assert_relative_eq!(
+            (stats.std() / degrees(1.0)).value,
+            stats.std_deg,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (stats.mean().unwrap() / degrees(1.0)).value,
+            stats.mean_deg.unwrap(),
+            max_relative = 1e-12
+        );
     }
 
     #[test]

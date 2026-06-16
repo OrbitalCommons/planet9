@@ -14,6 +14,7 @@
 //! low-order ratios.
 
 use p9_core::data::etno::{Etno, BROWN_2017_SAMPLE};
+use p9_core::units::{au, julian_year, Length, Time};
 
 /// Malhotra, Volk & Wang (2016) best-fit Planet Nine semi-major axis (AU).
 pub const MALHOTRA_2016_A9_AU: f64 = 665.0;
@@ -111,6 +112,19 @@ pub struct A9Score {
     pub residual: f64,
     /// Number of ETNOs that were interior to a9 (and so contributed).
     pub n_constraints: usize,
+}
+
+impl A9Score {
+    /// Candidate Planet Nine semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a9_au)
+    }
+
+    /// Candidate Planet Nine orbital period as a dimension-checked [`Time`]
+    /// (the stored value is in Julian years).
+    pub fn period(&self) -> Time {
+        self.period_yr * julian_year()
+    }
 }
 
 /// Score a single candidate a9 against a set of ETNO semi-major axes: the mean
@@ -306,6 +320,21 @@ mod tests {
         );
         // Every ETNO in the distant set constrained the fit.
         assert_eq!(best.n_constraints, distant_set().len());
+    }
+
+    #[test]
+    fn typed_a9_score_accessors_match_f64() {
+        let score = score_a9(665.0, &distant_set(), DEFAULT_P_MAX, DEFAULT_Q_MAX, false);
+        assert_relative_eq!(
+            (score.semi_major_axis() / au(1.0)).value,
+            score.a9_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            (score.period() / julian_year()).value,
+            score.period_yr,
+            epsilon = 1e-6
+        );
     }
 
     #[test]

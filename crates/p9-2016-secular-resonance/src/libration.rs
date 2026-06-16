@@ -15,6 +15,7 @@
 //! the stable apse librates; one launched far off-resonance circulates.
 
 use crate::portrait::ResonantHamiltonian;
+use p9_core::units::{radians, Angle};
 use std::f64::consts::PI;
 
 /// Outcome of following a resonant trajectory.
@@ -52,6 +53,16 @@ impl Trajectory {
     pub fn amplitude(&self) -> f64 {
         let (lo, hi) = self.bounds();
         0.5 * (hi - lo)
+    }
+
+    /// Libration center as a dimension-checked [`Angle`].
+    pub fn center_typed(&self) -> Angle {
+        radians(self.center())
+    }
+
+    /// Libration amplitude as a dimension-checked [`Angle`].
+    pub fn amplitude_typed(&self) -> Angle {
+        radians(self.amplitude())
     }
 
     fn bounds(&self) -> (f64, f64) {
@@ -155,6 +166,7 @@ mod tests {
     use crate::hamiltonian::SecularModel;
     use crate::portrait::{libration_island, ResonantHamiltonian};
     use crate::published;
+    use approx::assert_relative_eq;
 
     // A representative distant-ETNO semi-major axis with a robust, well-isolated
     // resonance (2015 RX245 sits at a ≈ 430 AU; 2007 TG422 at ≈ 500 AU).
@@ -180,6 +192,17 @@ mod tests {
             island.e_center,
             dt,
             steps,
+        );
+        // Typed angle accessors mirror the f64 center/amplitude.
+        assert_relative_eq!(
+            (lib.center_typed() / radians(1.0)).value,
+            lib.center(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (lib.amplitude_typed() / radians(1.0)).value,
+            lib.amplitude(),
+            max_relative = 1e-12
         );
         assert_eq!(
             lib.kind,
