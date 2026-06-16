@@ -24,6 +24,7 @@
 use p9_core::constants::{A_NEPTUNE_AU, DEG2RAD, TWO_PI};
 use p9_core::data::etno::BROWN_2017_SAMPLE;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{au, radians, Angle, Length};
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
 use serde::{Deserialize, Serialize};
@@ -70,6 +71,26 @@ impl ObservedTno {
     pub fn varpi(&self) -> f64 {
         (self.omega + self.omega_big).rem_euclid(TWO_PI)
     }
+
+    /// Semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance `q = a(1 − e)` as a dimension-checked [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
+    }
+
+    /// Inclination as a dimension-checked [`Angle`].
+    pub fn inclination_typed(&self) -> Angle {
+        radians(self.i)
+    }
+
+    /// Longitude of perihelion ϖ as a dimension-checked [`Angle`].
+    pub fn varpi_typed(&self) -> Angle {
+        radians(self.varpi())
+    }
 }
 
 /// A clone of a TNO with sampled orbital elements (all six, including the
@@ -101,6 +122,16 @@ impl TnoClone {
     /// Longitude of perihelion ϖ = ω + Ω (rad), wrapped to [0, 2π).
     pub fn varpi(&self) -> f64 {
         (self.omega + self.omega_big).rem_euclid(TWO_PI)
+    }
+
+    /// Perihelion distance `q = a(1 − e)` as a dimension-checked [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
+    }
+
+    /// Longitude of perihelion ϖ as a dimension-checked [`Angle`].
+    pub fn varpi_typed(&self) -> Angle {
+        radians(self.varpi())
     }
 
     /// Full orbital element set for integration.
@@ -207,7 +238,48 @@ fn passes_selection_ref(tno: &ObservedTno) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use rand::SeedableRng;
+    use uom::si::angle::radian;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let tno = &distant_tno_sample()[0];
+        assert_relative_eq!(
+            tno.semi_major_axis().get::<astronomical_unit>(),
+            tno.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            tno.perihelion_typed().get::<astronomical_unit>(),
+            tno.perihelion(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            tno.inclination_typed().get::<radian>(),
+            tno.i,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            tno.varpi_typed().get::<radian>(),
+            tno.varpi(),
+            epsilon = 1e-12
+        );
+
+        let mut rng = rand::rngs::StdRng::seed_from_u64(1);
+        let clone = &generate_clones(tno, 1, &mut rng)[0];
+        assert_relative_eq!(
+            clone.perihelion_typed().get::<astronomical_unit>(),
+            clone.perihelion(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            clone.varpi_typed().get::<radian>(),
+            clone.varpi(),
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn test_sample_from_vetted_table() {

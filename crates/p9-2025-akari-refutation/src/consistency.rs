@@ -45,6 +45,7 @@ use p9_core::coords::candidate_pair::{
     annual_proper_motion_circular, implied_distance_circular, transverse_rate_rad_day,
 };
 use p9_core::coords::observer::{EarthProvider, EarthState, Time, Timescale};
+use p9_core::units::{self, arcseconds, au, days, Angle, Length};
 
 /// Arcminutes per radian.
 const ARCMIN_PER_RAD: f64 = RAD2DEG * 60.0;
@@ -175,6 +176,11 @@ pub fn baseline_days() -> f64 {
     t2.tdb() - t1.tdb()
 }
 
+/// The two-epoch baseline as a dimension-checked [`units::Time`].
+pub fn baseline_duration() -> units::Time {
+    days(baseline_days())
+}
+
 /// Result of the bound-object consistency check at one assumed distance.
 #[derive(Debug, Clone)]
 pub struct ConsistencyVerdict {
@@ -192,6 +198,29 @@ pub struct ConsistencyVerdict {
     /// Whether the observed separation lies inside the bound-object
     /// envelope at all (i.e. reproducible only at the envelope extreme).
     pub within_bound_envelope: bool,
+}
+
+impl ConsistencyVerdict {
+    /// Assumed heliocentric distance as a dimension-checked [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.d_au)
+    }
+
+    /// Observed candidate separation as a dimension-checked [`Angle`].
+    pub fn observed_separation(&self) -> Angle {
+        arcseconds(self.observed_arcmin * 60.0)
+    }
+
+    /// Maximum bound-object parallax at the real epochs as an [`Angle`].
+    pub fn max_parallax(&self) -> Angle {
+        arcseconds(self.max_parallax_arcmin * 60.0)
+    }
+
+    /// Maximum bound-object total (parallax + proper motion) separation as
+    /// an [`Angle`].
+    pub fn max_bound_total(&self) -> Angle {
+        arcseconds(self.max_bound_total_arcmin * 60.0)
+    }
 }
 
 /// Run the full consistency check at distance `d_au` using Earth states from
@@ -231,8 +260,43 @@ pub fn max_circular_proper_motion(d_min: f64, _d_max: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::published;
+    use approx::assert_relative_eq;
     use p9_core::constants::YEAR_DAYS;
     use p9_core::coords::observer::CircularEarth;
+    use uom::si::angle::minute;
+    use uom::si::length::astronomical_unit;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let mut circ = CircularEarth;
+        let v = check(&mut circ, 600.0, 0.7);
+        assert_relative_eq!(
+            v.distance().get::<astronomical_unit>(),
+            v.d_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            v.observed_separation().get::<minute>(),
+            v.observed_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            v.max_parallax().get::<minute>(),
+            v.max_parallax_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            v.max_bound_total().get::<minute>(),
+            v.max_bound_total_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            baseline_duration().get::<day>(),
+            baseline_days(),
+            epsilon = 1e-9
+        );
+    }
 
     /// Earth states from the ephemeris when available, else the analytic
     /// circular-Earth fallback (the parallax budget is set by Earth's

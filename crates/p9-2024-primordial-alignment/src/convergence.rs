@@ -41,6 +41,7 @@
 use crate::precession::apsidal_precession_rate;
 use p9_core::analysis::circular::mean_resultant_length;
 use p9_core::data::etno::{Etno, BROWN_2017_SAMPLE};
+use p9_core::units::{julian_year, radians, Angle, AngularVelocity};
 
 /// Published reference: the sednoids' apsides converge near solar-system
 /// formation, ~4.5 Gyr ago (Huang & Gladman 2024).
@@ -60,6 +61,21 @@ impl Precessor {
     /// (τ ≥ 0): ϖ(−τ) = ϖ₀ − ϖ̇·τ.
     pub fn varpi_at_lookback(&self, tau_yr: f64) -> f64 {
         self.varpi0 - self.rate_rad_per_yr * tau_yr
+    }
+
+    /// Present-day longitude of perihelion ϖ₀ as a dimension-checked [`Angle`].
+    pub fn varpi0_angle(&self) -> Angle {
+        radians(self.varpi0)
+    }
+
+    /// Apsidal precession rate as a typed [`AngularVelocity`] (rad/yr storage).
+    pub fn rate(&self) -> AngularVelocity {
+        (radians(self.rate_rad_per_yr) / julian_year()).into()
+    }
+
+    /// Longitude of perihelion at look-back time `tau_yr` years as an [`Angle`].
+    pub fn varpi_at_lookback_typed(&self, tau_yr: f64) -> Angle {
+        radians(self.varpi_at_lookback(tau_yr))
     }
 }
 
@@ -159,6 +175,29 @@ pub fn primordial_convergence_epoch(age_gyr: f64, n_steps: usize) -> Convergence
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::radian;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::time::second;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let p = observed_sednoids()[0];
+        // Angle accessors read back exactly in radians.
+        assert_relative_eq!(p.varpi0_angle().get::<radian>(), p.varpi0, epsilon = 1e-12);
+        assert_relative_eq!(
+            p.varpi_at_lookback_typed(1.0e8).get::<radian>(),
+            p.varpi_at_lookback(1.0e8),
+            epsilon = 1e-9
+        );
+        // The rad/yr rate, read back in rad/s, equals the f64 rate / seconds-per-year.
+        let yr_s = julian_year().get::<second>();
+        assert_relative_eq!(
+            p.rate().get::<radian_per_second>(),
+            p.rate_rad_per_yr / yr_s,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_primordial_alignment_back_converges_at_birth_epoch() {

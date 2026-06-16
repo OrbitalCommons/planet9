@@ -15,6 +15,7 @@
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{RAD2DEG, TWO_PI};
 use p9_core::data::etno::{Etno, BROWN_2017_SAMPLE};
+use p9_core::units::{degrees, Angle};
 
 use crate::discoveries::NewDiscovery;
 
@@ -29,6 +30,13 @@ pub struct ClusteringStat {
     pub rayleigh_p: f64,
     /// Circular mean of ϖ (degrees, [0, 360)).
     pub mean_varpi_deg: f64,
+}
+
+impl ClusteringStat {
+    /// Circular mean of ϖ as a dimension-checked [`Angle`].
+    pub fn mean_varpi(&self) -> Angle {
+        degrees(self.mean_varpi_deg)
+    }
 }
 
 /// Compute R̄, the Rayleigh p-value and the circular mean ϖ for a slice of
@@ -55,6 +63,12 @@ pub fn varpi_offset_deg(object: &Etno, reference_varpi: f64) -> f64 {
     d * RAD2DEG
 }
 
+/// Angular offset of an object's ϖ from a reference longitude of perihelion as
+/// a dimension-checked [`Angle`] (the typed sibling of [`varpi_offset_deg`]).
+pub fn varpi_offset(object: &Etno, reference_varpi: f64) -> Angle {
+    degrees(varpi_offset_deg(object, reference_varpi))
+}
+
 /// Full stress analysis: baseline, +OF201, +Ammonite, +both, plus each
 /// object's ϖ offset from the baseline circular mean.
 #[derive(Debug, Clone, Copy)]
@@ -71,6 +85,18 @@ pub struct StressResult {
     pub of201_offset_deg: f64,
     /// Ammonite ϖ offset from the baseline circular mean (deg).
     pub ammonite_offset_deg: f64,
+}
+
+impl StressResult {
+    /// 2017 OF201 ϖ offset from the baseline mean as a dimension-checked [`Angle`].
+    pub fn of201_offset(&self) -> Angle {
+        degrees(self.of201_offset_deg)
+    }
+
+    /// Ammonite ϖ offset from the baseline mean as a dimension-checked [`Angle`].
+    pub fn ammonite_offset(&self) -> Angle {
+        degrees(self.ammonite_offset_deg)
+    }
 }
 
 /// Run the stress analysis on the vetted baseline sample and the two new
@@ -105,9 +131,38 @@ pub fn run_stress(of201: &NewDiscovery, ammonite: &NewDiscovery) -> StressResult
 mod tests {
     use super::*;
     use crate::discoveries::{ammonite, of201};
+    use approx::assert_relative_eq;
+    use uom::si::angle::degree;
 
     fn result() -> StressResult {
         run_stress(&of201(), &ammonite())
+    }
+
+    #[test]
+    fn typed_angles_match_deg_sources() {
+        let r = result();
+        assert_relative_eq!(
+            r.baseline.mean_varpi().get::<degree>(),
+            r.baseline.mean_varpi_deg,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            r.of201_offset().get::<degree>(),
+            r.of201_offset_deg,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            r.ammonite_offset().get::<degree>(),
+            r.ammonite_offset_deg,
+            max_relative = 1e-12
+        );
+        // The free-function typed sibling agrees with its f64 source.
+        let baseline_mean = r.baseline.mean_varpi_deg / RAD2DEG;
+        assert_relative_eq!(
+            varpi_offset(&of201().etno, baseline_mean).get::<degree>(),
+            varpi_offset_deg(&of201().etno, baseline_mean),
+            max_relative = 1e-12
+        );
     }
 
     #[test]
