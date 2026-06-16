@@ -28,6 +28,7 @@
 
 use p9_core::analysis::resonance::resonance_semi_major_axis;
 use p9_core::constants::EARTH_MASS_SOLAR;
+use p9_core::units::{au, Length};
 
 /// Dimensionless prefactor in the first-order resonance-overlap width
 /// Δa/a_p = C μ^{2/7} (circular limit). Wisdom (1980) / Duncan et al. (1989)
@@ -69,6 +70,12 @@ pub fn j_one_location(j: i64, a9_au: f64) -> f64 {
     resonance_semi_major_axis(1, j as u32, a9_au)
 }
 
+/// Interior j:1 resonance location as a typed [`Length`] (see
+/// [`j_one_location`]).
+pub fn j_one_location_typed(j: i64, a9_au: f64) -> Length {
+    au(j_one_location(j, a9_au))
+}
+
 /// Inward extent (AU) of the overlapped resonance zone from Planet Nine, for a
 /// particle of eccentricity `e`:
 ///
@@ -80,6 +87,12 @@ pub fn j_one_location(j: i64, a9_au: f64) -> f64 {
 pub fn overlap_zone_width(e: f64, a9_au: f64, m9_earth: f64) -> f64 {
     let mu = m9_earth * EARTH_MASS_SOLAR;
     OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * e.powf(0.2) * a9_au
+}
+
+/// Inward extent of the overlapped resonance zone as a typed [`Length`] (see
+/// [`overlap_zone_width`]).
+pub fn overlap_zone_width_typed(e: f64, a9_au: f64, m9_earth: f64) -> Length {
+    au(overlap_zone_width(e, a9_au, m9_earth))
 }
 
 /// Resonance-overlap parameter K at (a, e) for a Planet Nine of semi-major
@@ -211,6 +224,21 @@ mod tests {
             let core = chirikov_overlap_parameter(a, q);
             assert_relative_eq!(ours, core, max_relative = 1e-12);
         }
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        use uom::si::length::astronomical_unit;
+        assert_relative_eq!(
+            j_one_location_typed(5, A9).get::<astronomical_unit>(),
+            j_one_location(5, A9),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            overlap_zone_width_typed(0.7, A9, M9).get::<astronomical_unit>(),
+            overlap_zone_width(0.7, A9, M9),
+            max_relative = 1e-12
+        );
     }
 
     #[test]

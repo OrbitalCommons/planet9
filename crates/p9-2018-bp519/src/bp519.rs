@@ -21,6 +21,7 @@
 
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::types::OrbitalElements;
+use p9_core::units::{radians, Angle, Length};
 
 /// A labelled orbit solution for 2015 BP519.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -67,6 +68,34 @@ impl Bp519 {
     /// Longitude of perihelion ϖ = ω + Ω in radians, wrapped to [0, 2π).
     pub fn longitude_of_perihelion(&self) -> f64 {
         ((self.omega_deg + self.omega_big_deg) * DEG2RAD).rem_euclid(TWO_PI)
+    }
+
+    /// Semi-major axis as a typed [`Length`] (via the core
+    /// [`OrbitalElements`] accessor).
+    pub fn semi_major_axis(&self) -> Length {
+        self.elements().semi_major_axis()
+    }
+
+    /// Inclination as a typed [`Angle`] (via the core [`OrbitalElements`]
+    /// accessor).
+    pub fn inclination(&self) -> Angle {
+        self.elements().inclination()
+    }
+
+    /// Perihelion distance as a typed [`Length`] (see [`Self::perihelion`]).
+    pub fn perihelion_typed(&self) -> Length {
+        self.elements().perihelion_typed()
+    }
+
+    /// Aphelion distance as a typed [`Length`] (see [`Self::aphelion`]).
+    pub fn aphelion_typed(&self) -> Length {
+        self.elements().aphelion_typed()
+    }
+
+    /// Longitude of perihelion as a typed [`Angle`] (see
+    /// [`Self::longitude_of_perihelion`]).
+    pub fn longitude_of_perihelion_typed(&self) -> Angle {
+        radians(self.longitude_of_perihelion())
     }
 }
 
@@ -135,5 +164,37 @@ mod tests {
         let el = bp.elements();
         assert_relative_eq!(el.i, 54.0 * DEG2RAD, epsilon = 1e-12);
         assert_relative_eq!(el.a, 449.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        use uom::si::angle::radian;
+        use uom::si::length::astronomical_unit;
+        let bp = discovery_2018();
+        assert_relative_eq!(
+            bp.semi_major_axis().get::<astronomical_unit>(),
+            bp.a,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            bp.inclination().get::<radian>(),
+            bp.i_deg * DEG2RAD,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            bp.perihelion_typed().get::<astronomical_unit>(),
+            bp.perihelion(),
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            bp.aphelion_typed().get::<astronomical_unit>(),
+            bp.aphelion(),
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            bp.longitude_of_perihelion_typed().get::<radian>(),
+            bp.longitude_of_perihelion(),
+            epsilon = 1e-9
+        );
     }
 }

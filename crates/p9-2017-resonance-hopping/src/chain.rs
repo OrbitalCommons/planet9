@@ -44,6 +44,7 @@
 //! `tno` module and REPRODUCTION_NOTES for the honest scale caveat.
 
 use p9_core::analysis::resonance::resonance_semi_major_axis;
+use p9_core::units::{au, Length};
 
 /// Published / reference constants for Becker, Adams et al. (2017).
 pub mod published {
@@ -94,6 +95,12 @@ impl P9Resonance {
         resonance_semi_major_axis(self.q, self.p, a9_au)
     }
 
+    /// Interior resonance semimajor axis as a typed [`Length`] (see
+    /// [`Self::semi_major_axis`]).
+    pub fn semi_major_axis_typed(&self, a9_au: f64) -> Length {
+        au(self.semi_major_axis(a9_au))
+    }
+
     /// Dimensionless ratio α = a_res / a9 (< 1 for interior resonances).
     pub fn alpha(&self) -> f64 {
         (self.q as f64 / self.p as f64).powf(2.0 / 3.0)
@@ -106,6 +113,12 @@ impl P9Resonance {
         let a_res = self.semi_major_axis(a9_au);
         let strength = resonance_strength(self.alpha(), e);
         a_res * ((16.0 / 3.0) * mu * strength).sqrt()
+    }
+
+    /// Pendulum libration half-width as a typed [`Length`] (see
+    /// [`Self::libration_half_width_au`]).
+    pub fn libration_half_width(&self, a9_au: f64, mu: f64, e: f64) -> Length {
+        au(self.libration_half_width_au(a9_au, mu, e))
     }
 }
 
@@ -179,6 +192,21 @@ impl OverlapLink {
     pub fn overlaps(&self) -> bool {
         self.k >= 1.0
     }
+
+    /// Mean semimajor axis of the pair as a typed [`Length`].
+    pub fn a_mid(&self) -> Length {
+        au(self.a_mid_au)
+    }
+
+    /// Separation between the two resonance centres as a typed [`Length`].
+    pub fn separation(&self) -> Length {
+        au(self.separation_au)
+    }
+
+    /// Sum of the two libration half-widths as a typed [`Length`].
+    pub fn width_sum(&self) -> Length {
+        au(self.width_sum_au)
+    }
 }
 
 /// Build the overlap links for an ordered (increasing-a) chain.
@@ -217,8 +245,44 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::analysis::resonance::chirikov_overlap_parameter;
+    use uom::si::length::astronomical_unit;
 
     const A9: f64 = published::A9_AU;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let res = P9Resonance::new(5, 4);
+        let mu = mass_ratio(published::M9_EARTH);
+        assert_relative_eq!(
+            res.semi_major_axis_typed(A9).get::<astronomical_unit>(),
+            res.semi_major_axis(A9),
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            res.libration_half_width(A9, mu, 0.9)
+                .get::<astronomical_unit>(),
+            res.libration_half_width_au(A9, mu, 0.9),
+            epsilon = 1e-9
+        );
+
+        let chain = first_order_chain(2, 20);
+        let link = overlap_profile(&chain, A9, mu, published::TNO_E)[0];
+        assert_relative_eq!(
+            link.a_mid().get::<astronomical_unit>(),
+            link.a_mid_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            link.separation().get::<astronomical_unit>(),
+            link.separation_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            link.width_sum().get::<astronomical_unit>(),
+            link.width_sum_au,
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn resonance_locations_match_kepler_relation() {

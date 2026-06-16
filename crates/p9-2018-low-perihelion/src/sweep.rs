@@ -10,6 +10,7 @@
 
 use crate::confinement::{analyze, Confinement};
 use crate::reference::{E9_SWEEP_HI, E9_SWEEP_LO};
+use p9_core::units::{au, Length};
 
 /// One row of the q9 sweep.
 #[derive(Debug, Clone, Copy)]
@@ -17,6 +18,13 @@ pub struct SweepRow {
     pub e9: f64,
     pub q9_au: f64,
     pub confinement: Confinement,
+}
+
+impl SweepRow {
+    /// Planet Nine perihelion q9 as a typed [`Length`] (see [`Self::q9_au`]).
+    pub fn q9(&self) -> Length {
+        au(self.q9_au)
+    }
 }
 
 /// Sweep e9 ∈ [E9_SWEEP_LO, E9_SWEEP_HI] at fixed `a9` (so q9 = a9(1−e9)
@@ -54,6 +62,15 @@ mod tests {
 
     fn run() -> Vec<SweepRow> {
         sweep_q9(TEST_ETNO_A_AU, BB_A9_AU, P9_MASS_EARTH, 7)
+    }
+
+    #[test]
+    fn typed_q9_matches_f64_source() {
+        use uom::si::length::astronomical_unit;
+        let rows = run();
+        for r in &rows {
+            assert!((r.q9().get::<astronomical_unit>() - r.q9_au).abs() < 1e-9);
+        }
     }
 
     #[test]

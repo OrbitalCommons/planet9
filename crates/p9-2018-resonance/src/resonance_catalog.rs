@@ -19,6 +19,7 @@
 use p9_core::analysis::resonance as core_resonance;
 use p9_core::constants::TWO_PI;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{au, Length};
 
 /// A mean-motion resonance specification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -43,6 +44,12 @@ impl Resonance {
     /// a_res = a_p9 * (q/p)^(2/3)
     pub fn semimajor_axis(&self, a_p9: f64) -> f64 {
         a_p9 * self.period_ratio().powf(2.0 / 3.0)
+    }
+
+    /// Resonance semi-major axis as a typed [`Length`] (see
+    /// [`Self::semimajor_axis`]).
+    pub fn semimajor_axis_typed(&self, a_p9: f64) -> Length {
+        au(self.semimajor_axis(a_p9))
     }
 
     /// Whether this is an N/1 period ratio (integer period ratio, p=1).
@@ -244,6 +251,18 @@ mod tests {
         let a = res.semimajor_axis(700.0);
         // 2:1 → a = 700 * (1/2)^(2/3) ≈ 441
         assert!((a - 441.0).abs() < 1.0, "2:1 at {:.1} AU", a);
+    }
+
+    #[test]
+    fn typed_semimajor_axis_matches_f64_source() {
+        use uom::si::length::astronomical_unit;
+        let res = Resonance::new(2, 1);
+        assert!(
+            (res.semimajor_axis_typed(700.0).get::<astronomical_unit>()
+                - res.semimajor_axis(700.0))
+            .abs()
+                < 1e-9
+        );
     }
 
     #[test]

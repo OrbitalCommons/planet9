@@ -44,6 +44,7 @@ use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN};
 use p9_core::forces::j2_secular::combined_j2_jsu;
 use p9_core::types::P9Params;
+use p9_core::units::{au, days, radians, AngularVelocity, Length};
 use std::f64::consts::PI;
 
 /// Nominal Planet Nine for the Li et al. (2018) coplanar study: 10 M⊕,
@@ -127,6 +128,12 @@ pub fn free_precession_rate(a: f64, e: f64) -> f64 {
     // dϖ/dt = +(√(1−e²)/(n a² e)) · ∂R/∂e with the disturbing function R = −H,
     // so the giants' apsidal precession comes out prograde (> 0).
     -(1.0 - e * e).sqrt() / (n * a * a * e) * dh
+}
+
+/// Free (giants-only) apsidal precession rate as a typed [`AngularVelocity`]
+/// (see [`free_precession_rate`], in rad/day).
+pub fn free_precession_rate_typed(a: f64, e: f64) -> AngularVelocity {
+    (radians(free_precession_rate(a, e)) / days(1.0)).into()
 }
 
 /// The linear secular coefficients `(B, A)` of the eccentricity-vector
@@ -256,6 +263,12 @@ pub fn critical_semimajor_axis(p9: &P9Params, a_lo: f64, a_hi: f64) -> Option<f6
     Some(0.5 * (lo + hi))
 }
 
+/// Critical semi-major axis as a typed [`Length`] (see
+/// [`critical_semimajor_axis`]).
+pub fn critical_semimajor_axis_typed(p9: &P9Params, a_lo: f64, a_hi: f64) -> Option<Length> {
+    critical_semimajor_axis(p9, a_lo, a_hi).map(au)
+}
+
 /// Analytic-vs-numerical cross-check helper: the secular apsidal precession
 /// rate from the giants' J2 term computed by finite difference of the p9-core
 /// J2 energy (`free_precession_rate`) against the closed-form
@@ -276,6 +289,35 @@ pub fn precession_cross_check(a: f64, e: f64) -> (f64, f64) {
 mod tests {
     use super::*;
     use p9_core::analysis::secular::coplanar_quadrupole;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        use approx::assert_relative_eq;
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::length::astronomical_unit;
+        use uom::si::time::second;
+
+        // The typed rate stores rad/s; convert back to rad/day to compare with
+        // the f64 source (which is in rad/day).
+        let seconds_per_day = days(1.0).get::<second>();
+        let rate = free_precession_rate(250.0, 0.2);
+        let typed = free_precession_rate_typed(250.0, 0.2);
+        assert_relative_eq!(
+            typed.get::<radian_per_second>() * seconds_per_day,
+            rate,
+            max_relative = 1e-9
+        );
+
+        let p9 = nominal_p9();
+        if let Some(a_crit) = critical_semimajor_axis(&p9, 50.0, 400.0) {
+            let typed_a = critical_semimajor_axis_typed(&p9, 50.0, 400.0).unwrap();
+            assert_relative_eq!(
+                typed_a.get::<astronomical_unit>(),
+                a_crit,
+                max_relative = 1e-9
+            );
+        }
+    }
 
     /// The giants' J2 secular precession computed by finite-differencing the
     /// p9-core J2 energy must match the classical closed form (3/2) n J2 (R/a)²

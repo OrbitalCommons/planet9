@@ -24,6 +24,7 @@ use p9_core::forces::ExtraForce;
 use p9_core::initial_conditions::scattered_disk::{generate_scattered_disk, ScatteredDiskConfig};
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::*;
+use p9_core::units::{au, radians, Angle, Length};
 
 use crate::resonance_catalog::{
     extended_catalog, is_librating, resonant_angle_from_angles, Resonance,
@@ -109,6 +110,23 @@ pub struct AngleSample {
     pub varpi: f64,
     /// Osculating semi-major axis (AU)
     pub a: f64,
+}
+
+impl AngleSample {
+    /// Mean longitude λ as a typed [`Angle`] (see [`Self::lambda`]).
+    pub fn mean_longitude(&self) -> Angle {
+        radians(self.lambda)
+    }
+
+    /// Longitude of perihelion ϖ as a typed [`Angle`] (see [`Self::varpi`]).
+    pub fn longitude_of_perihelion(&self) -> Angle {
+        radians(self.varpi)
+    }
+
+    /// Osculating semi-major axis as a typed [`Length`] (see [`Self::a`]).
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
 }
 
 /// Result of one planar run: final elements plus the recorded angle series
@@ -391,6 +409,20 @@ pub struct ResonanceTypeStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn typed_angle_sample_accessors_match_f64() {
+        use uom::si::angle::radian;
+        use uom::si::length::astronomical_unit;
+        let s = AngleSample {
+            lambda: 1.23,
+            varpi: 2.34,
+            a: 345.6,
+        };
+        assert!((s.mean_longitude().get::<radian>() - s.lambda).abs() < 1e-9);
+        assert!((s.longitude_of_perihelion().get::<radian>() - s.varpi).abs() < 1e-9);
+        assert!((s.semi_major_axis().get::<astronomical_unit>() - s.a).abs() < 1e-9);
+    }
 
     #[test]
     fn test_config_for_eccentricity() {

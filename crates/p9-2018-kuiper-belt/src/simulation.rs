@@ -23,6 +23,7 @@ use p9_core::initial_conditions::planets;
 use p9_core::initial_conditions::scattered_disk::{generate_scattered_disk, ScatteredDiskConfig};
 use p9_core::integrator::hybrid::hybrid_step;
 use p9_core::types::*;
+use p9_core::units::{days, Time};
 
 /// Configuration for the Kuiper Belt generation simulation.
 #[derive(Debug, Clone)]
@@ -118,6 +119,13 @@ pub struct KbSnapshot {
     pub elements: Vec<Option<OrbitalElements>>,
     pub active_count: usize,
     pub total_count: usize,
+}
+
+impl KbSnapshot {
+    /// Snapshot epoch as a typed [`Time`] (see [`Self::t`], in days).
+    pub fn time(&self) -> Time {
+        days(self.t)
+    }
 }
 
 /// Result of the full simulation.
@@ -383,6 +391,18 @@ mod tests {
                 assert!((-PI..=PI).contains(&dv));
             }
         }
+    }
+
+    #[test]
+    fn typed_snapshot_time_matches_days() {
+        use uom::si::time::day;
+        let snapshot = KbSnapshot {
+            t: 1234.5,
+            elements: vec![],
+            active_count: 0,
+            total_count: 0,
+        };
+        assert!((snapshot.time().get::<day>() - snapshot.t).abs() < 1e-9);
     }
 
     #[test]

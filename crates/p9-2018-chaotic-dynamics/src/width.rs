@@ -15,6 +15,7 @@
 use p9_core::analysis::hansen::hansen_coefficient;
 use p9_core::analysis::resonance::resonance_semi_major_axis;
 use p9_core::constants::EARTH_MASS_SOLAR;
+use p9_core::units::{au, Length};
 
 /// Quadrupole-limit pendulum half-width (AU) of the interior j:1 resonance at
 /// particle eccentricity `e`, for a Planet Nine of mass `m9_earth` (Earth
@@ -35,9 +36,20 @@ pub fn libration_half_width(j: i64, e: f64, m9_earth: f64, a9_au: f64, _e9: f64)
     a_j * ((16.0 / 3.0) * m9_solar * alpha.powi(j as i32 + 1) * x).sqrt()
 }
 
+/// Quadrupole-limit pendulum half-width as a typed [`Length`] (see
+/// [`libration_half_width`]).
+pub fn libration_half_width_typed(j: i64, e: f64, m9_earth: f64, a9_au: f64, e9: f64) -> Length {
+    au(libration_half_width(j, e, m9_earth, a9_au, e9))
+}
+
 /// Full libration width (AU) — twice the half-width — of the j:1 resonance.
 pub fn libration_width(j: i64, e: f64, m9_earth: f64, a9_au: f64, e9: f64) -> f64 {
     2.0 * libration_half_width(j, e, m9_earth, a9_au, e9)
+}
+
+/// Full libration width as a typed [`Length`] (see [`libration_width`]).
+pub fn libration_width_typed(j: i64, e: f64, m9_earth: f64, a9_au: f64, e9: f64) -> Length {
+    au(libration_width(j, e, m9_earth, a9_au, e9))
 }
 
 /// Libration half-width as a function of mass over a list of Planet Nine
@@ -82,6 +94,21 @@ mod tests {
         let w2 = libration_half_width(3, 0.7, 40.0, A9, E9);
         // 4x mass -> 2x width.
         assert_relative_eq!(w2 / w1, 2.0, max_relative = 1e-6);
+    }
+
+    #[test]
+    fn typed_width_accessors_match_f64_sources() {
+        use uom::si::length::astronomical_unit;
+        assert_relative_eq!(
+            libration_half_width_typed(3, 0.7, 10.0, A9, E9).get::<astronomical_unit>(),
+            libration_half_width(3, 0.7, 10.0, A9, E9),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            libration_width_typed(3, 0.7, 10.0, A9, E9).get::<astronomical_unit>(),
+            libration_width(3, 0.7, 10.0, A9, E9),
+            max_relative = 1e-12
+        );
     }
 
     #[test]

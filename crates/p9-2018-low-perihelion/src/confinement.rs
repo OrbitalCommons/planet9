@@ -43,6 +43,7 @@
 
 use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN};
+use p9_core::units::{au, radians, Angle, Length};
 use std::f64::consts::PI;
 
 /// Quadrature nodes per anomaly for the Gauss-ring average (n² evaluations).
@@ -101,6 +102,17 @@ impl Confinement {
     /// island exists AND a real apsidal well is present.
     pub fn is_confined(&self) -> bool {
         self.libration_half_width < PI - 1e-3 && self.well_depth > 1e-6
+    }
+
+    /// Planet Nine perihelion q9 as a typed [`Length`] (see [`Self::q9_au`]).
+    pub fn q9(&self) -> Length {
+        au(self.q9_au)
+    }
+
+    /// Δϖ libration-island half-width as a typed [`Angle`] (see
+    /// [`Self::libration_half_width`]).
+    pub fn libration_half_width_angle(&self) -> Angle {
+        radians(self.libration_half_width)
     }
 }
 
@@ -264,6 +276,19 @@ mod tests {
         assert!(c.torque_amplitude > 0.0);
         assert!(c.well_depth > 0.0);
         assert_relative_eq!(c.q9_au, 280.0, epsilon = 1e-9);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        use uom::si::angle::radian;
+        use uom::si::length::astronomical_unit;
+        let c = analyze(TEST_ETNO_A_AU, BB_A9_AU, BB_E9, P9_MASS_EARTH);
+        assert_relative_eq!(c.q9().get::<astronomical_unit>(), c.q9_au, epsilon = 1e-9);
+        assert_relative_eq!(
+            c.libration_half_width_angle().get::<radian>(),
+            c.libration_half_width,
+            epsilon = 1e-9
+        );
     }
 
     #[test]
