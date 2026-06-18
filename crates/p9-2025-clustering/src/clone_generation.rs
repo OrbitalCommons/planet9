@@ -399,6 +399,11 @@ mod tests {
         let clone = &generate_clones(tno, 1, &mut rng)[0];
         let elem = clone.elements();
         assert!((elem.a - clone.a).abs() < 1e-12);
-        assert!((elem.perihelion() - clone.perihelion()).abs() < 1e-9);
+        assert!(
+            (elem.perihelion_typed().get::<astronomical_unit>()
+                - clone.perihelion_typed().get::<astronomical_unit>())
+            .abs()
+                < 1e-9
+        );
     }
 }

@@ -182,6 +182,7 @@ pub fn paper_sample_a230() -> Vec<DistantKbo> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uom::si::length::astronomical_unit;
 
     #[test]
     fn test_sample_size() {
@@ -207,7 +208,7 @@ mod tests {
     #[test]
     fn test_sample_cut_q_above_30() {
         for kbo in paper_sample_a230() {
-            let q = kbo.elements.perihelion();
+            let q = kbo.elements.perihelion_typed().get::<astronomical_unit>();
             assert!(q > 30.0, "{} has q = {:.1} AU, expected > 30", kbo.name, q);
         }
     }
@@ -218,9 +219,9 @@ mod tests {
         let fe72 = kbos.iter().find(|k| k.name == "2014 FE72").unwrap();
         assert!((fe72.elements.e - 0.983).abs() < 1e-12);
         assert!(
-            (fe72.elements.perihelion() - 36.0).abs() < 1.0,
+            (fe72.elements.perihelion_typed().get::<astronomical_unit>() - 36.0).abs() < 1.0,
             "q = {:.1}",
-            fe72.elements.perihelion()
+            fe72.elements.perihelion_typed().get::<astronomical_unit>()
         );
     }
 }

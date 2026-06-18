@@ -117,6 +117,7 @@ pub fn longitude_of_perihelion(elem: &OrbitalElements) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uom::si::length::astronomical_unit;
 
     #[test]
     fn test_six_stable_kbos() {
@@ -131,10 +132,10 @@ mod tests {
                 kbo.name
             );
             assert!(
-                kbo.elements.perihelion() > 30.0,
+                kbo.elements.perihelion_typed().get::<astronomical_unit>() > 30.0,
                 "{} q = {:.1} should be > 30 AU",
                 kbo.name,
-                kbo.elements.perihelion()
+                kbo.elements.perihelion_typed().get::<astronomical_unit>()
             );
         }
     }

@@ -152,6 +152,7 @@ mod tests {
     use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use uom::si::length::astronomical_unit;
 
     #[test]
     fn typed_population_accessors_match_f64() {
@@ -182,7 +183,7 @@ mod tests {
         let pop = generate_population(5000, &p, &mut rng);
         for o in &pop {
             assert!(o.elements.a >= p.a_range.0 && o.elements.a <= p.a_range.1);
-            let q = o.elements.perihelion();
+            let q = o.elements.perihelion_typed().get::<astronomical_unit>();
             assert!(
                 q >= p.q_range.0 - 1e-9 && q <= p.q_range.1 + 1e-9,
                 "q = {q}"

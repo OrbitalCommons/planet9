@@ -285,6 +285,7 @@ mod tests {
     use super::*;
     use crate::integrator::whm::{barycentric_energy, WhmIntegrator};
     use crate::types::SimConfig;
+    use uom::si::length::astronomical_unit;
 
     fn ephemeris_or_skip() -> Option<PlanetEphemeris> {
         match PlanetEphemeris::try_new() {
@@ -307,7 +308,7 @@ mod tests {
         ];
         for (body, (a, name)) in giant_planets_j2000().iter().zip(expected_au) {
             assert_eq!(body.name, name);
-            let r = body.state.distance();
+            let r = body.state.distance_typed().get::<astronomical_unit>();
             assert!(
                 (r - a).abs() / a < 0.06,
                 "{name} at r = {r:.2} AU, expected near {a} AU"
@@ -442,6 +443,6 @@ mod tests {
         let mut eph = PlanetEphemeris::try_new_downloading().expect("download or cache de440");
         let ts = Timescale::default();
         let bodies = eph.giant_planets_at(&ts.tdb_jd(J2000)).unwrap();
-        assert!((bodies[0].state.distance() - 5.0).abs() < 0.5);
+        assert!((bodies[0].state.distance_typed().get::<astronomical_unit>() - 5.0).abs() < 0.5);
     }
 }
