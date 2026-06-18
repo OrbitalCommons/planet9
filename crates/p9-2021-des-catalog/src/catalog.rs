@@ -41,31 +41,6 @@ pub struct DesTno {
 }
 
 impl DesTno {
-    /// Perihelion distance q = a(1 − e) in AU.
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Aphelion distance Q = a(1 + e) in AU.
-    pub fn aphelion(&self) -> f64 {
-        self.a * (1.0 + self.e)
-    }
-
-    /// Longitude of ascending node Ω (radians, wrapped to [0, 2π)).
-    pub fn node(&self) -> f64 {
-        (self.node_deg * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
-    /// Argument of perihelion ω (radians, wrapped to [0, 2π)).
-    pub fn argp(&self) -> f64 {
-        (self.argp_deg * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
-    /// Longitude of perihelion ϖ = ω + Ω (radians, wrapped to [0, 2π)).
-    pub fn varpi(&self) -> f64 {
-        ((self.argp_deg + self.node_deg) * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
     // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
 
     /// Semi-major axis as a typed [`Length`].
@@ -75,12 +50,12 @@ impl DesTno {
 
     /// Perihelion distance q = a(1 − e) as a typed [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 
     /// Aphelion distance Q = a(1 + e) as a typed [`Length`].
     pub fn aphelion_typed(&self) -> Length {
-        au(self.aphelion())
+        au(self.a * (1.0 + self.e))
     }
 
     /// Inclination as a typed [`units::Angle`].
@@ -88,19 +63,22 @@ impl DesTno {
         degrees(self.i_deg)
     }
 
-    /// Longitude of ascending node Ω as a typed [`units::Angle`].
+    /// Longitude of ascending node Ω as a typed [`units::Angle`]
+    /// (wrapped to [0, 2π)).
     pub fn node_typed(&self) -> units::Angle {
-        radians(self.node())
+        radians((self.node_deg * DEG2RAD).rem_euclid(TWO_PI))
     }
 
-    /// Argument of perihelion ω as a typed [`units::Angle`].
+    /// Argument of perihelion ω as a typed [`units::Angle`]
+    /// (wrapped to [0, 2π)).
     pub fn argp_typed(&self) -> units::Angle {
-        radians(self.argp())
+        radians((self.argp_deg * DEG2RAD).rem_euclid(TWO_PI))
     }
 
-    /// Longitude of perihelion ϖ as a typed [`units::Angle`].
+    /// Longitude of perihelion ϖ = ω + Ω as a typed [`units::Angle`]
+    /// (wrapped to [0, 2π)).
     pub fn varpi_typed(&self) -> units::Angle {
-        radians(self.varpi())
+        radians(((self.argp_deg + self.node_deg) * DEG2RAD).rem_euclid(TWO_PI))
     }
 }
 
@@ -207,11 +185,12 @@ impl Angle {
 
     /// Extract this angle (radians) from an object.
     pub fn of(&self, o: &DesTno) -> f64 {
-        match self {
-            Angle::Node => o.node(),
-            Angle::ArgPeri => o.argp(),
-            Angle::Varpi => o.varpi(),
-        }
+        let a = match self {
+            Angle::Node => o.node_typed(),
+            Angle::ArgPeri => o.argp_typed(),
+            Angle::Varpi => o.varpi_typed(),
+        };
+        (a / p9_core::units::radians(1.0)).value
     }
 }
 
@@ -228,12 +207,8 @@ mod tests {
     fn all_objects_are_extreme_tnos() {
         for o in &DES_EXTREME_TNOS {
             assert!(o.a > 150.0, "{}: a = {}", o.name, o.a);
-            assert!(
-                o.perihelion() > 30.0,
-                "{}: q = {:.1}",
-                o.name,
-                o.perihelion()
-            );
+            let q = (o.perihelion_typed() / au(1.0)).value;
+            assert!(q > 30.0, "{}: q = {:.1}", o.name, q);
         }
     }
 
@@ -245,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn typed_accessors_match_f64() {
+    fn typed_accessors_match_formulas() {
         use approx::assert_relative_eq;
         use uom::si::angle::{degree, radian};
         use uom::si::length::astronomical_unit;
@@ -258,18 +233,30 @@ mod tests {
         );
         assert_relative_eq!(
             o.perihelion_typed().get::<astronomical_unit>(),
-            o.perihelion(),
+            o.a * (1.0 - o.e),
             epsilon = 1e-12
         );
         assert_relative_eq!(
             o.aphelion_typed().get::<astronomical_unit>(),
-            o.aphelion(),
+            o.a * (1.0 + o.e),
             epsilon = 1e-12
         );
         assert_relative_eq!(o.inclination().get::<degree>(), o.i_deg, epsilon = 1e-12);
-        assert_relative_eq!(o.node_typed().get::<radian>(), o.node(), epsilon = 1e-12);
-        assert_relative_eq!(o.argp_typed().get::<radian>(), o.argp(), epsilon = 1e-12);
-        assert_relative_eq!(o.varpi_typed().get::<radian>(), o.varpi(), epsilon = 1e-12);
+        assert_relative_eq!(
+            o.node_typed().get::<radian>(),
+            (o.node_deg * DEG2RAD).rem_euclid(TWO_PI),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.argp_typed().get::<radian>(),
+            (o.argp_deg * DEG2RAD).rem_euclid(TWO_PI),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.varpi_typed().get::<radian>(),
+            ((o.argp_deg + o.node_deg) * DEG2RAD).rem_euclid(TWO_PI),
+            epsilon = 1e-12
+        );
     }
 
     #[test]
@@ -279,7 +266,8 @@ mod tests {
             .iter()
             .find(|o| o.name == "2013 RA109")
             .unwrap();
-        let varpi_deg = o.varpi() * p9_core::constants::RAD2DEG;
+        let varpi_rad = (o.varpi_typed() / radians(1.0)).value;
+        let varpi_deg = varpi_rad * p9_core::constants::RAD2DEG;
         assert!((varpi_deg - 7.70).abs() < 0.05, "varpi = {varpi_deg:.2}");
     }
 }

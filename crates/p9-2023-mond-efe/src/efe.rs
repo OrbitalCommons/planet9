@@ -59,28 +59,21 @@ pub fn galactic_center_ecliptic() -> Vector3<f64> {
     sky::ecliptic_to_galactic_matrix().row(0).transpose()
 }
 
-/// Ecliptic longitude (degrees, in [0, 360)) of the galactic-center direction.
-pub fn galactic_center_ecliptic_lon_deg() -> f64 {
-    let n = galactic_center_ecliptic();
-    n.y.atan2(n.x)
-        .rem_euclid(std::f64::consts::TAU)
-        .to_degrees()
-}
-
-/// Ecliptic latitude (degrees) of the galactic-center direction.
-pub fn galactic_center_ecliptic_lat_deg() -> f64 {
-    let n = galactic_center_ecliptic();
-    (n.z / n.norm()).asin().to_degrees()
-}
-
-/// Ecliptic longitude of the galactic-center direction as a typed [`Angle`].
+/// Ecliptic longitude (in [0, 360)) of the galactic-center direction as a typed
+/// [`Angle`].
 pub fn galactic_center_ecliptic_lon() -> Angle {
-    degrees(galactic_center_ecliptic_lon_deg())
+    let n = galactic_center_ecliptic();
+    degrees(
+        n.y.atan2(n.x)
+            .rem_euclid(std::f64::consts::TAU)
+            .to_degrees(),
+    )
 }
 
 /// Ecliptic latitude of the galactic-center direction as a typed [`Angle`].
 pub fn galactic_center_ecliptic_lat() -> Angle {
-    degrees(galactic_center_ecliptic_lat_deg())
+    let n = galactic_center_ecliptic();
+    degrees((n.z / n.norm()).asin().to_degrees())
 }
 
 /// EFE quadrupole perturbing potential per unit mass (AU²/day²) at a
@@ -112,16 +105,22 @@ mod tests {
     use p9_core::coords::sky;
 
     #[test]
-    fn typed_galactic_center_angles_match_f64() {
+    fn typed_galactic_center_angles_match_formula() {
         use uom::si::angle::degree;
+        let n = galactic_center_ecliptic();
+        let lon_deg =
+            n.y.atan2(n.x)
+                .rem_euclid(std::f64::consts::TAU)
+                .to_degrees();
+        let lat_deg = (n.z / n.norm()).asin().to_degrees();
         assert_relative_eq!(
             galactic_center_ecliptic_lon().get::<degree>(),
-            galactic_center_ecliptic_lon_deg(),
+            lon_deg,
             epsilon = 1e-12
         );
         assert_relative_eq!(
             galactic_center_ecliptic_lat().get::<degree>(),
-            galactic_center_ecliptic_lat_deg(),
+            lat_deg,
             epsilon = 1e-12
         );
     }
@@ -139,11 +138,12 @@ mod tests {
 
     #[test]
     fn test_galactic_center_ecliptic_longitude_matches_reference() {
+        use uom::si::angle::degree;
         // Sgr A* lies near ecliptic longitude ~267°; pin the computed value.
-        let lon = galactic_center_ecliptic_lon_deg();
+        let lon = galactic_center_ecliptic_lon().get::<degree>();
         assert_relative_eq!(lon, GALACTIC_CENTER_ECLIPTIC_LON_DEG_REF, epsilon = 1.0);
         // Galactic center is well south of the ecliptic (β ≈ −5.5°).
-        assert!(galactic_center_ecliptic_lat_deg() < 0.0);
+        assert!(galactic_center_ecliptic_lat().get::<degree>() < 0.0);
     }
 
     #[test]

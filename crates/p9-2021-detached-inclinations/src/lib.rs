@@ -125,15 +125,19 @@ mod tests {
         let p9 = nominal_inclined_p9();
         let a_mid = 0.5 * (cfg.a_min + cfg.a_max);
 
+        use p9_core::units::radians;
+        let forced_rad = |p: &DetachedParticle| {
+            (forcing::forced_inclination_typed(p.a, p.e, p.i_free, &p9) / radians(1.0)).value
+        };
         let inner: Vec<f64> = pop
             .iter()
             .filter(|p| p.a < a_mid)
-            .map(|p| forcing::forced_inclination(p.a, p.e, p.i_free, &p9))
+            .map(|p| forced_rad(p))
             .collect();
         let outer: Vec<f64> = pop
             .iter()
             .filter(|p| p.a >= a_mid)
-            .map(|p| forcing::forced_inclination(p.a, p.e, p.i_free, &p9))
+            .map(|p| forced_rad(p))
             .collect();
 
         let mean_inner = mean(&inner) * RAD2DEG;

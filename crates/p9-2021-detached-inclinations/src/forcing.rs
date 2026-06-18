@@ -50,7 +50,7 @@ use p9_core::units::{julian_year, radians, Angle, AngularVelocity};
 ///
 /// Returned as a positive magnitude (a precession *rate*); the forced-
 /// inclination ratio only depends on the relative strengths.
-pub fn giant_planet_frequency(a: f64, e: f64, i: f64) -> f64 {
+pub fn giant_planet_frequency_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
     let n = (GM_SUN / (a * a * a)).sqrt(); // rad/day
     let eta_sq = (1.0 - e * e) * (1.0 - e * e);
     let sum: f64 = giant_planets_j2000()
@@ -61,13 +61,8 @@ pub fn giant_planet_frequency(a: f64, e: f64, i: f64) -> f64 {
         })
         .sum();
     let rate_day = 0.75 * n * i.cos() / eta_sq * sum;
-    (rate_day * 365.25).abs() // rad/yr
-}
-
-/// Giant-planet nodal precession frequency as a typed [`AngularVelocity`]
-/// (dimension-checked view of [`giant_planet_frequency`], rad/yr).
-pub fn giant_planet_frequency_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
-    (radians(giant_planet_frequency(a, e, i)) / julian_year()).into()
+    let rate_yr = (rate_day * 365.25).abs(); // rad/yr
+    (radians(rate_yr) / julian_year()).into()
 }
 
 /// Planet Nine secular inclination-coupling frequency `B_p9` for a test
@@ -92,20 +87,14 @@ pub fn giant_planet_frequency_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
 /// the coupling *strengthen with semi-major axis*, the central prediction. We
 /// cross-check this closed form against the p9-core quadrupole Hamiltonian's
 /// curvature in the unit tests.
-pub fn planet_nine_frequency(a: f64, p9: &P9Params) -> f64 {
+pub fn planet_nine_frequency_typed(a: f64, p9: &P9Params) -> AngularVelocity {
     let n = (GM_SUN / (a * a * a)).sqrt(); // rad/day
     let m9 = p9.mass_solar();
     let alpha = a / p9.a;
     let ecc_factor = (1.0 - p9.e * p9.e).powf(-1.5);
     let rate_day = 0.75 * n * m9 * alpha * alpha * ecc_factor;
-    rate_day * 365.25 // rad/yr
-}
-
-/// Planet Nine secular inclination-coupling frequency as a typed
-/// [`AngularVelocity`] (dimension-checked view of [`planet_nine_frequency`],
-/// rad/yr).
-pub fn planet_nine_frequency_typed(a: f64, p9: &P9Params) -> AngularVelocity {
-    (radians(planet_nine_frequency(a, p9)) / julian_year()).into()
+    let rate_yr = rate_day * 365.25; // rad/yr
+    (radians(rate_yr) / julian_year()).into()
 }
 
 /// Curvature of the p9-core quadrupole Hamiltonian in inclination at I = 0,
@@ -131,19 +120,17 @@ pub fn quadrupole_inclination_curvature(a: f64, e: f64, p9: &P9Params) -> f64 {
 /// the invariable plane. As Planet Nine's mass or inclination grows, or as the
 /// particle's semi-major axis grows (stronger α² coupling), the forced plane
 /// tilts further toward Planet Nine's plane.
-pub fn forced_inclination(a: f64, e: f64, i: f64, p9: &P9Params) -> f64 {
-    let b_gp = giant_planet_frequency(a, e, i);
-    let b_p9 = planet_nine_frequency(a, p9);
-    if b_gp + b_p9 <= 0.0 {
-        return 0.0;
-    }
-    b_p9 / (b_gp + b_p9) * p9.i
-}
-
-/// Forced inclination as a typed [`Angle`] (dimension-checked view of
-/// [`forced_inclination`]).
 pub fn forced_inclination_typed(a: f64, e: f64, i: f64, p9: &P9Params) -> Angle {
-    radians(forced_inclination(a, e, i, p9))
+    let b_gp = giant_planet_frequency_typed(a, e, i);
+    let b_p9 = planet_nine_frequency_typed(a, p9);
+    // Extract rad/yr magnitudes via the version-safe units pattern.
+    let per_yr = radians(1.0) / julian_year();
+    let b_gp_yr = (b_gp / per_yr).value;
+    let b_p9_yr = (b_p9 / per_yr).value;
+    if b_gp_yr + b_p9_yr <= 0.0 {
+        return radians(0.0);
+    }
+    radians(b_p9_yr / (b_gp_yr + b_p9_yr)) * p9.i
 }
 
 /// Forced inclination in the Planet-Nine-free Solar System: identically zero
@@ -161,8 +148,19 @@ mod tests {
         P9Params::nominal_2016() // 10 M⊕, a = 700, e = 0.6, i = 30°
     }
 
+    /// Planet Nine coupling frequency in rad/yr (version-safe extraction).
+    fn p9_freq_yr(a: f64, p9: &P9Params) -> f64 {
+        let per_yr = radians(1.0) / julian_year();
+        (planet_nine_frequency_typed(a, p9) / per_yr).value
+    }
+
+    /// Forced inclination in radians (version-safe extraction).
+    fn forced_rad(a: f64, e: f64, i: f64, p9: &P9Params) -> f64 {
+        (forced_inclination_typed(a, e, i, p9) / radians(1.0)).value
+    }
+
     #[test]
-    fn typed_forcing_accessors_match_f64() {
+    fn typed_forcing_accessors_match_inline() {
         use approx::assert_relative_eq;
         use uom::si::angle::radian;
         use uom::si::angular_velocity::radian_per_second;
@@ -172,19 +170,40 @@ mod tests {
         let p9 = nominal();
         let (a, e, i) = (300.0, 0.5, 10.0 * DEG2RAD);
 
+        // Inline the forced-inclination formula from the typed components.
+        let b_gp_yr = giant_planet_frequency_typed(a, e, i).get::<radian_per_second>() * yr_s;
+        let b_p9_yr = planet_nine_frequency_typed(a, &p9).get::<radian_per_second>() * yr_s;
+        let forced = b_p9_yr / (b_gp_yr + b_p9_yr) * p9.i;
         assert_relative_eq!(
             forced_inclination_typed(a, e, i, &p9).get::<radian>(),
-            forced_inclination(a, e, i, &p9),
+            forced,
             epsilon = 1e-12
         );
+
+        // Inline B_gp closed form: (3/4) n cos i /(1−e²)² Σ_j (m_j/M_⊙)(a_j/a)².
+        let n = (GM_SUN / (a * a * a)).sqrt();
+        let eta_sq = (1.0 - e * e) * (1.0 - e * e);
+        let sum: f64 = giant_planets_j2000()
+            .iter()
+            .map(|body| {
+                let a_j = cartesian_to_elements(&body.state, GM_SUN).a;
+                body.mass * (a_j / a).powi(2)
+            })
+            .sum();
+        let b_gp_inline = (0.75 * n * i.cos() / eta_sq * sum * 365.25).abs();
         assert_relative_eq!(
             giant_planet_frequency_typed(a, e, i).get::<radian_per_second>(),
-            giant_planet_frequency(a, e, i) / yr_s,
+            b_gp_inline / yr_s,
             max_relative = 1e-12
         );
+
+        // Inline B_p9 closed form: (3/4) n (m₉/M_⊙) (a/a₉)² /(1−e₉²)^{3/2}.
+        let alpha = a / p9.a;
+        let b_p9_inline =
+            0.75 * n * p9.mass_solar() * alpha * alpha * (1.0 - p9.e * p9.e).powf(-1.5) * 365.25;
         assert_relative_eq!(
             planet_nine_frequency_typed(a, &p9).get::<radian_per_second>(),
-            planet_nine_frequency(a, &p9) / yr_s,
+            b_p9_inline / yr_s,
             max_relative = 1e-12
         );
     }
@@ -193,8 +212,8 @@ mod tests {
     fn test_p9_frequency_scales_as_alpha_squared() {
         // Coupling ∝ (a/a₉)²: doubling a quadruples B_p9 (× the n ∝ a^{-3/2}).
         let p9 = nominal();
-        let b1 = planet_nine_frequency(250.0, &p9);
-        let b2 = planet_nine_frequency(500.0, &p9);
+        let b1 = p9_freq_yr(250.0, &p9);
+        let b2 = p9_freq_yr(500.0, &p9);
         // B_p9 ∝ a^{-3/2} · a² = a^{1/2}; ratio = sqrt(2) ≈ 1.414.
         let ratio = b2 / b1;
         assert!(
@@ -214,7 +233,7 @@ mod tests {
             mass_earth: 10.0,
             ..nominal()
         };
-        let ratio = planet_nine_frequency(300.0, &heavy) / planet_nine_frequency(300.0, &light);
+        let ratio = p9_freq_yr(300.0, &heavy) / p9_freq_yr(300.0, &light);
         assert!((ratio - 2.0).abs() < 1e-9, "mass scaling = {ratio:.4}");
     }
 
@@ -239,7 +258,7 @@ mod tests {
         // 1/(1−e₉²)^{3/2} perturber-eccentricity scaling, shared with B_p9.
         let eobs = quadrupole_inclination_curvature(300.0, 0.4, &base)
             / quadrupole_inclination_curvature(300.0, 0.4, &ecc);
-        let bobs = planet_nine_frequency(300.0, &base) / planet_nine_frequency(300.0, &ecc);
+        let bobs = p9_freq_yr(300.0, &base) / p9_freq_yr(300.0, &ecc);
         let expected = (1.0 - ecc.e * ecc.e).powf(1.5) / (1.0 - base.e * base.e).powf(1.5);
         assert!(
             (eobs - expected).abs() < 0.02 && (bobs - expected).abs() < 0.02,
@@ -262,8 +281,8 @@ mod tests {
             mass_earth: 15.0,
             ..nominal()
         };
-        let fl = forced_inclination(400.0, 0.7, 10.0 * DEG2RAD, &light);
-        let fh = forced_inclination(400.0, 0.7, 10.0 * DEG2RAD, &heavy);
+        let fl = forced_rad(400.0, 0.7, 10.0 * DEG2RAD, &light);
+        let fh = forced_rad(400.0, 0.7, 10.0 * DEG2RAD, &heavy);
         assert!(fh > fl, "forced i should grow with mass: {fl} vs {fh}");
     }
 
@@ -277,8 +296,8 @@ mod tests {
             i: 30.0 * DEG2RAD,
             ..nominal()
         };
-        let fl = forced_inclination(400.0, 0.7, 10.0 * DEG2RAD, &low);
-        let fh = forced_inclination(400.0, 0.7, 10.0 * DEG2RAD, &high);
+        let fl = forced_rad(400.0, 0.7, 10.0 * DEG2RAD, &low);
+        let fh = forced_rad(400.0, 0.7, 10.0 * DEG2RAD, &high);
         assert!(fh > fl, "forced i should grow with i9: {fl} vs {fh}");
         // Approximately linear in i9 at fixed coupling fraction.
         let ratio = fh / fl;
@@ -291,8 +310,8 @@ mod tests {
     #[test]
     fn test_forced_inclination_strengthens_with_semimajor_axis() {
         let p9 = nominal();
-        let inner = forced_inclination(250.0, 0.7, 10.0 * DEG2RAD, &p9);
-        let outer = forced_inclination(450.0, 0.7, 10.0 * DEG2RAD, &p9);
+        let inner = forced_rad(250.0, 0.7, 10.0 * DEG2RAD, &p9);
+        let outer = forced_rad(450.0, 0.7, 10.0 * DEG2RAD, &p9);
         assert!(
             outer > inner,
             "forced i should strengthen with a: {inner} (250) vs {outer} (450)"
@@ -303,7 +322,7 @@ mod tests {
     fn test_forced_inclination_bounded_by_i9() {
         // The forced plane never over-tilts past Planet Nine's own plane.
         let p9 = nominal();
-        let f = forced_inclination(500.0, 0.8, 5.0 * DEG2RAD, &p9);
+        let f = forced_rad(500.0, 0.8, 5.0 * DEG2RAD, &p9);
         assert!(f >= 0.0 && f <= p9.i, "forced i = {f} out of [0, i9]");
     }
 }

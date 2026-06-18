@@ -57,12 +57,6 @@ pub struct Precessor {
 }
 
 impl Precessor {
-    /// Longitude of perihelion at look-back time `tau_yr` years before present
-    /// (τ ≥ 0): ϖ(−τ) = ϖ₀ − ϖ̇·τ.
-    pub fn varpi_at_lookback(&self, tau_yr: f64) -> f64 {
-        self.varpi0 - self.rate_rad_per_yr * tau_yr
-    }
-
     /// Present-day longitude of perihelion ϖ₀ as a dimension-checked [`Angle`].
     pub fn varpi0_angle(&self) -> Angle {
         radians(self.varpi0)
@@ -73,9 +67,10 @@ impl Precessor {
         (radians(self.rate_rad_per_yr) / julian_year()).into()
     }
 
-    /// Longitude of perihelion at look-back time `tau_yr` years as an [`Angle`].
+    /// Longitude of perihelion at look-back time `tau_yr` years before present
+    /// (τ ≥ 0) as an [`Angle`]: ϖ(−τ) = ϖ₀ − ϖ̇·τ.
     pub fn varpi_at_lookback_typed(&self, tau_yr: f64) -> Angle {
-        radians(self.varpi_at_lookback(tau_yr))
+        radians(self.varpi0 - self.rate_rad_per_yr * tau_yr)
     }
 }
 
@@ -122,7 +117,7 @@ pub fn primordially_aligned_then_aged(varpi0: f64, age_yr: f64) -> Vec<Precessor
 pub fn resultant_at_lookback(precessors: &[Precessor], tau_yr: f64) -> f64 {
     let varpis: Vec<f64> = precessors
         .iter()
-        .map(|p| p.varpi_at_lookback(tau_yr))
+        .map(|p| (p.varpi_at_lookback_typed(tau_yr) / radians(1.0)).value)
         .collect();
     mean_resultant_length(&varpis)
 }
@@ -187,7 +182,7 @@ mod tests {
         assert_relative_eq!(p.varpi0_angle().get::<radian>(), p.varpi0, epsilon = 1e-12);
         assert_relative_eq!(
             p.varpi_at_lookback_typed(1.0e8).get::<radian>(),
-            p.varpi_at_lookback(1.0e8),
+            p.varpi0 - p.rate_rad_per_yr * 1.0e8,
             epsilon = 1e-9
         );
         // The rad/yr rate, read back in rad/s, equals the f64 rate / seconds-per-year.

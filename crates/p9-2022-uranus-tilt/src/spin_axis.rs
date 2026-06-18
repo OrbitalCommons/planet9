@@ -124,30 +124,23 @@ pub fn satellite_l(
         / denom
 }
 
-/// The full spin-axis precession constant α (rad/yr) for Uranus today
-/// (Eq. 2). `cos θ` is folded in: α as defined is the precession-constant
-/// prefactor; the precession rate is α cos θ. Here we return the bare α.
-pub fn alpha_rad_per_yr() -> f64 {
+/// The full spin-axis precession constant α for Uranus today as a typed
+/// [`AngularVelocity`] (arcsec per Julian year). `cos θ` is folded in: α as
+/// defined is the precession-constant prefactor; the precession rate is
+/// α cos θ. Here we return the bare α (Eq. 2).
+pub fn alpha_typed() -> AngularVelocity {
     let n = mean_motion_rad_per_yr(URANUS_A_AU);
     let omega = spin_frequency_rad_per_yr(URANUS_SPIN_PERIOD_HR);
     let q = satellite_q(&URANUS_MOONS, URANUS_MASS_KG, URANUS_RADIUS_KM);
     let l = satellite_l(&URANUS_MOONS, URANUS_MASS_KG, URANUS_RADIUS_KM, omega);
-    (3.0 * n * n / (2.0 * omega)) * (J2_URANUS + q) / (URANUS_LAMBDA + l)
-}
-
-/// α in arcsec/yr (the paper's units).
-pub fn alpha_arcsec_per_yr() -> f64 {
-    alpha_rad_per_yr() * RAD2DEG * 3600.0
-}
-
-/// α as a typed [`AngularVelocity`] (arcsec per Julian year).
-pub fn alpha_typed() -> AngularVelocity {
-    (arcseconds(alpha_arcsec_per_yr()) / julian_year()).into()
+    let alpha_rad_per_yr = (3.0 * n * n / (2.0 * omega)) * (J2_URANUS + q) / (URANUS_LAMBDA + l);
+    (arcseconds(alpha_rad_per_yr * RAD2DEG * 3600.0) / julian_year()).into()
 }
 
 /// Spin-axis precession period Tα = 2π / (α cos θ) in Myr at obliquity θ.
 pub fn precession_period_myr(theta_rad: f64) -> f64 {
-    let rate = alpha_rad_per_yr() * theta_rad.cos().abs();
+    let alpha_rad_per_yr = (alpha_typed() / (p9_core::units::radians(1.0) / julian_year())).value;
+    let rate = alpha_rad_per_yr * theta_rad.cos().abs();
     (2.0 * PI / rate) / 1.0e6
 }
 
@@ -172,9 +165,15 @@ mod tests {
             moon.a_km,
             epsilon = 1e-9
         );
-        // α typed (arcsec/yr) read back in rad/s matches the f64 source.
+        // α typed (arcsec/yr) read back in rad/s matches the inline formula.
         let alpha_rad_s = alpha_typed().get::<radian_per_second>();
-        let expect = alpha_rad_per_yr() / (365.25 * 86_400.0);
+        let n = mean_motion_rad_per_yr(URANUS_A_AU);
+        let omega = spin_frequency_rad_per_yr(URANUS_SPIN_PERIOD_HR);
+        let q = satellite_q(&URANUS_MOONS, URANUS_MASS_KG, URANUS_RADIUS_KM);
+        let l = satellite_l(&URANUS_MOONS, URANUS_MASS_KG, URANUS_RADIUS_KM, omega);
+        let alpha_rad_per_yr =
+            (3.0 * n * n / (2.0 * omega)) * (J2_URANUS + q) / (URANUS_LAMBDA + l);
+        let expect = alpha_rad_per_yr / (365.25 * 86_400.0);
         assert_relative_eq!(alpha_rad_s, expect, max_relative = 1e-9);
     }
 
@@ -213,7 +212,7 @@ mod tests {
     #[test]
     fn alpha_matches_paper_present_value() {
         // HEADLINE PIN: Lu & Laughlin (2022) quote α ≈ 0.045 arcsec/yr today.
-        let alpha = alpha_arcsec_per_yr();
+        let alpha = (alpha_typed() / (arcseconds(1.0) / julian_year())).value;
         assert!(
             (0.030..0.070).contains(&alpha),
             "α = {alpha:.4} arcsec/yr; paper quotes ≈0.045"
@@ -227,7 +226,8 @@ mod tests {
         // Paper: Tα ≈ 169 Myr at the present 98° obliquity. cos(98°) is small,
         // so the precession about the orbit normal is slow; we land within a
         // factor of a few — see crate-level note on residuals.
-        let t = precession_period_myr(crate::uranus_obliquity_rad());
+        use uom::si::angle::radian;
+        let t = precession_period_myr(crate::uranus_obliquity().get::<radian>());
         assert!(t > 50.0 && t < 2000.0, "Tα = {t:.1} Myr (paper ~169)");
     }
 }
