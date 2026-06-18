@@ -311,42 +311,28 @@ impl RangePerturbationCurve {
         best
     }
 
-    /// True anomaly (radians) that minimizes the range perturbation.
-    pub fn argmin_true_anomaly(&self) -> f64 {
-        self.true_anomaly[self.argmin()]
-    }
-
     /// True anomaly (degrees) that minimizes the range perturbation.
     pub fn argmin_true_anomaly_deg(&self) -> f64 {
-        self.argmin_true_anomaly().to_degrees()
-    }
-
-    /// Minimum amplitude (km).
-    pub fn min_amplitude_km(&self) -> f64 {
-        self.amplitude_km[self.argmin()]
-    }
-
-    /// Maximum amplitude (km).
-    pub fn max_amplitude_km(&self) -> f64 {
-        self.amplitude_km
-            .iter()
-            .copied()
-            .fold(f64::NEG_INFINITY, f64::max)
+        self.true_anomaly[self.argmin()].to_degrees()
     }
 
     /// True anomaly that minimizes the range perturbation, as a typed [`Angle`].
     pub fn argmin_true_anomaly_typed(&self) -> Angle {
-        radians(self.argmin_true_anomaly())
+        radians(self.true_anomaly[self.argmin()])
     }
 
     /// Minimum range-perturbation amplitude as a typed [`Length`].
     pub fn min_amplitude(&self) -> Length {
-        km(self.min_amplitude_km())
+        km(self.amplitude_km[self.argmin()])
     }
 
     /// Maximum range-perturbation amplitude as a typed [`Length`].
     pub fn max_amplitude(&self) -> Length {
-        km(self.max_amplitude_km())
+        km(self
+            .amplitude_km
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max))
     }
 }
 
@@ -487,10 +473,10 @@ mod tests {
         p_close.a = 400.0;
         let mut p_far = brown_batygin_orbit();
         p_far.a = 800.0;
-        let max_close = range_perturbation_curve(&p_close, 360).max_amplitude_km();
-        let max_far = range_perturbation_curve(&p_far, 360).max_amplitude_km();
+        let max_close = range_perturbation_curve(&p_close, 360).max_amplitude();
+        let max_far = range_perturbation_curve(&p_far, 360).max_amplitude();
         // Doubling a roughly doubles distance → tidal ~1/r³ → factor several.
-        let ratio = max_close / max_far;
+        let ratio = (max_close / max_far).value;
         assert!(ratio > 4.0, "distance falloff too weak: ratio = {ratio:.2}");
     }
 
@@ -499,19 +485,25 @@ mod tests {
         use approx::assert_relative_eq;
         let p = brown_batygin_orbit();
         let curve = range_perturbation_curve(&p, 64);
+        let argmin = curve.argmin();
         assert_relative_eq!(
             (curve.min_amplitude() / km(1.0)).value,
-            curve.min_amplitude_km(),
+            curve.amplitude_km[argmin],
             max_relative = 1e-12
         );
+        let max_km = curve
+            .amplitude_km
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
         assert_relative_eq!(
             (curve.max_amplitude() / km(1.0)).value,
-            curve.max_amplitude_km(),
+            max_km,
             max_relative = 1e-12
         );
         assert_relative_eq!(
             (curve.argmin_true_anomaly_typed() / radians(1.0)).value,
-            curve.argmin_true_anomaly(),
+            curve.true_anomaly[argmin],
             max_relative = 1e-12
         );
     }
