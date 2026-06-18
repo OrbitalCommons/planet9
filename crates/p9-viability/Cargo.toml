@@ -1,0 +1,11 @@
+[package]
+name = "p9-viability"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+p9-2018-wise-search = { version = "0.1.0", path = "../p9-2018-wise-search" }
+p9-2025-simons-forecast = { version = "0.1.0", path = "../p9-2025-simons-forecast" }
+p9-core = { version = "0.1.0", path = "../p9-core" }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

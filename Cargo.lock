@@ -2093,6 +2093,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-viability"
+version = "0.1.0"
+dependencies = [
+ "p9-2018-wise-search",
+ "p9-2025-simons-forecast",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"

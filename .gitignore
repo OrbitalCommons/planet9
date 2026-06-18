@@ -4,3 +4,7 @@ papers/
 review_article.html
 figure_*.svg
 crates/p9-survey/p9_survey_data.json
+
+# Generated viability artifacts (regenerate via `cargo run -p p9-viability` + scripts/plot_viability.py)
+figures/viability.json
+figures/*.png
