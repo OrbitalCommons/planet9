@@ -33,6 +33,7 @@
 
 use p9_core::constants::{A_NEPTUNE_AU, EARTH_MASS_SOLAR, MASS_NEPTUNE_SOLAR};
 use p9_core::forces::j2_secular::{combined_j2_jsu, effective_j2};
+use p9_core::units::{days, radians, solar_masses, AngularVelocity, Mass};
 
 use crate::growth::{mean_motion, secular_frequency};
 
@@ -67,6 +68,17 @@ pub fn critical_mass_earth(a: f64, e: f64) -> f64 {
     critical_mass_solar(a, e) / EARTH_MASS_SOLAR
 }
 
+/// Giant-planet precession rate [`g`](giant_planet_precession_rate) as a typed
+/// [`AngularVelocity`].
+pub fn giant_planet_precession_rate_typed(a: f64, e: f64) -> AngularVelocity {
+    (radians(giant_planet_precession_rate(a, e)) / days(1.0)).into()
+}
+
+/// Critical disc mass [`M_crit`](critical_mass_solar) as a typed [`Mass`].
+pub fn critical_mass(a: f64, e: f64) -> Mass {
+    solar_masses(critical_mass_solar(a, e))
+}
+
 /// Stability verdict for a disc of mass `m_disk_solar` at (a, e).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stability {
@@ -91,9 +103,27 @@ pub fn classify(m_disk_solar: f64, a: f64, e: f64) -> Stability {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use p9_core::units::SOLAR_MASS_KG;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::mass::kilogram;
 
     const A_AU: f64 = 250.0;
     const E_DISK: f64 = 0.6;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        assert_relative_eq!(
+            giant_planet_precession_rate_typed(A_AU, E_DISK).get::<radian_per_second>(),
+            giant_planet_precession_rate(A_AU, E_DISK) / 86_400.0,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            critical_mass(A_AU, E_DISK).get::<kilogram>(),
+            critical_mass_solar(A_AU, E_DISK) * SOLAR_MASS_KG,
+            epsilon = 1e10
+        );
+    }
 
     #[test]
     fn test_critical_mass_is_positive() {

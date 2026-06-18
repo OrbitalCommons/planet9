@@ -12,6 +12,7 @@ use p9_core::initial_conditions::planets;
 use p9_core::initial_conditions::scattered_disk::{generate_scattered_disk, ScatteredDiskConfig};
 use p9_core::integrator::hybrid::hybrid_step;
 use p9_core::types::*;
+use p9_core::units::{au, days, radians, Angle, Length, Time};
 
 use crate::kozai_lidov::ParticleHistory;
 
@@ -76,6 +77,41 @@ impl InclinedTnoConfig {
             snapshot_interval: 5e3 * YEAR_DAYS,
         }
     }
+
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Minimum semi-major axis as a [`Length`].
+    pub fn semi_major_axis_min(&self) -> Length {
+        au(self.a_min)
+    }
+    /// Maximum semi-major axis as a [`Length`].
+    pub fn semi_major_axis_max(&self) -> Length {
+        au(self.a_max)
+    }
+    /// Minimum perihelion distance as a [`Length`].
+    pub fn perihelion_min(&self) -> Length {
+        au(self.q_min)
+    }
+    /// Maximum perihelion distance as a [`Length`].
+    pub fn perihelion_max(&self) -> Length {
+        au(self.q_max)
+    }
+    /// Inclination dispersion as an [`Angle`].
+    pub fn inclination_dispersion(&self) -> Angle {
+        radians(self.sigma_i)
+    }
+    /// Total integration time as a [`Time`].
+    pub fn total_time(&self) -> Time {
+        days(self.t_total)
+    }
+    /// Integration timestep as a [`Time`].
+    pub fn timestep(&self) -> Time {
+        days(self.dt)
+    }
+    /// Snapshot interval as a [`Time`].
+    pub fn snapshot_interval_typed(&self) -> Time {
+        days(self.snapshot_interval)
+    }
 }
 
 /// Snapshot of particle state at a given time.
@@ -88,6 +124,13 @@ pub struct TnoSnapshot {
     pub ids: Vec<usize>,
     pub active_count: usize,
     pub total_count: usize,
+}
+
+impl TnoSnapshot {
+    /// Snapshot time as a [`Time`].
+    pub fn time(&self) -> Time {
+        days(self.t)
+    }
 }
 
 /// Result of the full simulation.
@@ -360,6 +403,26 @@ pub fn density_map_qi(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::radian;
+    use uom::si::length::astronomical_unit;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_config_accessors_match_f64_fields() {
+        let c = InclinedTnoConfig::nominal();
+        assert_relative_eq!(c.semi_major_axis_min().get::<astronomical_unit>(), c.a_min);
+        assert_relative_eq!(c.semi_major_axis_max().get::<astronomical_unit>(), c.a_max);
+        assert_relative_eq!(c.perihelion_min().get::<astronomical_unit>(), c.q_min);
+        assert_relative_eq!(c.perihelion_max().get::<astronomical_unit>(), c.q_max);
+        assert_relative_eq!(c.inclination_dispersion().get::<radian>(), c.sigma_i);
+        assert_relative_eq!(c.total_time().get::<day>(), c.t_total);
+        assert_relative_eq!(c.timestep().get::<day>(), c.dt);
+        assert_relative_eq!(
+            c.snapshot_interval_typed().get::<day>(),
+            c.snapshot_interval
+        );
+    }
 
     #[test]
     fn test_quick_simulation_runs() {

@@ -59,6 +59,7 @@ use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::secular::perturber_perihelion_precession;
 use p9_core::constants::GM_SUN;
+use p9_core::units::{arcseconds, au, days, julian_centuries, radians, AngularVelocity, Length};
 
 // Reuse the 2026 sibling's perturber model and consistency check verbatim.
 pub use p9_2026_iorio_precession::{
@@ -88,6 +89,24 @@ impl PlanetBound {
     /// Keplerian mean motion n = sqrt(GM_sun / a^3) in radians/day.
     pub fn mean_motion_rad_per_day(&self) -> f64 {
         (GM_SUN / self.a_au.powi(3)).sqrt()
+    }
+
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Adopted anomalous-precession bound as a typed [`AngularVelocity`]
+    /// (arcseconds per Julian century).
+    pub fn bound(&self) -> AngularVelocity {
+        (arcseconds(self.bound_arcsec_per_cy) / julian_centuries(1.0)).into()
+    }
+
+    /// Keplerian mean motion as a typed [`AngularVelocity`].
+    pub fn mean_motion(&self) -> AngularVelocity {
+        (radians(self.mean_motion_rad_per_day()) / days(1.0)).into()
     }
 }
 
@@ -172,6 +191,14 @@ pub fn planet_perihelion_precession_arcsec_per_cy(planet: &PlanetBound, p9: &Per
     perturber_perihelion_precession(planet.a_au, planet.e, p9.mass_solar(), p9.a_au, p9.e)
 }
 
+/// Predicted perihelion precession of `planet` induced by `p9`, as a typed
+/// [`AngularVelocity`] (the dimension-checked view of
+/// [`planet_perihelion_precession_arcsec_per_cy`]).
+pub fn planet_perihelion_precession(planet: &PlanetBound, p9: &Perturber) -> AngularVelocity {
+    (arcseconds(planet_perihelion_precession_arcsec_per_cy(planet, p9)) / julian_centuries(1.0))
+        .into()
+}
+
 /// True if this perturber's predicted precession of `planet` exceeds the
 /// planet's adopted ephemeris bound (and is therefore *excluded* by that
 /// planet's ranging).
@@ -209,6 +236,12 @@ pub fn critical_distance_au(planet: &PlanetBound, p9: &Perturber) -> f64 {
     p9.a_au * (rate / planet.bound_arcsec_per_cy).cbrt()
 }
 
+/// Critical perturber distance as a typed [`Length`] (the dimension-checked
+/// view of [`critical_distance_au`]).
+pub fn critical_distance(planet: &PlanetBound, p9: &Perturber) -> Length {
+    au(critical_distance_au(planet, p9))
+}
+
 /// The three P9 hypotheses, re-exported from the 2026 sibling
 /// (`Perturber::planet_nine / planet_x / planet_y`).
 pub fn hypotheses() -> [Perturber; 3] {
@@ -226,6 +259,38 @@ mod tests {
 
     fn saturn() -> PlanetBound {
         bound_for("Saturn").unwrap()
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::length::astronomical_unit;
+
+        let s = saturn();
+        let p9 = Perturber::planet_nine();
+        // arcsec/century -> rad/s
+        let arcsec = std::f64::consts::PI / (180.0 * 3600.0);
+        let cy_s = 36_525.0 * 86_400.0;
+        assert_relative_eq!(s.semi_major_axis().get::<astronomical_unit>(), s.a_au);
+        assert_relative_eq!(
+            s.bound().get::<radian_per_second>(),
+            s.bound_arcsec_per_cy * arcsec / cy_s,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            s.mean_motion().get::<radian_per_second>(),
+            s.mean_motion_rad_per_day() / 86_400.0,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            planet_perihelion_precession(&s, &p9).get::<radian_per_second>(),
+            planet_perihelion_precession_arcsec_per_cy(&s, &p9) * arcsec / cy_s,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            critical_distance(&s, &p9).get::<astronomical_unit>(),
+            critical_distance_au(&s, &p9)
+        );
     }
 
     #[test]

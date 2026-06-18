@@ -37,6 +37,7 @@ pub mod reference;
 pub mod thermal;
 
 use p9_core::analysis::photometry::planet_apparent_magnitude;
+use p9_core::units::{au, earth_masses, Length, Mass};
 
 /// Neptune-like geometric albedo used for the reflected-light channel, matching
 /// the workspace default (`p9_core::analysis::photometry::ALBEDO_NEPTUNE`).
@@ -65,6 +66,19 @@ pub struct MagnitudeRow {
     pub v_mag: f64,
     /// Thermal apparent magnitude in the most-favorable mid-IR band (WISE W4).
     pub mid_ir_mag: f64,
+}
+
+impl MagnitudeRow {
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Planet mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+    /// Heliocentric distance as a [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
 }
 
 /// Build a [`MagnitudeRow`] for the given mass and distance.
@@ -102,6 +116,20 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::analysis::surveys::limiting_magnitude;
+    use p9_core::units::EARTH_MASS_KG;
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn typed_row_accessors_match_f64_fields() {
+        let row = magnitude_row(10.0, 700.0);
+        assert_relative_eq!(
+            row.mass().get::<kilogram>(),
+            row.mass_earth * EARTH_MASS_KG,
+            epsilon = 1.0
+        );
+        assert_relative_eq!(row.distance().get::<astronomical_unit>(), row.distance_au);
+    }
 
     #[test]
     fn ten_earth_mass_at_700au_matches_published_v() {

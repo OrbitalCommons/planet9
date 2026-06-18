@@ -16,6 +16,7 @@
 use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::*;
 use p9_core::initial_conditions::giant_planets;
+use p9_core::units::{au, days, radians, solar_masses, Angle, Length, Mass, Time};
 
 use crate::solar_model;
 
@@ -79,6 +80,16 @@ impl SpinOrbitState {
             self.l_gp[0] * self.l_9[0] + self.l_gp[1] * self.l_9[1] + self.l_gp[2] * self.l_9[2];
         dot.clamp(-1.0, 1.0).acos()
     }
+
+    /// Solar obliquity [`obliquity`](Self::obliquity) as a typed [`Angle`].
+    pub fn obliquity_typed(&self) -> Angle {
+        radians(self.obliquity())
+    }
+    /// Mutual inclination [`mutual_inclination`](Self::mutual_inclination) as a
+    /// typed [`Angle`].
+    pub fn mutual_inclination_typed(&self) -> Angle {
+        radians(self.mutual_inclination())
+    }
 }
 
 /// Parameters for the secular integration.
@@ -99,6 +110,25 @@ pub struct SecularParams {
 impl SecularParams {
     pub fn epsilon_9(&self) -> f64 {
         (1.0 - self.e9 * self.e9).sqrt()
+    }
+
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Planet Nine mass as a [`Mass`].
+    pub fn mass(&self) -> Mass {
+        solar_masses(self.m9_solar)
+    }
+    /// Planet Nine semi-major axis as a [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a9)
+    }
+    /// Total integration time as a [`Time`].
+    pub fn total_time(&self) -> Time {
+        days(self.t_total)
+    }
+    /// Integration time step as a [`Time`].
+    pub fn timestep(&self) -> Time {
+        days(self.dt)
     }
 }
 
@@ -259,6 +289,39 @@ pub struct ObliquitySnapshot {
     pub delta_omega_big: f64,
 }
 
+impl ObliquitySnapshot {
+    // ---- typed (uom) boundary: dimension-checked views of the f64 fields ----
+
+    /// Snapshot time as a [`Time`].
+    pub fn time(&self) -> Time {
+        days(self.t)
+    }
+    /// Solar obliquity as an [`Angle`].
+    pub fn obliquity_typed(&self) -> Angle {
+        radians(self.obliquity)
+    }
+    /// Mutual inclination (giant planets vs P9) as an [`Angle`].
+    pub fn mutual_inclination_typed(&self) -> Angle {
+        radians(self.mutual_inclination)
+    }
+    /// Solar spin node longitude as an [`Angle`].
+    pub fn omega_big_sun_typed(&self) -> Angle {
+        radians(self.omega_big_sun)
+    }
+    /// Planet Nine inclination as an [`Angle`].
+    pub fn i9_typed(&self) -> Angle {
+        radians(self.i_9)
+    }
+    /// Planet Nine node longitude as an [`Angle`].
+    pub fn omega_big_9_typed(&self) -> Angle {
+        radians(self.omega_big_9)
+    }
+    /// ΔΩ = Ω_sun − Ω_9 as an [`Angle`].
+    pub fn delta_omega_typed(&self) -> Angle {
+        radians(self.delta_omega_big)
+    }
+}
+
 /// Integrate the secular spin-orbit equations over the solar system lifetime.
 ///
 /// Uses RK4 with time-dependent coupling (Skumanich spin-down).
@@ -372,7 +435,51 @@ fn make_snapshot(state: &SpinOrbitState, t: f64) -> ObliquitySnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use std::f64::consts::PI;
+    use uom::si::angle::radian;
+    use uom::si::length::astronomical_unit;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let params = SecularParams {
+            m9_solar: 10.0 * EARTH_MASS_SOLAR,
+            a9: 700.0,
+            e9: 0.6,
+            t_total: 4.5 * GYR_DAYS,
+            dt: 1e5 * YEAR_DAYS,
+        };
+        assert_relative_eq!(
+            params.semi_major_axis().get::<astronomical_unit>(),
+            params.a9
+        );
+        assert_relative_eq!(params.total_time().get::<day>(), params.t_total);
+        assert_relative_eq!(params.timestep().get::<day>(), params.dt);
+
+        let state = SpinOrbitState::from_inclinations(0.5, 1.0, 1.0, 0.3);
+        assert_relative_eq!(state.obliquity_typed().get::<radian>(), state.obliquity());
+        assert_relative_eq!(
+            state.mutual_inclination_typed().get::<radian>(),
+            state.mutual_inclination()
+        );
+
+        let snap = ObliquitySnapshot {
+            t: 1.0e9,
+            obliquity: 0.1,
+            mutual_inclination: 0.2,
+            omega_big_sun: 0.3,
+            i_9: 0.4,
+            omega_big_9: 0.5,
+            delta_omega_big: -0.2,
+        };
+        assert_relative_eq!(snap.time().get::<day>(), snap.t);
+        assert_relative_eq!(snap.obliquity_typed().get::<radian>(), snap.obliquity);
+        assert_relative_eq!(
+            snap.delta_omega_typed().get::<radian>(),
+            snap.delta_omega_big
+        );
+    }
 
     #[test]
     fn test_coupling_constant_positive() {

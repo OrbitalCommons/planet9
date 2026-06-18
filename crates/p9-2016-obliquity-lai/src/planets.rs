@@ -10,6 +10,7 @@
 
 use p9_core::constants::*;
 use p9_core::initial_conditions::giant_planets::GIANT_PLANETS;
+use p9_core::units::{days, radians, AngularVelocity};
 
 /// Terrestrial planet (mass in M_sun, semi-major axis in AU). Masses from
 /// JPL DE440 GM ratios; semi-major axes are mean osculating values.
@@ -39,6 +40,11 @@ pub fn mean_motion(a_au: f64) -> f64 {
     (G_AU3_MSUN_DAY2 * (a_au * a_au * a_au).recip()).sqrt()
 }
 
+/// [`mean_motion`] as a typed [`AngularVelocity`].
+pub fn mean_motion_typed(a_au: f64) -> AngularVelocity {
+    (radians(mean_motion(a_au)) / days(1.0)).into()
+}
+
 /// Orbital angular momentum of a circular planet, `L = m √(GM_sun a)`,
 /// in M_sun·AU²/day.
 pub fn orbital_angular_momentum(mass_solar: f64, a_au: f64) -> f64 {
@@ -62,6 +68,17 @@ pub fn total_orbital_angular_momentum() -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angular_velocity::radian_per_second;
+
+    #[test]
+    fn typed_mean_motion_matches_f64() {
+        assert_relative_eq!(
+            mean_motion_typed(A_JUPITER_AU).get::<radian_per_second>(),
+            mean_motion(A_JUPITER_AU) / 86_400.0,
+            epsilon = 1e-30
+        );
+    }
 
     #[test]
     fn total_l_matches_lai_1p624_lj() {
