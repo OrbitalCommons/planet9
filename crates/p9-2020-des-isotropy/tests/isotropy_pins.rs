@@ -189,8 +189,14 @@ fn mc_null_calibrated_on_uniform() {
 #[test]
 fn des_two_angle_correlation_not_significant() {
     let sample = case_sample(SampleCase::Case1);
-    let omega: Vec<f64> = sample.iter().map(|o| o.argp()).collect();
-    let node: Vec<f64> = sample.iter().map(|o| o.node()).collect();
+    let omega: Vec<f64> = sample
+        .iter()
+        .map(|o| (o.argp_typed() / p9_core::units::radians(1.0)).value)
+        .collect();
+    let node: Vec<f64> = sample
+        .iter()
+        .map(|o| (o.node_typed() / p9_core::units::radians(1.0)).value)
+        .collect();
     let r = circular_correlation(&omega, &node);
     assert!(r.abs() < 0.95, "|r_T| = {:.3}", r.abs());
     let p = mc_correlation_p_value(&omega, &node, SEED, MC);

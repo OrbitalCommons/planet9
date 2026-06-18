@@ -12,30 +12,28 @@ use p9_core::types::P9Params;
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 use crate::published::CASSINI_RANGE_PRECISION_M;
-use crate::signal::range_residual_m;
+use crate::signal::range_residual;
 
 /// Number of true-anomaly samples used to find a P9's peak range residual.
 const PERIHELION_ARC_SAMPLES: usize = 180;
 
-/// The strongest range residual (METRES) P9 can produce anywhere on its orbit.
+/// The strongest range residual P9 can produce anywhere on its orbit, as a
+/// typed [`Length`].
 ///
 /// The signal is largest on the perihelion-facing arc (closest approach to
 /// Saturn), so we scan true anomaly and take the maximum. This is the quantity
 /// compared against the Cassini precision: if even the worst-case phase stays
 /// below precision, the planet is unconstrained.
-pub fn peak_range_residual_m(params: &P9Params) -> f64 {
-    let mut peak = 0.0_f64;
+pub fn peak_range_residual(params: &P9Params) -> Length {
+    let mut peak = meters(0.0);
     for k in 0..PERIHELION_ARC_SAMPLES {
         let nu = std::f64::consts::TAU * (k as f64) / (PERIHELION_ARC_SAMPLES as f64);
-        peak = peak.max(range_residual_m(params, nu));
+        let residual = range_residual(params, nu);
+        if residual > peak {
+            peak = residual;
+        }
     }
     peak
-}
-
-/// The strongest range residual P9 can produce anywhere on its orbit, as a
-/// typed [`Length`] — the [`peak_range_residual_m`] value in metres.
-pub fn peak_range_residual(params: &P9Params) -> Length {
-    meters(peak_range_residual_m(params))
 }
 
 /// Verdict for a candidate Planet Nine.
@@ -49,7 +47,7 @@ pub enum ExclusionVerdict {
 
 /// Whether `params` is excluded by the Cassini range precision.
 pub fn excluded(params: &P9Params) -> ExclusionVerdict {
-    if peak_range_residual_m(params) > CASSINI_RANGE_PRECISION_M {
+    if peak_range_residual(params) > meters(CASSINI_RANGE_PRECISION_M) {
         ExclusionVerdict::Excluded
     } else {
         ExclusionVerdict::Allowed
@@ -67,7 +65,7 @@ pub fn max_allowed_mass_earth(template: &P9Params, a_au: f64) -> f64 {
     let mut p = *template;
     p.a = a_au;
     p.mass_earth = 1.0;
-    let peak_per_earth_mass = peak_range_residual_m(&p);
+    let peak_per_earth_mass = (peak_range_residual(&p) / meters(1.0)).value;
     CASSINI_RANGE_PRECISION_M / peak_per_earth_mass
 }
 
@@ -180,11 +178,17 @@ mod tests {
 
     #[test]
     fn typed_exclusion_accessors_match_f64() {
+        use crate::signal::range_residual;
         use approx::assert_relative_eq;
         let template = brown_batygin_orbit();
+        let mut peak_m = 0.0_f64;
+        for k in 0..PERIHELION_ARC_SAMPLES {
+            let nu = std::f64::consts::TAU * (k as f64) / (PERIHELION_ARC_SAMPLES as f64);
+            peak_m = peak_m.max((range_residual(&template, nu) / meters(1.0)).value);
+        }
         assert_relative_eq!(
             (peak_range_residual(&template) / meters(1.0)).value,
-            peak_range_residual_m(&template),
+            peak_m,
             max_relative = 1e-12
         );
         assert_relative_eq!(

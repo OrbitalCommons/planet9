@@ -98,7 +98,7 @@ impl PlanetNine {
 ///
 ///   Ω_jp = (3 mp / 4 M★) (aⱼ / ãp)³ nⱼ
 fn omega_jp(p9: &PlanetNine, a_j: f64) -> f64 {
-    let n_j = planets::mean_motion(a_j);
+    let n_j = (planets::mean_motion_typed(a_j) / (radians(1.0) / days(1.0))).value;
     (3.0 * p9.mass_solar() / (4.0 * 1.0)) * (a_j / p9.a_tilde_au()).powi(3) * n_j
 }
 
@@ -108,7 +108,7 @@ fn omega_jp(p9: &PlanetNine, a_j: f64) -> f64 {
 ///   Ω_L = Σ_j Lⱼ Ω_jp / L
 ///
 /// Lai gives Ω_L = 2π / 87.5 Gyr × (mp/10m⊕)(ãp/400 AU)⁻³.
-pub fn omega_l(p9: &PlanetNine) -> f64 {
+pub fn omega_l_typed(p9: &PlanetNine) -> AngularVelocity {
     let mut num = 0.0;
     let mut l_total = 0.0;
     for &(m, a) in planets::canonical_planets().iter() {
@@ -116,12 +116,7 @@ pub fn omega_l(p9: &PlanetNine) -> f64 {
         num += l_j * omega_jp(p9, a);
         l_total += l_j;
     }
-    num / l_total
-}
-
-/// [`omega_l`] as a typed [`AngularVelocity`].
-pub fn omega_l_typed(p9: &PlanetNine) -> AngularVelocity {
-    (radians(omega_l(p9)) / days(1.0)).into()
+    (radians(num / l_total) / days(1.0)).into()
 }
 
 /// Solar spin-axis precession frequency Ω★ps driven by the planetary torques
@@ -130,18 +125,14 @@ pub fn omega_l_typed(p9: &PlanetNine) -> AngularVelocity {
 ///   Ω★ps = Σ_j (3 k_q★ / 2 k★) (mⱼ / M★) (R★ / aⱼ)³ Ω★
 ///
 /// with Ω★ = 2π / P★. Lai gives Ω★ps = 2π / 55.8 Gyr × (P★/10 d)⁻¹ for λ★ = 1.
-pub fn omega_spin_precession(spin_period_days: f64) -> f64 {
+pub fn omega_spin_precession_typed(spin_period_days: f64) -> AngularVelocity {
     let omega_star = 2.0 * PI / spin_period_days;
     let coeff = 3.0 * solar::KQ_STAR / (2.0 * solar::K_STAR);
-    planets::canonical_planets()
+    let rate: f64 = planets::canonical_planets()
         .iter()
         .map(|&(m, a)| coeff * (m / 1.0) * (RADIUS_SUN_AU / a).powi(3) * omega_star)
-        .sum()
-}
-
-/// [`omega_spin_precession`] as a typed [`AngularVelocity`].
-pub fn omega_spin_precession_typed(spin_period_days: f64) -> AngularVelocity {
-    (radians(omega_spin_precession(spin_period_days)) / days(1.0)).into()
+        .sum();
+    (radians(rate) / days(1.0)).into()
 }
 
 /// The two precession frequencies of the spin equation in the frame
@@ -153,24 +144,19 @@ pub fn omega_spin_precession_typed(spin_period_days: f64) -> AngularVelocity {
 ///   Ω_z ≃ Ω★ps − Ω_L cos θp (L/Lp + cos θp).
 ///
 /// The secular spin–orbit resonance is `Ω_z = 0`.
-pub fn corotating_frequencies(p9: &PlanetNine, spin_period_days: f64) -> (f64, f64) {
+pub fn corotating_frequencies_typed(
+    p9: &PlanetNine,
+    spin_period_days: f64,
+) -> (AngularVelocity, AngularVelocity) {
     let theta_p = p9.inclination_rad;
-    let om_l = omega_l(p9);
-    let om_spin = omega_spin_precession(spin_period_days);
+    let om_l = (omega_l_typed(p9) / (radians(1.0) / days(1.0))).value;
+    let om_spin =
+        (omega_spin_precession_typed(spin_period_days) / (radians(1.0) / days(1.0))).value;
     let l_total = planets::total_orbital_angular_momentum();
     let lp = p9.angular_momentum();
 
     let omega_y = om_l * theta_p.sin() * theta_p.cos();
     let omega_z = om_spin - om_l * theta_p.cos() * (l_total / lp + theta_p.cos());
-    (omega_y, omega_z)
-}
-
-/// [`corotating_frequencies`] as typed [`AngularVelocity`] pair `(Ω_y, Ω_z)`.
-pub fn corotating_frequencies_typed(
-    p9: &PlanetNine,
-    spin_period_days: f64,
-) -> (AngularVelocity, AngularVelocity) {
-    let (omega_y, omega_z) = corotating_frequencies(p9, spin_period_days);
     (
         (radians(omega_y) / days(1.0)).into(),
         (radians(omega_z) / days(1.0)).into(),
@@ -183,24 +169,23 @@ pub fn corotating_frequencies_typed(
 ///
 /// `t_gyr` is the elapsed time in Gyr (Lai evaluates at 4.5 Gyr). The solar
 /// rotation enters only through `spin_period_days = P★/λ★` (λ★ ≈ 1).
-pub fn solar_obliquity_rad(p9: &PlanetNine, spin_period_days: f64, t_gyr: f64) -> f64 {
-    let (omega_y, omega_z) = corotating_frequencies(p9, spin_period_days);
-    let t = t_gyr * GYR_DAYS;
-    if omega_z.abs() < 1e-30 {
-        // Exact resonance: sin(Ω_z t/2)/Ω_z → t/2, so θsl → Ω_y t.
-        return (omega_y * t).abs();
-    }
-    ((2.0 * omega_y / omega_z) * (omega_z * t / 2.0).sin()).abs()
-}
-
-/// [`solar_obliquity_rad`] as a typed [`Angle`].
 pub fn solar_obliquity_typed(p9: &PlanetNine, spin_period_days: f64, t_gyr: f64) -> Angle {
-    radians(solar_obliquity_rad(p9, spin_period_days, t_gyr))
+    let (omega_y_t, omega_z_t) = corotating_frequencies_typed(p9, spin_period_days);
+    let omega_y = (omega_y_t / (radians(1.0) / days(1.0))).value;
+    let omega_z = (omega_z_t / (radians(1.0) / days(1.0))).value;
+    let t = t_gyr * GYR_DAYS;
+    let theta = if omega_z.abs() < 1e-30 {
+        // Exact resonance: sin(Ω_z t/2)/Ω_z → t/2, so θsl → Ω_y t.
+        (omega_y * t).abs()
+    } else {
+        ((2.0 * omega_y / omega_z) * (omega_z * t / 2.0).sin()).abs()
+    };
+    radians(theta)
 }
 
 /// Convenience: obliquity in degrees at 4.5 Gyr.
 pub fn solar_obliquity_deg(p9: &PlanetNine, spin_period_days: f64) -> f64 {
-    solar_obliquity_rad(p9, spin_period_days, 4.5) * RAD2DEG
+    (solar_obliquity_typed(p9, spin_period_days, 4.5) / radians(1.0)).value * RAD2DEG
 }
 
 #[cfg(test)]
@@ -217,23 +202,61 @@ mod tests {
         assert_relative_eq!(p9.semi_major_axis().get::<astronomical_unit>(), p9.a_au);
         assert_relative_eq!(p9.inclination().get::<radian>(), p9.inclination_rad);
         assert_relative_eq!(p9.a_tilde().get::<astronomical_unit>(), p9.a_tilde_au());
+
+        // Ω_L: typed against the inline rad/day → rad/s sum.
+        let mut num = 0.0;
+        let mut l_total_lj = 0.0;
+        for &(m, a) in planets::canonical_planets().iter() {
+            let l_j = planets::orbital_angular_momentum(m, a);
+            num += l_j * omega_jp(&p9, a);
+            l_total_lj += l_j;
+        }
         assert_relative_eq!(
             omega_l_typed(&p9).get::<radian_per_second>(),
-            omega_l(&p9) / 86_400.0,
+            (num / l_total_lj) / 86_400.0,
             epsilon = 1e-40
         );
+
+        // Ω★ps: typed against the inline rad/day → rad/s sum.
+        let omega_star = 2.0 * PI / 10.0;
+        let coeff = 3.0 * solar::KQ_STAR / (2.0 * solar::K_STAR);
+        let spin_rate: f64 = planets::canonical_planets()
+            .iter()
+            .map(|&(m, a)| coeff * (m / 1.0) * (RADIUS_SUN_AU / a).powi(3) * omega_star)
+            .sum();
         assert_relative_eq!(
             omega_spin_precession_typed(10.0).get::<radian_per_second>(),
-            omega_spin_precession(10.0) / 86_400.0,
+            spin_rate / 86_400.0,
             epsilon = 1e-40
         );
-        let (y, z) = corotating_frequencies(&p9, 20.0);
+
+        // Corotating frequencies: typed against the inline formula (rad/day → rad/s).
+        let theta_p = p9.inclination_rad;
+        let om_l = omega_l_typed(&p9).get::<radian_per_second>() * 86_400.0;
+        let om_spin = omega_spin_precession_typed(20.0).get::<radian_per_second>() * 86_400.0;
+        let l_total = planets::total_orbital_angular_momentum();
+        let lp = p9.angular_momentum();
+        let y = om_l * theta_p.sin() * theta_p.cos();
+        let z = om_spin - om_l * theta_p.cos() * (l_total / lp + theta_p.cos());
         let (yt, zt) = corotating_frequencies_typed(&p9, 20.0);
-        assert_relative_eq!(yt.get::<radian_per_second>(), y / 86_400.0, epsilon = 1e-40);
-        assert_relative_eq!(zt.get::<radian_per_second>(), z / 86_400.0, epsilon = 1e-40);
+        assert_relative_eq!(
+            yt.get::<radian_per_second>(),
+            y / 86_400.0,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            zt.get::<radian_per_second>(),
+            z / 86_400.0,
+            max_relative = 1e-12
+        );
+
+        // Obliquity: typed against the inline closed form.
+        let t = 4.5 * GYR_DAYS;
+        let theta = ((2.0 * y / z) * (z * t / 2.0).sin()).abs();
         assert_relative_eq!(
             solar_obliquity_typed(&p9, 20.0, 4.5).get::<radian>(),
-            solar_obliquity_rad(&p9, 20.0, 4.5)
+            theta,
+            max_relative = 1e-12
         );
     }
 
@@ -265,7 +288,7 @@ mod tests {
     fn omega_l_matches_published_period() {
         // Lai Eq. (5): Ω_L = 2π / 87.5 Gyr for the nominal P9.
         let p9 = nominal_p9();
-        let om_l = omega_l(&p9);
+        let om_l = omega_l_typed(&p9).get::<radian_per_second>() * 86_400.0;
         let period_gyr = (2.0 * PI / om_l) / GYR_DAYS;
         let rel =
             (period_gyr - published::OMEGA_L_PERIOD_GYR).abs() / published::OMEGA_L_PERIOD_GYR;
@@ -279,7 +302,8 @@ mod tests {
     fn omega_l_is_2p74_omega_jp() {
         // Lai Eq. (5): Ω_L = 2.74 Ω_Jp.
         let p9 = nominal_p9();
-        let ratio = omega_l(&p9) / omega_jp(&p9, planets::A_JUPITER_AU);
+        let om_l = omega_l_typed(&p9).get::<radian_per_second>() * 86_400.0;
+        let ratio = om_l / omega_jp(&p9, planets::A_JUPITER_AU);
         assert!(
             (ratio - published::OMEGA_L_OVER_OMEGA_JP).abs() < 0.03,
             "Ω_L/Ω_Jp = {ratio:.3} (Lai: 2.74)"
@@ -292,20 +316,20 @@ mod tests {
         let base = nominal_p9();
         let mut heavy = base;
         heavy.mass_earth = 20.0;
-        let r_mass = omega_l(&heavy) / omega_l(&base);
+        let r_mass = (omega_l_typed(&heavy) / omega_l_typed(&base)).value;
         assert!((r_mass - 2.0).abs() < 1e-6, "mass scaling {r_mass:.4}");
 
         // Double ãp by doubling a (e fixed): expect Ω_L → 1/8.
         let mut far = base;
         far.a_au = base.a_au * 2.0;
-        let r_a = omega_l(&far) / omega_l(&base);
+        let r_a = (omega_l_typed(&far) / omega_l_typed(&base)).value;
         assert!((r_a - 0.125).abs() < 1e-6, "ãp⁻³ scaling {r_a:.5}");
     }
 
     #[test]
     fn omega_spin_matches_published_period() {
         // Lai Eq. (8): Ω★ps = 2π / 55.8 Gyr for P★ = 10 d, λ★ = 1.
-        let om = omega_spin_precession(10.0);
+        let om = omega_spin_precession_typed(10.0).get::<radian_per_second>() * 86_400.0;
         let period_gyr = (2.0 * PI / om) / GYR_DAYS;
         let rel = (period_gyr - published::OMEGA_SPIN_PERIOD_GYR).abs()
             / published::OMEGA_SPIN_PERIOD_GYR;
@@ -326,7 +350,8 @@ mod tests {
             * MASS_JUPITER_SOLAR
             * (RADIUS_SUN_AU / planets::A_JUPITER_AU).powi(3)
             * omega_star;
-        let ratio = omega_spin_precession(10.0) / om_j;
+        let om_spin = omega_spin_precession_typed(10.0).get::<radian_per_second>() * 86_400.0;
+        let ratio = om_spin / om_j;
         assert!(
             (ratio - published::OMEGA_SPIN_OVER_J).abs() < 0.03,
             "Ω★ps/Ω★J = {ratio:.3} (Lai: 2.88)"
@@ -431,17 +456,21 @@ mod tests {
 
         // At P★/λ★ = 20 d the system is below resonance (Ω_z < 0).
         assert!(
-            corotating_frequencies(&p9, 20.0).1 < 0.0,
+            corotating_frequencies_typed(&p9, 20.0)
+                .1
+                .get::<radian_per_second>()
+                < 0.0,
             "Ω_z should be negative (below resonance) at P★ = 20 d"
         );
 
         // The plane-precession side of the balance (Ω_z = 0):
-        let om_l = omega_l(&p9);
+        let om_l = omega_l_typed(&p9).get::<radian_per_second>() * 86_400.0;
         let l_total = planets::total_orbital_angular_momentum();
         let lp = p9.angular_momentum();
         let rhs = om_l * theta_p.cos() * (l_total / lp + theta_p.cos());
         // Ω★ps(P) = Ω★ps(10 d)·(10/P); solve Ω★ps = rhs for P.
-        let p_resonant = omega_spin_precession(10.0) * 10.0 / rhs;
+        let om_spin10 = omega_spin_precession_typed(10.0).get::<radian_per_second>() * 86_400.0;
+        let p_resonant = om_spin10 * 10.0 / rhs;
         assert!(
             (1.0..6.0).contains(&p_resonant),
             "resonant spin period {p_resonant:.2} d (young, rapidly rotating Sun)"
@@ -449,8 +478,12 @@ mod tests {
 
         // Confirm Ω_z indeed crosses zero versus spin period (sign flip between
         // the fast-spin resonant value and the slow 20 d value).
-        let z_fast = corotating_frequencies(&p9, 0.5 * p_resonant).1;
-        let z_slow = corotating_frequencies(&p9, 20.0).1;
+        let z_fast = corotating_frequencies_typed(&p9, 0.5 * p_resonant)
+            .1
+            .get::<radian_per_second>();
+        let z_slow = corotating_frequencies_typed(&p9, 20.0)
+            .1
+            .get::<radian_per_second>();
         assert!(
             z_fast * z_slow < 0.0,
             "Ω_z must change sign across resonance"
@@ -471,11 +504,12 @@ mod tests {
             e,
             inclination_rad: theta_p,
         };
-        let om_l = omega_l(&p9);
+        let om_l = omega_l_typed(&p9).get::<radian_per_second>() * 86_400.0;
         let l_total = planets::total_orbital_angular_momentum();
         let lp = p9.angular_momentum();
         let rhs = om_l * theta_p.cos() * (l_total / lp + theta_p.cos());
-        let p_resonant = omega_spin_precession(10.0) * 10.0 / rhs;
+        let om_spin10 = omega_spin_precession_typed(10.0).get::<radian_per_second>() * 86_400.0;
+        let p_resonant = om_spin10 * 10.0 / rhs;
 
         // Slightly off resonance to keep θsl finite and small-angle valid.
         let obl_near = solar_obliquity_deg(&p9, 1.15 * p_resonant);

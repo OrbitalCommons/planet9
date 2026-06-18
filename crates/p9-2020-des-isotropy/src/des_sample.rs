@@ -42,26 +42,6 @@ pub struct DesEtno {
 }
 
 impl DesEtno {
-    /// Perihelion distance q = a(1 − e) in AU.
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Longitude of ascending node Ω in radians, wrapped to [0, 2π).
-    pub fn node(&self) -> f64 {
-        (self.node_deg * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
-    /// Argument of perihelion ω in radians, wrapped to [0, 2π).
-    pub fn argp(&self) -> f64 {
-        (self.argp_deg * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
-    /// Longitude of perihelion ϖ = ω + Ω in radians, wrapped to [0, 2π).
-    pub fn varpi(&self) -> f64 {
-        ((self.argp_deg + self.node_deg) * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
     // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
 
     /// Semi-major axis as a typed [`Length`].
@@ -71,7 +51,7 @@ impl DesEtno {
 
     /// Perihelion distance q = a(1 − e) as a typed [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 
     /// Inclination as a typed [`units::Angle`].
@@ -79,19 +59,22 @@ impl DesEtno {
         degrees(self.i_deg)
     }
 
-    /// Longitude of ascending node Ω as a typed [`units::Angle`].
+    /// Longitude of ascending node Ω as a typed [`units::Angle`], wrapped to
+    /// [0, 2π).
     pub fn node_typed(&self) -> units::Angle {
-        radians(self.node())
+        radians((self.node_deg * DEG2RAD).rem_euclid(TWO_PI))
     }
 
-    /// Argument of perihelion ω as a typed [`units::Angle`].
+    /// Argument of perihelion ω as a typed [`units::Angle`], wrapped to
+    /// [0, 2π).
     pub fn argp_typed(&self) -> units::Angle {
-        radians(self.argp())
+        radians((self.argp_deg * DEG2RAD).rem_euclid(TWO_PI))
     }
 
-    /// Longitude of perihelion ϖ as a typed [`units::Angle`].
+    /// Longitude of perihelion ϖ = ω + Ω as a typed [`units::Angle`], wrapped
+    /// to [0, 2π).
     pub fn varpi_typed(&self) -> units::Angle {
-        radians(self.varpi())
+        radians(((self.argp_deg + self.node_deg) * DEG2RAD).rem_euclid(TWO_PI))
     }
 }
 
@@ -211,7 +194,11 @@ pub fn case_sample(case: SampleCase) -> Vec<DesEtno> {
     let (a_min, q_min) = case.cuts();
     DES_ETNOS
         .iter()
-        .filter(|o| o.y4_discovery && o.a > a_min && o.perihelion() > q_min)
+        .filter(|o| {
+            o.y4_discovery
+                && o.a > a_min
+                && (o.perihelion_typed() / p9_core::units::au(1.0)).value > q_min
+        })
         .copied()
         .collect()
 }
@@ -242,11 +229,12 @@ impl Angle {
 
     /// Extract this angle (radians) from an object.
     pub fn of(&self, o: &DesEtno) -> f64 {
-        match self {
-            Angle::Node => o.node(),
-            Angle::ArgPeri => o.argp(),
-            Angle::Varpi => o.varpi(),
-        }
+        let a = match self {
+            Angle::Node => o.node_typed(),
+            Angle::ArgPeri => o.argp_typed(),
+            Angle::Varpi => o.varpi_typed(),
+        };
+        (a / p9_core::units::radians(1.0)).value
     }
 }
 
@@ -271,7 +259,8 @@ mod tests {
     fn test_varpi_consistent_with_paper() {
         // Paper lists ϖ = Ω + ω; spot-check 2013 RA109 (104.79 + 262.91 = 367.70 → 7.70°).
         let ra109 = DES_ETNOS.iter().find(|o| o.name == "2013 RA109").unwrap();
-        let varpi_deg = ra109.varpi() * p9_core::constants::RAD2DEG;
+        let varpi_deg = (ra109.varpi_typed() / p9_core::units::radians(1.0)).value
+            * p9_core::constants::RAD2DEG;
         assert!((varpi_deg - 7.70).abs() < 0.05, "varpi = {varpi_deg:.2}");
     }
 
@@ -289,25 +278,33 @@ mod tests {
         );
         assert_relative_eq!(
             o.perihelion_typed().get::<astronomical_unit>(),
-            o.perihelion(),
+            o.a * (1.0 - o.e),
             epsilon = 1e-12
         );
         assert_relative_eq!(o.inclination().get::<degree>(), o.i_deg, epsilon = 1e-12);
-        assert_relative_eq!(o.node_typed().get::<radian>(), o.node(), epsilon = 1e-12);
-        assert_relative_eq!(o.argp_typed().get::<radian>(), o.argp(), epsilon = 1e-12);
-        assert_relative_eq!(o.varpi_typed().get::<radian>(), o.varpi(), epsilon = 1e-12);
+        assert_relative_eq!(
+            o.node_typed().get::<radian>(),
+            (o.node_deg * DEG2RAD).rem_euclid(TWO_PI),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.argp_typed().get::<radian>(),
+            (o.argp_deg * DEG2RAD).rem_euclid(TWO_PI),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.varpi_typed().get::<radian>(),
+            ((o.argp_deg + o.node_deg) * DEG2RAD).rem_euclid(TWO_PI),
+            epsilon = 1e-12
+        );
     }
 
     #[test]
     fn test_all_objects_are_etnos() {
         for o in &DES_ETNOS {
             assert!(o.a > 150.0, "{}: a = {}", o.name, o.a);
-            assert!(
-                o.perihelion() > 30.0,
-                "{}: q = {:.1}",
-                o.name,
-                o.perihelion()
-            );
+            let q = (o.perihelion_typed() / p9_core::units::au(1.0)).value;
+            assert!(q > 30.0, "{}: q = {q:.1}", o.name);
         }
     }
 }

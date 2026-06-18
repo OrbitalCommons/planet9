@@ -121,15 +121,10 @@ pub fn l_total(p: &GomesParams) -> f64 {
 ///
 /// This is the half-angle of the cone on which L_p precesses. The maximum
 /// achievable obliquity over a full precession cycle is 2·i_p.
-pub fn forced_inclination(p: &GomesParams) -> f64 {
+pub fn forced_inclination_typed(p: &GomesParams) -> Angle {
     let l9 = l_p9(p);
     let ltot = l_total(p);
-    ((l9 / ltot) * p.i9.sin()).clamp(-1.0, 1.0).asin()
-}
-
-/// [`forced_inclination`] as a typed [`Angle`].
-pub fn forced_inclination_typed(p: &GomesParams) -> Angle {
-    radians(forced_inclination(p))
+    radians(((l9 / ltot) * p.i9.sin()).clamp(-1.0, 1.0).asin())
 }
 
 /// Quadrupole secular coupling constant of two coplanar wires of mass m1, m2
@@ -162,27 +157,20 @@ pub fn coupling_planets_p9(p: &GomesParams) -> f64 {
 ///
 /// (magnitude; the node regresses for prograde mutual tilt). The precession
 /// period is T_prec = 2π / g_p.
-pub fn precession_rate(p: &GomesParams) -> f64 {
+pub fn precession_rate_typed(p: &GomesParams) -> AngularVelocity {
     let c = coupling_planets_p9(p);
     let lp = l_planets();
     let l9 = l_p9(p);
     let ltot = l_total(p);
-    (3.0 * c * p.i9.cos() * ltot / (lp * l9)).abs()
+    let rate = (3.0 * c * p.i9.cos() * ltot / (lp * l9)).abs();
+    (radians(rate) / days(1.0)).into()
 }
 
-/// [`precession_rate`] as a typed [`AngularVelocity`].
-pub fn precession_rate_typed(p: &GomesParams) -> AngularVelocity {
-    (radians(precession_rate(p)) / days(1.0)).into()
-}
-
-/// Precession period of the planetary plane about L_tot (days).
-pub fn precession_period(p: &GomesParams) -> f64 {
-    2.0 * PI / precession_rate(p)
-}
-
-/// [`precession_period`] as a typed [`Time`].
+/// Precession period of the planetary plane about L_tot, as a typed [`Time`].
 pub fn precession_period_typed(p: &GomesParams) -> Time {
-    days(precession_period(p))
+    let w = precession_rate_typed(p);
+    let rate_per_day = (w / (radians(1.0) / days(1.0))).value;
+    days(2.0 * PI / rate_per_day)
 }
 
 /// Solar obliquity induced at time `t` (days), given a fixed primordial solar
@@ -196,15 +184,10 @@ pub fn precession_period_typed(p: &GomesParams) -> Time {
 ///
 /// Over one precession period the obliquity rises from 0 to a maximum of
 /// 2·i_p (when the plane has precessed half-way around) and returns to 0.
-pub fn obliquity_at_time(p: &GomesParams, t: f64) -> f64 {
-    let i_p = forced_inclination(p);
-    let t_prec = precession_period(p);
-    2.0 * i_p * (PI * t / t_prec).sin().abs()
-}
-
-/// [`obliquity_at_time`] as a typed [`Angle`].
 pub fn obliquity_at_time_typed(p: &GomesParams, t: f64) -> Angle {
-    radians(obliquity_at_time(p, t))
+    let i_p = forced_inclination_typed(p);
+    let t_prec = (precession_period_typed(p) / days(1.0)).value;
+    2.0 * i_p * (PI * t / t_prec).sin().abs()
 }
 
 /// Maximum solar obliquity achievable over a full precession cycle (radians).
@@ -215,34 +198,25 @@ pub fn obliquity_at_time_typed(p: &GomesParams, t: f64) -> Angle {
 /// Planet Nine configuration is capable of exciting; the value actually
 /// realised at 4.5 Gyr (see `obliquity_over_age`) is a phase-dependent
 /// fraction of it because the precession period exceeds the system age.
-pub fn max_obliquity(p: &GomesParams) -> f64 {
-    2.0 * forced_inclination(p)
-}
-
-/// [`max_obliquity`] as a typed [`Angle`].
 pub fn max_obliquity_typed(p: &GomesParams) -> Angle {
-    radians(max_obliquity(p))
+    2.0 * forced_inclination_typed(p)
 }
 
 /// Maximum achievable solar obliquity in degrees.
 pub fn max_obliquity_deg(p: &GomesParams) -> f64 {
-    max_obliquity(p) * RAD2DEG
+    (max_obliquity_typed(p) / radians(1.0)).value * RAD2DEG
 }
 
-/// Solar obliquity induced over the age of the Solar System (radians).
-pub fn obliquity_over_age(p: &GomesParams) -> f64 {
-    let t_age = crate::reference::SOLAR_SYSTEM_AGE_GYR * GYR_DAYS;
-    obliquity_at_time(p, t_age)
-}
-
-/// [`obliquity_over_age`] as a typed [`Angle`].
+/// Solar obliquity induced over the age of the Solar System, as a typed
+/// [`Angle`].
 pub fn obliquity_over_age_typed(p: &GomesParams) -> Angle {
-    radians(obliquity_over_age(p))
+    let t_age = crate::reference::SOLAR_SYSTEM_AGE_GYR * GYR_DAYS;
+    obliquity_at_time_typed(p, t_age)
 }
 
 /// Convenience: solar obliquity over the age of the Solar System in degrees.
 pub fn obliquity_over_age_deg(p: &GomesParams) -> f64 {
-    obliquity_over_age(p) * RAD2DEG
+    (obliquity_over_age_typed(p) / radians(1.0)).value * RAD2DEG
 }
 
 /// A single sample of the obliquity time series.
@@ -272,7 +246,7 @@ pub fn obliquity_series(p: &GomesParams, t_max: f64, n: usize) -> Vec<ObliquityS
             let t = t_max * (k as f64) / (n as f64);
             ObliquitySample {
                 t,
-                obliquity: obliquity_at_time(p, t),
+                obliquity: (obliquity_at_time_typed(p, t) / radians(1.0)).value,
             }
         })
         .collect()
@@ -282,7 +256,7 @@ pub fn obliquity_series(p: &GomesParams, t_max: f64, n: usize) -> Vec<ObliquityS
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use uom::si::angle::radian;
+    use uom::si::angle::{degree, radian};
     use uom::si::angular_velocity::radian_per_second;
     use uom::si::length::astronomical_unit;
     use uom::si::time::day;
@@ -292,24 +266,35 @@ mod tests {
         let p = GomesParams::nominal();
         assert_relative_eq!(p.semi_major_axis().get::<astronomical_unit>(), p.a9);
         assert_relative_eq!(p.inclination().get::<radian>(), p.i9);
-        assert_relative_eq!(
-            forced_inclination_typed(&p).get::<radian>(),
-            forced_inclination(&p)
-        );
+
+        // forced inclination: typed vs the inline closed form.
+        let l9 = l_p9(&p);
+        let ltot = l_total(&p);
+        let i_p = ((l9 / ltot) * p.i9.sin()).clamp(-1.0, 1.0).asin();
+        assert_relative_eq!(forced_inclination_typed(&p).get::<radian>(), i_p);
+
+        // precession rate (rad/day) and its rad/s typed view.
+        let c = coupling_planets_p9(&p);
+        let lp = l_planets();
+        let rate = (3.0 * c * p.i9.cos() * ltot / (lp * l9)).abs();
         assert_relative_eq!(
             precession_rate_typed(&p).get::<radian_per_second>(),
-            precession_rate(&p) / 86_400.0,
+            rate / 86_400.0,
             epsilon = 1e-40
         );
-        assert_relative_eq!(
-            precession_period_typed(&p).get::<day>(),
-            precession_period(&p)
-        );
-        assert_relative_eq!(max_obliquity_typed(&p).get::<radian>(), max_obliquity(&p));
-        assert_relative_eq!(
-            obliquity_over_age_typed(&p).get::<radian>(),
-            obliquity_over_age(&p)
-        );
+
+        // precession period (days).
+        assert_relative_eq!(precession_period_typed(&p).get::<day>(), 2.0 * PI / rate);
+
+        // max obliquity (rad) = 2·i_p.
+        assert_relative_eq!(max_obliquity_typed(&p).get::<radian>(), 2.0 * i_p);
+
+        // obliquity over age (rad) vs inline formula.
+        let t_age = crate::reference::SOLAR_SYSTEM_AGE_GYR * GYR_DAYS;
+        let t_prec = 2.0 * PI / rate;
+        let eps_age = 2.0 * i_p * (PI * t_age / t_prec).sin().abs();
+        assert_relative_eq!(obliquity_over_age_typed(&p).get::<radian>(), eps_age);
+
         let s = ObliquitySample {
             t: 1.0e9,
             obliquity: 0.1,
@@ -318,7 +303,7 @@ mod tests {
         assert_relative_eq!(s.obliquity_typed().get::<radian>(), s.obliquity);
         assert_relative_eq!(
             crate::reference::observed_solar_obliquity().get::<radian>(),
-            crate::reference::observed_solar_obliquity_rad()
+            crate::reference::OBSERVED_SOLAR_OBLIQUITY_DEG * DEG2RAD
         );
     }
 
@@ -385,8 +370,16 @@ mod tests {
     fn test_no_obliquity_without_inclination() {
         let mut p = GomesParams::nominal();
         p.i9 = 0.0;
-        assert_relative_eq!(obliquity_over_age(&p), 0.0, epsilon = 1e-12);
-        assert_relative_eq!(forced_inclination(&p), 0.0, epsilon = 1e-12);
+        assert_relative_eq!(
+            obliquity_over_age_typed(&p).get::<radian>(),
+            0.0,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            forced_inclination_typed(&p).get::<radian>(),
+            0.0,
+            epsilon = 1e-12
+        );
     }
 
     /// Obliquity increases monotonically with Planet Nine mass (more massive
@@ -423,7 +416,7 @@ mod tests {
             };
             // Compare the forced inclination, which scales with sin(i_9) and is
             // the monotone driver of the obliquity amplitude.
-            let i_p = forced_inclination(&p) * RAD2DEG;
+            let i_p = forced_inclination_typed(&p).get::<degree>();
             assert!(
                 i_p > prev,
                 "forced inclination not increasing with i_9: i9={i_deg} gave {i_p:.3}°"
@@ -457,7 +450,7 @@ mod tests {
     #[test]
     fn test_precession_period_order_of_magnitude() {
         let p = GomesParams::nominal();
-        let t_prec_gyr = precession_period(&p) / GYR_DAYS;
+        let t_prec_gyr = precession_period_typed(&p).get::<day>() / GYR_DAYS;
         assert!(
             (1.0..100.0).contains(&t_prec_gyr),
             "precession period {t_prec_gyr:.2} Gyr outside the expected 1-100 Gyr range"
@@ -469,7 +462,7 @@ mod tests {
     #[test]
     fn test_forced_inclination_brackets_observed() {
         let p = GomesParams::nominal();
-        let i_p_deg = forced_inclination(&p) * RAD2DEG;
+        let i_p_deg = forced_inclination_typed(&p).get::<degree>();
         // Forced inclination is positive and below the mutual inclination.
         assert!(i_p_deg > 0.0 && i_p_deg < crate::reference::P9_INCLINATION_DEG);
         // The cycle maximum 2·i_p must be able to reach the observed 6°.
@@ -490,7 +483,7 @@ mod tests {
 
         assert_relative_eq!(series[0].obliquity, 0.0, epsilon = 1e-12);
         // First half-period (t_max < T_prec/2 for the nominal case): monotone.
-        let half_period = precession_period(&p) / 2.0;
+        let half_period = precession_period_typed(&p).get::<day>() / 2.0;
         for w in series.windows(2) {
             assert!(w[1].obliquity.is_finite() && w[1].obliquity >= 0.0);
             if w[1].t <= half_period {

@@ -28,37 +28,33 @@ use p9_core::units::{au, Length};
 /// it vanishes for a circular orbit and grows strongly toward e → 1, which is
 /// what drives the resonance overlap. `e9` is accepted for API symmetry with
 /// the chaos map but does not enter the leading multipole width.
-pub fn libration_half_width(j: i64, e: f64, m9_earth: f64, a9_au: f64, _e9: f64) -> f64 {
+pub fn libration_half_width_typed(j: i64, e: f64, m9_earth: f64, a9_au: f64, _e9: f64) -> Length {
     let m9_solar = m9_earth * EARTH_MASS_SOLAR;
     let a_j = resonance_semi_major_axis(1, j as u32, a9_au);
     let alpha = a_j / a9_au;
     let x = hansen_coefficient(1, j as i32, j as i32, e, 1e-8).abs();
-    a_j * ((16.0 / 3.0) * m9_solar * alpha.powi(j as i32 + 1) * x).sqrt()
+    au(a_j * ((16.0 / 3.0) * m9_solar * alpha.powi(j as i32 + 1) * x).sqrt())
 }
 
-/// Quadrupole-limit pendulum half-width as a typed [`Length`] (see
-/// [`libration_half_width`]).
-pub fn libration_half_width_typed(j: i64, e: f64, m9_earth: f64, a9_au: f64, e9: f64) -> Length {
-    au(libration_half_width(j, e, m9_earth, a9_au, e9))
-}
-
-/// Full libration width (AU) — twice the half-width — of the j:1 resonance.
-pub fn libration_width(j: i64, e: f64, m9_earth: f64, a9_au: f64, e9: f64) -> f64 {
-    2.0 * libration_half_width(j, e, m9_earth, a9_au, e9)
-}
-
-/// Full libration width as a typed [`Length`] (see [`libration_width`]).
+/// Full libration width as a typed [`Length`] — twice the half-width — of the
+/// j:1 resonance (see [`libration_half_width_typed`]).
 pub fn libration_width_typed(j: i64, e: f64, m9_earth: f64, a9_au: f64, e9: f64) -> Length {
-    au(libration_width(j, e, m9_earth, a9_au, e9))
+    2.0 * libration_half_width_typed(j, e, m9_earth, a9_au, e9)
 }
 
 /// Libration half-width as a function of mass over a list of Planet Nine
 /// masses (Earth masses), all other parameters fixed. Returns parallel
 /// (mass, half-width) pairs for trend analysis.
-pub fn width_vs_mass(masses_earth: &[f64], j: i64, e: f64, a9_au: f64, e9: f64) -> Vec<(f64, f64)> {
+pub fn width_vs_mass(
+    masses_earth: &[f64],
+    j: i64,
+    e: f64,
+    a9_au: f64,
+    e9: f64,
+) -> Vec<(f64, Length)> {
     masses_earth
         .iter()
-        .map(|&m| (m, libration_half_width(j, e, m, a9_au, e9)))
+        .map(|&m| (m, libration_half_width_typed(j, e, m, a9_au, e9)))
         .collect()
 }
 
@@ -76,13 +72,15 @@ mod tests {
         let masses = [1.0, 5.0, 10.0, 20.0, 50.0];
         let widths = width_vs_mass(&masses, 3, 0.7, A9, E9);
         for w in widths.windows(2) {
+            let lo = (w[0].1 / au(1.0)).value;
+            let hi = (w[1].1 / au(1.0)).value;
             assert!(
-                w[1].1 > w[0].1,
+                hi > lo,
                 "width must grow with mass: {} M⊕ -> {} AU, {} M⊕ -> {} AU",
                 w[0].0,
-                w[0].1,
+                lo,
                 w[1].0,
-                w[1].1
+                hi
             );
         }
     }
@@ -90,39 +88,48 @@ mod tests {
     #[test]
     fn libration_half_width_follows_sqrt_mass_scaling() {
         // δa ∝ √m₉: doubling the mass multiplies the half-width by √2.
-        let w1 = libration_half_width(3, 0.7, 10.0, A9, E9);
-        let w2 = libration_half_width(3, 0.7, 40.0, A9, E9);
+        let w1 = libration_half_width_typed(3, 0.7, 10.0, A9, E9);
+        let w2 = libration_half_width_typed(3, 0.7, 40.0, A9, E9);
         // 4x mass -> 2x width.
-        assert_relative_eq!(w2 / w1, 2.0, max_relative = 1e-6);
+        assert_relative_eq!((w2 / w1).value, 2.0, max_relative = 1e-6);
     }
 
     #[test]
-    fn typed_width_accessors_match_f64_sources() {
-        use uom::si::length::astronomical_unit;
-        assert_relative_eq!(
-            libration_half_width_typed(3, 0.7, 10.0, A9, E9).get::<astronomical_unit>(),
-            libration_half_width(3, 0.7, 10.0, A9, E9),
-            max_relative = 1e-12
-        );
-        assert_relative_eq!(
-            libration_width_typed(3, 0.7, 10.0, A9, E9).get::<astronomical_unit>(),
-            libration_width(3, 0.7, 10.0, A9, E9),
-            max_relative = 1e-12
-        );
+    fn typed_width_matches_inline_formula() {
+        use p9_core::analysis::hansen::hansen_coefficient;
+        use p9_core::analysis::resonance::resonance_semi_major_axis;
+        use p9_core::constants::EARTH_MASS_SOLAR;
+        // Reproduce the closed-form half-width inline and compare to the typed
+        // accessor (in AU).
+        let (j, e, m9_earth) = (3i64, 0.7, 10.0);
+        let m9_solar = m9_earth * EARTH_MASS_SOLAR;
+        let a_j = resonance_semi_major_axis(1, j as u32, A9);
+        let alpha = a_j / A9;
+        let x = hansen_coefficient(1, j as i32, j as i32, e, 1e-8).abs();
+        let expected = a_j * ((16.0 / 3.0) * m9_solar * alpha.powi(j as i32 + 1) * x).sqrt();
+        let half = libration_half_width_typed(j, e, m9_earth, A9, E9);
+        assert_relative_eq!((half / au(1.0)).value, expected, max_relative = 1e-12);
+        // Full width is exactly twice the half-width.
+        let full = libration_width_typed(j, e, m9_earth, A9, E9);
+        assert_relative_eq!((full / au(1.0)).value, 2.0 * expected, max_relative = 1e-12);
     }
 
     #[test]
     fn full_width_is_twice_half_width() {
-        let h = libration_half_width(4, 0.6, 10.0, A9, E9);
-        let f = libration_width(4, 0.6, 10.0, A9, E9);
-        assert_relative_eq!(f, 2.0 * h, max_relative = 1e-12);
+        let h = libration_half_width_typed(4, 0.6, 10.0, A9, E9);
+        let f = libration_width_typed(4, 0.6, 10.0, A9, E9);
+        assert_relative_eq!(
+            (f / au(1.0)).value,
+            2.0 * (h / au(1.0)).value,
+            max_relative = 1e-12
+        );
     }
 
     #[test]
     fn width_is_finite_and_positive() {
         for &j in &[2i64, 3, 5, 8] {
             for &e in &[0.1, 0.5, 0.85] {
-                let w = libration_half_width(j, e, 10.0, A9, E9);
+                let w = (libration_half_width_typed(j, e, 10.0, A9, E9) / au(1.0)).value;
                 assert!(w.is_finite() && w > 0.0, "j={j} e={e} w={w}");
             }
         }

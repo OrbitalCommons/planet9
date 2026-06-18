@@ -35,14 +35,11 @@ pub fn canonical_planets() -> Vec<(f64, f64)> {
 /// in Lai (2016).
 pub const A_JUPITER_AU: f64 = 5.2026;
 
-/// Mean motion `n = √(GM_sun / a³)` in rad/day for a circular orbit at `a`.
-pub fn mean_motion(a_au: f64) -> f64 {
-    (G_AU3_MSUN_DAY2 * (a_au * a_au * a_au).recip()).sqrt()
-}
-
-/// [`mean_motion`] as a typed [`AngularVelocity`].
+/// Mean motion `n = √(GM_sun / a³)` for a circular orbit at `a`, as a typed
+/// [`AngularVelocity`].
 pub fn mean_motion_typed(a_au: f64) -> AngularVelocity {
-    (radians(mean_motion(a_au)) / days(1.0)).into()
+    let n = (G_AU3_MSUN_DAY2 * (a_au * a_au * a_au).recip()).sqrt();
+    (radians(n) / days(1.0)).into()
 }
 
 /// Orbital angular momentum of a circular planet, `L = m √(GM_sun a)`,
@@ -72,10 +69,11 @@ mod tests {
     use uom::si::angular_velocity::radian_per_second;
 
     #[test]
-    fn typed_mean_motion_matches_f64() {
+    fn typed_mean_motion_matches_formula() {
+        let n = (G_AU3_MSUN_DAY2 * (A_JUPITER_AU.powi(3)).recip()).sqrt();
         assert_relative_eq!(
             mean_motion_typed(A_JUPITER_AU).get::<radian_per_second>(),
-            mean_motion(A_JUPITER_AU) / 86_400.0,
+            n / 86_400.0,
             epsilon = 1e-30
         );
     }
@@ -104,7 +102,7 @@ mod tests {
 
     #[test]
     fn jupiter_mean_motion_period_about_11_86_yr() {
-        let n = mean_motion(A_JUPITER_AU);
+        let n = (mean_motion_typed(A_JUPITER_AU) / (radians(1.0) / days(1.0))).value;
         let period_yr = (2.0 * std::f64::consts::PI / n) / YEAR_DAYS;
         assert!(
             (period_yr - 11.86).abs() < 0.05,

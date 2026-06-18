@@ -17,6 +17,7 @@ use crate::chain::{
     first_order_chain, hopping_threshold_au, mass_ratio, n_over_1_chain, published, P9Resonance,
 };
 use p9_core::data::etno::{Etno, BROWN_2017_SAMPLE};
+use p9_core::units::au;
 
 /// Classification of a TNO's dynamical state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -57,9 +58,9 @@ pub fn nearest_n1_resonance(a_au: f64) -> P9Resonance {
     *chain
         .iter()
         .min_by(|x, y| {
-            (x.semi_major_axis(published::A9_AU) - a_au)
+            (x.semi_major_axis_typed(published::A9_AU) - au(a_au))
                 .abs()
-                .partial_cmp(&(y.semi_major_axis(published::A9_AU) - a_au).abs())
+                .partial_cmp(&(y.semi_major_axis_typed(published::A9_AU) - au(a_au)).abs())
                 .unwrap()
         })
         .unwrap()
@@ -122,11 +123,12 @@ mod tests {
         // within the local 2:1→1:1 gap.
         let o = obj("2007 TG422"); // a = 501 AU
         let res = nearest_n1_resonance(o.a);
-        let local_gap = published::A9_AU - P9Resonance::new(2, 1).semi_major_axis(published::A9_AU);
-        let da = (res.semi_major_axis(published::A9_AU) - o.a).abs();
+        let local_gap =
+            au(published::A9_AU) - P9Resonance::new(2, 1).semi_major_axis_typed(published::A9_AU);
+        let da = (res.semi_major_axis_typed(published::A9_AU) - au(o.a)).abs();
         assert!(
             da < local_gap,
-            "nearest n:1 resonance {da} AU away (gap {local_gap})"
+            "nearest n:1 resonance {da:?} away (gap {local_gap:?})"
         );
         // And the nearest n:1 to 2007 TG422 is the 2:1.
         assert_eq!(res, P9Resonance::new(2, 1));

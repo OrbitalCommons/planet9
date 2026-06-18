@@ -38,17 +38,11 @@ pub mod precession_model;
 
 /// Published reference constants from Gomes, Deienno & Morbidelli (2016).
 pub mod reference {
-    use p9_core::constants::DEG2RAD;
     use p9_core::units::{degrees, Angle};
 
     /// Observed solar obliquity: the tilt of the Sun's equator relative to the
     /// invariable (giant-planet) plane, ≈ 6° (degrees).
     pub const OBSERVED_SOLAR_OBLIQUITY_DEG: f64 = 6.0;
-
-    /// Observed solar obliquity in radians.
-    pub fn observed_solar_obliquity_rad() -> f64 {
-        OBSERVED_SOLAR_OBLIQUITY_DEG * DEG2RAD
-    }
 
     /// Observed solar obliquity as a typed [`Angle`].
     pub fn observed_solar_obliquity() -> Angle {
