@@ -16,6 +16,7 @@
 use std::f64::consts::PI;
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
+use p9_core::units::{au, Length};
 
 use crate::simulation::{delta_varpi_series, perihelion_distances, SimulationResult};
 
@@ -46,6 +47,28 @@ pub struct PopulationStats {
     pub mean_q: f64,
     pub min_q: f64,
     pub max_q: f64,
+}
+
+impl PopulationStats {
+    /// Median perihelion distance as a typed [`Length`] (see [`Self::median_q`]).
+    pub fn median_perihelion(&self) -> Length {
+        au(self.median_q)
+    }
+
+    /// Mean perihelion distance as a typed [`Length`] (see [`Self::mean_q`]).
+    pub fn mean_perihelion(&self) -> Length {
+        au(self.mean_q)
+    }
+
+    /// Minimum perihelion distance as a typed [`Length`] (see [`Self::min_q`]).
+    pub fn min_perihelion(&self) -> Length {
+        au(self.min_q)
+    }
+
+    /// Maximum perihelion distance as a typed [`Length`] (see [`Self::max_q`]).
+    pub fn max_perihelion(&self) -> Length {
+        au(self.max_q)
+    }
 }
 
 /// Result of population classification.
@@ -388,5 +411,32 @@ mod tests {
         // Even count
         let stats = compute_stats(&[10.0, 20.0, 30.0, 40.0]);
         assert!((stats.median_q - 25.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn typed_perihelion_accessors_match_f64_sources() {
+        use approx::assert_relative_eq;
+        use uom::si::length::astronomical_unit;
+        let stats = compute_stats(&[10.0, 20.0, 30.0, 40.0]);
+        assert_relative_eq!(
+            stats.median_perihelion().get::<astronomical_unit>(),
+            stats.median_q,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            stats.mean_perihelion().get::<astronomical_unit>(),
+            stats.mean_q,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            stats.min_perihelion().get::<astronomical_unit>(),
+            stats.min_q,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            stats.max_perihelion().get::<astronomical_unit>(),
+            stats.max_q,
+            epsilon = 1e-9
+        );
     }
 }

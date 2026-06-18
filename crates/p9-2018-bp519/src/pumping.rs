@@ -44,6 +44,7 @@ use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::GM_SUN;
 use p9_core::forces::j2_secular::combined_j2_jsu;
 use p9_core::types::P9Params;
+use p9_core::units::{degrees, Angle};
 
 /// Slowly-varying secular state of a test particle (semi-major axis is a
 /// secular invariant and carried separately).
@@ -276,6 +277,18 @@ impl PumpingHistory {
         *self.inclination_deg.last().unwrap()
     }
 
+    /// Maximum inclination over the history as a typed [`Angle`] (see
+    /// [`Self::max_inclination_deg`]).
+    pub fn max_inclination(&self) -> Angle {
+        degrees(self.max_inclination_deg())
+    }
+
+    /// Inclination at the end of the history as a typed [`Angle`] (see
+    /// [`Self::final_inclination_deg`]).
+    pub fn final_inclination(&self) -> Angle {
+        degrees(self.final_inclination_deg())
+    }
+
     /// Maximum eccentricity reached.
     pub fn max_eccentricity(&self) -> f64 {
         self.eccentricity
@@ -383,6 +396,24 @@ mod tests {
     /// a = 700 AU, e = 0.6, i₉ = 30°.
     fn inclined_p9() -> P9Params {
         P9Params::nominal_2016()
+    }
+
+    #[test]
+    fn typed_inclination_accessors_match_degrees() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::degree;
+        let p = scattered_particle(250.0, 0.85, 40.0);
+        let hist = integrate(p, &inclined_p9(), PumpConfig::fast());
+        assert_relative_eq!(
+            hist.max_inclination().get::<degree>(),
+            hist.max_inclination_deg(),
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            hist.final_inclination().get::<degree>(),
+            hist.final_inclination_deg(),
+            epsilon = 1e-9
+        );
     }
 
     #[test]

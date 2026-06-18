@@ -15,6 +15,7 @@
 //! every implied-a₉ peak by tens of AU).
 
 use crate::resonance_catalog::{extended_catalog, farey_f5, Resonance};
+use p9_core::units::{au, Length};
 
 /// Names of the 6 clustered ETNOs of Batygin & Brown (2016) — the sample
 /// Millholland & Laughlin (2017) and Bailey+ (2018) analyze ("all 6 KBOs").
@@ -68,6 +69,11 @@ pub fn p_all_simple(p_simple: f64, n_kbos: usize) -> f64 {
 ///   a₉ = a_kbo / (q/p)^(2/3) = a_kbo * (p/q)^(2/3)
 pub fn implied_a9(a_kbo: f64, res: &Resonance) -> f64 {
     a_kbo * (res.p as f64 / res.q as f64).powf(2.0 / 3.0)
+}
+
+/// Implied a₉ as a typed [`Length`] (see [`implied_a9`]).
+pub fn implied_a9_typed(a_kbo: f64, res: &Resonance) -> Length {
+    au(implied_a9(a_kbo, res))
 }
 
 /// Explicit, honest prior on a₉ and the kernel model for the
@@ -253,6 +259,20 @@ pub struct DistributionComparison {
     pub ext_distribution: A9Distribution,
 }
 
+impl DistributionComparison {
+    /// Peak a₉ of the F5 distribution as a typed [`Length`] (see
+    /// [`Self::f5_peak_a9`]).
+    pub fn f5_peak(&self) -> Length {
+        au(self.f5_peak_a9)
+    }
+
+    /// Peak a₉ of the extended distribution as a typed [`Length`] (see
+    /// [`Self::ext_peak_a9`]).
+    pub fn ext_peak(&self) -> Length {
+        au(self.ext_peak_a9)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -263,6 +283,20 @@ mod tests {
         // a₉ = 378 * (2/1)^(2/3) = 378 * 1.587 ≈ 600
         let a9 = implied_a9(378.0, &Resonance::new(2, 1));
         assert!((a9 - 600.0).abs() < 5.0, "Implied a₉ = {:.1}", a9);
+    }
+
+    #[test]
+    fn typed_length_accessors_match_f64_sources() {
+        use uom::si::length::astronomical_unit;
+        let res = Resonance::new(2, 1);
+        assert!(
+            (implied_a9_typed(378.0, &res).get::<astronomical_unit>() - implied_a9(378.0, &res))
+                .abs()
+                < 1e-9
+        );
+        let cmp = compare_distributions(&observed_kbo_axes());
+        assert!((cmp.f5_peak().get::<astronomical_unit>() - cmp.f5_peak_a9).abs() < 1e-9);
+        assert!((cmp.ext_peak().get::<astronomical_unit>() - cmp.ext_peak_a9).abs() < 1e-9);
     }
 
     #[test]
