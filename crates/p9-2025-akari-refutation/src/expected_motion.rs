@@ -18,6 +18,7 @@
 
 use p9_core::constants::RAD2DEG;
 use p9_core::coords::candidate_pair::transverse_rate_arcmin_yr;
+use p9_core::units::{arcseconds, Angle};
 
 /// Arcminutes per radian.
 const ARCMIN_PER_RAD: f64 = RAD2DEG * 60.0;
@@ -39,6 +40,11 @@ pub fn parallax_six_month_arcmin(d_au: f64) -> f64 {
     2.0 * parallax_half_amplitude_arcmin(d_au)
 }
 
+/// Six-month parallactic swing as a dimension-checked [`Angle`].
+pub fn parallax_six_month(d_au: f64) -> Angle {
+    arcseconds(parallax_six_month_arcmin(d_au) * 60.0)
+}
+
 /// Six-month proper motion (arcmin) for an object at heliocentric distance
 /// `r_au` on an orbit (`a_au`, `e`), from the heliocentric transverse rate.
 /// For a circular orbit pass `a_au == r_au`, `e == 0`.
@@ -49,6 +55,11 @@ pub fn proper_motion_six_month_arcmin(r_au: f64, a_au: f64, e: f64) -> f64 {
 /// Circular-orbit six-month proper motion (arcmin) at distance `d_au`.
 pub fn proper_motion_six_month_circular_arcmin(d_au: f64) -> f64 {
     proper_motion_six_month_arcmin(d_au, d_au, 0.0)
+}
+
+/// Circular-orbit six-month proper motion as a dimension-checked [`Angle`].
+pub fn proper_motion_six_month_circular(d_au: f64) -> Angle {
+    arcseconds(proper_motion_six_month_circular_arcmin(d_au) * 60.0)
 }
 
 /// The six-month parallax range (arcmin) over a distance interval
@@ -81,6 +92,22 @@ mod tests {
     use super::*;
     use crate::published;
     use approx::assert_relative_eq;
+    use uom::si::angle::minute;
+
+    #[test]
+    fn typed_accessors_match_arcmin_sources() {
+        // The typed angles read back in arcminutes exactly.
+        assert_relative_eq!(
+            parallax_six_month(600.0).get::<minute>(),
+            parallax_six_month_arcmin(600.0),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            proper_motion_six_month_circular(600.0).get::<minute>(),
+            proper_motion_six_month_circular_arcmin(600.0),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn parallax_half_amplitude_at_600au_is_5_73_arcmin() {

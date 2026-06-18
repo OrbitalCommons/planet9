@@ -19,6 +19,7 @@ use p9_core::forces::ExtraForce;
 use p9_core::initial_conditions::planets::neptune_j2000;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, P9Params, SimConfig, StateVector};
+use p9_core::units::{days, julian_year, radians, Angle, Time};
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
@@ -75,6 +76,21 @@ impl PipelineConfig {
             p9: None,
         }
     }
+
+    /// Total integration time as a dimension-checked [`Time`].
+    pub fn total_time(&self) -> Time {
+        julian_year() * self.t_total_yr
+    }
+
+    /// Integration timestep as a dimension-checked [`Time`].
+    pub fn timestep(&self) -> Time {
+        days(self.dt_days)
+    }
+
+    /// Snapshot cadence as a dimension-checked [`Time`].
+    pub fn snapshot_interval(&self) -> Time {
+        julian_year() * self.snapshot_interval_yr
+    }
 }
 
 /// Per-TNO pipeline output.
@@ -93,6 +109,13 @@ pub struct TnoResult {
     pub class: StabilityClass,
     /// Clones lost to the integration boundaries
     pub n_escaped: usize,
+}
+
+impl TnoResult {
+    /// Observed longitude of perihelion ϖ as a dimension-checked [`Angle`].
+    pub fn varpi_typed(&self) -> Angle {
+        radians(self.varpi)
+    }
 }
 
 /// Computed pipeline results (no hard-coded paper numbers).
@@ -257,6 +280,41 @@ pub fn run_pipeline(config: &PipelineConfig) -> PipelineResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::radian;
+    use uom::si::time::day;
+
+    #[test]
+    fn config_typed_times_match_f64_sources() {
+        let c = PipelineConfig::smoke();
+        assert_relative_eq!(c.timestep().get::<day>(), c.dt_days, epsilon = 1e-9);
+        // Years convert through the Julian-year length.
+        let yr_d = julian_year().get::<day>();
+        assert_relative_eq!(
+            c.total_time().get::<day>(),
+            c.t_total_yr * yr_d,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            c.snapshot_interval().get::<day>(),
+            c.snapshot_interval_yr * yr_d,
+            max_relative = 1e-12
+        );
+    }
+
+    #[test]
+    fn tno_result_varpi_typed_matches_f64() {
+        let r = TnoResult {
+            name: "x",
+            varpi: 1.234,
+            d_mean: 0.0,
+            d_std: 0.0,
+            d_analytical: 0.0,
+            class: StabilityClass::Stable,
+            n_escaped: 0,
+        };
+        assert_relative_eq!(r.varpi_typed().get::<radian>(), r.varpi, epsilon = 1e-12);
+    }
 
     /// Reduced-scale smoke run: real integration, real statistics.
     #[test]

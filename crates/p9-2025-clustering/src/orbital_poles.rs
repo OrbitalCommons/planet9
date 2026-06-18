@@ -19,6 +19,7 @@ use p9_core::constants::GM_SUN;
 use p9_core::coords::sky::angular_distance;
 use p9_core::initial_conditions::planets::{giant_planets_at, giant_planets_j2000, Time};
 use p9_core::types::{cartesian_to_elements, MassiveBody};
+use p9_core::units::{julian_year, radians, Angle, AngularVelocity};
 use serde::{Deserialize, Serialize};
 
 /// Orbital pole, stored as inclination + node with the planar projection
@@ -49,6 +50,16 @@ impl OrbitalPole {
     /// Position angle (longitude of ascending node in rad).
     pub fn omega_big(&self) -> f64 {
         self.y.atan2(self.x)
+    }
+
+    /// Inclination as a dimension-checked [`Angle`].
+    pub fn inclination_typed(&self) -> Angle {
+        radians(self.inclination())
+    }
+
+    /// Longitude of ascending node as a dimension-checked [`Angle`].
+    pub fn omega_big_typed(&self) -> Angle {
+        radians(self.omega_big())
     }
 
     /// Unit vector of the orbit normal in ecliptic coordinates:
@@ -148,10 +159,43 @@ pub fn nodal_precession_rate(a: f64, e: f64, i: f64) -> f64 {
     rate_day * 365.25 // Convert to rad/yr
 }
 
+/// Nodal precession rate as a typed [`AngularVelocity`] (the rad/yr value of
+/// [`nodal_precession_rate`] carried with units).
+pub fn nodal_precession_rate_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
+    (radians(nodal_precession_rate(a, e, i)) / julian_year()).into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::constants::DEG2RAD;
+    use uom::si::angle::radian;
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::time::second;
+
+    #[test]
+    fn typed_pole_and_rate_match_f64_sources() {
+        let pole = OrbitalPole::from_elements("t", 30.0 * DEG2RAD, 45.0 * DEG2RAD);
+        assert_relative_eq!(
+            pole.inclination_typed().get::<radian>(),
+            pole.inclination(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            pole.omega_big_typed().get::<radian>(),
+            pole.omega_big(),
+            epsilon = 1e-12
+        );
+        // rad/yr rate read back in rad/s matches the f64 rate / seconds-per-year.
+        let yr_s = julian_year().get::<second>();
+        let (a, e, i) = (300.0, 0.7, 20.0 * DEG2RAD);
+        assert_relative_eq!(
+            nodal_precession_rate_typed(a, e, i).get::<radian_per_second>(),
+            nodal_precession_rate(a, e, i) / yr_s,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_orbital_pole_from_elements() {

@@ -16,6 +16,7 @@
 //!    scale.
 
 use crate::parallax::{epoch_parallax_arcsec, half_parallax_arcsec};
+use p9_core::units::{arcseconds, au, Angle, Length};
 
 /// Contrast ratio between a Planet Nine at `distance_au` and a background star of
 /// parallax `star_parallax_arcsec`, using the **half-angle** (annual) parallax of
@@ -51,6 +52,15 @@ pub fn max_tolerable_error_arcsec(distance_au: f64, snr: f64, epoch_separation_d
     epoch_parallax_arcsec(distance_au, epoch_separation_days) / snr
 }
 
+/// Maximum tolerable per-epoch astrometric error as a dimension-checked [`Angle`].
+pub fn max_tolerable_error(distance_au: f64, snr: f64, epoch_separation_days: f64) -> Angle {
+    arcseconds(max_tolerable_error_arcsec(
+        distance_au,
+        snr,
+        epoch_separation_days,
+    ))
+}
+
 /// The same demanded precision expressed in detector pixels for a given plate
 /// scale (arcsec/pixel). Smaller is harder; the value falls as `1/d`.
 pub fn required_precision_pixels(
@@ -73,12 +83,38 @@ pub fn max_detectable_distance_au(sigma_arcsec: f64, snr: f64, epoch_separation_
     k / (snr * sigma_arcsec)
 }
 
+/// Largest detectable heliocentric distance as a dimension-checked [`Length`].
+pub fn max_detectable_distance(sigma_arcsec: f64, snr: f64, epoch_separation_days: f64) -> Length {
+    au(max_detectable_distance_au(
+        sigma_arcsec,
+        snr,
+        epoch_separation_days,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::parallax::YEAR_DAYS;
     use crate::published;
     use approx::assert_relative_eq;
+    use uom::si::angle::second as arcsecond;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_siblings_match_f64_sources() {
+        let base = YEAR_DAYS / 2.0;
+        assert_relative_eq!(
+            max_tolerable_error(700.0, 5.0, base).get::<arcsecond>(),
+            max_tolerable_error_arcsec(700.0, 5.0, base),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            max_detectable_distance(1.0, 5.0, base).get::<astronomical_unit>(),
+            max_detectable_distance_au(1.0, 5.0, base),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn contrast_against_field_star_is_thousands() {

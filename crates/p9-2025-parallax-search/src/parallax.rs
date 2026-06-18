@@ -15,6 +15,7 @@
 
 use p9_core::constants::{AU_KM, PC_AU};
 use p9_core::coords::parallax::{annual_parallax_arcsec, parallax_arcsec};
+use p9_core::units::{arcseconds, au, Angle, Length};
 
 /// Arcseconds per arcminute.
 pub const ARCSEC_PER_ARCMIN: f64 = 60.0;
@@ -32,6 +33,11 @@ pub fn half_parallax_arcsec(distance_au: f64) -> f64 {
     PC_AU / distance_au
 }
 
+/// Reflex-parallax half-angle as a dimension-checked [`Angle`].
+pub fn half_parallax(distance_au: f64) -> Angle {
+    arcseconds(half_parallax_arcsec(distance_au))
+}
+
 /// Reflex-parallax half-angle in **arcminutes** — the paper's order-of-arcmin
 /// headline for a 500–700 AU body.
 pub fn half_parallax_arcmin(distance_au: f64) -> f64 {
@@ -44,6 +50,11 @@ pub fn annual_parallax_arcmin(distance_au: f64) -> f64 {
     annual_parallax_arcsec(distance_au) / ARCSEC_PER_ARCMIN
 }
 
+/// Full annual peak-to-peak parallax as a dimension-checked [`Angle`].
+pub fn annual_parallax(distance_au: f64) -> Angle {
+    arcseconds(annual_parallax_arcsec(distance_au))
+}
+
 /// Projected Earth-orbit baseline (AU) between two epochs separated by
 /// `epoch_separation_days`, for a circular 1 AU orbit. Two positions separated
 /// by orbital phase `Δθ` are `2 * sin(Δθ/2)` AU apart (chord length). A
@@ -54,12 +65,23 @@ pub fn projected_baseline_au(epoch_separation_days: f64) -> f64 {
     2.0 * (dtheta / 2.0).sin().abs()
 }
 
+/// Projected Earth-orbit baseline as a dimension-checked [`Length`].
+pub fn projected_baseline(epoch_separation_days: f64) -> Length {
+    au(projected_baseline_au(epoch_separation_days))
+}
+
 /// Parallactic displacement (arcsec) of a body at `distance_au` observed at two
 /// epochs separated by `epoch_separation_days`, using the chord baseline above.
 /// This is the quantity the search actually measures between two visits.
 pub fn epoch_parallax_arcsec(distance_au: f64, epoch_separation_days: f64) -> f64 {
     let baseline_km = projected_baseline_au(epoch_separation_days) * AU_KM;
     parallax_arcsec(baseline_km, distance_au)
+}
+
+/// Parallactic displacement over an epoch separation as a dimension-checked
+/// [`Angle`].
+pub fn epoch_parallax(distance_au: f64, epoch_separation_days: f64) -> Angle {
+    arcseconds(epoch_parallax_arcsec(distance_au, epoch_separation_days))
 }
 
 /// Same, in arcminutes.
@@ -82,6 +104,33 @@ mod tests {
     use super::*;
     use crate::published;
     use approx::assert_relative_eq;
+    use uom::si::angle::second as arcsecond;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_siblings_match_f64_sources() {
+        let d = published::REFERENCE_DISTANCE_AU;
+        assert_relative_eq!(
+            half_parallax(d).get::<arcsecond>(),
+            half_parallax_arcsec(d),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            annual_parallax(d).get::<arcsecond>(),
+            annual_parallax_arcsec(d),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            epoch_parallax(d, 30.0).get::<arcsecond>(),
+            epoch_parallax_arcsec(d, 30.0),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            projected_baseline(30.0).get::<astronomical_unit>(),
+            projected_baseline_au(30.0),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn half_parallax_is_arcminutes_at_p9_distance() {

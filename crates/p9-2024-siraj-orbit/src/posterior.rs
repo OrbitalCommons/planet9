@@ -23,6 +23,7 @@
 use crate::confinement::observed_forcing;
 use crate::forcing::forcing_strength;
 use p9_core::data::ephemeris_constraint::{SIRAJ_2024_A_AU, SIRAJ_2024_MASS_EARTH};
+use p9_core::units::{au, earth_masses, Length, Mass};
 
 /// A point in the (mass, semi-major axis) inference space.
 #[derive(Debug, Clone, Copy)]
@@ -31,6 +32,18 @@ pub struct OrbitPoint {
     pub mass_earth: f64,
     /// Perturber semi-major axis in AU.
     pub a_p: f64,
+}
+
+impl OrbitPoint {
+    /// Perturber mass as a dimension-checked [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Perturber semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_p)
+    }
 }
 
 /// The (m, a_p) posterior model.
@@ -138,7 +151,30 @@ pub fn calibrated_posterior(angles: &[f64]) -> ForcingPosterior {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::data::etno::longitudes_of_perihelion;
+    use uom::si::length::astronomical_unit;
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let p = OrbitPoint {
+            mass_earth: SIRAJ_2024_MASS_EARTH,
+            a_p: SIRAJ_2024_A_AU,
+        };
+        assert_relative_eq!(
+            p.semi_major_axis().get::<astronomical_unit>(),
+            p.a_p,
+            epsilon = 1e-12
+        );
+        // Mass reads back in Earth masses via the kg ratio.
+        let earth_kg = earth_masses(1.0).get::<kilogram>();
+        assert_relative_eq!(
+            p.mass().get::<kilogram>() / earth_kg,
+            p.mass_earth,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_neg2_log_post_minimized_on_ridge_at_aref() {

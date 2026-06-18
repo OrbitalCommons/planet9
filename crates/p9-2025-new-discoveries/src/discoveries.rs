@@ -10,6 +10,7 @@
 //! the same arc the papers report.
 
 use p9_core::data::etno::Etno;
+use p9_core::units::{au, Length};
 
 /// A new discovery with its discovery-paper headline reference numbers kept
 /// separately from the computed orbit.
@@ -26,6 +27,18 @@ pub struct NewDiscovery {
     pub paper_q_au: f64,
     /// One-line note on why this object stresses the clustering hypothesis.
     pub note: &'static str,
+}
+
+impl NewDiscovery {
+    /// Paper-headline semi-major axis as a dimension-checked [`Length`].
+    pub fn paper_a(&self) -> Length {
+        au(self.paper_a_au)
+    }
+
+    /// Paper-headline perihelion distance as a dimension-checked [`Length`].
+    pub fn paper_q(&self) -> Length {
+        au(self.paper_q_au)
+    }
 }
 
 /// 2017 OF201 — Cheng, Yang, et al. 2025 (arXiv:2505.15806).
@@ -88,6 +101,22 @@ pub const AMMONITE_SEDNOID_RANK: u32 = 4;
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn paper_lengths_match_f64_sources() {
+        let d = of201();
+        assert_relative_eq!(
+            d.paper_a().get::<astronomical_unit>(),
+            d.paper_a_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            d.paper_q().get::<astronomical_unit>(),
+            d.paper_q_au,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn of201_is_very_distant() {

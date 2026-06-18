@@ -18,6 +18,7 @@
 
 use p9_core::analysis::photometry::mass_radius_neptunian;
 use p9_core::analysis::thermal::{planck_bnu, solar_equilibrium_temp, thermal_flux_jy, C_LIGHT};
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 use crate::survey_model::{AkariFisSurvey, IrasSurvey};
 
@@ -41,6 +42,21 @@ impl P9ThermalParams {
     /// docs for sources).
     pub fn radius_m(&self) -> f64 {
         mass_radius_neptunian(self.mass_earth) * R_EARTH
+    }
+
+    /// Mass as a dimension-checked [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Heliocentric distance as a dimension-checked [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+
+    /// Physical radius as a dimension-checked [`Length`].
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
     }
 
     /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
@@ -135,6 +151,34 @@ pub fn is_detectable(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::length::{astronomical_unit, meter};
+    use uom::si::mass::kilogram;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let p = P9ThermalParams {
+            mass_earth: 10.0,
+            distance_au: 600.0,
+            t_eff: 40.0,
+        };
+        assert_relative_eq!(
+            p.distance().get::<astronomical_unit>(),
+            p.distance_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.radius().get::<meter>(),
+            p.radius_m(),
+            max_relative = 1e-12
+        );
+        let earth_kg = earth_masses(1.0).get::<kilogram>();
+        assert_relative_eq!(
+            p.mass().get::<kilogram>() / earth_kg,
+            p.mass_earth,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn planck_peak_shifts_with_temperature() {

@@ -18,6 +18,7 @@
 
 use p9_core::constants::YEAR_DAYS;
 use p9_core::coords::observer::{Time, Timescale};
+use p9_core::units::{self, arcseconds, julian_year, Angle};
 use serde::{Deserialize, Serialize};
 
 /// A far-infrared point source detection from either survey.
@@ -141,6 +142,11 @@ pub fn epoch_baseline(iras: &IrasSurvey, akari: &AkariFisSurvey) -> f64 {
     (akari.mid_epoch(&ts).tdb() - iras.mid_epoch(&ts).tdb()) / YEAR_DAYS
 }
 
+/// The IRAS–AKARI epoch baseline as a dimension-checked [`units::Time`].
+pub fn epoch_baseline_time(iras: &IrasSurvey, akari: &AkariFisSurvey) -> units::Time {
+    julian_year() * epoch_baseline(iras, akari)
+}
+
 /// Angular separation between two sky positions in arcminutes.
 ///
 /// Uses the Vincenty formula for great-circle distance, accurate at all
@@ -162,9 +168,34 @@ pub fn angular_separation_arcmin(ra1_deg: f64, dec1_deg: f64, ra2_deg: f64, dec2
     angle_rad.to_degrees() * 60.0 // convert degrees to arcminutes
 }
 
+/// Angular separation between two sky positions as a dimension-checked
+/// [`Angle`] (the typed sibling of [`angular_separation_arcmin`]).
+pub fn angular_separation(ra1_deg: f64, dec1_deg: f64, ra2_deg: f64, dec2_deg: f64) -> Angle {
+    arcseconds(angular_separation_arcmin(ra1_deg, dec1_deg, ra2_deg, dec2_deg) * 60.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::angle::minute;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_siblings_match_f64_sources() {
+        let (iras, akari) = (IrasSurvey::default(), AkariFisSurvey::default());
+        let yr_d = julian_year().get::<day>();
+        assert_relative_eq!(
+            epoch_baseline_time(&iras, &akari).get::<day>(),
+            epoch_baseline(&iras, &akari) * yr_d,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            angular_separation(10.0, 20.0, 11.0, 21.0).get::<minute>(),
+            angular_separation_arcmin(10.0, 20.0, 11.0, 21.0),
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn iras_default_matches_paper() {

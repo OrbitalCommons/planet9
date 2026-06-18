@@ -13,6 +13,7 @@
 //! The paper finds 13 pairs after step 4, and 1 good candidate after step 6.
 
 use p9_core::coords::candidate_pair::implied_distance;
+use p9_core::units::{arcseconds, au, Angle, Length};
 use serde::{Deserialize, Serialize};
 
 use crate::survey_model::{angular_separation_arcmin, FirSource};
@@ -33,6 +34,18 @@ pub struct SelectionCriteria {
     /// positional uncertainty (the catalogued 20"/30" errors were
     /// previously carried but never used in the match).
     pub pos_err_n_sigma: f64,
+}
+
+impl SelectionCriteria {
+    /// Minimum angular separation as a dimension-checked [`Angle`].
+    pub fn sep_min(&self) -> Angle {
+        arcseconds(self.sep_min_arcmin * 60.0)
+    }
+
+    /// Maximum angular separation as a dimension-checked [`Angle`].
+    pub fn sep_max(&self) -> Angle {
+        arcseconds(self.sep_max_arcmin * 60.0)
+    }
 }
 
 impl SelectionCriteria {
@@ -80,6 +93,23 @@ pub struct CandidatePair {
     pub implied_distance_au: f64,
     /// Flux ratio (IRAS 60µm / AKARI 90µm)
     pub flux_ratio: f64,
+}
+
+impl CandidatePair {
+    /// Angular separation as a dimension-checked [`Angle`].
+    pub fn separation(&self) -> Angle {
+        arcseconds(self.separation_arcmin * 60.0)
+    }
+
+    /// Combined 1σ positional uncertainty as a dimension-checked [`Angle`].
+    pub fn combined_pos_err(&self) -> Angle {
+        arcseconds(self.combined_pos_err_arcmin * 60.0)
+    }
+
+    /// Implied heliocentric distance as a dimension-checked [`Length`].
+    pub fn implied_distance(&self) -> Length {
+        au(self.implied_distance_au)
+    }
 }
 
 /// Result of the candidate search.
@@ -249,7 +279,44 @@ pub fn false_alarm_probability(expected_pairs: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::survey_model::Survey;
+    use approx::assert_relative_eq;
     use rand::{Rng, SeedableRng};
+    use uom::si::angle::minute;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let criteria = SelectionCriteria::default();
+        assert_relative_eq!(
+            criteria.sep_min().get::<minute>(),
+            criteria.sep_min_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            criteria.sep_max().get::<minute>(),
+            criteria.sep_max_arcmin,
+            max_relative = 1e-12
+        );
+
+        let iras = vec![make_iras_source(180.0, 45.0, 0.5)];
+        let akari = vec![make_akari_source(180.0, 46.0, 0.6)];
+        let pair = &search_candidates(&iras, &akari, &criteria, 23.0).candidates[0];
+        assert_relative_eq!(
+            pair.separation().get::<minute>(),
+            pair.separation_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            pair.combined_pos_err().get::<minute>(),
+            pair.combined_pos_err_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            pair.implied_distance().get::<astronomical_unit>(),
+            pair.implied_distance_au,
+            epsilon = 1e-9
+        );
+    }
 
     fn make_iras_source(ra: f64, dec: f64, flux: f64) -> FirSource {
         FirSource {

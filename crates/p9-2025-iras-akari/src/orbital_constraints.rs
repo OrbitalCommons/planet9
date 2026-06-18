@@ -14,6 +14,7 @@
 
 use crate::survey_model::angular_separation_arcmin;
 use p9_core::coords::candidate_pair;
+use p9_core::units::{arcseconds, au, degrees, julian_year, Angle, AngularVelocity, Length, Time};
 
 /// The candidate pair from Phan et al. (2025) Table 2.
 pub struct CandidatePair {
@@ -74,6 +75,38 @@ pub struct TwoEpochConstraints {
     pub delta_dec_arcmin: f64,
 }
 
+impl TwoEpochConstraints {
+    /// Angular separation as a dimension-checked [`Angle`].
+    pub fn separation(&self) -> Angle {
+        arcseconds(self.separation_arcmin * 60.0)
+    }
+
+    /// Annual proper motion as a typed [`AngularVelocity`].
+    pub fn proper_motion(&self) -> AngularVelocity {
+        (arcseconds(self.proper_motion_arcmin_yr * 60.0) / julian_year()).into()
+    }
+
+    /// Position angle of motion as a dimension-checked [`Angle`].
+    pub fn position_angle(&self) -> Angle {
+        degrees(self.position_angle_deg)
+    }
+
+    /// Epoch baseline as a dimension-checked [`Time`].
+    pub fn baseline(&self) -> Time {
+        julian_year() * self.baseline_years
+    }
+
+    /// RA component of motion as a dimension-checked [`Angle`].
+    pub fn delta_ra(&self) -> Angle {
+        arcseconds(self.delta_ra_arcmin * 60.0)
+    }
+
+    /// Dec component of motion as a dimension-checked [`Angle`].
+    pub fn delta_dec(&self) -> Angle {
+        arcseconds(self.delta_dec_arcmin * 60.0)
+    }
+}
+
 /// Distance-orbit constraints for a grid of assumed semi-major axes.
 #[derive(Debug, Clone)]
 pub struct DistanceOrbitConstraint {
@@ -86,6 +119,18 @@ pub struct DistanceOrbitConstraint {
     pub implied_eccentricity: f64,
     /// Whether this (a, e) combination is physically plausible
     pub plausible: bool,
+}
+
+impl DistanceOrbitConstraint {
+    /// Assumed semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Heliocentric distance at observation as a dimension-checked [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.r_au)
+    }
 }
 
 /// Compute two-epoch constraints from the candidate pair.
@@ -191,7 +236,63 @@ pub fn explore_orbit_space(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use p9_core::coords::sky::equatorial_to_ecliptic_deg;
+    use uom::si::angle::{degree, minute, radian};
+    use uom::si::angular_velocity::radian_per_second;
+    use uom::si::length::astronomical_unit;
+    use uom::si::time::{day, second};
+
+    #[test]
+    fn typed_accessors_match_f64_sources() {
+        let c = derive_constraints(&CandidatePair::paper_candidate());
+        assert_relative_eq!(
+            c.separation().get::<minute>(),
+            c.separation_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            c.position_angle().get::<degree>(),
+            c.position_angle_deg,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            c.delta_ra().get::<minute>(),
+            c.delta_ra_arcmin,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            c.delta_dec().get::<minute>(),
+            c.delta_dec_arcmin,
+            max_relative = 1e-12
+        );
+        // Baseline (years) reads back through the Julian-year day count.
+        let yr_d = julian_year().get::<day>();
+        assert_relative_eq!(
+            c.baseline().get::<day>(),
+            c.baseline_years * yr_d,
+            max_relative = 1e-12
+        );
+        // Proper motion arcmin/yr read back in rad/s.
+        let yr_s = julian_year().get::<second>();
+        assert_relative_eq!(
+            c.proper_motion().get::<radian_per_second>(),
+            arcseconds(c.proper_motion_arcmin_yr * 60.0).get::<radian>() / yr_s,
+            max_relative = 1e-9
+        );
+
+        let orbits = explore_orbit_space(&c, &[700.0]);
+        assert_relative_eq!(
+            orbits[0].semi_major_axis().get::<astronomical_unit>(),
+            orbits[0].a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            orbits[0].distance().get::<astronomical_unit>(),
+            orbits[0].r_au,
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn candidate_separation_matches_paper() {
