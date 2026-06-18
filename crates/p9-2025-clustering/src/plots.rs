@@ -141,7 +141,7 @@ pub fn orbital_pole_plot(poles: &[OrbitalPole], width: u32, height: u32) -> Stri
     if !poles.is_empty() {
         let max_r = poles
             .iter()
-            .map(|p| p.inclination())
+            .map(|p| (p.inclination_typed() / p9_core::units::radians(1.0)).value)
             .fold(0.0_f64, f64::max)
             .max(0.01);
 

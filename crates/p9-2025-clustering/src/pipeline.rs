@@ -222,11 +222,15 @@ pub fn run_pipeline(config: &PipelineConfig) -> PipelineResult {
             }
             d_values.push(measure_diffusion(s, config.snapshot_interval_yr, 5));
         }
-        let agg = aggregate_clone_diffusion(tno.name, &d_values, tno.perihelion());
+        let agg = aggregate_clone_diffusion(
+            tno.name,
+            &d_values,
+            (tno.perihelion_typed() / p9_core::units::au(1.0)).value,
+        );
         let class = classify(&agg);
         per_tno.push(TnoResult {
             name: tno.name,
-            varpi: tno.varpi(),
+            varpi: (tno.varpi_typed() / p9_core::units::radians(1.0)).value,
             d_mean: agg.d_mean,
             d_std: agg.d_std,
             d_analytical: agg.d_analytical,

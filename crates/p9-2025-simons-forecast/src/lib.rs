@@ -81,8 +81,9 @@ mod tests {
         // The full forecast in one assertion chain: for a nominal 5 M⊕ body
         // SO reaches the paper's ~900 AU, exceeds ACT's published band, and
         // covers a larger fraction of the reference box.
-        let so5 = max_detectable_distance(5.0, &SO_SENSITIVITY);
-        let act5 = max_detectable_distance(5.0, &ACT_SENSITIVITY);
+        use p9_core::units::au;
+        let so5 = (max_detectable_distance(5.0, &SO_SENSITIVITY) / au(1.0)).value;
+        let act5 = (max_detectable_distance(5.0, &ACT_SENSITIVITY) / au(1.0)).value;
 
         assert!(so5 > act5, "SO reach > ACT reach");
         assert!(

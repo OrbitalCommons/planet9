@@ -62,16 +62,6 @@ pub struct ObservedTno {
 }
 
 impl ObservedTno {
-    /// Perihelion distance q = a(1 − e) in AU.
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Longitude of perihelion ϖ = ω + Ω (rad), wrapped to [0, 2π).
-    pub fn varpi(&self) -> f64 {
-        (self.omega + self.omega_big).rem_euclid(TWO_PI)
-    }
-
     /// Semi-major axis as a dimension-checked [`Length`].
     pub fn semi_major_axis(&self) -> Length {
         au(self.a)
@@ -79,7 +69,7 @@ impl ObservedTno {
 
     /// Perihelion distance `q = a(1 − e)` as a dimension-checked [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 
     /// Inclination as a dimension-checked [`Angle`].
@@ -87,9 +77,10 @@ impl ObservedTno {
         radians(self.i)
     }
 
-    /// Longitude of perihelion ϖ as a dimension-checked [`Angle`].
+    /// Longitude of perihelion ϖ = ω + Ω as a dimension-checked [`Angle`],
+    /// wrapped to [0, 2π).
     pub fn varpi_typed(&self) -> Angle {
-        radians(self.varpi())
+        radians((self.omega + self.omega_big).rem_euclid(TWO_PI))
     }
 }
 
@@ -115,23 +106,15 @@ pub struct TnoClone {
 }
 
 impl TnoClone {
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Longitude of perihelion ϖ = ω + Ω (rad), wrapped to [0, 2π).
-    pub fn varpi(&self) -> f64 {
-        (self.omega + self.omega_big).rem_euclid(TWO_PI)
-    }
-
     /// Perihelion distance `q = a(1 − e)` as a dimension-checked [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 
-    /// Longitude of perihelion ϖ as a dimension-checked [`Angle`].
+    /// Longitude of perihelion ϖ = ω + Ω as a dimension-checked [`Angle`],
+    /// wrapped to [0, 2π).
     pub fn varpi_typed(&self) -> Angle {
-        radians(self.varpi())
+        radians((self.omega + self.omega_big).rem_euclid(TWO_PI))
     }
 
     /// Full orbital element set for integration.
@@ -157,7 +140,7 @@ pub fn generate_clones<R: Rng>(tno: &ObservedTno, n_clones: usize, rng: &mut R) 
     let ang_dist = Normal::new(0.0, tno.sigma_angle.max(1e-9)).unwrap();
     let m_dist = Uniform::new(0.0, TWO_PI);
 
-    let q0 = tno.perihelion();
+    let q0 = (tno.perihelion_typed() / p9_core::units::au(1.0)).value;
     let parent_crossing = q0 < A_NEPTUNE_AU;
 
     let mut clones = Vec::with_capacity(n_clones);
@@ -253,7 +236,7 @@ mod tests {
         );
         assert_relative_eq!(
             tno.perihelion_typed().get::<astronomical_unit>(),
-            tno.perihelion(),
+            tno.a * (1.0 - tno.e),
             epsilon = 1e-12
         );
         assert_relative_eq!(
@@ -263,7 +246,7 @@ mod tests {
         );
         assert_relative_eq!(
             tno.varpi_typed().get::<radian>(),
-            tno.varpi(),
+            (tno.omega + tno.omega_big).rem_euclid(TWO_PI),
             epsilon = 1e-12
         );
 
@@ -271,12 +254,12 @@ mod tests {
         let clone = &generate_clones(tno, 1, &mut rng)[0];
         assert_relative_eq!(
             clone.perihelion_typed().get::<astronomical_unit>(),
-            clone.perihelion(),
+            clone.a * (1.0 - clone.e),
             epsilon = 1e-12
         );
         assert_relative_eq!(
             clone.varpi_typed().get::<radian>(),
-            clone.varpi(),
+            (clone.omega + clone.omega_big).rem_euclid(TWO_PI),
             epsilon = 1e-12
         );
     }
@@ -359,13 +342,14 @@ mod tests {
         let mut rng = rand::rngs::StdRng::seed_from_u64(11);
         let tno = &distant_tno_sample()[0]; // Sedna, q = 75.9 AU
         let clones = generate_clones(tno, 200, &mut rng);
-        let q0 = tno.perihelion();
+        let q0 = tno.perihelion_typed().get::<astronomical_unit>();
         for c in &clones {
+            let q = c.perihelion_typed().get::<astronomical_unit>();
             assert!(
-                (c.perihelion() - q0).abs() < 5.0 * SIGMA_E * c.a,
+                (q - q0).abs() < 5.0 * SIGMA_E * c.a,
                 "{}: clone q = {:.1} vs parent q = {:.1}",
                 c.parent_name,
-                c.perihelion(),
+                q,
                 q0
             );
         }
@@ -381,11 +365,12 @@ mod tests {
                 // Parent is detached (q > a_N): clones either stay
                 // outside Neptune or carry the explicit flag.
                 if !c.neptune_crossing {
+                    let q = c.perihelion_typed().get::<astronomical_unit>();
                     assert!(
-                        c.perihelion() > A_NEPTUNE_AU,
+                        q > A_NEPTUNE_AU,
                         "{}: silent Neptune crosser q = {:.1}",
                         c.parent_name,
-                        c.perihelion()
+                        q
                     );
                 }
             }

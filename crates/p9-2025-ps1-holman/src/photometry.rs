@@ -19,25 +19,26 @@ pub fn apparent_r_magnitude(mass_earth: f64, r_au: f64) -> f64 {
     planet_apparent_magnitude(mass_earth, ALBEDO_NEPTUNE, r_au)
 }
 
-/// Maximum heliocentric distance (AU) at which a P9 of `mass_earth` is still
-/// at or brighter than the survey's effective (shift-and-stack) depth, i.e.
-/// `apparent_r_magnitude(mass, r) == survey.effective_depth()`.
+/// Maximum heliocentric distance at which a P9 of `mass_earth` is still at or
+/// brighter than the survey's effective (shift-and-stack) depth, i.e.
+/// `apparent_r_magnitude(mass, r) == survey.effective_depth()`, as a
+/// dimension-checked [`Length`].
 ///
 /// Apparent magnitude rises monotonically with distance (reflected light
 /// dims as r^4 at opposition: m ~ H + 5 log10(r(r-1))), so the equation has
 /// a unique root, found by bisection on [`R_MIN_AU`, `R_MAX_AU`]. Returns
 /// `R_MAX_AU` if even there the object is detectable, `R_MIN_AU` if it is
 /// never detectable.
-pub fn max_detectable_distance(survey: &Ps1StackSurvey, mass_earth: f64) -> f64 {
+pub fn max_detectable_distance_typed(survey: &Ps1StackSurvey, mass_earth: f64) -> Length {
     let target = survey.effective_depth();
     let mut lo = R_MIN_AU;
     let mut hi = R_MAX_AU;
     // At lo the object is brightest (smallest m); detectable means m <= target.
     if apparent_r_magnitude(mass_earth, lo) > target {
-        return R_MIN_AU; // not detectable anywhere in range
+        return au(R_MIN_AU); // not detectable anywhere in range
     }
     if apparent_r_magnitude(mass_earth, hi) <= target {
-        return R_MAX_AU; // detectable everywhere in range
+        return au(R_MAX_AU); // detectable everywhere in range
     }
     for _ in 0..100 {
         let mid = 0.5 * (lo + hi);
@@ -47,12 +48,7 @@ pub fn max_detectable_distance(survey: &Ps1StackSurvey, mass_earth: f64) -> f64 
             hi = mid;
         }
     }
-    0.5 * (lo + hi)
-}
-
-/// [`max_detectable_distance`] as a dimension-checked [`Length`].
-pub fn max_detectable_distance_typed(survey: &Ps1StackSurvey, mass_earth: f64) -> Length {
-    au(max_detectable_distance(survey, mass_earth))
+    au(0.5 * (lo + hi))
 }
 
 /// Inner bound of the bisection bracket (AU). Objects closer than the giant
@@ -81,7 +77,7 @@ mod tests {
     #[test]
     fn max_distance_is_finite_and_at_threshold() {
         let s = Ps1StackSurvey::default();
-        let r = max_detectable_distance(&s, 6.0);
+        let r = (max_detectable_distance_typed(&s, 6.0) / au(1.0)).value;
         // PINNED: a finite AU value strictly inside the bracket.
         assert!(r.is_finite());
         assert!(r > R_MIN_AU && r < R_MAX_AU, "r_max = {r:.1}");
@@ -95,12 +91,25 @@ mod tests {
     }
 
     #[test]
-    fn typed_distance_matches_f64() {
-        use uom::si::length::astronomical_unit;
+    fn typed_distance_matches_inline_bisection() {
         let s = Ps1StackSurvey::default();
+        // Inline the same bracket-bisection root the typed function computes,
+        // then check the typed result (in AU) matches it exactly.
+        let target = s.effective_depth();
+        let mut lo = R_MIN_AU;
+        let mut hi = R_MAX_AU;
+        for _ in 0..100 {
+            let mid = 0.5 * (lo + hi);
+            if apparent_r_magnitude(6.0, mid) <= target {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        let expected = 0.5 * (lo + hi);
         assert_relative_eq!(
-            max_detectable_distance_typed(&s, 6.0).get::<astronomical_unit>(),
-            max_detectable_distance(&s, 6.0),
+            (max_detectable_distance_typed(&s, 6.0) / au(1.0)).value,
+            expected,
             epsilon = 1e-12
         );
     }
@@ -108,9 +117,9 @@ mod tests {
     #[test]
     fn max_distance_increases_with_mass() {
         let s = Ps1StackSurvey::default();
-        let r5 = max_detectable_distance(&s, 5.0);
-        let r10 = max_detectable_distance(&s, 10.0);
-        let r20 = max_detectable_distance(&s, 20.0);
+        let r5 = (max_detectable_distance_typed(&s, 5.0) / au(1.0)).value;
+        let r10 = (max_detectable_distance_typed(&s, 10.0) / au(1.0)).value;
+        let r20 = (max_detectable_distance_typed(&s, 20.0) / au(1.0)).value;
         // PINNED: more massive (larger, brighter) P9 detectable farther out.
         assert!(r10 > r5, "r10 {r10:.1} should exceed r5 {r5:.1}");
         assert!(r20 > r10, "r20 {r20:.1} should exceed r10 {r10:.1}");
@@ -124,8 +133,8 @@ mod tests {
             stack_depth_gain: 0.0,
             ..Ps1StackSurvey::default()
         };
-        let r_stack = max_detectable_distance(&stack, 6.0);
-        let r_single = max_detectable_distance(&single, 6.0);
+        let r_stack = (max_detectable_distance_typed(&stack, 6.0) / au(1.0)).value;
+        let r_single = (max_detectable_distance_typed(&single, 6.0) / au(1.0)).value;
         assert!(
             r_stack > r_single,
             "stack reach {r_stack:.1} should exceed single-epoch {r_single:.1}"

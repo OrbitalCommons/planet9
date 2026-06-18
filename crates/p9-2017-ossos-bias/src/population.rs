@@ -41,14 +41,10 @@ pub struct SyntheticEtno {
 }
 
 impl SyntheticEtno {
-    /// Longitude of perihelion ϖ = Ω + ω, wrapped to [0, 2π).
-    pub fn longitude_of_perihelion(&self) -> f64 {
-        (self.elements.omega_big + self.elements.omega).rem_euclid(TWO_PI)
-    }
-
-    /// Longitude of perihelion as a dimension-checked [`Angle`].
+    /// Longitude of perihelion ϖ = Ω + ω, wrapped to [0, 2π), as a
+    /// dimension-checked [`Angle`].
     pub fn longitude_of_perihelion_typed(&self) -> Angle {
-        radians(self.longitude_of_perihelion())
+        radians((self.elements.omega_big + self.elements.omega).rem_euclid(TWO_PI))
     }
 }
 
@@ -142,7 +138,9 @@ pub fn generate_population<R: Rng>(
 
 /// Longitudes of perihelion of a population (radians).
 pub fn longitudes_of_perihelion(pop: &[SyntheticEtno]) -> Vec<f64> {
-    pop.iter().map(|o| o.longitude_of_perihelion()).collect()
+    pop.iter()
+        .map(|o| (o.longitude_of_perihelion_typed() / radians(1.0)).value)
+        .collect()
 }
 
 #[cfg(test)]
@@ -171,7 +169,7 @@ mod tests {
         let o = generate_population(1, &p, &mut rng)[0];
         assert_relative_eq!(
             (o.longitude_of_perihelion_typed() / radians(1.0)).value,
-            o.longitude_of_perihelion(),
+            (o.elements.omega_big + o.elements.omega).rem_euclid(TWO_PI),
             max_relative = 1e-12
         );
     }

@@ -18,21 +18,22 @@ use p9_core::units::{au, earth_masses, Length, Mass};
 use crate::bands::MmSensitivity;
 use crate::thermal::P9Thermal;
 
-/// Maximum heliocentric distance (AU) at which a Planet Nine of `mass_earth`
-/// emits at least `sens.flux_limit_mjy` at the sensitivity's band frequency.
+/// Maximum heliocentric distance at which a Planet Nine of `mass_earth`
+/// emits at least `sens.flux_limit_mjy` at the sensitivity's band frequency,
+/// as a dimension-checked [`Length`].
 ///
 /// Flux falls monotonically as 1/d², so the reach is the unique root of
 /// `F_ν(d) = flux_limit`. Solved by bisection over `[d_lo, d_hi]`; returns
 /// `d_lo` if even the nearest distance is too faint and `d_hi` if the body is
 /// still detectable at the far bracket.
-pub fn max_detectable_distance(mass_earth: f64, sens: &MmSensitivity) -> f64 {
+pub fn max_detectable_distance(mass_earth: f64, sens: &MmSensitivity) -> Length {
     let flux_at = |d: f64| P9Thermal::new(mass_earth, d).flux_mjy(sens.nu_hz);
     let (mut lo, mut hi) = (50.0_f64, 5000.0_f64);
     if flux_at(lo) < sens.flux_limit_mjy {
-        return lo;
+        return au(lo);
     }
     if flux_at(hi) >= sens.flux_limit_mjy {
-        return hi;
+        return au(hi);
     }
     for _ in 0..200 {
         let mid = 0.5 * (lo + hi);
@@ -45,12 +46,7 @@ pub fn max_detectable_distance(mass_earth: f64, sens: &MmSensitivity) -> f64 {
             break;
         }
     }
-    0.5 * (lo + hi)
-}
-
-/// [`max_detectable_distance`] as a dimension-checked [`Length`].
-pub fn max_detectable_distance_typed(mass_earth: f64, sens: &MmSensitivity) -> Length {
-    au(max_detectable_distance(mass_earth, sens))
+    au(0.5 * (lo + hi))
 }
 
 /// Expected detection significance (signal-to-noise ratio) of a Planet Nine of
@@ -142,9 +138,27 @@ mod tests {
         use uom::si::length::astronomical_unit;
         use uom::si::mass::kilogram;
 
+        // The bisection root recomputed inline must equal the typed reach.
+        let reach = max_detectable_distance(5.0, &SO_SENSITIVITY);
+        let expected_au = {
+            let flux_at = |d: f64| P9Thermal::new(5.0, d).flux_mjy(SO_SENSITIVITY.nu_hz);
+            let (mut lo, mut hi) = (50.0_f64, 5000.0_f64);
+            for _ in 0..200 {
+                let mid = 0.5 * (lo + hi);
+                if flux_at(mid) >= SO_SENSITIVITY.flux_limit_mjy {
+                    lo = mid;
+                } else {
+                    hi = mid;
+                }
+                if hi - lo < 1e-6 {
+                    break;
+                }
+            }
+            0.5 * (lo + hi)
+        };
         assert_relative_eq!(
-            max_detectable_distance_typed(5.0, &SO_SENSITIVITY).get::<astronomical_unit>(),
-            max_detectable_distance(5.0, &SO_SENSITIVITY),
+            reach.get::<astronomical_unit>(),
+            expected_au,
             epsilon = 1e-9
         );
         let bx = ReferenceBox::nominal();
@@ -165,9 +179,9 @@ mod tests {
         // A heavier P9 has a larger radius, is brighter, and is detectable to a
         // greater distance — for both surveys.
         for sens in [&ACT_SENSITIVITY, &SO_SENSITIVITY] {
-            let d5 = max_detectable_distance(5.0, sens);
-            let d10 = max_detectable_distance(10.0, sens);
-            let d15 = max_detectable_distance(15.0, sens);
+            let d5 = (max_detectable_distance(5.0, sens) / au(1.0)).value;
+            let d10 = (max_detectable_distance(10.0, sens) / au(1.0)).value;
+            let d15 = (max_detectable_distance(15.0, sens) / au(1.0)).value;
             assert!(
                 d5 < d10 && d10 < d15,
                 "{}: reach must rise with mass: {d5:.0} < {d10:.0} < {d15:.0}",
@@ -181,8 +195,8 @@ mod tests {
         // The headline comparison: for the same cold body SO's deeper map
         // detects it to a greater heliocentric distance than ACT.
         for &m in &[5.0, 10.0, 15.0] {
-            let so = max_detectable_distance(m, &SO_SENSITIVITY);
-            let act = max_detectable_distance(m, &ACT_SENSITIVITY);
+            let so = (max_detectable_distance(m, &SO_SENSITIVITY) / au(1.0)).value;
+            let act = (max_detectable_distance(m, &ACT_SENSITIVITY) / au(1.0)).value;
             assert!(
                 so > act,
                 "{m} M⊕: SO reach {so:.0} AU should exceed ACT {act:.0} AU"
@@ -195,7 +209,7 @@ mod tests {
         // Naess et al. (2021): a 5 M⊕ P9 has an ACT detection limit of
         // 325–625 AU depending on sky location; our median-depth (8 mJy)
         // reach lands inside that band.
-        let act5 = max_detectable_distance(5.0, &ACT_SENSITIVITY);
+        let act5 = (max_detectable_distance(5.0, &ACT_SENSITIVITY) / au(1.0)).value;
         assert!(
             (325.0..=625.0).contains(&act5),
             "ACT 5 M⊕ reach {act5:.0} AU should be within published 325–625"
@@ -205,8 +219,8 @@ mod tests {
     #[test]
     fn so_reach_matches_published_5me_band() {
         // SO forecast: 5 M⊕ detectable from 500 AU (shallow) to 900 AU (deep).
-        let deep = max_detectable_distance(5.0, &SO_SENSITIVITY);
-        let shallow = max_detectable_distance(5.0, &SO_SENSITIVITY_SHALLOW);
+        let deep = (max_detectable_distance(5.0, &SO_SENSITIVITY) / au(1.0)).value;
+        let shallow = (max_detectable_distance(5.0, &SO_SENSITIVITY_SHALLOW) / au(1.0)).value;
         assert!(
             (820.0..=980.0).contains(&deep),
             "SO deep 5 M⊕ reach {deep:.0} AU near published ~900"
@@ -225,7 +239,7 @@ mod tests {
         let ratio = near / far;
         assert!((3.9..=4.1).contains(&ratio), "SNR ratio {ratio:.3} ≈ 4");
         // At the flux limit the SNR is ~2 (the 95%-CL threshold).
-        let edge_d = max_detectable_distance(5.0, &SO_SENSITIVITY);
+        let edge_d = (max_detectable_distance(5.0, &SO_SENSITIVITY) / au(1.0)).value;
         let snr_edge = detection_significance(5.0, edge_d, &SO_SENSITIVITY);
         assert!((snr_edge - 2.0).abs() < 0.05, "edge SNR {snr_edge:.3} ≈ 2");
     }
