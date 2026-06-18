@@ -70,7 +70,7 @@ members = [
     "crates/p9-2026-iorio-precession",
     "crates/p9-2016-iorio-precession",
     "crates/p9-review-article",
-    "crates/p9-2016-linder-evolution",
+    "crates/p9-2016-linder-evolution", "crates/p9-viability",
 ]
 
 [workspace.dependencies]
