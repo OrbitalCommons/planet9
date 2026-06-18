@@ -19,6 +19,7 @@ use p9_core::forces::ExtraForce;
 use p9_core::initial_conditions::planets;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, P9Params, SimConfig as CoreConfig};
+use p9_core::units::{au, days, degrees, radians, Angle, Length, Time};
 use rand::Rng;
 use rand_distr::{Distribution, Uniform};
 use serde::{Deserialize, Serialize};
@@ -101,6 +102,51 @@ impl SimConfig {
         config.p9.mass_earth = 20.0;
         config
     }
+
+    /// Total integration time as a dimension-checked [`Time`] (stored in Gyr).
+    pub fn integration_time(&self) -> Time {
+        days(self.t_gyr * GYR_DAYS)
+    }
+
+    /// Integration timestep as a dimension-checked [`Time`] (stored in days).
+    pub fn timestep(&self) -> Time {
+        days(self.dt)
+    }
+
+    /// Snapshot interval as a dimension-checked [`Time`] (stored in days).
+    pub fn snapshot_interval_typed(&self) -> Time {
+        days(self.snapshot_interval)
+    }
+
+    /// Minimum initial semi-major axis as a dimension-checked [`Length`].
+    pub fn a_min_typed(&self) -> Length {
+        au(self.a_min)
+    }
+
+    /// Maximum initial semi-major axis as a dimension-checked [`Length`].
+    pub fn a_max_typed(&self) -> Length {
+        au(self.a_max)
+    }
+
+    /// Minimum initial perihelion distance as a dimension-checked [`Length`].
+    pub fn q_min_typed(&self) -> Length {
+        au(self.q_min)
+    }
+
+    /// Maximum initial perihelion distance as a dimension-checked [`Length`].
+    pub fn q_max_typed(&self) -> Length {
+        au(self.q_max)
+    }
+
+    /// Inner removal boundary as a dimension-checked [`Length`].
+    pub fn r_remove_inner_typed(&self) -> Length {
+        au(self.r_remove_inner)
+    }
+
+    /// Outer removal boundary as a dimension-checked [`Length`].
+    pub fn r_remove_outer_typed(&self) -> Length {
+        au(self.r_remove_outer)
+    }
 }
 
 /// Observability selection criteria from the paper.
@@ -119,6 +165,16 @@ impl ObservabilityCriteria {
 
     pub fn is_observable(&self, q: f64, i_deg: f64) -> bool {
         q <= self.q_max && i_deg <= self.i_max_deg
+    }
+
+    /// Maximum observable perihelion distance as a dimension-checked [`Length`].
+    pub fn q_max_typed(&self) -> Length {
+        au(self.q_max)
+    }
+
+    /// Maximum observable inclination as a dimension-checked [`Angle`].
+    pub fn i_max_typed(&self) -> Angle {
+        degrees(self.i_max_deg)
     }
 }
 
@@ -182,6 +238,21 @@ impl TestParticle {
 
     pub fn inclination_deg(&self) -> f64 {
         self.i / DEG2RAD
+    }
+
+    /// Semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Inclination as a dimension-checked [`Angle`] (stored in radians).
+    pub fn inclination(&self) -> Angle {
+        radians(self.i)
+    }
+
+    /// Perihelion distance `q = a(1 − e)` as a dimension-checked [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
     }
 
     fn elements(&self) -> OrbitalElements {
@@ -310,6 +381,52 @@ pub fn quick_test_simulation(config: &SimConfig) -> Vec<TestParticle> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn typed_sim_config_accessors_match_f64() {
+        let c = SimConfig::default_paper();
+        assert_relative_eq!(
+            (c.a_min_typed() / au(1.0)).value,
+            c.a_min,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (c.q_max_typed() / au(1.0)).value,
+            c.q_max,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!((c.timestep() / days(1.0)).value, c.dt, max_relative = 1e-12);
+        assert_relative_eq!(
+            (c.integration_time() / days(1.0)).value,
+            c.t_gyr * GYR_DAYS,
+            max_relative = 1e-12
+        );
+        let obs = ObservabilityCriteria::default_paper();
+        assert_relative_eq!(
+            (obs.i_max_typed() / degrees(1.0)).value,
+            obs.i_max_deg,
+            max_relative = 1e-12
+        );
+        let tp = TestParticle {
+            a: 500.0,
+            e: 0.8,
+            i: 0.3,
+            omega: 0.1,
+            omega_big: 0.2,
+            mean_anomaly: 0.0,
+        };
+        assert_relative_eq!(
+            (tp.perihelion_typed() / au(1.0)).value,
+            tp.perihelion(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (tp.inclination() / radians(1.0)).value,
+            tp.i,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_default_config() {

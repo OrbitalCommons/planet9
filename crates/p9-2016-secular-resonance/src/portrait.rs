@@ -36,6 +36,7 @@
 
 use crate::hamiltonian::SecularModel;
 use p9_core::constants::GM_SUN;
+use p9_core::units::{days, radians, Angle, AngularVelocity, Time};
 use std::f64::consts::PI;
 
 /// The 1-DOF resonant pendulum built from the secular Hamiltonian's apsidal
@@ -93,6 +94,24 @@ pub struct Island {
     pub suggested_dt: f64,
     /// Suggested step count (covers several libration periods).
     pub suggested_steps: usize,
+}
+
+impl Island {
+    /// Stable libration angle as a dimension-checked [`Angle`].
+    pub fn center_dvarpi_typed(&self) -> Angle {
+        radians(self.center_dvarpi)
+    }
+
+    /// Small-oscillation libration frequency as a dimension-checked
+    /// [`AngularVelocity`] (the stored value is in rad/day).
+    pub fn omega_lib_typed(&self) -> AngularVelocity {
+        (radians(self.omega_lib) / days(1.0)).into()
+    }
+
+    /// Suggested integration timestep as a dimension-checked [`Time`].
+    pub fn suggested_dt_typed(&self) -> Time {
+        days(self.suggested_dt)
+    }
 }
 
 impl ResonantHamiltonian {
@@ -159,6 +178,12 @@ impl ResonantHamiltonian {
     pub fn with_external_rate(mut self, g_p: f64) -> Self {
         self.g_p = g_p;
         self
+    }
+
+    /// Planet Nine apsidal precession rate `g₉` as a dimension-checked
+    /// [`AngularVelocity`] (the stored value is in rad/day).
+    pub fn g_p_typed(&self) -> AngularVelocity {
+        (radians(self.g_p) / days(1.0)).into()
     }
 
     /// Span [min, max] of the free precession rate over the eccentricity grid.
@@ -316,7 +341,37 @@ pub fn libration_island(model: &SecularModel) -> Option<Island> {
 mod tests {
     use super::*;
     use crate::published;
+    use approx::assert_relative_eq;
     use p9_core::types::P9Params;
+
+    #[test]
+    fn typed_island_and_rate_accessors_match_f64() {
+        let p9 = published::nominal_p9();
+        let m = SecularModel::new(published::REPRESENTATIVE_ETNO_A_AU, &p9);
+        let island = libration_island(&m).expect("nominal P9 should have an island");
+        assert_relative_eq!(
+            (island.center_dvarpi_typed() / radians(1.0)).value,
+            island.center_dvarpi,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (island.omega_lib_typed() * days(1.0) / radians(1.0)).value,
+            island.omega_lib,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (island.suggested_dt_typed() / days(1.0)).value,
+            island.suggested_dt,
+            max_relative = 1e-12
+        );
+
+        let rh = ResonantHamiltonian::new(m, island.e_center).with_external_rate(island.omega_lib);
+        assert_relative_eq!(
+            (rh.g_p_typed() * days(1.0) / radians(1.0)).value,
+            rh.g_p,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn island_exists_for_nominal_p9_and_is_anti_aligned() {

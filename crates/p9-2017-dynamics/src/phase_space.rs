@@ -15,6 +15,7 @@
 //!    (ω = (Δϖ − θ)/2).
 
 use p9_core::constants::DEG2RAD;
+use p9_core::units::{au, radians, Angle, Length};
 use serde::{Deserialize, Serialize};
 
 use crate::hamiltonian::{secular_hamiltonian, SecularHamiltonianParams};
@@ -30,6 +31,18 @@ pub struct PhasePoint {
     pub i: f64,
     /// Hamiltonian value at this point
     pub h_value: f64,
+}
+
+impl PhasePoint {
+    /// Δϖ as a dimension-checked [`Angle`] (stored in radians).
+    pub fn delta_varpi_typed(&self) -> Angle {
+        radians(self.delta_varpi)
+    }
+
+    /// Implied inclination as a dimension-checked [`Angle`] (stored in radians).
+    pub fn inclination(&self) -> Angle {
+        radians(self.i)
+    }
 }
 
 /// Configuration for phase portrait generation.
@@ -90,6 +103,11 @@ impl PhasePortraitConfig {
     /// Inclination implied by H_z at eccentricity e.
     pub fn inclination_at(&self, e: f64) -> f64 {
         (self.h_z / (1.0 - e * e).sqrt()).clamp(-1.0, 1.0).acos()
+    }
+
+    /// Test-particle semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
     }
 }
 
@@ -234,7 +252,30 @@ pub fn find_equilibria(
 mod tests {
     use super::*;
     use crate::hamiltonian::{high_inclination_action, SecularHamiltonianParams};
+    use approx::assert_relative_eq;
     use std::f64::consts::PI;
+
+    #[test]
+    fn typed_phase_space_accessors_match_f64() {
+        let config = PhasePortraitConfig::low_inclination();
+        assert_relative_eq!(
+            (config.semi_major_axis() / au(1.0)).value,
+            config.a,
+            max_relative = 1e-12
+        );
+        let params = SecularHamiltonianParams::default_paper();
+        let p = &compute_phase_portrait(&config, &params)[0];
+        assert_relative_eq!(
+            (p.delta_varpi_typed() / radians(1.0)).value,
+            p.delta_varpi,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.inclination() / radians(1.0)).value,
+            p.i,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_phase_portrait_size() {

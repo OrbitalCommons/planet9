@@ -38,6 +38,7 @@ use std::f64::consts::PI;
 
 use p9_core::analysis::photometry::{apparent_magnitude, opposition_delta};
 use p9_core::constants::{DEG2RAD, TWO_PI};
+use p9_core::units::{radians, Angle};
 
 /// Ecliptic longitudes (radians) where the galactic plane crosses the
 /// ecliptic: λ ≈ 95° (toward the galactic center side) and 275°.
@@ -72,6 +73,27 @@ pub struct BiasParams {
     /// marginalization. The observed a > 230 AU sample has i ≲ 30°; the
     /// physical prior range is [0, i_max], not [0, π].
     pub i_max: f64,
+}
+
+impl BiasParams {
+    /// Ecliptic-latitude cutoff as a dimension-checked [`Angle`].
+    pub fn latitude_cutoff_typed(&self) -> Angle {
+        radians(self.latitude_cutoff)
+    }
+
+    /// Maximum population inclination as a dimension-checked [`Angle`].
+    pub fn i_max_typed(&self) -> Angle {
+        radians(self.i_max)
+    }
+
+    /// Galactic-plane longitude suppression 1σ widths as dimension-checked
+    /// [`Angle`]s (same ordering as [`BiasParams::galactic_lon_sigmas`]).
+    pub fn galactic_lon_sigmas_typed(&self) -> [Angle; 2] {
+        [
+            radians(self.galactic_lon_sigmas[0]),
+            radians(self.galactic_lon_sigmas[1]),
+        ]
+    }
 }
 
 impl Default for BiasParams {
@@ -259,6 +281,28 @@ pub fn bias_max(a: f64, e: f64, h_mag: f64, i: f64, params: &BiasParams) -> f64 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn typed_bias_param_angles_match_f64() {
+        let p = BiasParams::default();
+        assert_relative_eq!(
+            (p.latitude_cutoff_typed() / radians(1.0)).value,
+            p.latitude_cutoff,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (p.i_max_typed() / radians(1.0)).value,
+            p.i_max,
+            max_relative = 1e-12
+        );
+        let sig = p.galactic_lon_sigmas_typed();
+        assert_relative_eq!(
+            (sig[1] / radians(1.0)).value,
+            p.galactic_lon_sigmas[1],
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_detectable_fraction_limits() {

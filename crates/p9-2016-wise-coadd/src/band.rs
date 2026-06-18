@@ -21,6 +21,7 @@ use p9_core::analysis::thermal::{
     flux_to_magnitude, reflected_flux_jy as p9_core_reflected_flux,
     thermal_flux_jy as p9_core_thermal_flux, C_LIGHT,
 };
+use p9_core::units::{meters, Length};
 
 /// A WISE photometric band: effective wavelength and Vega zero-point flux
 /// density (Wright et al. 2010, Table 1).
@@ -32,6 +33,13 @@ pub struct WiseBand {
     pub wavelength_m: f64,
     /// Vega zero-point flux density in Jansky (0.0 mag source).
     pub zero_point_jy: f64,
+}
+
+impl WiseBand {
+    /// Effective wavelength as a dimension-checked [`Length`].
+    pub fn wavelength(&self) -> Length {
+        meters(self.wavelength_m)
+    }
 }
 
 /// WISE W1 (3.3526 µm, F_ν0 = 309.540 Jy; Wright et al. 2010, Table 1).
@@ -107,6 +115,17 @@ mod tests {
     fn brighter_with_mass_and_fainter_with_distance_in_w2() {
         assert!(band_magnitude(15.0, 500.0, W2) < band_magnitude(5.0, 500.0, W2));
         assert!(band_magnitude(10.0, 800.0, W2) > band_magnitude(10.0, 400.0, W2));
+    }
+
+    #[test]
+    fn typed_wavelength_matches_f64() {
+        for band in [W1, W2] {
+            assert_relative_eq!(
+                (band.wavelength() / meters(1.0)).value,
+                band.wavelength_m,
+                max_relative = 1e-12
+            );
+        }
     }
 
     #[test]

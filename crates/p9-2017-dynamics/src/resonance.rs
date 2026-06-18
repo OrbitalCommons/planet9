@@ -15,6 +15,7 @@
 use p9_core::analysis::hansen::{hansen_coefficient, mean_to_true_anomaly};
 use p9_core::analysis::resonance::resonant_angle;
 use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN, TWO_PI};
+use p9_core::units::{au, Length};
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 
@@ -33,6 +34,16 @@ pub struct Resonance {
 }
 
 impl Resonance {
+    /// Nominal semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_nominal)
+    }
+
+    /// Pendulum half-width in semi-major axis as a dimension-checked [`Length`].
+    pub fn delta_semi_major_axis(&self) -> Length {
+        au(self.delta_a)
+    }
+
     /// Compute the nominal semi-major axis for a p:q resonance given a_9.
     pub fn nominal_semimajor(p: i64, q: i64, a9: f64) -> f64 {
         a9 * (q as f64 / p as f64).powf(2.0 / 3.0)
@@ -287,6 +298,22 @@ pub fn adiabatic_deviation(libration_amplitude: f64, resonance_width: f64) -> f6
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn typed_resonance_lengths_match_f64() {
+        let r = &key_resonances_700()[0];
+        assert_relative_eq!(
+            (r.semi_major_axis() / au(1.0)).value,
+            r.a_nominal,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            (r.delta_semi_major_axis() / au(1.0)).value,
+            r.delta_a,
+            max_relative = 1e-12
+        );
+    }
 
     #[test]
     fn test_nominal_semimajor_1_1() {
