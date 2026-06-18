@@ -19,6 +19,7 @@
 use serde::{Deserialize, Serialize};
 
 use p9_core::constants::{GM_SUN, GYR_DAYS};
+use p9_core::units::{au, days, radians, Angle, Length, Time};
 
 use crate::hamiltonian::{secular_hamiltonian, HamiltonianParams};
 
@@ -31,6 +32,17 @@ pub struct VzlkPoint {
     pub q: f64,
     /// Hamiltonian value
     pub h_value: f64,
+}
+
+impl VzlkPoint {
+    /// Argument of perihelion as a typed [`Angle`].
+    pub fn omega(&self) -> Angle {
+        radians(self.omega)
+    }
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion(&self) -> Length {
+        au(self.q)
+    }
 }
 
 /// A point along an integrated secular trajectory.
@@ -48,6 +60,25 @@ pub struct TrajectoryPoint {
     pub q: f64,
     /// Hamiltonian value (conserved along the trajectory)
     pub h_value: f64,
+}
+
+impl TrajectoryPoint {
+    /// Time as a typed [`Time`].
+    pub fn time(&self) -> Time {
+        days(self.t_days)
+    }
+    /// Argument of perihelion as a typed [`Angle`].
+    pub fn omega(&self) -> Angle {
+        radians(self.omega)
+    }
+    /// Inclination as a typed [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        radians(self.i)
+    }
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion(&self) -> Length {
+        au(self.q)
+    }
 }
 
 /// Configuration for vZLK phase portrait.
@@ -68,6 +99,19 @@ pub struct VzlkConfig {
 }
 
 impl VzlkConfig {
+    /// Fixed semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+    /// Minimum perihelion as a typed [`Length`].
+    pub fn q_min(&self) -> Length {
+        au(self.q_min)
+    }
+    /// Maximum perihelion as a typed [`Length`].
+    pub fn q_max(&self) -> Length {
+        au(self.q_max)
+    }
+
     /// Configuration for a typical IOC object at a=1000 AU.
     pub fn default_paper() -> Self {
         Self {
@@ -300,6 +344,57 @@ mod tests {
             n_quadrature: 64,
             ..HamiltonianParams::default_paper()
         }
+    }
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::radian;
+        use uom::si::length::astronomical_unit;
+        use uom::si::time::day;
+        let cfg = VzlkConfig::default_paper();
+        assert_relative_eq!(
+            cfg.semi_major_axis().get::<astronomical_unit>(),
+            cfg.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            cfg.q_min().get::<astronomical_unit>(),
+            cfg.q_min,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            cfg.q_max().get::<astronomical_unit>(),
+            cfg.q_max,
+            epsilon = 1e-12
+        );
+        let p = VzlkPoint {
+            omega: 1.2,
+            q: 200.0,
+            h_value: 0.0,
+        };
+        assert_relative_eq!(p.omega().get::<radian>(), p.omega, epsilon = 1e-12);
+        assert_relative_eq!(
+            p.perihelion().get::<astronomical_unit>(),
+            p.q,
+            epsilon = 1e-12
+        );
+        let tp = TrajectoryPoint {
+            t_days: 1.0e6,
+            omega: 0.5,
+            e: 0.9,
+            i: 0.7,
+            q: 150.0,
+            h_value: 0.0,
+        };
+        assert_relative_eq!(tp.time().get::<day>(), tp.t_days, max_relative = 1e-12);
+        assert_relative_eq!(tp.omega().get::<radian>(), tp.omega, epsilon = 1e-12);
+        assert_relative_eq!(tp.inclination().get::<radian>(), tp.i, epsilon = 1e-12);
+        assert_relative_eq!(
+            tp.perihelion().get::<astronomical_unit>(),
+            tp.q,
+            epsilon = 1e-12
+        );
     }
 
     #[test]

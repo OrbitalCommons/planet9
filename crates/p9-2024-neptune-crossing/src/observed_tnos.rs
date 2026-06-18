@@ -18,6 +18,7 @@
 //! fabricated entries ("2016 QV89" is a ~30 m NEA, "2014 LU28" is a
 //! retrograde centaur); both are gone.
 
+use p9_core::units::{au, degrees, Angle, Length};
 use serde::{Deserialize, Serialize};
 
 /// Provenance statement for the table below (tested non-empty and SBDB-sourced).
@@ -40,11 +41,41 @@ pub struct NeptuneCrossingTno {
     pub q: f64,
 }
 
+impl NeptuneCrossingTno {
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+    /// Inclination as a typed [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        degrees(self.i)
+    }
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion(&self) -> Length {
+        au(self.q)
+    }
+}
+
 /// Selection criteria for the Neptune-crossing TNO sample.
 pub struct SelectionCriteria {
     pub a_min: f64,
     pub i_max: f64,
     pub q_max: f64,
+}
+
+impl SelectionCriteria {
+    /// Minimum semi-major axis as a typed [`Length`].
+    pub fn a_min(&self) -> Length {
+        au(self.a_min)
+    }
+    /// Maximum inclination as a typed [`Angle`].
+    pub fn i_max(&self) -> Angle {
+        degrees(self.i_max)
+    }
+    /// Maximum perihelion as a typed [`Length`].
+    pub fn q_max(&self) -> Length {
+        au(self.q_max)
+    }
 }
 
 /// Returns the selection criteria used in the paper.
@@ -230,6 +261,37 @@ mod tests {
     #[test]
     fn test_sample_size() {
         assert_eq!(observed_sample().len(), 17);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::degree;
+        use uom::si::length::astronomical_unit;
+        let t = &observed_sample()[0];
+        assert_relative_eq!(
+            t.semi_major_axis().get::<astronomical_unit>(),
+            t.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(t.inclination().get::<degree>(), t.i, epsilon = 1e-12);
+        assert_relative_eq!(
+            t.perihelion().get::<astronomical_unit>(),
+            t.q,
+            epsilon = 1e-12
+        );
+        let c = selection_criteria();
+        assert_relative_eq!(
+            c.a_min().get::<astronomical_unit>(),
+            c.a_min,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(c.i_max().get::<degree>(), c.i_max, epsilon = 1e-12);
+        assert_relative_eq!(
+            c.q_max().get::<astronomical_unit>(),
+            c.q_max,
+            epsilon = 1e-12
+        );
     }
 
     #[test]

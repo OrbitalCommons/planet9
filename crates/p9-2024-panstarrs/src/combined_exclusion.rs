@@ -19,6 +19,7 @@ use p9_core::constants::DEG2RAD;
 use p9_core::coords::observer::{EarthProvider, EarthState};
 use p9_core::data::reference_population::{generate_reference_population, heliocentric_distance};
 use p9_core::types::{OrbitalElements, P9Params};
+use p9_core::units::{au, earth_masses, Length, Mass};
 
 use crate::detection_pipeline::{
     detection_probability_for_orbit, detection_probability_for_orbit_with_earth,
@@ -88,6 +89,31 @@ impl UpdatedParameters {
             omega_big: 97.0 * DEG2RAD,
             mean_anomaly: 0.0,
         }
+    }
+
+    /// Median semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_median)
+    }
+    /// Upper semi-major axis uncertainty as a typed [`Length`].
+    pub fn a_upper(&self) -> Length {
+        au(self.a_upper)
+    }
+    /// Lower semi-major axis uncertainty as a typed [`Length`].
+    pub fn a_lower(&self) -> Length {
+        au(self.a_lower)
+    }
+    /// Median mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth_median)
+    }
+    /// Upper mass uncertainty as a typed [`Mass`].
+    pub fn mass_upper(&self) -> Mass {
+        earth_masses(self.mass_upper)
+    }
+    /// Lower mass uncertainty as a typed [`Mass`].
+    pub fn mass_lower(&self) -> Mass {
+        earth_masses(self.mass_lower)
     }
 }
 
@@ -256,6 +282,43 @@ pub fn remaining_parameter_space(exclusion: &CombinedExclusion) -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn updated_parameters_typed_accessors_match_f64() {
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let p = UpdatedParameters::paper_values();
+        assert_relative_eq!(
+            p.semi_major_axis().get::<astronomical_unit>(),
+            p.a_median,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.a_upper().get::<astronomical_unit>(),
+            p.a_upper,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.a_lower().get::<astronomical_unit>(),
+            p.a_lower,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            p.mass().get::<kilogram>(),
+            earth_masses(p.mass_earth_median).get::<kilogram>(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            p.mass_upper().get::<kilogram>(),
+            earth_masses(p.mass_upper).get::<kilogram>(),
+            epsilon = 1.0
+        );
+        assert_relative_eq!(
+            p.mass_lower().get::<kilogram>(),
+            earth_masses(p.mass_lower).get::<kilogram>(),
+            epsilon = 1.0
+        );
+    }
 
     #[test]
     fn paper_exclusion_values_from_shared_table() {

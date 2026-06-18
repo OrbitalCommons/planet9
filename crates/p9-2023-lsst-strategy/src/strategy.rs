@@ -27,6 +27,7 @@
 //! computed from a real reference Planet Nine population in
 //! [`crate::discoverable`].
 
+use p9_core::units::{degrees, Angle};
 use serde::{Deserialize, Serialize};
 
 /// Published LSST single-visit and co-added depths and footprint parameters,
@@ -94,6 +95,19 @@ pub struct LsstStrategy {
 }
 
 impl LsstStrategy {
+    /// Southern declination limit as a typed [`Angle`].
+    pub fn dec_min(&self) -> Angle {
+        degrees(self.dec_min_deg)
+    }
+    /// Northern declination limit as a typed [`Angle`].
+    pub fn dec_max(&self) -> Angle {
+        degrees(self.dec_max_deg)
+    }
+    /// Galactic-plane avoidance limit as a typed [`Angle`].
+    pub fn galactic_lat_min(&self) -> Angle {
+        degrees(self.galactic_lat_min_deg)
+    }
+
     /// The baseline LSST strategy from the [`published`] reference constants.
     /// Detection uses the single-visit depth (a slow mover must be detectable
     /// on individual nights to be *linked*).
@@ -196,6 +210,19 @@ pub fn binomial_survival(n: u32, k: u32, p: f64) -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn typed_declination_accessors_match_f64() {
+        use uom::si::angle::degree;
+        let s = LsstStrategy::baseline();
+        assert_relative_eq!(s.dec_min().get::<degree>(), s.dec_min_deg, epsilon = 1e-12);
+        assert_relative_eq!(s.dec_max().get::<degree>(), s.dec_max_deg, epsilon = 1e-12);
+        assert_relative_eq!(
+            s.galactic_lat_min().get::<degree>(),
+            s.galactic_lat_min_deg,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn baseline_matches_published_reference_constants() {

@@ -15,3 +15,6 @@ approx = { workspace = true }
 # Live JPL SBDB refresh path for the frozen sample table (see
 # `observed_tnos`); default builds and tests stay offline.
 sbdb-refresh = ["p9-core/sbdb-refresh"]
+
+[dev-dependencies]
+uom = "0.38.0"

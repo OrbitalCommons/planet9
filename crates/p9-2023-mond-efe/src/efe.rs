@@ -33,6 +33,7 @@
 use nalgebra::Vector3;
 
 use p9_core::coords::sky;
+use p9_core::units::{degrees, Angle};
 
 /// MOND acceleration scale `a0`, in m/s² (Milgrom 1983; Brown & Mathur 2023
 /// adopt the canonical value). Labelled reference constant; not used to set the
@@ -72,6 +73,16 @@ pub fn galactic_center_ecliptic_lat_deg() -> f64 {
     (n.z / n.norm()).asin().to_degrees()
 }
 
+/// Ecliptic longitude of the galactic-center direction as a typed [`Angle`].
+pub fn galactic_center_ecliptic_lon() -> Angle {
+    degrees(galactic_center_ecliptic_lon_deg())
+}
+
+/// Ecliptic latitude of the galactic-center direction as a typed [`Angle`].
+pub fn galactic_center_ecliptic_lat() -> Angle {
+    degrees(galactic_center_ecliptic_lat_deg())
+}
+
 /// EFE quadrupole perturbing potential per unit mass (AU²/day²) at a
 /// heliocentric ecliptic position `r` (AU):
 ///
@@ -99,6 +110,21 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::coords::sky;
+
+    #[test]
+    fn typed_galactic_center_angles_match_f64() {
+        use uom::si::angle::degree;
+        assert_relative_eq!(
+            galactic_center_ecliptic_lon().get::<degree>(),
+            galactic_center_ecliptic_lon_deg(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            galactic_center_ecliptic_lat().get::<degree>(),
+            galactic_center_ecliptic_lat_deg(),
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn test_galactic_center_is_unit_and_round_trips() {

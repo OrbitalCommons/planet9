@@ -20,12 +20,20 @@
 use std::f64::consts::PI;
 
 use p9_core::constants::{J2_URANUS, RAD2DEG, RADIUS_URANUS_AU};
+use p9_core::units::{arcseconds, julian_year, km, AngularVelocity, Length};
 
 /// A regular satellite: (mass in kg, semi-major axis in km).
 #[derive(Debug, Clone, Copy)]
 pub struct Satellite {
     pub mass_kg: f64,
     pub a_km: f64,
+}
+
+impl Satellite {
+    /// Orbital semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        km(self.a_km)
+    }
 }
 
 /// Uranus' polar mass in kg (JPL).
@@ -132,6 +140,11 @@ pub fn alpha_arcsec_per_yr() -> f64 {
     alpha_rad_per_yr() * RAD2DEG * 3600.0
 }
 
+/// α as a typed [`AngularVelocity`] (arcsec per Julian year).
+pub fn alpha_typed() -> AngularVelocity {
+    (arcseconds(alpha_arcsec_per_yr()) / julian_year()).into()
+}
+
 /// Spin-axis precession period Tα = 2π / (α cos θ) in Myr at obliquity θ.
 pub fn precession_period_myr(theta_rad: f64) -> f64 {
     let rate = alpha_rad_per_yr() * theta_rad.cos().abs();
@@ -148,6 +161,22 @@ pub fn radius_consistency_ratio() -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::length::kilometer;
+        let moon = URANUS_MOONS[0];
+        assert_relative_eq!(
+            moon.semi_major_axis().get::<kilometer>(),
+            moon.a_km,
+            epsilon = 1e-9
+        );
+        // α typed (arcsec/yr) read back in rad/s matches the f64 source.
+        let alpha_rad_s = alpha_typed().get::<radian_per_second>();
+        let expect = alpha_rad_per_yr() / (365.25 * 86_400.0);
+        assert_relative_eq!(alpha_rad_s, expect, max_relative = 1e-9);
+    }
 
     #[test]
     fn radius_km_matches_core_radius_au() {

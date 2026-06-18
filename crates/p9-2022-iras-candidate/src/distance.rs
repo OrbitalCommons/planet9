@@ -19,6 +19,7 @@
 
 use p9_2025_iras_akari::thermal_model::P9ThermalParams;
 use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::units::{au, Length};
 
 /// 1 AU in metres (matches `p9_2025_iras_akari::thermal_model`).
 const AU_M: f64 = 1.495_978_707e11;
@@ -79,6 +80,13 @@ pub struct CandidateInversion {
     pub flux_100um_jy: f64,
 }
 
+impl CandidateInversion {
+    /// Implied heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+}
+
 /// Invert a 60 µm candidate flux for distance, then evaluate the forward
 /// fluxes in both IRAS bands at that distance.
 pub fn invert_candidate(flux_60um_jy: f64, t_eff_k: f64, mass_earth: f64) -> CandidateInversion {
@@ -95,6 +103,21 @@ mod tests {
     use super::*;
     use crate::REF_CANDIDATE;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn inversion_distance_typed_matches_f64() {
+        use uom::si::length::astronomical_unit;
+        let inv = invert_candidate(
+            REF_CANDIDATE.flux_60um_jy,
+            REF_CANDIDATE.t_eff_k,
+            REF_CANDIDATE.mass_earth,
+        );
+        assert_relative_eq!(
+            inv.distance().get::<astronomical_unit>(),
+            inv.distance_au,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn reference_candidate_implies_published_distance() {

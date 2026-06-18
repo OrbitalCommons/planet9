@@ -18,13 +18,14 @@
 //! linearly with the perturber mass); the paper-scale configuration runs in
 //! the `#[ignore]`d `full_scale` test.
 
-use p9_core::constants::{DEG2RAD, GM_SUN, YEAR_DAYS};
+use p9_core::constants::{DEG2RAD, GM_SUN, GYR_DAYS, YEAR_DAYS};
 use p9_core::forces::ExtraForce;
 use p9_core::initial_conditions::planets::neptune_j2000;
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{
     cartesian_to_elements, elements_to_cartesian, OrbitalElements, P9Params, SimConfig, StateVector,
 };
+use p9_core::units::{au, days, degrees, Angle, Length, Time};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +41,11 @@ pub struct P9InclusiveConfig {
 }
 
 impl P9InclusiveConfig {
+    /// Integration time as a typed [`Time`].
+    pub fn integration_time(&self) -> Time {
+        days(self.t_gyr * GYR_DAYS)
+    }
+
     /// Default configuration matching the paper: m=5 ME, a=500, e=0.25,
     /// i=20 deg, ~2000 particles, 4 Gyr.
     pub fn default_paper() -> Self {
@@ -71,6 +77,11 @@ pub struct P9FreeConfig {
 }
 
 impl P9FreeConfig {
+    /// Integration time as a typed [`Time`].
+    pub fn integration_time(&self) -> Time {
+        days(self.t_gyr * GYR_DAYS)
+    }
+
     /// Default null model configuration.
     pub fn default_paper() -> Self {
         Self {
@@ -109,6 +120,15 @@ pub struct SimulationOptions {
 }
 
 impl SimulationOptions {
+    /// Total integration time as a typed [`Time`].
+    pub fn total_time(&self) -> Time {
+        days(self.t_days)
+    }
+    /// WHM timestep as a typed [`Time`].
+    pub fn timestep(&self) -> Time {
+        days(self.dt_days)
+    }
+
     /// Reduced-scale options used by `quick_test_simulation`: 24 particles,
     /// 3 Myr, Neptune absorbed into the ring (20,000-day steps), and P9's
     /// mass boosted 60x (300 M_earth) so the run applies the secular forcing
@@ -158,6 +178,21 @@ pub struct Footprint {
     pub q: f64,
     /// Inclination (deg)
     pub i_deg: f64,
+}
+
+impl Footprint {
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+    /// Perihelion as a typed [`Length`].
+    pub fn perihelion(&self) -> Length {
+        au(self.q)
+    }
+    /// Inclination as a typed [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        degrees(self.i_deg)
+    }
 }
 
 /// Result of a simulation run, storing orbital footprint statistics.
@@ -354,6 +389,43 @@ pub fn quick_test_simulation(with_p9: bool) -> SimulationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::degree;
+        use uom::si::length::astronomical_unit;
+        use uom::si::time::day;
+        let cfg = P9InclusiveConfig::default_paper();
+        assert_relative_eq!(
+            cfg.integration_time().get::<day>(),
+            cfg.t_gyr * GYR_DAYS,
+            max_relative = 1e-12
+        );
+        let opts = SimulationOptions::reduced_scale(true);
+        assert_relative_eq!(
+            opts.total_time().get::<day>(),
+            opts.t_days,
+            max_relative = 1e-9
+        );
+        assert_relative_eq!(opts.timestep().get::<day>(), opts.dt_days, epsilon = 1e-9);
+        let fp = Footprint {
+            a: 150.0,
+            q: 28.0,
+            i_deg: 12.0,
+        };
+        assert_relative_eq!(
+            fp.semi_major_axis().get::<astronomical_unit>(),
+            fp.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            fp.perihelion().get::<astronomical_unit>(),
+            fp.q,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(fp.inclination().get::<degree>(), fp.i_deg, epsilon = 1e-12);
+    }
 
     #[test]
     fn test_p9_inclusive_config() {
