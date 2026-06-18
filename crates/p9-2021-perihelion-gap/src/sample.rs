@@ -24,6 +24,7 @@
 //! gap regression.
 
 use p9_core::data::etno::BROWN_2017_SAMPLE;
+use p9_core::units::{au, Length};
 
 /// A distant high-e TNO entered by (a, e). Only the perihelion q = a(1−e) and
 /// the eccentricity are used by the gap analysis, so we keep the record
@@ -41,6 +42,16 @@ impl DistantTno {
     /// Perihelion distance q = a(1 − e) in AU.
     pub fn perihelion(&self) -> f64 {
         self.a * (1.0 - self.e)
+    }
+
+    /// Semi-major axis as a dimension-checked [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance q = a(1 − e) as a dimension-checked [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
     }
 }
 
@@ -154,6 +165,27 @@ pub fn high_e_perihelia(e_floor: f64) -> Vec<f64> {
 mod tests {
     use super::*;
     use crate::published::{ETNO_Q_FLOOR_AU, GAP_ECCENTRICITY_FLOOR, IOC_Q_FLOOR_AU};
+    use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        let t = DistantTno {
+            name: "test",
+            a: 500.0,
+            e: 0.9,
+        };
+        assert_relative_eq!(
+            t.semi_major_axis().get::<astronomical_unit>(),
+            t.a,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            t.perihelion_typed().get::<astronomical_unit>(),
+            t.perihelion(),
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn extended_table_has_no_brown_duplicates() {

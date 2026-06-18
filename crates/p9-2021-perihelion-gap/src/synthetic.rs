@@ -11,6 +11,8 @@
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal, Uniform};
 
+use p9_core::units::{au, Length};
+
 /// Parameters of the seeded two-component (scattering + detached) population.
 #[derive(Debug, Clone, Copy)]
 pub struct TwoPopulationParams {
@@ -52,6 +54,35 @@ impl Default for TwoPopulationParams {
     }
 }
 
+impl TwoPopulationParams {
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Mean perihelion of the scattering component as a [`Length`].
+    pub fn scattering_mean_perihelion(&self) -> Length {
+        au(self.scattering_q_mean)
+    }
+    /// Perihelion spread of the scattering component as a [`Length`].
+    pub fn scattering_perihelion_sigma(&self) -> Length {
+        au(self.scattering_q_sigma)
+    }
+    /// Mean perihelion of the detached component as a [`Length`].
+    pub fn detached_mean_perihelion(&self) -> Length {
+        au(self.detached_q_mean)
+    }
+    /// Perihelion spread of the detached component as a [`Length`].
+    pub fn detached_perihelion_sigma(&self) -> Length {
+        au(self.detached_q_sigma)
+    }
+    /// Lower edge of the bridge perihelion window as a [`Length`].
+    pub fn bridge_lower(&self) -> Length {
+        au(self.bridge_lo)
+    }
+    /// Upper edge of the bridge perihelion window as a [`Length`].
+    pub fn bridge_upper(&self) -> Length {
+        au(self.bridge_hi)
+    }
+}
+
 /// Draw a seeded two-component perihelion population (AU). Perihelia are
 /// clamped to be positive; the two Gaussian components flank the gap and the
 /// bridge populates it sparsely.
@@ -88,6 +119,43 @@ mod tests {
     use super::*;
     use crate::distribution::{dip_statistic, locate_gap_center, Histogram};
     use crate::published::{GAP_Q_CENTER_AU, GAP_Q_HIGH_AU, GAP_Q_LOW_AU};
+    use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_param_accessors_match_f64() {
+        let p = TwoPopulationParams::default();
+        assert_relative_eq!(
+            p.scattering_mean_perihelion().get::<astronomical_unit>(),
+            p.scattering_q_mean,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.scattering_perihelion_sigma().get::<astronomical_unit>(),
+            p.scattering_q_sigma,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.detached_mean_perihelion().get::<astronomical_unit>(),
+            p.detached_q_mean,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.detached_perihelion_sigma().get::<astronomical_unit>(),
+            p.detached_q_sigma,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.bridge_lower().get::<astronomical_unit>(),
+            p.bridge_lo,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.bridge_upper().get::<astronomical_unit>(),
+            p.bridge_hi,
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn two_population_is_reproducible() {

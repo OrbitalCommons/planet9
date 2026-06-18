@@ -13,6 +13,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::units::{au, Length};
+
 use crate::injection_simulation::{simulate_injection, InjectionConfig, InjectionResult};
 
 /// Comparison of confinement between IOC-injected and scattered disk populations.
@@ -79,6 +81,17 @@ pub struct SmaBin {
     pub count_scattered: usize,
 }
 
+impl SmaBin {
+    /// Lower bin edge as a [`Length`].
+    pub fn lower_edge(&self) -> Length {
+        au(self.a_low)
+    }
+    /// Upper bin edge as a [`Length`].
+    pub fn upper_edge(&self) -> Length {
+        au(self.a_high)
+    }
+}
+
 /// Build a semi-major axis distribution histogram from the simulated
 /// populations in an injection result (injected IOC end-state a vs the
 /// simulated scattered-disk end-state a).
@@ -142,6 +155,28 @@ pub fn fraction_above_threshold(result: &InjectionResult, a_threshold: f64) -> f
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_bin_edges_match_f64() {
+        let bin = SmaBin {
+            a_low: 150.0,
+            a_high: 220.0,
+            count_ioc: 3,
+            count_scattered: 5,
+        };
+        assert_relative_eq!(
+            bin.lower_edge().get::<astronomical_unit>(),
+            bin.a_low,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            bin.upper_edge().get::<astronomical_unit>(),
+            bin.a_high,
+            epsilon = 1e-9
+        );
+    }
 
     fn sample_result() -> InjectionResult {
         InjectionResult {

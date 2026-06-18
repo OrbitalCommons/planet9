@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::data::etno::longitudes_of_perihelion;
+use p9_core::units::{radians, Angle};
 
 /// Result of the clustering confidence analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +36,13 @@ pub struct ClusteringConfidence {
     pub confidence: f64,
     /// Number of objects analyzed
     pub n_objects: usize,
+}
+
+impl ClusteringConfidence {
+    /// Mean direction of clustering as a dimension-checked [`Angle`].
+    pub fn mean_direction_angle(&self) -> Angle {
+        radians(self.mean_direction)
+    }
 }
 
 /// Compute clustering significance using the (analytic, small-n-corrected)
@@ -162,6 +170,17 @@ pub fn paper_clustering_confidence() -> ClusteringConfidence {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use uom::si::angle::radian;
+
+    #[test]
+    fn typed_mean_direction_matches_f64() {
+        let result = compute_clustering_significance(&[0.7, 0.8, 0.9, 1.0]);
+        assert_relative_eq!(
+            result.mean_direction_angle().get::<radian>(),
+            result.mean_direction,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn test_perfectly_clustered() {

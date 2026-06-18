@@ -10,6 +10,7 @@
 use p9_core::constants::{DEG2RAD, GM_SUN};
 use p9_core::coords::sky::ecliptic_vec_declination;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{degrees, Angle};
 
 /// Heliocentric ecliptic longitude, latitude (radians) and distance (AU)
 /// for orbital elements at their stored mean anomaly.
@@ -27,6 +28,12 @@ pub fn declination_deg(elem: &OrbitalElements) -> f64 {
     ecliptic_vec_declination(&state.pos) / DEG2RAD
 }
 
+/// Declination of an orbit's current sky position as a dimension-checked
+/// [`Angle`]. Typed sibling of [`declination_deg`].
+pub fn declination(elem: &OrbitalElements) -> Angle {
+    degrees(declination_deg(elem))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,6 +48,18 @@ mod tests {
             omega_big: omega_big_deg * DEG2RAD,
             mean_anomaly: m_deg * DEG2RAD,
         }
+    }
+
+    #[test]
+    fn typed_declination_matches_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::degree;
+        let e = elem(15.0, 30.0, 45.0, 60.0);
+        assert_relative_eq!(
+            declination(&e).get::<degree>(),
+            declination_deg(&e),
+            epsilon = 1e-12
+        );
     }
 
     #[test]

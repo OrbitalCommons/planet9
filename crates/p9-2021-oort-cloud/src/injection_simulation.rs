@@ -33,6 +33,7 @@ use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::*;
 use p9_core::forces::ExtraForce;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, P9Params};
+use p9_core::units::{au, days, julian_year, Length, Time};
 
 use crate::oort_cloud::{generate_ioc_population, generate_scattered_disk, OortCloudConfig};
 
@@ -116,6 +117,25 @@ impl InjectionConfig {
             n_scattered: 100,
         }
     }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Perihelion threshold for "injected" classification as a [`Length`].
+    pub fn injection_perihelion_threshold(&self) -> Length {
+        au(self.q_injection_threshold)
+    }
+    /// Distant-Kuiper-belt minimum semi-major axis as a [`Length`].
+    pub fn min_dkb_semi_major_axis(&self) -> Length {
+        au(self.a_dkb_min)
+    }
+    /// Full-scale (equivalent) simulation duration as a [`Time`].
+    pub fn duration(&self) -> Time {
+        julian_year() * (self.duration_gyr * 1.0e9)
+    }
+    /// Integration timestep as a [`Time`].
+    pub fn timestep(&self) -> Time {
+        days(self.dt_days)
+    }
 }
 
 /// Outcome of the secular evolution for a single particle.
@@ -126,6 +146,13 @@ pub struct ParticleOutcome {
     pub final_elements: Option<OrbitalElements>,
     /// Minimum perihelion distance reached at any element check (AU)
     pub min_q: f64,
+}
+
+impl ParticleOutcome {
+    /// Minimum perihelion distance reached during the run as a [`Length`].
+    pub fn min_perihelion(&self) -> Length {
+        au(self.min_q)
+    }
 }
 
 /// Integrate a population under the Sun (+ optionally Planet Nine's
@@ -344,8 +371,54 @@ pub fn simulate_injection<R: Rng>(config: &InjectionConfig, rng: &mut R) -> Inje
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use uom::si::length::astronomical_unit;
+    use uom::si::time::day;
+
+    #[test]
+    fn typed_config_accessors_match_f64() {
+        let c = InjectionConfig::nominal();
+        assert_relative_eq!(
+            c.injection_perihelion_threshold()
+                .get::<astronomical_unit>(),
+            c.q_injection_threshold,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            c.min_dkb_semi_major_axis().get::<astronomical_unit>(),
+            c.a_dkb_min,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(c.timestep().get::<day>(), c.dt_days, epsilon = 1e-6);
+        assert_relative_eq!(
+            c.duration().get::<day>(),
+            c.duration_gyr * 1.0e9 * julian_year().get::<day>(),
+            epsilon = 1.0
+        );
+    }
+
+    #[test]
+    fn typed_outcome_accessor_matches_f64() {
+        let outcome = ParticleOutcome {
+            initial: OrbitalElements {
+                a: 5000.0,
+                e: 0.9,
+                i: 0.5,
+                omega_big: 0.0,
+                omega: 0.0,
+                mean_anomaly: 0.0,
+            },
+            final_elements: None,
+            min_q: 73.5,
+        };
+        assert_relative_eq!(
+            outcome.min_perihelion().get::<astronomical_unit>(),
+            outcome.min_q,
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn test_injection_config_nominal() {

@@ -14,6 +14,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use p9_core::units::{au, Length};
+
 use crate::stability::diffusion_coefficient;
 
 /// Result of a diffusion measurement for a single configuration.
@@ -27,6 +29,17 @@ pub struct DiffusionMeasurement {
     pub d_measured: f64,
     /// Analytical prediction (AU^2/yr)
     pub d_analytical: f64,
+}
+
+impl DiffusionMeasurement {
+    /// Initial semi-major axis as a [`Length`].
+    pub fn initial_semi_major_axis(&self) -> Length {
+        au(self.a_initial)
+    }
+    /// Initial perihelion distance as a [`Length`].
+    pub fn initial_perihelion(&self) -> Length {
+        au(self.q_initial)
+    }
 }
 
 /// Fit of the mean-squared displacement curve.
@@ -180,8 +193,30 @@ pub fn measurement_from_ensemble(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_measurement_accessors_match_f64() {
+        let m = DiffusionMeasurement {
+            a_initial: 250.0,
+            q_initial: 36.0,
+            d_measured: 1e-3,
+            d_analytical: 1.1e-3,
+        };
+        assert_relative_eq!(
+            m.initial_semi_major_axis().get::<astronomical_unit>(),
+            m.a_initial,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            m.initial_perihelion().get::<astronomical_unit>(),
+            m.q_initial,
+            epsilon = 1e-9
+        );
+    }
 
     #[test]
     fn test_measure_diffusion_constant() {
