@@ -19,6 +19,7 @@
 use p9_core::analysis::circular::{
     bessel_i0, circular_mean, kappa_from_r_bar, mean_resultant_length,
 };
+use p9_core::units::{radians, Angle};
 use serde::{Deserialize, Serialize};
 
 /// Maximum-likelihood von Mises fit of a ϖ sample plus the resulting
@@ -35,6 +36,14 @@ pub struct ApsidalFit {
     pub r_bar: f64,
     /// Log-likelihood ratio Λ = ln L(H1) − ln L(H0).
     pub lambda: f64,
+}
+
+impl ApsidalFit {
+    /// Maximum-likelihood mean direction µ as a dimension-checked [`Angle`]
+    /// (radian storage).
+    pub fn mean_direction(&self) -> Angle {
+        radians(self.mu)
+    }
 }
 
 /// Maximum-likelihood von Mises fit (µ = circular mean, κ = A⁻¹(R̄)).
@@ -99,5 +108,19 @@ mod tests {
         let fit = fit(&varpi);
         assert!((fit.mu - 2.0).abs() < 0.05, "µ = {}", fit.mu);
         assert!(fit.kappa > 1.0, "κ = {}", fit.kappa);
+    }
+
+    #[test]
+    fn mean_direction_matches_f64_field() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::radian;
+
+        let varpi: Vec<f64> = (0..20).map(|k| 2.0 + 0.02 * (k as f64 - 10.0)).collect();
+        let fit = fit(&varpi);
+        assert_relative_eq!(
+            fit.mean_direction().get::<radian>(),
+            fit.mu,
+            epsilon = 1e-12
+        );
     }
 }

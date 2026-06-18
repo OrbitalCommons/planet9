@@ -31,6 +31,9 @@ pub mod significance;
 /// Labelled reference numbers from the paper (for regression comparison only;
 /// every quantity used in tests is computed, not taken from here).
 pub mod published {
+    use p9_core::constants::YEAR_DAYS;
+    use p9_core::units::{days, Time};
+
     /// ZTF single-exposure r-band limiting magnitude (Bellm et al. 2019).
     pub const ZTF_SINGLE_DEPTH: f64 = 20.5;
     /// Headline stacked depth reached for TNOs (~27th magnitude).
@@ -39,4 +42,26 @@ pub mod published {
     pub const TRIAL_ORBITS_ORDER: f64 = 1.0e9;
     /// Survey baseline of the ZTF validation (six years).
     pub const ZTF_BASELINE_YEARS: f64 = 6.0;
+
+    /// [`ZTF_BASELINE_YEARS`] as a dimension-checked [`Time`].
+    pub fn ztf_baseline() -> Time {
+        days(ZTF_BASELINE_YEARS * YEAR_DAYS)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::published::{ztf_baseline, ZTF_BASELINE_YEARS};
+    use approx::assert_relative_eq;
+    use p9_core::constants::YEAR_DAYS;
+    use uom::si::time::day;
+
+    #[test]
+    fn ztf_baseline_matches_f64() {
+        assert_relative_eq!(
+            ztf_baseline().get::<day>(),
+            ZTF_BASELINE_YEARS * YEAR_DAYS,
+            epsilon = 1e-9
+        );
+    }
 }

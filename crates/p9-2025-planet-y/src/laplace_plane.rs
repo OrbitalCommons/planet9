@@ -56,6 +56,7 @@ use p9_core::constants::{
     MASS_URANUS_SOLAR,
 };
 use p9_core::forces::j2_secular::effective_j2;
+use p9_core::units::{au, degrees, radians, solar_masses, Angle, Length, Mass};
 
 /// Published Planet Y reference numbers (Siraj et al. 2025), kept as labelled
 /// constants so the tests pin against them rather than against magic numbers.
@@ -108,6 +109,20 @@ impl PlanetY {
             a_au,
             inclination: inclination_deg * DEG2RAD,
         }
+    }
+
+    /// Mass as a dimension-checked [`Mass`] (solar-mass storage).
+    pub fn mass(&self) -> Mass {
+        solar_masses(self.mass_solar)
+    }
+    /// Semi-major axis as a dimension-checked [`Length`] (AU storage).
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+    /// Orbital-plane inclination as a dimension-checked [`Angle`] (radian
+    /// storage).
+    pub fn inclination_angle(&self) -> Angle {
+        radians(self.inclination)
     }
 }
 
@@ -200,6 +215,17 @@ pub struct ForcedProfilePoint {
     pub i_forced_deg: f64,
 }
 
+impl ForcedProfilePoint {
+    /// Semi-major axis as a dimension-checked [`Length`] (AU storage).
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+    /// Forced inclination as a dimension-checked [`Angle`] (degree storage).
+    pub fn forced_inclination_angle(&self) -> Angle {
+        degrees(self.i_forced_deg)
+    }
+}
+
 /// Sample the forced-inclination profile i_forced(a) over a grid of
 /// semi-major axes (AU), inclusive of both endpoints.
 pub fn forced_profile(
@@ -233,6 +259,29 @@ pub struct WarpFeature {
     pub i_outer_deg: f64,
     /// Warp amplitude (deg): rise across the band, i_outer − i_inner.
     pub amplitude_deg: f64,
+}
+
+impl WarpFeature {
+    /// Semi-major axis of the in-band peak as a [`Length`] (AU storage).
+    pub fn a_peak(&self) -> Length {
+        au(self.a_peak_au)
+    }
+    /// Forced tilt at the peak as an [`Angle`] (degree storage).
+    pub fn peak_tilt(&self) -> Angle {
+        degrees(self.i_peak_deg)
+    }
+    /// Forced tilt at the inner band edge as an [`Angle`] (degree storage).
+    pub fn inner_tilt(&self) -> Angle {
+        degrees(self.i_inner_deg)
+    }
+    /// Forced tilt at the outer band edge as an [`Angle`] (degree storage).
+    pub fn outer_tilt(&self) -> Angle {
+        degrees(self.i_outer_deg)
+    }
+    /// Warp amplitude (i_outer − i_inner) as an [`Angle`] (degree storage).
+    pub fn amplitude(&self) -> Angle {
+        degrees(self.amplitude_deg)
+    }
 }
 
 /// Measure the warp feature in the 50–80 AU band: the rise of the forced tilt
@@ -447,5 +496,54 @@ mod tests {
         assert!(neptune_mass_solar() > 0.0);
         let with_n = inner_torque_coeff(60.0);
         assert!(with_n > 0.0);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64_fields() {
+        use uom::si::angle::{degree, radian};
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+
+        let py = nominal_planet_y();
+        assert_relative_eq!(
+            py.mass().get::<kilogram>(),
+            solar_masses(py.mass_solar).get::<kilogram>(),
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            py.semi_major_axis().get::<astronomical_unit>(),
+            py.a_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            py.inclination_angle().get::<radian>(),
+            py.inclination,
+            epsilon = 1e-12
+        );
+
+        let pt = &forced_profile(50.0, 80.0, 11, &py)[5];
+        assert_relative_eq!(
+            pt.semi_major_axis().get::<astronomical_unit>(),
+            pt.a_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            pt.forced_inclination_angle().get::<degree>(),
+            pt.i_forced_deg,
+            epsilon = 1e-12
+        );
+
+        let w = warp_feature(&py);
+        assert_relative_eq!(
+            w.a_peak().get::<astronomical_unit>(),
+            w.a_peak_au,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(w.peak_tilt().get::<degree>(), w.i_peak_deg, epsilon = 1e-12);
+        assert_relative_eq!(
+            w.amplitude().get::<degree>(),
+            w.amplitude_deg,
+            epsilon = 1e-12
+        );
     }
 }

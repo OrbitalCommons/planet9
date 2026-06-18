@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use p9_core::coords::sky::apparent_position_deg;
 use p9_core::data::reference_population::generate_reference_population;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{degrees, Angle};
 
 use crate::survey_model::Ps1StackSurvey;
 
@@ -26,6 +27,13 @@ use crate::survey_model::Ps1StackSurvey;
 pub struct DetectionTarget {
     pub dec_deg: f64,
     pub r_magnitude: f64,
+}
+
+impl DetectionTarget {
+    /// Equatorial declination as a dimension-checked [`Angle`] (degree storage).
+    pub fn declination(&self) -> Angle {
+        degrees(self.dec_deg)
+    }
 }
 
 /// Result of the exclusion analysis.
@@ -109,6 +117,18 @@ pub fn monte_carlo_detected(
 mod tests {
     use super::*;
     use crate::published;
+
+    #[test]
+    fn declination_accessor_matches_f64_field() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::degree;
+
+        let t = DetectionTarget {
+            dec_deg: -12.5,
+            r_magnitude: 22.0,
+        };
+        assert_relative_eq!(t.declination().get::<degree>(), t.dec_deg, epsilon = 1e-12);
+    }
 
     #[test]
     fn exclusion_fraction_in_open_unit_interval() {
