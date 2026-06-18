@@ -20,16 +20,23 @@ preface:
 papers:
   # Act I -- the evidence and its critics
   - {file: scenes/papers/p9_2016_evidence/scene.py,        scene: Evidence2016}
+  - {file: scenes/papers/p9_2016_constraints/scene.py,     scene: Constraints2016}
   - {file: scenes/papers/p9_2017_ossos_bias/scene.py,      scene: OssosBias2017}
+  - {file: scenes/papers/p9_2021_napier_critique/scene.py, scene: NapierCritique2021}
   # Act II -- the dynamics
   - {file: scenes/papers/p9_2017_dynamics/scene.py,        scene: Dynamics2017}
+  - {file: scenes/papers/p9_2018_chaotic_dynamics/scene.py, scene: ChaoticDynamics2018}
   # Act III -- indirect signatures
   - {file: scenes/papers/p9_2016_cassini_ranging/scene.py, scene: CassiniRanging2016}
   - {file: scenes/papers/p9_2016_obliquity/scene.py,       scene: Obliquity2016}
   # Act IV -- the hunt (surveys)
+  - {file: scenes/papers/p9_2018_wise_search/scene.py,     scene: WiseSearch2018}
   - {file: scenes/papers/p9_2021_ztf/scene.py,             scene: Ztf2021}
   - {file: scenes/papers/p9_2024_panstarrs/scene.py,       scene: PanStarrs2024}
   - {file: scenes/papers/p9_2019_tess_yield/scene.py,      scene: TessYield2019}
   - {file: scenes/papers/p9_2025_iras_akari/scene.py,      scene: IrasAkari2025}
+  - {file: scenes/papers/p9_2025_simons_forecast/scene.py, scene: SimonsForecast2025}
+  - {file: scenes/papers/p9_2023_lsst_strategy/scene.py,   scene: LsstStrategy2023}
   # Act V -- alternatives
   - {file: scenes/papers/p9_2023_mond_efe/scene.py,        scene: MondEfe2023}
+  - {file: scenes/papers/p9_2025_planet_y/scene.py,        scene: PlanetY2025}
