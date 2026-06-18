@@ -232,10 +232,6 @@ pub struct TestParticle {
 }
 
 impl TestParticle {
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
     pub fn inclination_deg(&self) -> f64 {
         self.i / DEG2RAD
     }
@@ -252,7 +248,7 @@ impl TestParticle {
 
     /// Perihelion distance `q = a(1 − e)` as a dimension-checked [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 
     fn elements(&self) -> OrbitalElements {
@@ -418,7 +414,7 @@ mod tests {
         };
         assert_relative_eq!(
             (tp.perihelion_typed() / au(1.0)).value,
-            tp.perihelion(),
+            tp.a * (1.0 - tp.e),
             max_relative = 1e-12
         );
         assert_relative_eq!(
@@ -449,7 +445,7 @@ mod tests {
         for p in &particles {
             assert!(p.a >= config.a_min && p.a <= config.a_max);
             assert!(p.e >= 0.0 && p.e < 1.0);
-            let q = p.perihelion();
+            let q = (p.perihelion_typed() / au(1.0)).value;
             assert!(q >= config.q_min - 1.0 && q <= config.q_max + 1.0);
         }
     }

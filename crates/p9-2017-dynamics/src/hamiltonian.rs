@@ -70,11 +70,6 @@ impl SecularHamiltonianParams {
         }
     }
 
-    /// Planet Nine GM in AU³/day².
-    pub fn gm9(&self) -> f64 {
-        self.m9_solar * GM_SUN
-    }
-
     /// Planet Nine semi-major axis as a dimension-checked [`Length`].
     pub fn semi_major_axis(&self) -> Length {
         au(self.a9)
@@ -88,7 +83,7 @@ impl SecularHamiltonianParams {
     /// Planet Nine gravitational parameter as a dimension-checked
     /// [`GravitationalParameter`] (AU³/day² source).
     pub fn gm9_typed(&self) -> GravitationalParameter {
-        gm_from_au3_day2(self.gm9())
+        gm_from_au3_day2(self.m9_solar * GM_SUN)
     }
 
     /// Planet Nine apsidal precession rate as a dimension-checked
@@ -143,7 +138,7 @@ pub fn octupole_term(a: f64, e: f64, delta_varpi: f64, params: &SecularHamiltoni
     let alpha = a / params.a9;
     let eta9_sq = 1.0 - params.e9 * params.e9;
     -(15.0 / 16.0)
-        * (params.gm9() * alpha.powi(3) / params.a9)
+        * ((params.gm9_typed() / gm_from_au3_day2(1.0)).value * alpha.powi(3) / params.a9)
         * e
         * params.e9
         * (1.0 + 0.75 * e * e)
@@ -176,7 +171,15 @@ pub fn secular_hamiltonian(
     let h_frame = -params.precession_rate_9 * (GM_SUN * a).sqrt() * eta;
 
     // Term 3: standard doubly-averaged quadrupole (axisymmetric in Δϖ).
-    let h_quad = quadrupole_hamiltonian(a, e, i, omega, params.a9, params.e9, params.gm9());
+    let h_quad = quadrupole_hamiltonian(
+        a,
+        e,
+        i,
+        omega,
+        params.a9,
+        params.e9,
+        (params.gm9_typed() / gm_from_au3_day2(1.0)).value,
+    );
 
     // Term 4: octupole — the leading Δϖ-dependent coupling, ∝ e e₉.
     let h_oct = octupole_term(a, e, delta_varpi, params);
@@ -219,7 +222,7 @@ mod tests {
         );
         assert_relative_eq!(
             (p.gm9_typed() / gm_from_au3_day2(1.0)).value,
-            p.gm9(),
+            p.m9_solar * GM_SUN,
             max_relative = 1e-9
         );
     }

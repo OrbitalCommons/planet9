@@ -264,29 +264,19 @@ pub struct PumpingHistory {
 }
 
 impl PumpingHistory {
-    /// Maximum inclination reached over the history (degrees).
-    pub fn max_inclination_deg(&self) -> f64 {
-        self.inclination_deg
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max)
-    }
-
-    /// Inclination at the end of the history (degrees).
-    pub fn final_inclination_deg(&self) -> f64 {
-        *self.inclination_deg.last().unwrap()
-    }
-
-    /// Maximum inclination over the history as a typed [`Angle`] (see
-    /// [`Self::max_inclination_deg`]).
+    /// Maximum inclination over the history as a typed [`Angle`].
     pub fn max_inclination(&self) -> Angle {
-        degrees(self.max_inclination_deg())
+        degrees(
+            self.inclination_deg
+                .iter()
+                .cloned()
+                .fold(f64::NEG_INFINITY, f64::max),
+        )
     }
 
-    /// Inclination at the end of the history as a typed [`Angle`] (see
-    /// [`Self::final_inclination_deg`]).
+    /// Inclination at the end of the history as a typed [`Angle`].
     pub fn final_inclination(&self) -> Angle {
-        degrees(self.final_inclination_deg())
+        degrees(*self.inclination_deg.last().unwrap())
     }
 
     /// Maximum eccentricity reached.
@@ -391,6 +381,7 @@ pub fn scattered_particle(a: f64, e: f64, i_mutual_deg: f64) -> TestParticle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uom::si::angle::degree;
 
     /// The nominal inclined Planet Nine (Batygin & Brown 2016): 10 M⊕,
     /// a = 700 AU, e = 0.6, i₉ = 30°.
@@ -401,17 +392,21 @@ mod tests {
     #[test]
     fn typed_inclination_accessors_match_degrees() {
         use approx::assert_relative_eq;
-        use uom::si::angle::degree;
         let p = scattered_particle(250.0, 0.85, 40.0);
         let hist = integrate(p, &inclined_p9(), PumpConfig::fast());
+        let max_deg = hist
+            .inclination_deg
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
         assert_relative_eq!(
             hist.max_inclination().get::<degree>(),
-            hist.max_inclination_deg(),
+            max_deg,
             epsilon = 1e-9
         );
         assert_relative_eq!(
             hist.final_inclination().get::<degree>(),
-            hist.final_inclination_deg(),
+            *hist.inclination_deg.last().unwrap(),
             epsilon = 1e-9
         );
     }
@@ -424,16 +419,16 @@ mod tests {
         let p = scattered_particle(250.0, 0.85, 40.0);
         let hist = integrate(p, &inclined_p9(), PumpConfig::fast());
         assert!(
-            hist.max_inclination_deg() >= 50.0,
+            hist.max_inclination().get::<degree>() >= 50.0,
             "inclined P9 should pump i ≥ 50° (BP519-like), got {:.1}°",
-            hist.max_inclination_deg()
+            hist.max_inclination().get::<degree>()
         );
         // And the achieved inclination is in the high-i band, consistent with
         // BP519's observed i ≈ 54°.
         assert!(
-            (50.0..70.0).contains(&hist.max_inclination_deg()),
+            (50.0..70.0).contains(&hist.max_inclination().get::<degree>()),
             "max i = {:.1}° outside the BP519-consistent band",
-            hist.max_inclination_deg()
+            hist.max_inclination().get::<degree>()
         );
     }
 
@@ -452,16 +447,16 @@ mod tests {
             .iter()
             .cloned()
             .fold(f64::INFINITY, f64::min);
-        let range = hist.max_inclination_deg() - min_i;
+        let range = hist.max_inclination().get::<degree>() - min_i;
         assert!(
             range < 2.0,
             "no-P9 control inclination should stay flat, range = {range:.2}°"
         );
         // It stays near its initial 40°, never reaching the BP519-like band.
         assert!(
-            hist.max_inclination_deg() < 45.0,
+            hist.max_inclination().get::<degree>() < 45.0,
             "no-P9 control should not pump, got {:.1}°",
-            hist.max_inclination_deg()
+            hist.max_inclination().get::<degree>()
         );
     }
 
@@ -482,10 +477,10 @@ mod tests {
             PumpConfig::fast(),
         );
         assert!(
-            hi.max_inclination_deg() > lo.max_inclination_deg() + 3.0,
+            hi.max_inclination().get::<degree>() > lo.max_inclination().get::<degree>() + 3.0,
             "higher i₉ (mutual inclination) should pump more: {:.1}° vs {:.1}°",
-            hi.max_inclination_deg(),
-            lo.max_inclination_deg()
+            hi.max_inclination().get::<degree>(),
+            lo.max_inclination().get::<degree>()
         );
     }
 
@@ -504,10 +499,10 @@ mod tests {
         let light = integrate(p, &p9_light, cfg);
         let heavy = integrate(p, &p9_heavy, cfg);
         assert!(
-            heavy.max_inclination_deg() > light.max_inclination_deg(),
+            heavy.max_inclination().get::<degree>() > light.max_inclination().get::<degree>(),
             "heavier P9 should pump faster: {:.1}° vs {:.1}°",
-            heavy.max_inclination_deg(),
-            light.max_inclination_deg()
+            heavy.max_inclination().get::<degree>(),
+            light.max_inclination().get::<degree>()
         );
     }
 
@@ -521,9 +516,10 @@ mod tests {
         let p = scattered_particle(250.0, 0.85, 40.0);
         let hist = integrate(p, &inclined_p9(), PumpConfig::fast());
         assert!(
-            hist.max_inclination_deg() > 50.0 && hist.max_inclination_deg() < 90.0,
+            hist.max_inclination().get::<degree>() > 50.0
+                && hist.max_inclination().get::<degree>() < 90.0,
             "pumped i should be high but prograde, max i = {:.1}°",
-            hist.max_inclination_deg()
+            hist.max_inclination().get::<degree>()
         );
         for (&i, &e) in hist.inclination_deg.iter().zip(&hist.eccentricity) {
             assert!(i.is_finite() && (0.0..90.0).contains(&i), "i = {i}");
