@@ -1,6 +1,6 @@
 /target
 .claude/
-papers/
+/papers/
 review_article.html
 figure_*.svg
 crates/p9-survey/p9_survey_data.json
