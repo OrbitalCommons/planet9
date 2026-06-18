@@ -1,0 +1,20 @@
+# Ordered scene list for the Planet Nine film. The assembler renders/concatenates
+# in this order. Each entry: {file, scene}. Paper scenes are appended as they land.
+preface:
+  - {file: scenes/preface/preface_a_foundations.py, scene: P00Hook}
+  - {file: scenes/preface/preface_a_foundations.py, scene: P01Ellipse}
+  - {file: scenes/preface/preface_a_foundations.py, scene: P02KeplerLaws}
+  - {file: scenes/preface/preface_b_elements.py,    scene: P03Elements}
+  - {file: scenes/preface/preface_b_elements.py,    scene: P04Geography}
+  - {file: scenes/preface/preface_c_dynamics.py,    scene: P05Clustering}
+  - {file: scenes/preface/preface_c_dynamics.py,    scene: P06Precession}
+  - {file: scenes/preface/preface_c_dynamics.py,    scene: P07Resonance}
+  - {file: scenes/preface/preface_d_mechanism.py,   scene: P08Sculpting}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P09ReflectedLight}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P10Thermal}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P11Surveys}
+  - {file: scenes/preface/preface_f_indirect_map.py, scene: P12Indirect}
+  - {file: scenes/preface/preface_f_indirect_map.py, scene: P13Map}
+
+# Per-paper scenes (Act I-V of the film). Appended one crate at a time.
+papers: []
