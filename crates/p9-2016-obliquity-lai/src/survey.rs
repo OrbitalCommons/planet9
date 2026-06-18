@@ -37,14 +37,9 @@ impl NodeGeometry {
 /// target obliquity, as a function of P9 mass and inclination:
 ///
 ///   ãₚ ≃ 462 [ (mp/10m⊕) sin 2θp / (θ̂sl f) ]^(1/3) AU
-pub fn required_a_tilde(mass_earth: f64, theta_p_rad: f64, geom: &NodeGeometry) -> f64 {
-    let inner = (mass_earth / 10.0) * (2.0 * theta_p_rad).sin() / (geom.theta_sl_hat * geom.f);
-    published::A_TILDE_PREFACTOR_AU * inner.powf(1.0 / 3.0)
-}
-
-/// [`required_a_tilde`] as a typed [`Length`].
 pub fn required_a_tilde_typed(mass_earth: f64, theta_p_rad: f64, geom: &NodeGeometry) -> Length {
-    au(required_a_tilde(mass_earth, theta_p_rad, geom))
+    let inner = (mass_earth / 10.0) * (2.0 * theta_p_rad).sin() / (geom.theta_sl_hat * geom.f);
+    au(published::A_TILDE_PREFACTOR_AU * inner.powf(1.0 / 3.0))
 }
 
 /// Brute-force inversion of the full analytic theory: find the effective
@@ -120,11 +115,13 @@ mod tests {
     use uom::si::length::astronomical_unit;
 
     #[test]
-    fn typed_required_a_tilde_matches_f64() {
+    fn typed_required_a_tilde_matches_formula() {
         let geom = NodeGeometry::new(6.0, 45.0 * DEG2RAD);
+        let inner = (10.0 / 10.0) * (2.0 * 20.0 * DEG2RAD).sin() / (geom.theta_sl_hat * geom.f);
+        let expected = published::A_TILDE_PREFACTOR_AU * inner.powf(1.0 / 3.0);
         assert_relative_eq!(
             required_a_tilde_typed(10.0, 20.0 * DEG2RAD, &geom).get::<astronomical_unit>(),
-            required_a_tilde(10.0, 20.0 * DEG2RAD, &geom)
+            expected
         );
     }
 
@@ -133,7 +130,8 @@ mod tests {
         // Lai §3: across the parameter box, ãₚ ∈ [340, 480] AU. For ΔΩ = 45°,
         // mp = 10 m⊕, θp = 20°, Eq. (17) should land inside that band.
         let geom = NodeGeometry::new(6.0, 45.0 * DEG2RAD);
-        let a_tilde = required_a_tilde(10.0, 20.0 * DEG2RAD, &geom);
+        let a_tilde =
+            required_a_tilde_typed(10.0, 20.0 * DEG2RAD, &geom).get::<astronomical_unit>();
         let (lo, hi) = published::A_TILDE_RANGE_AU;
         assert!(
             (lo..=hi).contains(&a_tilde),
@@ -148,8 +146,8 @@ mod tests {
         // shrinks as mp grows. Equivalently at fixed θp, ãₚ ∝ mp^(1/3) — a
         // modest (cube-root) change.
         let geom = NodeGeometry::new(6.0, 45.0 * DEG2RAD);
-        let a10 = required_a_tilde(10.0, 20.0 * DEG2RAD, &geom);
-        let a20 = required_a_tilde(20.0, 20.0 * DEG2RAD, &geom);
+        let a10 = required_a_tilde_typed(10.0, 20.0 * DEG2RAD, &geom).get::<astronomical_unit>();
+        let a20 = required_a_tilde_typed(20.0, 20.0 * DEG2RAD, &geom).get::<astronomical_unit>();
         let ratio = a20 / a10;
         // Cube-root of 2 ≈ 1.26: a "modest change".
         assert!(

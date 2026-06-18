@@ -314,7 +314,7 @@ mod tests {
                 "a = {} out of range",
                 elem.a
             );
-            let q = elem.perihelion();
+            let q = elem.perihelion_typed().get::<astronomical_unit>();
             assert!(
                 q >= config.q_min * 0.99 && q <= config.q_max * 1.01,
                 "q = {} out of range [{}, {}]",
@@ -334,7 +334,7 @@ mod tests {
         assert_eq!(pop.len(), 200);
         for e in &pop {
             assert!(e.a >= 250.0 && e.a <= 550.0);
-            let q = e.perihelion();
+            let q = e.perihelion_typed().get::<astronomical_unit>();
             assert!(q >= 29.9 && q <= 50.1, "q = {q}");
             assert!(e.e > 0.0 && e.e < 1.0);
         }

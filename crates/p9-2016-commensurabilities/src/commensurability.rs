@@ -36,18 +36,12 @@ use p9_core::units::{julian_year, Time};
 /// p/q. de la Fuente Marcos et al. emphasize low-order commensurabilities.
 pub const DEFAULT_MAX_INTEGER: u32 = 9;
 
-/// Heliocentric orbital period (years) from semi-major axis (AU): Kepler's
-/// third law for a one-solar-mass primary, P = a^{3/2}. The neglected ~1e-4
-/// planet/ETNO masses are far below the precision of a commensurability
-/// argument.
-pub fn orbital_period_years(a_au: f64) -> f64 {
-    a_au.powf(1.5)
-}
-
 /// Heliocentric orbital period as a typed [`Time`] from semi-major axis (AU):
-/// the [`orbital_period_years`] value scaled into Julian years.
+/// Kepler's third law for a one-solar-mass primary, P = a^{3/2}, scaled into
+/// Julian years. The neglected ~1e-4 planet/ETNO masses are far below the
+/// precision of a commensurability argument.
 pub fn orbital_period(a_au: f64) -> Time {
-    julian_year() * orbital_period_years(a_au)
+    julian_year() * a_au.powf(1.5)
 }
 
 /// Distance of a period ratio `ratio` (≥ 1) to the nearest small-integer ratio
@@ -80,11 +74,11 @@ pub fn distance_to_nearest_commensurability(ratio: f64, max_int: u32) -> f64 {
 
 /// Period ratio of two bodies, longer period over shorter (≥ 1).
 pub fn period_ratio(a_i: f64, a_j: f64) -> f64 {
-    let (pi, pj) = (orbital_period_years(a_i), orbital_period_years(a_j));
+    let (pi, pj) = (orbital_period(a_i), orbital_period(a_j));
     if pi >= pj {
-        pi / pj
+        (pi / pj).value
     } else {
-        pj / pi
+        (pj / pi).value
     }
 }
 
@@ -371,7 +365,7 @@ mod tests {
         for &a in &[300.0, 500.0, 700.0] {
             assert_relative_eq!(
                 (orbital_period(a) / julian_year()).value,
-                orbital_period_years(a),
+                a.powf(1.5),
                 max_relative = 1e-12
             );
         }

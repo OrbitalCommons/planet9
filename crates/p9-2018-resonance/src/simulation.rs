@@ -275,7 +275,7 @@ pub fn classify_particle(
 
     let mut best: Option<(Resonance, f64)> = None;
     for &res in catalog {
-        let a_res = res.semimajor_axis(a_p9);
+        let a_res = (res.semimajor_axis_typed(a_p9) / au(1.0)).value;
         if ((a_mean - a_res) / a_res).abs() > CANDIDATE_A_TOLERANCE {
             continue;
         }
@@ -457,7 +457,7 @@ mod tests {
         // φ = qλ − pλ9 + (p−q)ϖ oscillates about π with amplitude 0.6.
         let res = Resonance::new(2, 1);
         let a_p9 = 600.0;
-        let a_res = res.semimajor_axis(a_p9);
+        let a_res = (res.semimajor_axis_typed(a_p9) / au(1.0)).value;
         let n = 200;
         let mut series = Vec::with_capacity(n);
         let mut p9_samples = Vec::with_capacity(n);
@@ -491,7 +491,7 @@ mod tests {
         // a-proximity preselect alone would have called this resonant.
         let res = Resonance::new(2, 1);
         let a_p9 = 600.0;
-        let a_res = res.semimajor_axis(a_p9);
+        let a_res = (res.semimajor_axis_typed(a_p9) / au(1.0)).value;
         let n = 200;
         let mut series = Vec::with_capacity(n);
         let mut p9_samples = Vec::with_capacity(n);

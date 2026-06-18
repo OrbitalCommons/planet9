@@ -41,14 +41,10 @@ pub struct SyntheticEtno {
 }
 
 impl SyntheticEtno {
-    /// Longitude of perihelion ϖ = Ω + ω, wrapped to [0, 2π).
-    pub fn longitude_of_perihelion(&self) -> f64 {
-        (self.elements.omega_big + self.elements.omega).rem_euclid(TWO_PI)
-    }
-
-    /// Longitude of perihelion as a dimension-checked [`Angle`].
+    /// Longitude of perihelion ϖ = Ω + ω, wrapped to [0, 2π), as a
+    /// dimension-checked [`Angle`].
     pub fn longitude_of_perihelion_typed(&self) -> Angle {
-        radians(self.longitude_of_perihelion())
+        radians((self.elements.omega_big + self.elements.omega).rem_euclid(TWO_PI))
     }
 }
 
@@ -142,7 +138,9 @@ pub fn generate_population<R: Rng>(
 
 /// Longitudes of perihelion of a population (radians).
 pub fn longitudes_of_perihelion(pop: &[SyntheticEtno]) -> Vec<f64> {
-    pop.iter().map(|o| o.longitude_of_perihelion()).collect()
+    pop.iter()
+        .map(|o| (o.longitude_of_perihelion_typed() / radians(1.0)).value)
+        .collect()
 }
 
 #[cfg(test)]
@@ -152,6 +150,7 @@ mod tests {
     use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use uom::si::length::astronomical_unit;
 
     #[test]
     fn typed_population_accessors_match_f64() {
@@ -170,7 +169,7 @@ mod tests {
         let o = generate_population(1, &p, &mut rng)[0];
         assert_relative_eq!(
             (o.longitude_of_perihelion_typed() / radians(1.0)).value,
-            o.longitude_of_perihelion(),
+            (o.elements.omega_big + o.elements.omega).rem_euclid(TWO_PI),
             max_relative = 1e-12
         );
     }
@@ -182,7 +181,7 @@ mod tests {
         let pop = generate_population(5000, &p, &mut rng);
         for o in &pop {
             assert!(o.elements.a >= p.a_range.0 && o.elements.a <= p.a_range.1);
-            let q = o.elements.perihelion();
+            let q = o.elements.perihelion_typed().get::<astronomical_unit>();
             assert!(
                 q >= p.q_range.0 - 1e-9 && q <= p.q_range.1 + 1e-9,
                 "q = {q}"

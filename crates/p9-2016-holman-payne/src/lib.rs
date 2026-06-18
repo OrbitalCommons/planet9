@@ -85,5 +85,5 @@ pub mod published {
 }
 
 pub use exclusion::{excluded, max_allowed_mass_earth, ExclusionMap, ExclusionVerdict};
-pub use signal::{favored_true_anomaly, range_residual_m};
+pub use signal::{favored_true_anomaly, range_residual};
 pub use sky::{favored_sky_position, SkyPosition};

@@ -67,13 +67,8 @@ pub fn p_all_simple(p_simple: f64, n_kbos: usize) -> f64 {
 /// If the KBO is in a p:q resonance with P9:
 ///   a_kbo = a₉ * (q/p)^(2/3)
 ///   a₉ = a_kbo / (q/p)^(2/3) = a_kbo * (p/q)^(2/3)
-pub fn implied_a9(a_kbo: f64, res: &Resonance) -> f64 {
-    a_kbo * (res.p as f64 / res.q as f64).powf(2.0 / 3.0)
-}
-
-/// Implied a₉ as a typed [`Length`] (see [`implied_a9`]).
 pub fn implied_a9_typed(a_kbo: f64, res: &Resonance) -> Length {
-    au(implied_a9(a_kbo, res))
+    au(a_kbo * (res.p as f64 / res.q as f64).powf(2.0 / 3.0))
 }
 
 /// Explicit, honest prior on a₉ and the kernel model for the
@@ -158,7 +153,7 @@ pub fn compute_a9_distribution(
                 if res.period_ratio() >= 1.0 {
                     continue; // exterior: P9 inside the KBO orbit
                 }
-                let a_res = res.semimajor_axis(a9);
+                let a_res = (res.semimajor_axis_typed(a9) / au(1.0)).value;
                 let z = (a_kbo - a_res) / sigma;
                 let weight = if prior.order_weighting {
                     1.0 / res.order().max(1) as f64
@@ -281,22 +276,18 @@ mod tests {
     fn test_implied_a9() {
         // If KBO at a=378 is in 2:1 with P9:
         // a₉ = 378 * (2/1)^(2/3) = 378 * 1.587 ≈ 600
-        let a9 = implied_a9(378.0, &Resonance::new(2, 1));
+        let a9 = (implied_a9_typed(378.0, &Resonance::new(2, 1)) / au(1.0)).value;
         assert!((a9 - 600.0).abs() < 5.0, "Implied a₉ = {:.1}", a9);
     }
 
     #[test]
-    fn typed_length_accessors_match_f64_sources() {
-        use uom::si::length::astronomical_unit;
+    fn typed_length_accessors_match_sources() {
         let res = Resonance::new(2, 1);
-        assert!(
-            (implied_a9_typed(378.0, &res).get::<astronomical_unit>() - implied_a9(378.0, &res))
-                .abs()
-                < 1e-9
-        );
+        let expected = 378.0 * (res.p as f64 / res.q as f64).powf(2.0 / 3.0);
+        assert!(((implied_a9_typed(378.0, &res) / au(1.0)).value - expected).abs() < 1e-9);
         let cmp = compare_distributions(&observed_kbo_axes());
-        assert!((cmp.f5_peak().get::<astronomical_unit>() - cmp.f5_peak_a9).abs() < 1e-9);
-        assert!((cmp.ext_peak().get::<astronomical_unit>() - cmp.ext_peak_a9).abs() < 1e-9);
+        assert!(((cmp.f5_peak() / au(1.0)).value - cmp.f5_peak_a9).abs() < 1e-9);
+        assert!(((cmp.ext_peak() / au(1.0)).value - cmp.ext_peak_a9).abs() < 1e-9);
     }
 
     #[test]

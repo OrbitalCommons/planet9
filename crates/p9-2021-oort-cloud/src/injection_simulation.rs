@@ -34,6 +34,7 @@ use p9_core::constants::*;
 use p9_core::forces::ExtraForce;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, P9Params};
 use p9_core::units::{au, days, julian_year, Length, Time};
+use uom::si::length::astronomical_unit;
 
 use crate::oort_cloud::{generate_ioc_population, generate_scattered_disk, OortCloudConfig};
 
@@ -190,7 +191,10 @@ pub fn evolve_population(
 
     let mut elements: Vec<OrbitalElements> = initial.to_vec();
     let mut active = vec![true; initial.len()];
-    let mut min_q: Vec<f64> = initial.iter().map(|e| e.perihelion()).collect();
+    let mut min_q: Vec<f64> = initial
+        .iter()
+        .map(|e| e.perihelion_typed().get::<astronomical_unit>())
+        .collect();
 
     if let Some(ring) = &ring {
         // Second-order leapfrog: drift(dt/2) – kick(dt) – drift(dt/2);
@@ -211,8 +215,8 @@ pub fn evolve_population(
                     active[k] = false;
                     continue;
                 }
-                min_q[k] = min_q[k].min(new_elem.perihelion());
-                if new_elem.perihelion() < Q_REMOVAL_AU {
+                min_q[k] = min_q[k].min(new_elem.perihelion_typed().get::<astronomical_unit>());
+                if new_elem.perihelion_typed().get::<astronomical_unit>() < Q_REMOVAL_AU {
                     active[k] = false;
                     continue;
                 }
@@ -319,7 +323,11 @@ pub fn simulate_injection<R: Rng>(config: &InjectionConfig, rng: &mut R) -> Inje
     let mut injected_sma = Vec::new();
     let mut injected_dvarpi = Vec::new();
     for outcome in &ioc_run {
-        let started_above = outcome.initial.perihelion() > config.q_injection_threshold;
+        let started_above = outcome
+            .initial
+            .perihelion_typed()
+            .get::<astronomical_unit>()
+            > config.q_injection_threshold;
         let crossed = outcome.min_q < config.q_injection_threshold;
         let distant = outcome.initial.a > config.a_dkb_min;
         if started_above && crossed && distant {
@@ -332,7 +340,10 @@ pub fn simulate_injection<R: Rng>(config: &InjectionConfig, rng: &mut R) -> Inje
 
     let n_injectable = ioc_pop
         .iter()
-        .filter(|e| e.perihelion() > config.q_injection_threshold && e.a > config.a_dkb_min)
+        .filter(|e| {
+            e.perihelion_typed().get::<astronomical_unit>() > config.q_injection_threshold
+                && e.a > config.a_dkb_min
+        })
         .count()
         .max(1);
 

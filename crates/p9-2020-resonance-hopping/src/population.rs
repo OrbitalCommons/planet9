@@ -26,19 +26,14 @@ pub struct Tno {
 }
 
 impl Tno {
-    /// Perihelion distance q = a(1 − e) (AU).
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
     /// Semimajor axis as a typed [`Length`].
     pub fn semi_major_axis(&self) -> Length {
         au(self.a)
     }
 
-    /// Perihelion distance as a typed [`Length`].
+    /// Perihelion distance q = a(1 − e) as a typed [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 }
 
@@ -200,7 +195,7 @@ mod tests {
         );
         assert_relative_eq!(
             t.perihelion_typed().get::<astronomical_unit>(),
-            t.perihelion(),
+            t.a * (1.0 - t.e),
             epsilon = 1e-12
         );
     }

@@ -18,6 +18,7 @@ use p9_core::constants::*;
 use p9_core::data::etno::longitudes_of_perihelion;
 use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos};
 use p9_core::types::OrbitalElements;
+use uom::si::length::astronomical_unit;
 
 /// Sedna-like "high perihelion" threshold (AU). Detached objects lifted to
 /// q > 60 AU are dynamically decoupled from Neptune (q_Neptune-scattering
@@ -123,7 +124,7 @@ pub fn confinement_probability(
         .filter(|e| {
             e.a >= 300.0
                 && e.a <= 700.0
-                && e.perihelion() < 80.0
+                && e.perihelion_typed().get::<astronomical_unit>() < 80.0
                 && e.i < 50.0 * DEG2RAD
                 && e.e < 1.0
         })

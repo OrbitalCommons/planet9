@@ -129,11 +129,6 @@ impl Perturber {
         self.mass_earth * EARTH_MASS_SOLAR
     }
 
-    /// GM in AU^3/day^2.
-    pub fn gm(&self) -> f64 {
-        self.mass_solar() * GM_SUN
-    }
-
     /// Mass as a dimension-checked [`Mass`] (Earth-mass storage).
     pub fn mass(&self) -> Mass {
         earth_masses(self.mass_earth)
@@ -145,7 +140,7 @@ impl Perturber {
     /// Gravitational parameter as a dimension-checked
     /// [`GravitationalParameter`] (AU³/day² storage).
     pub fn gm_typed(&self) -> GravitationalParameter {
-        gm_from_au3_day2(self.gm())
+        gm_from_au3_day2(self.mass_solar() * GM_SUN)
     }
 
     /// Planet Nine, Batygin/Brown-class nominal: ~6 Earth masses at ~460 AU,
@@ -240,13 +235,14 @@ pub fn is_excluded(p: &Perturber) -> bool {
 /// convention we simply confirm that `H` scales as `(a/a_p)^2` and as `gm_p`,
 /// which is exactly the GM_p / a_p^3 tidal scaling our rate inherits.
 pub fn quadrupole_prefactor_consistency(p: &Perturber) -> f64 {
-    let h = coplanar_quadrupole(A_SATURN_AU, E_SATURN, p.a_au, p.e, p.gm());
+    let gm = (p.gm_typed() / gm_from_au3_day2(1.0)).value;
+    let h = coplanar_quadrupole(A_SATURN_AU, E_SATURN, p.a_au, p.e, gm);
     // Reconstruct C from H = -C (2 + 3 e^2)/2.
     let e2 = E_SATURN * E_SATURN;
     let c_from_h = -2.0 * h / (2.0 + 3.0 * e2);
     // Independent closed form of C.
     let alpha = A_SATURN_AU / p.a_au;
-    let c_closed = p.gm() * alpha * alpha / (4.0 * p.a_au * (1.0 - p.e * p.e).powf(1.5));
+    let c_closed = gm * alpha * alpha / (4.0 * p.a_au * (1.0 - p.e * p.e).powf(1.5));
     c_from_h / c_closed
 }
 
@@ -438,7 +434,7 @@ mod tests {
         );
         assert_relative_eq!(
             p.gm_typed().value,
-            gm_from_au3_day2(p.gm()).value,
+            gm_from_au3_day2(p.mass_solar() * GM_SUN).value,
             max_relative = 1e-12
         );
 

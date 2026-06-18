@@ -88,17 +88,11 @@ impl P9Resonance {
         self.p.abs_diff(self.q)
     }
 
-    /// Interior resonance semimajor axis (AU) for a perturber at `a9`:
-    /// `a_res = a9 (q/p)^{2/3}`. Delegates to the single workspace Kepler
-    /// relation (with arguments swapped to select the interior branch).
-    pub fn semi_major_axis(&self, a9_au: f64) -> f64 {
-        resonance_semi_major_axis(self.q, self.p, a9_au)
-    }
-
-    /// Interior resonance semimajor axis as a typed [`Length`] (see
-    /// [`Self::semi_major_axis`]).
+    /// Interior resonance semimajor axis as a typed [`Length`] for a perturber
+    /// at `a9`: `a_res = a9 (q/p)^{2/3}`. Delegates to the single workspace
+    /// Kepler relation (with arguments swapped to select the interior branch).
     pub fn semi_major_axis_typed(&self, a9_au: f64) -> Length {
-        au(self.semi_major_axis(a9_au))
+        au(resonance_semi_major_axis(self.q, self.p, a9_au))
     }
 
     /// Dimensionless ratio α = a_res / a9 (< 1 for interior resonances).
@@ -110,7 +104,7 @@ impl P9Resonance {
     /// eccentricity `e` perturbed by a planet of mass ratio `mu` at `a9`:
     /// `δa = a_res · sqrt( (16/3) · mu · S )`, S from `resonance_strength`.
     pub fn libration_half_width_au(&self, a9_au: f64, mu: f64, e: f64) -> f64 {
-        let a_res = self.semi_major_axis(a9_au);
+        let a_res = (self.semi_major_axis_typed(a9_au) / au(1.0)).value;
         let strength = resonance_strength(self.alpha(), e);
         a_res * ((16.0 / 3.0) * mu * strength).sqrt()
     }
@@ -166,8 +160,8 @@ fn sorted_by_a(iter: impl Iterator<Item = P9Resonance>) -> Vec<P9Resonance> {
 /// Chirikov overlap parameter between two neighbouring resonances:
 /// `K = (δa_lo + δa_hi) / |a_hi − a_lo|`. K ≥ 1 ⇒ overlap (hopping).
 pub fn neighbour_overlap(lo: P9Resonance, hi: P9Resonance, a9_au: f64, mu: f64, e: f64) -> f64 {
-    let a_lo = lo.semi_major_axis(a9_au);
-    let a_hi = hi.semi_major_axis(a9_au);
+    let a_lo = (lo.semi_major_axis_typed(a9_au) / au(1.0)).value;
+    let a_hi = (hi.semi_major_axis_typed(a9_au) / au(1.0)).value;
     let sep = (a_hi - a_lo).abs();
     let w = lo.libration_half_width_au(a9_au, mu, e) + hi.libration_half_width_au(a9_au, mu, e);
     w / sep
@@ -215,8 +209,8 @@ pub fn overlap_profile(chain: &[P9Resonance], a9_au: f64, mu: f64, e: f64) -> Ve
         .windows(2)
         .map(|w| {
             let (lo, hi) = (w[0], w[1]);
-            let a_lo = lo.semi_major_axis(a9_au);
-            let a_hi = hi.semi_major_axis(a9_au);
+            let a_lo = (lo.semi_major_axis_typed(a9_au) / au(1.0)).value;
+            let a_hi = (hi.semi_major_axis_typed(a9_au) / au(1.0)).value;
             OverlapLink {
                 lo,
                 hi,
@@ -255,7 +249,7 @@ mod tests {
         let mu = mass_ratio(published::M9_EARTH);
         assert_relative_eq!(
             res.semi_major_axis_typed(A9).get::<astronomical_unit>(),
-            res.semi_major_axis(A9),
+            resonance_semi_major_axis(res.q, res.p, A9),
             epsilon = 1e-9
         );
         assert_relative_eq!(
@@ -290,9 +284,13 @@ mod tests {
         for &(p, q) in &[(2u32, 1u32), (3, 1), (5, 1), (3, 2), (5, 2), (4, 3)] {
             let res = P9Resonance::new(p, q);
             let expected = A9 * (q as f64 / p as f64).powf(2.0 / 3.0);
-            assert_relative_eq!(res.semi_major_axis(A9), expected, epsilon = 1e-9);
+            assert_relative_eq!(
+                res.semi_major_axis_typed(A9).get::<astronomical_unit>(),
+                expected,
+                epsilon = 1e-9
+            );
             // All interior resonances sit inside P9.
-            assert!(res.semi_major_axis(A9) < A9);
+            assert!(res.semi_major_axis_typed(A9) < au(A9));
         }
     }
 
@@ -300,13 +298,13 @@ mod tests {
     fn n_over_1_chain_is_ordered_and_crowds_toward_p9() {
         let chain = n_over_1_chain(2, 30);
         for w in chain.windows(2) {
-            assert!(w[1].semi_major_axis(A9) > w[0].semi_major_axis(A9));
+            assert!(w[1].semi_major_axis_typed(A9) > w[0].semi_major_axis_typed(A9));
         }
         // Spacing shrinks toward smaller a (higher p crowds together): the
         // first (small-a) gap is smaller than the last (large-a, near 2:1).
-        let seps: Vec<f64> = chain
+        let seps: Vec<Length> = chain
             .windows(2)
-            .map(|w| w[1].semi_major_axis(A9) - w[0].semi_major_axis(A9))
+            .map(|w| w[1].semi_major_axis_typed(A9) - w[0].semi_major_axis_typed(A9))
             .collect();
         assert!(seps.first().unwrap() < seps.last().unwrap());
     }
@@ -315,15 +313,18 @@ mod tests {
     fn n_over_2_interleaves_n_over_1() {
         // A (2p+1):2 resonance sits between the (p+1):1 and p:1 resonances.
         let p = 5u32;
-        let inner = P9Resonance::new(p + 1, 1).semi_major_axis(A9); // smaller a
-        let outer = P9Resonance::new(p, 1).semi_major_axis(A9); // larger a
-        let half = P9Resonance::new(2 * p + 1, 2).semi_major_axis(A9);
-        assert!(inner < half && half < outer, "{inner} < {half} < {outer}");
+        let inner = P9Resonance::new(p + 1, 1).semi_major_axis_typed(A9); // smaller a
+        let outer = P9Resonance::new(p, 1).semi_major_axis_typed(A9); // larger a
+        let half = P9Resonance::new(2 * p + 1, 2).semi_major_axis_typed(A9);
+        assert!(
+            inner < half && half < outer,
+            "{inner:?} < {half:?} < {outer:?}"
+        );
         // n:2 chain is odd-p and ordered.
         let chain = n_over_2_chain(3, 21);
         assert!(chain.iter().all(|r| r.p % 2 == 1));
         for w in chain.windows(2) {
-            assert!(w[1].semi_major_axis(A9) > w[0].semi_major_axis(A9));
+            assert!(w[1].semi_major_axis_typed(A9) > w[0].semi_major_axis_typed(A9));
         }
     }
 

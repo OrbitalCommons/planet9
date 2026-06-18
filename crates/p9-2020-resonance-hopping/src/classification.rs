@@ -54,20 +54,15 @@ pub struct Mmr {
 }
 
 impl Mmr {
-    /// Semimajor axis of this interior resonance for a P9 at `a_p9` (AU).
+    /// Semimajor axis of this interior resonance as a typed [`Length`], for a
+    /// Planet Nine at `a_p9` (AU).
     ///
     /// Particle does `p` orbits per `q` P9 orbits ⇒ period ratio
     /// T_particle/T_p9 = q/p, so a = a₉ (q/p)^{2/3}. We express this through
     /// the p9-core exterior helper a_planet (P/Q)^{2/3} with (P, Q) = (q, p),
     /// the single workspace resonance-location convention.
-    pub fn semimajor_axis(&self, a_p9: f64) -> f64 {
-        resonance_semi_major_axis(self.q, self.p, a_p9)
-    }
-
-    /// Semimajor axis of this interior resonance as a typed [`Length`], for a
-    /// Planet Nine at `a_p9` (AU).
     pub fn semi_major_axis_typed(&self, a_p9: f64) -> Length {
-        au(self.semimajor_axis(a_p9))
+        au(resonance_semi_major_axis(self.q, self.p, a_p9))
     }
 
     /// Order of the resonance, |p − q|.
@@ -120,7 +115,7 @@ impl ResonanceLandscape {
                     continue;
                 }
                 let mmr = Mmr { p, q };
-                let a_res = mmr.semimajor_axis(a_p9);
+                let a_res = (mmr.semi_major_axis_typed(a_p9) / au(1.0)).value;
                 if a_res < a_min {
                     break; // larger p only goes lower in a
                 }
@@ -319,7 +314,7 @@ mod tests {
         let mmr = Mmr { p: 3, q: 1 };
         assert_relative_eq!(
             mmr.semi_major_axis_typed(a_p9).get::<astronomical_unit>(),
-            mmr.semimajor_axis(a_p9),
+            resonance_semi_major_axis(mmr.q, mmr.p, a_p9),
             epsilon = 1e-12
         );
         let land = ResonanceLandscape::new(a_p9, 100.0, 600.0, 5);
@@ -336,7 +331,7 @@ mod tests {
         let a_p9 = 500.0;
         for (p, q) in [(2u32, 1u32), (3, 1), (5, 1), (3, 2), (5, 2), (7, 2)] {
             let mmr = Mmr { p, q };
-            let computed = mmr.semimajor_axis(a_p9);
+            let computed = mmr.semi_major_axis_typed(a_p9).get::<astronomical_unit>();
             let analytic = a_p9 * (q as f64 / p as f64).powf(2.0 / 3.0);
             assert_relative_eq!(computed, analytic, epsilon = 1e-9);
             // And it agrees with the p9-core helper directly.
@@ -361,7 +356,9 @@ mod tests {
             assert!(mmr.is_simple(), "{mmr:?} should be n:1 or n:2");
         }
         // 2:1 is the widest-spaced low-order resonance, near 315 AU.
-        let two_one = Mmr { p: 2, q: 1 }.semimajor_axis(500.0);
+        let two_one = Mmr { p: 2, q: 1 }
+            .semi_major_axis_typed(500.0)
+            .get::<astronomical_unit>();
         assert!((two_one - 315.0).abs() < 2.0, "2:1 at {two_one:.1} AU");
     }
 

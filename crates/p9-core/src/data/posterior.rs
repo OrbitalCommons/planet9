@@ -209,6 +209,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use rand::SeedableRng;
+    use uom::si::length::astronomical_unit;
 
     #[test]
     fn test_posterior_median_values() {
@@ -265,7 +266,10 @@ mod tests {
             .map(|_| sample_from_posterior(&post, &mut rng))
             .collect();
 
-        let qs: Vec<f64> = samples.iter().map(|s| s.perihelion()).collect();
+        let qs: Vec<f64> = samples
+            .iter()
+            .map(|s| s.perihelion_typed().get::<astronomical_unit>())
+            .collect();
         let a_mean = samples.iter().map(|s| s.a).sum::<f64>() / samples.len() as f64;
         let q_mean = qs.iter().sum::<f64>() / qs.len() as f64;
         let mut sa = 0.0;
@@ -299,11 +303,9 @@ mod tests {
                 "Eccentricity must be in (0,1)"
             );
             assert!(params.i > 0.0, "Inclination must be positive");
-            assert!(params.perihelion() > 0.0, "Perihelion must be positive");
-            assert!(
-                params.perihelion() < params.a,
-                "Perihelion must be less than a"
-            );
+            let q = params.perihelion_typed().get::<astronomical_unit>();
+            assert!(q > 0.0, "Perihelion must be positive");
+            assert!(q < params.a, "Perihelion must be less than a");
         }
     }
 

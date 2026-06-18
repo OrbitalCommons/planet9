@@ -187,6 +187,7 @@ mod tests {
     use crate::types::cartesian_to_elements;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use uom::si::length::astronomical_unit;
 
     #[test]
     fn test_scattered_disk_generation() {
@@ -207,7 +208,7 @@ mod tests {
                 config.a_max
             );
 
-            let q = elem.perihelion();
+            let q = elem.perihelion_typed().get::<astronomical_unit>();
             assert!(
                 q >= config.q_min * 0.99 && q <= config.q_max * 1.01,
                 "q = {} out of range [{}, {}]",

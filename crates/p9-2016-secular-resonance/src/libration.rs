@@ -43,26 +43,18 @@ pub struct Trajectory {
 }
 
 impl Trajectory {
-    /// Libration center: midpoint of the Δϖ swing (radians, folded to [0, 2π)).
-    pub fn center(&self) -> f64 {
-        let (lo, hi) = self.bounds();
-        (0.5 * (lo + hi)).rem_euclid(2.0 * PI)
-    }
-
-    /// Libration amplitude: half the peak-to-peak Δϖ swing (radians).
-    pub fn amplitude(&self) -> f64 {
-        let (lo, hi) = self.bounds();
-        0.5 * (hi - lo)
-    }
-
-    /// Libration center as a dimension-checked [`Angle`].
+    /// Libration center: midpoint of the Δϖ swing (radians, folded to [0, 2π)),
+    /// as a dimension-checked [`Angle`].
     pub fn center_typed(&self) -> Angle {
-        radians(self.center())
+        let (lo, hi) = self.bounds();
+        radians((0.5 * (lo + hi)).rem_euclid(2.0 * PI))
     }
 
-    /// Libration amplitude as a dimension-checked [`Angle`].
+    /// Libration amplitude: half the peak-to-peak Δϖ swing, as a
+    /// dimension-checked [`Angle`].
     pub fn amplitude_typed(&self) -> Angle {
-        radians(self.amplitude())
+        let (lo, hi) = self.bounds();
+        radians(0.5 * (hi - lo))
     }
 
     fn bounds(&self) -> (f64, f64) {
@@ -193,22 +185,21 @@ mod tests {
             dt,
             steps,
         );
-        // Typed angle accessors mirror the f64 center/amplitude.
+        // Typed angle accessors mirror the inline center/amplitude formulae.
+        let lo = lib.dvarpi.iter().cloned().fold(f64::INFINITY, f64::min);
+        let hi = lib.dvarpi.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         assert_relative_eq!(
             (lib.center_typed() / radians(1.0)).value,
-            lib.center(),
+            (0.5 * (lo + hi)).rem_euclid(2.0 * PI),
             max_relative = 1e-12
         );
-        assert_relative_eq!(
-            (lib.amplitude_typed() / radians(1.0)).value,
-            lib.amplitude(),
-            max_relative = 1e-12
-        );
+        let amplitude_rad = (lib.amplitude_typed() / radians(1.0)).value;
+        assert_relative_eq!(amplitude_rad, 0.5 * (hi - lo), max_relative = 1e-12);
         assert_eq!(
             lib.kind,
             TrajectoryKind::Libration,
             "commensurate start should librate; amplitude {:.1}°, K-drift {:.1e}",
-            lib.amplitude().to_degrees(),
+            amplitude_rad.to_degrees(),
             lib.energy_drift()
         );
         // K is conserved to integrator precision (the pendulum is exact).
@@ -229,7 +220,7 @@ mod tests {
             circ.kind,
             TrajectoryKind::Circulation,
             "detuned (non-commensurate) start should circulate; net swing {:.0}°",
-            (2.0 * circ.amplitude()).to_degrees()
+            (2.0 * (circ.amplitude_typed() / radians(1.0)).value).to_degrees()
         );
     }
 
@@ -268,7 +259,7 @@ mod tests {
             large.kind,
             TrajectoryKind::Circulation,
             "large launch should cross the separatrix and circulate; swing {:.0}°",
-            (2.0 * large.amplitude()).to_degrees()
+            (2.0 * (large.amplitude_typed() / radians(1.0)).value).to_degrees()
         );
     }
 
@@ -289,11 +280,12 @@ mod tests {
         );
         assert_eq!(lib.kind, TrajectoryKind::Libration);
 
-        let center_err = (lib.center() - published::ANTI_ALIGNED_CENTER_RAD).abs();
+        let center_rad = (lib.center_typed() / radians(1.0)).value;
+        let center_err = (center_rad - published::ANTI_ALIGNED_CENTER_RAD).abs();
         assert!(
             center_err < 0.15,
             "libration center {:.1}° not near 180° (err {:.1}°)",
-            lib.center().to_degrees(),
+            center_rad.to_degrees(),
             center_err.to_degrees()
         );
     }
@@ -323,11 +315,13 @@ mod tests {
         );
         assert_eq!(small.kind, TrajectoryKind::Libration);
         assert_eq!(large.kind, TrajectoryKind::Libration);
+        let small_amp = (small.amplitude_typed() / radians(1.0)).value;
+        let large_amp = (large.amplitude_typed() / radians(1.0)).value;
         assert!(
-            large.amplitude() > small.amplitude(),
+            large_amp > small_amp,
             "amplitude should grow with displacement: {:.1}° vs {:.1}°",
-            large.amplitude().to_degrees(),
-            small.amplitude().to_degrees()
+            large_amp.to_degrees(),
+            small_amp.to_degrees()
         );
     }
 }

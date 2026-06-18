@@ -42,10 +42,10 @@ use p9_core::units::{days, radians, AngularVelocity, Time};
 /// pinned in the tests and documented in the crate's residual notes.
 pub const C_GROWTH: f64 = TWO_PI;
 
-/// Mean motion n = sqrt(GM_sun / a^3) in rad/day for an orbit of semi-major
-/// axis `a` (AU), reusing `p9_core`'s element machinery so the Kepler
-/// convention is shared with the rest of the workspace.
-pub fn mean_motion(a: f64) -> f64 {
+/// Mean motion n = sqrt(GM_sun / a^3) as a typed [`AngularVelocity`] for an
+/// orbit of semi-major axis `a` (AU), reusing `p9_core`'s element machinery so
+/// the Kepler convention is shared with the rest of the workspace.
+pub fn mean_motion_typed(a: f64) -> AngularVelocity {
     let elem = OrbitalElements {
         a,
         e: 0.0,
@@ -54,80 +54,49 @@ pub fn mean_motion(a: f64) -> f64 {
         omega: 0.0,
         mean_anomaly: 0.0,
     };
-    elem.mean_motion(GM_SUN)
+    (radians(elem.mean_motion(GM_SUN)) / days(1.0)).into()
 }
 
-/// Orbital period P = 2 pi sqrt(a^3 / GM_sun) in days.
-pub fn orbital_period(a: f64) -> f64 {
-    TWO_PI / mean_motion(a)
+/// Orbital period P = 2 pi sqrt(a^3 / GM_sun) as a typed [`Time`].
+pub fn orbital_period_typed(a: f64) -> Time {
+    let n_rad_per_day = (mean_motion_typed(a) * days(1.0)) / radians(1.0);
+    days(TWO_PI / n_rad_per_day.value)
 }
 
 /// Disc self-gravity secular precession frequency omega_sec = (M_d/M_sun) * n
-/// [rad/day]. This is the rate compared against the giant planets in the
-/// suppression criterion. `m_disk_solar`: disc mass in solar masses;
-/// `a`: characteristic semi-major axis (AU).
-pub fn secular_frequency(m_disk_solar: f64, a: f64) -> f64 {
-    m_disk_solar * mean_motion(a)
+/// as a typed [`AngularVelocity`]. This is the rate compared against the giant
+/// planets in the suppression criterion. `m_disk_solar`: disc mass in solar
+/// masses; `a`: characteristic semi-major axis (AU).
+pub fn secular_frequency_typed(m_disk_solar: f64, a: f64) -> AngularVelocity {
+    m_disk_solar * mean_motion_typed(a)
 }
 
-/// Disc secular time t_sec = (M_sun/M_d) * P [days].
-pub fn secular_time_days(m_disk_solar: f64, a: f64) -> f64 {
-    orbital_period(a) / m_disk_solar
+/// Disc secular time t_sec = (M_sun/M_d) * P as a typed [`Time`].
+pub fn secular_time_typed(m_disk_solar: f64, a: f64) -> Time {
+    orbital_period_typed(a) / m_disk_solar
 }
 
-/// Linear-theory growth rate gamma = (M_d/M_sun) * n / C_GROWTH  [1/day].
-/// Monotonically increasing in `m_disk_solar`.
-pub fn growth_rate(m_disk_solar: f64, a: f64) -> f64 {
-    secular_frequency(m_disk_solar, a) / C_GROWTH
+/// Linear-theory growth rate gamma = (M_d/M_sun) * n / C_GROWTH as a typed
+/// [`AngularVelocity`]. Monotonically increasing in `m_disk_solar`.
+pub fn growth_rate_typed(m_disk_solar: f64, a: f64) -> AngularVelocity {
+    secular_frequency_typed(m_disk_solar, a) / C_GROWTH
 }
 
-/// E-folding time tau = 1/gamma  [days]. Decreases with disc mass.
-pub fn efolding_time_days(m_disk_solar: f64, a: f64) -> f64 {
-    1.0 / growth_rate(m_disk_solar, a)
+/// E-folding time tau = 1/gamma as a typed [`Time`]. Decreases with disc mass.
+pub fn efolding_time_typed(m_disk_solar: f64, a: f64) -> Time {
+    radians(1.0) / growth_rate_typed(m_disk_solar, a)
 }
 
 /// E-folding time in millions of years.
 pub fn efolding_time_myr(m_disk_solar: f64, a: f64) -> f64 {
-    efolding_time_days(m_disk_solar, a) / (YEAR_DAYS * 1.0e6)
+    let tau_days = efolding_time_typed(m_disk_solar, a) / days(1.0);
+    tau_days.value / (YEAR_DAYS * 1.0e6)
 }
 
 /// E-folding time in billions of years (Gyr).
 pub fn efolding_time_gyr(m_disk_solar: f64, a: f64) -> f64 {
-    efolding_time_days(m_disk_solar, a) / GYR_DAYS
-}
-
-// ---- typed (uom) boundary: dimension-checked views of the rates/times above ----
-
-/// Mean motion [`n`](mean_motion) as a typed [`AngularVelocity`].
-pub fn mean_motion_typed(a: f64) -> AngularVelocity {
-    (radians(mean_motion(a)) / days(1.0)).into()
-}
-
-/// Orbital period [`P`](orbital_period) as a typed [`Time`].
-pub fn orbital_period_typed(a: f64) -> Time {
-    days(orbital_period(a))
-}
-
-/// Disc secular precession frequency [`omega_sec`](secular_frequency) as a
-/// typed [`AngularVelocity`].
-pub fn secular_frequency_typed(m_disk_solar: f64, a: f64) -> AngularVelocity {
-    (radians(secular_frequency(m_disk_solar, a)) / days(1.0)).into()
-}
-
-/// Disc secular time [`t_sec`](secular_time_days) as a typed [`Time`].
-pub fn secular_time_typed(m_disk_solar: f64, a: f64) -> Time {
-    days(secular_time_days(m_disk_solar, a))
-}
-
-/// Linear-theory growth rate [`gamma`](growth_rate) as a typed
-/// [`AngularVelocity`].
-pub fn growth_rate_typed(m_disk_solar: f64, a: f64) -> AngularVelocity {
-    (radians(growth_rate(m_disk_solar, a)) / days(1.0)).into()
-}
-
-/// E-folding time [`tau`](efolding_time_days) as a typed [`Time`].
-pub fn efolding_time_typed(m_disk_solar: f64, a: f64) -> Time {
-    days(efolding_time_days(m_disk_solar, a))
+    let tau_days = efolding_time_typed(m_disk_solar, a) / days(1.0);
+    tau_days.value / GYR_DAYS
 }
 
 #[cfg(test)]
@@ -138,36 +107,48 @@ mod tests {
     use uom::si::angular_velocity::radian_per_second;
     use uom::si::time::day;
 
+    /// Inline reference mean motion n [rad/day] from the shared Kepler machinery.
+    fn ref_mean_motion(a: f64) -> f64 {
+        let elem = OrbitalElements {
+            a,
+            e: 0.0,
+            i: 0.0,
+            omega_big: 0.0,
+            omega: 0.0,
+            mean_anomaly: 0.0,
+        };
+        elem.mean_motion(GM_SUN)
+    }
+
     #[test]
-    fn typed_accessors_match_f64_sources() {
+    fn typed_accessors_match_inline_formulas() {
         let m = 20.0 * EARTH_MASS_SOLAR;
         let a = 250.0;
         // rates: rad/day -> compare in rad/s
         let per_day_to_per_s = 1.0 / 86_400.0;
+        let n = ref_mean_motion(a);
         assert_relative_eq!(
             mean_motion_typed(a).get::<radian_per_second>(),
-            mean_motion(a) * per_day_to_per_s,
+            n * per_day_to_per_s,
             epsilon = 1e-30
         );
         assert_relative_eq!(
             secular_frequency_typed(m, a).get::<radian_per_second>(),
-            secular_frequency(m, a) * per_day_to_per_s,
+            (m * n) * per_day_to_per_s,
             epsilon = 1e-30
         );
         assert_relative_eq!(
             growth_rate_typed(m, a).get::<radian_per_second>(),
-            growth_rate(m, a) * per_day_to_per_s,
+            (m * n / C_GROWTH) * per_day_to_per_s,
             epsilon = 1e-30
         );
         // times: days
-        assert_relative_eq!(orbital_period_typed(a).get::<day>(), orbital_period(a));
-        assert_relative_eq!(
-            secular_time_typed(m, a).get::<day>(),
-            secular_time_days(m, a)
-        );
+        assert_relative_eq!(orbital_period_typed(a).get::<day>(), TWO_PI / n);
+        assert_relative_eq!(secular_time_typed(m, a).get::<day>(), (TWO_PI / n) / m);
         assert_relative_eq!(
             efolding_time_typed(m, a).get::<day>(),
-            efolding_time_days(m, a)
+            1.0 / (m * n / C_GROWTH),
+            max_relative = 1e-12
         );
     }
 
@@ -187,7 +168,7 @@ mod tests {
         let masses = [1.0, 5.0, 10.0, 20.0, 50.0];
         let mut prev = 0.0;
         for &m_e in &masses {
-            let g = growth_rate(m_e * EARTH_MASS_SOLAR, a);
+            let g = (growth_rate_typed(m_e * EARTH_MASS_SOLAR, a) * days(1.0) / radians(1.0)).value;
             assert!(g > prev, "growth rate not increasing at {m_e} M_earth");
             prev = g;
         }
@@ -240,9 +221,9 @@ mod tests {
         // time t_sec = (M_sun/M_d) P exactly.
         let m = fiducial_mass_solar();
         let a = FIDUCIAL_A_AU;
-        let tau = efolding_time_days(m, a);
-        let t_sec = secular_time_days(m, a);
-        assert!((tau / t_sec - 1.0).abs() < 1e-12);
+        let tau = efolding_time_typed(m, a);
+        let t_sec = secular_time_typed(m, a);
+        assert!(((tau / t_sec).value - 1.0).abs() < 1e-12);
     }
 
     #[test]
@@ -252,8 +233,8 @@ mod tests {
         let m = fiducial_mass_solar();
         let a1 = 250.0;
         let a2 = a1 * 2.0_f64.powf(2.0 / 3.0); // period doubles
-        let w1 = secular_frequency(m, a1);
-        let w2 = secular_frequency(m, a2);
-        assert!((w1 / w2 - 2.0).abs() < 1e-9);
+        let w1 = secular_frequency_typed(m, a1);
+        let w2 = secular_frequency_typed(m, a2);
+        assert!(((w1 / w2).value - 2.0).abs() < 1e-9);
     }
 }

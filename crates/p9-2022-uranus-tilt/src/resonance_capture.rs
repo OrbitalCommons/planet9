@@ -282,8 +282,9 @@ pub fn fixed_band_sweep(alpha_arcsec: f64) -> SweepConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::spin_axis::alpha_arcsec_per_yr;
+    use crate::spin_axis::alpha_typed;
     use p9_core::constants::RAD2DEG;
+    use p9_core::units::{arcseconds, julian_year};
 
     fn deg(theta: f64) -> f64 {
         theta * RAD2DEG
@@ -424,7 +425,7 @@ mod tests {
         // is ~100× too slow. Across the same P9-set |g| band it reaches the
         // resonance only weakly and falls well short of 90°, whereas a ~100×
         // enhanced α drives the spin near 90°.
-        let alpha_now = alpha_arcsec_per_yr(); // ≈0.045
+        let alpha_now = (alpha_typed() / (arcseconds(1.0) / julian_year())).value; // ≈0.045
         let weak = fixed_band_sweep(alpha_now);
         let strong = fixed_band_sweep(5.0);
         let theta_weak = deg(final_obliquity(&run_sweep(&weak, weak.t_total / 50.0)));

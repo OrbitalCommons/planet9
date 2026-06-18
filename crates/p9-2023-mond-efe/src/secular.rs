@@ -108,14 +108,10 @@ pub fn averaged_disturbing(
     -sum / wsum
 }
 
-/// Mean motion n = sqrt(GM_sun / a³) (rad/day).
-pub fn mean_motion(a: f64) -> f64 {
-    (GM_SUN / (a * a * a)).sqrt()
-}
-
-/// Mean motion as a typed [`AngularVelocity`] (rad per day).
+/// Mean motion n = sqrt(GM_sun / a³) as a typed [`AngularVelocity`] (rad per
+/// day).
 pub fn mean_motion_typed(a: f64) -> AngularVelocity {
-    (radians(mean_motion(a)) / days(1.0)).into()
+    (radians((GM_SUN / (a * a * a)).sqrt()) / days(1.0)).into()
 }
 
 /// Secular apsidal precession rate dϖ/dt (rad/day) from Lagrange's planetary
@@ -138,7 +134,7 @@ pub fn precession_rate(
     let r_plus = averaged_disturbing(a, e + he, varpi, a_efe, n, geom, n_quad);
     let r_minus = averaged_disturbing(a, e - he, varpi, a_efe, n, geom, n_quad);
     let dr_de = (r_plus - r_minus) / (2.0 * he);
-    let nm = mean_motion(a);
+    let nm = (mean_motion_typed(a) / (radians(1.0) / days(1.0))).value;
     (1.0 - e * e).sqrt() / (nm * a * a * e) * dr_de
 }
 
@@ -268,13 +264,14 @@ mod tests {
     }
 
     #[test]
-    fn typed_mean_motion_matches_f64() {
+    fn typed_mean_motion_matches_formula() {
         use uom::si::angular_velocity::radian_per_second;
         let a = 500.0;
-        // rad/day read back as rad/s matches mean_motion / seconds-per-day.
+        // rad/day read back as rad/s matches n = sqrt(GM/a³) / seconds-per-day.
+        let n_rad_per_day = (GM_SUN / (a * a * a)).sqrt();
         assert_relative_eq!(
             mean_motion_typed(a).get::<radian_per_second>(),
-            mean_motion(a) / 86_400.0,
+            n_rad_per_day / 86_400.0,
             max_relative = 1e-9
         );
     }

@@ -29,14 +29,10 @@ pub const P_SUN_PRESENT_DAYS: f64 = 25.4;
 /// Initial solar rotation period in days (~10 days for young Sun).
 pub const P_SUN_INITIAL_DAYS: f64 = 10.0;
 
-/// Angular velocity of the Sun from rotation period (rad/day).
-pub fn omega_sun(period_days: f64) -> f64 {
-    2.0 * PI / period_days
-}
-
-/// [`omega_sun`] as a typed [`AngularVelocity`].
+/// Angular velocity of the Sun from rotation period, as a typed
+/// [`AngularVelocity`].
 pub fn omega_sun_typed(period_days: f64) -> AngularVelocity {
-    (radians(omega_sun(period_days)) / days(1.0)).into()
+    (radians(2.0 * PI / period_days) / days(1.0)).into()
 }
 
 /// Skumanich spin-down: ω(t) = ω₀ * (t₀/t)^{1/2}, capped at the initial
@@ -53,18 +49,13 @@ pub fn omega_sun_typed(period_days: f64) -> AngularVelocity {
 ///
 /// `t` is time since formation in days.
 /// `t_age` is the total age (4.5 Gyr in days).
-pub fn solar_omega_at_time(t: f64, t_age: f64) -> f64 {
-    let omega_initial = omega_sun(P_SUN_INITIAL_DAYS);
+pub fn solar_omega_at_time_typed(t: f64, t_age: f64) -> AngularVelocity {
+    let omega_initial = omega_sun_typed(P_SUN_INITIAL_DAYS);
     if t <= 0.0 {
         return omega_initial;
     }
-    let omega_present = omega_sun(P_SUN_PRESENT_DAYS);
+    let omega_present = omega_sun_typed(P_SUN_PRESENT_DAYS);
     (omega_present * (t_age / t).sqrt()).min(omega_initial)
-}
-
-/// [`solar_omega_at_time`] as a typed [`AngularVelocity`].
-pub fn solar_omega_at_time_typed(t: f64, t_age: f64) -> AngularVelocity {
-    (radians(solar_omega_at_time(t, t_age)) / days(1.0)).into()
 }
 
 /// Spin angular momentum of the Sun: L = I_hat * M * R² * ω
@@ -79,17 +70,12 @@ pub fn solar_spin_angular_momentum(omega: f64) -> f64 {
 ///   a_tilde = [ 16 * ω² * k₂² * R⁶ / (9 * I_hat² * G * M_sun) ]^{1/3}
 ///
 /// This maps the rotational bulge's gravitational effect to an equivalent wire.
-/// Returns value in AU.
-pub fn solar_ring_semimajor_axis(omega: f64) -> f64 {
+/// Returns a typed [`Length`].
+pub fn solar_ring_semimajor_axis_typed(omega: f64) -> Length {
     let r6 = R_SUN_AU.powi(6);
     let numerator = 16.0 * omega * omega * K2_SUN * K2_SUN * r6;
     let denominator = 9.0 * I_HAT * I_HAT * G_AU3_MSUN_DAY2 * M_SUN_SOLAR;
-    (numerator / denominator).powf(1.0 / 3.0)
-}
-
-/// [`solar_ring_semimajor_axis`] as a typed [`Length`].
-pub fn solar_ring_semimajor_axis_typed(omega: f64) -> Length {
-    au(solar_ring_semimajor_axis(omega))
+    au((numerator / denominator).powf(1.0 / 3.0))
 }
 
 #[cfg(test)]
@@ -99,31 +85,42 @@ mod tests {
     use uom::si::angular_velocity::radian_per_second;
     use uom::si::length::astronomical_unit;
 
+    /// Angular velocity in rad/day, extracted version-safely from a typed value.
+    fn rad_per_day(w: AngularVelocity) -> f64 {
+        (w / (radians(1.0) / days(1.0))).value
+    }
+
     #[test]
-    fn typed_accessors_match_f64_sources() {
+    fn typed_accessors_match_formula() {
         let t_age = 4.5 * GYR_DAYS;
-        let omega = omega_sun(P_SUN_PRESENT_DAYS);
+        // ω(P) = 2π/P rad/day.
         assert_relative_eq!(
             omega_sun_typed(P_SUN_PRESENT_DAYS).get::<radian_per_second>(),
-            omega / 86_400.0,
+            (2.0 * PI / P_SUN_PRESENT_DAYS) / 86_400.0,
             epsilon = 1e-30
         );
+        // At the present age the spin-down normalizes to the present-day rate.
         assert_relative_eq!(
             solar_omega_at_time_typed(t_age, t_age).get::<radian_per_second>(),
-            solar_omega_at_time(t_age, t_age) / 86_400.0,
+            (2.0 * PI / P_SUN_PRESENT_DAYS) / 86_400.0,
             epsilon = 1e-30
         );
+        // a_tilde = [16 ω² k₂² R⁶ / (9 Î² G M)]^{1/3}.
+        let omega = 2.0 * PI / P_SUN_PRESENT_DAYS;
+        let r6 = R_SUN_AU.powi(6);
+        let numerator = 16.0 * omega * omega * K2_SUN * K2_SUN * r6;
+        let denominator = 9.0 * I_HAT * I_HAT * G_AU3_MSUN_DAY2 * M_SUN_SOLAR;
         assert_relative_eq!(
             solar_ring_semimajor_axis_typed(omega).get::<astronomical_unit>(),
-            solar_ring_semimajor_axis(omega)
+            (numerator / denominator).powf(1.0 / 3.0)
         );
     }
 
     #[test]
     fn test_skumanich_spindown() {
         let t_age = 4.5 * GYR_DAYS;
-        let omega_now = solar_omega_at_time(t_age, t_age);
-        let omega_present = omega_sun(P_SUN_PRESENT_DAYS);
+        let omega_now = rad_per_day(solar_omega_at_time_typed(t_age, t_age));
+        let omega_present = rad_per_day(omega_sun_typed(P_SUN_PRESENT_DAYS));
 
         // At present age, should match present-day omega
         assert!(
@@ -134,7 +131,7 @@ mod tests {
         );
 
         // At half the age, should be faster by sqrt(2)
-        let omega_half = solar_omega_at_time(t_age / 2.0, t_age);
+        let omega_half = rad_per_day(solar_omega_at_time_typed(t_age / 2.0, t_age));
         let ratio = omega_half / omega_now;
         assert!(
             (ratio - std::f64::consts::SQRT_2).abs() < 1e-10,
@@ -146,11 +143,11 @@ mod tests {
     #[test]
     fn test_spindown_capped_at_initial_rotation() {
         let t_age = 4.5 * GYR_DAYS;
-        let omega_initial = omega_sun(P_SUN_INITIAL_DAYS);
+        let omega_initial = rad_per_day(omega_sun_typed(P_SUN_INITIAL_DAYS));
 
         // Early times: the divergent √(t_age/t) is capped at ω(P = 10 d).
         for &t in &[0.0, 1.0, 1e3, 1e6, 0.01 * t_age] {
-            let w = solar_omega_at_time(t, t_age);
+            let w = rad_per_day(solar_omega_at_time_typed(t, t_age));
             assert!(
                 w <= omega_initial * (1.0 + 1e-12),
                 "ω(t={t:.1e}) = {w:.3e} exceeds the initial rotation"
@@ -159,13 +156,13 @@ mod tests {
 
         // The cap releases exactly at t_c = t_age (ω_present/ω_initial)².
         let t_c = t_age * (P_SUN_INITIAL_DAYS / P_SUN_PRESENT_DAYS).powi(2);
-        let w_after = solar_omega_at_time(1.01 * t_c, t_age);
+        let w_after = rad_per_day(solar_omega_at_time_typed(1.01 * t_c, t_age));
         assert!(w_after < omega_initial);
 
         // Monotonically non-increasing
         let mut prev = f64::INFINITY;
         for k in 0..100 {
-            let w = solar_omega_at_time(k as f64 * t_age / 100.0, t_age);
+            let w = rad_per_day(solar_omega_at_time_typed(k as f64 * t_age / 100.0, t_age));
             assert!(w <= prev + 1e-15);
             prev = w;
         }
@@ -173,8 +170,8 @@ mod tests {
 
     #[test]
     fn test_solar_ring_semimajor_axis() {
-        let omega = omega_sun(P_SUN_PRESENT_DAYS);
-        let a_tilde = solar_ring_semimajor_axis(omega);
+        let omega = 2.0 * PI / P_SUN_PRESENT_DAYS;
+        let a_tilde = solar_ring_semimajor_axis_typed(omega).get::<astronomical_unit>();
 
         // Should be very small (inside the Sun)
         assert!(a_tilde > 0.0 && a_tilde < R_SUN_AU);

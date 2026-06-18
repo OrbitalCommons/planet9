@@ -11,6 +11,7 @@ use crate::bp519::Bp519;
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, wrap_to_pi};
 use p9_core::constants::RAD2DEG;
 use p9_core::data::etno::longitudes_of_perihelion;
+use uom::si::angle::radian;
 
 /// Circular mean ϖ of the Brown (2017) sample, in radians [0, 2π).
 pub fn sample_mean_varpi() -> f64 {
@@ -26,7 +27,8 @@ pub fn sample_varpi_concentration() -> f64 {
 /// (−180°, 180°] and returned in degrees. Near 0° means apsidally aligned
 /// with the cluster.
 pub fn varpi_offset_from_cluster_deg(bp: &Bp519) -> f64 {
-    let delta = wrap_to_pi(bp.longitude_of_perihelion() - sample_mean_varpi());
+    let delta =
+        wrap_to_pi(bp.longitude_of_perihelion_typed().get::<radian>() - sample_mean_varpi());
     delta * RAD2DEG
 }
 
@@ -35,7 +37,7 @@ pub fn varpi_offset_from_cluster_deg(bp: &Bp519) -> f64 {
 /// comparable if BP519 is consistent with the population).
 pub fn concentration_with_bp519(bp: &Bp519) -> f64 {
     let mut varpis = longitudes_of_perihelion();
-    varpis.push(bp.longitude_of_perihelion());
+    varpis.push(bp.longitude_of_perihelion_typed().get::<radian>());
     mean_resultant_length(&varpis)
 }
 

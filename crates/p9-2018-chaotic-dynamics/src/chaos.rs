@@ -66,14 +66,8 @@ pub fn nearest_j_one_index(a_au: f64, a9_au: f64) -> i64 {
 /// Delegated to `p9_core::analysis::resonance::resonance_semi_major_axis(1, j,
 /// a₉)` = a₉ (1/j)^{2/3} — a particle completing `j` orbits per Planet Nine
 /// orbit sits here.
-pub fn j_one_location(j: i64, a9_au: f64) -> f64 {
-    resonance_semi_major_axis(1, j as u32, a9_au)
-}
-
-/// Interior j:1 resonance location as a typed [`Length`] (see
-/// [`j_one_location`]).
 pub fn j_one_location_typed(j: i64, a9_au: f64) -> Length {
-    au(j_one_location(j, a9_au))
+    au(resonance_semi_major_axis(1, j as u32, a9_au))
 }
 
 /// Inward extent (AU) of the overlapped resonance zone from Planet Nine, for a
@@ -84,15 +78,9 @@ pub fn j_one_location_typed(j: i64, a9_au: f64) -> Length {
 /// `m9_earth` is Planet Nine's mass in Earth masses. The eccentricity factor
 /// e^{1/5} is the Mustill & Wyatt (2012) enhancement of the Wisdom (1980)
 /// circular overlap zone.
-pub fn overlap_zone_width(e: f64, a9_au: f64, m9_earth: f64) -> f64 {
-    let mu = m9_earth * EARTH_MASS_SOLAR;
-    OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * e.powf(0.2) * a9_au
-}
-
-/// Inward extent of the overlapped resonance zone as a typed [`Length`] (see
-/// [`overlap_zone_width`]).
 pub fn overlap_zone_width_typed(e: f64, a9_au: f64, m9_earth: f64) -> Length {
-    au(overlap_zone_width(e, a9_au, m9_earth))
+    let mu = m9_earth * EARTH_MASS_SOLAR;
+    au(OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * e.powf(0.2) * a9_au)
 }
 
 /// Resonance-overlap parameter K at (a, e) for a Planet Nine of semi-major
@@ -109,7 +97,7 @@ pub fn overlap_parameter(a_au: f64, e: f64, a9_au: f64, m9_earth: f64, _e9: f64)
     if gap <= 0.0 {
         return f64::INFINITY;
     }
-    overlap_zone_width(e, a9_au, m9_earth) / gap
+    (overlap_zone_width_typed(e, a9_au, m9_earth) / au(gap)).value
 }
 
 /// Whether the point (a, e) lies in the chaotic resonance-overlap regime
@@ -227,16 +215,19 @@ mod tests {
     }
 
     #[test]
-    fn typed_accessors_match_f64_sources() {
-        use uom::si::length::astronomical_unit;
+    fn typed_accessors_match_inline_formulas() {
+        // j:1 location: a_j = a9 j^{-2/3}.
         assert_relative_eq!(
-            j_one_location_typed(5, A9).get::<astronomical_unit>(),
-            j_one_location(5, A9),
+            (j_one_location_typed(5, A9) / au(1.0)).value,
+            A9 * 5.0f64.powf(-2.0 / 3.0),
             max_relative = 1e-12
         );
+        // Overlap zone width: C μ^{2/7} e^{1/5} a9.
+        let mu = M9 * EARTH_MASS_SOLAR;
+        let expected = OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * 0.7f64.powf(0.2) * A9;
         assert_relative_eq!(
-            overlap_zone_width_typed(0.7, A9, M9).get::<astronomical_unit>(),
-            overlap_zone_width(0.7, A9, M9),
+            (overlap_zone_width_typed(0.7, A9, M9) / au(1.0)).value,
+            expected,
             max_relative = 1e-12
         );
     }
@@ -246,7 +237,7 @@ mod tests {
         // Cross-check the j:1 resonance locations against a_j = a9 j^{-2/3}
         // to 1e-9 (the analytic relation underpinning the chain).
         for j in 1..=30i64 {
-            let computed = j_one_location(j, A9);
+            let computed = (j_one_location_typed(j, A9) / au(1.0)).value;
             let analytic = A9 * (j as f64).powf(-2.0 / 3.0);
             assert_relative_eq!(computed, analytic, max_relative = 1e-9);
         }
@@ -255,7 +246,7 @@ mod tests {
     #[test]
     fn nearest_index_is_self_consistent() {
         for j in 1..=20i64 {
-            let a = j_one_location(j, A9);
+            let a = (j_one_location_typed(j, A9) / au(1.0)).value;
             assert_eq!(nearest_j_one_index(a, A9), j, "j = {j}");
         }
     }

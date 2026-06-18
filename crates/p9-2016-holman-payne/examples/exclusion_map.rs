@@ -4,9 +4,10 @@
 //! Run with: `cargo run -p p9-2016-holman-payne --example exclusion_map`
 
 use p9_2016_holman_payne::{
-    exclusion::ExclusionMap, favored_sky_position, published, range_residual_m,
+    exclusion::ExclusionMap, favored_sky_position, published, range_residual,
 };
 use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
+use p9_core::units::meters;
 
 fn main() {
     let p = brown_batygin_orbit();
@@ -32,7 +33,7 @@ fn main() {
         println!(
             "{:>5.0}  {:>14.3e}",
             k as f64 * 20.0,
-            range_residual_m(&p, nu)
+            (range_residual(&p, nu) / meters(1.0)).value
         );
     }
 

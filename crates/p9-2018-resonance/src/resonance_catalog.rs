@@ -42,14 +42,8 @@ impl Resonance {
 
     /// Semi-major axis of the resonance given perturber semi-major axis.
     /// a_res = a_p9 * (q/p)^(2/3)
-    pub fn semimajor_axis(&self, a_p9: f64) -> f64 {
-        a_p9 * self.period_ratio().powf(2.0 / 3.0)
-    }
-
-    /// Resonance semi-major axis as a typed [`Length`] (see
-    /// [`Self::semimajor_axis`]).
     pub fn semimajor_axis_typed(&self, a_p9: f64) -> Length {
-        au(self.semimajor_axis(a_p9))
+        au(a_p9 * self.period_ratio().powf(2.0 / 3.0))
     }
 
     /// Whether this is an N/1 period ratio (integer period ratio, p=1).
@@ -161,7 +155,7 @@ pub fn identify_resonance(
     let mut best: Option<(Resonance, f64)> = None;
 
     for &res in catalog {
-        let a_res = res.semimajor_axis(a_p9);
+        let a_res = (res.semimajor_axis_typed(a_p9) / au(1.0)).value;
         let delta = (a - a_res).abs() / a_res;
 
         if delta < tolerance_frac {
@@ -226,7 +220,7 @@ pub fn resonance_census(
     catalog
         .iter()
         .filter_map(|&res| {
-            let a_res = res.semimajor_axis(a_p9);
+            let a_res = (res.semimajor_axis_typed(a_p9) / au(1.0)).value;
             let count = elements
                 .iter()
                 .filter(|e| ((e.a - a_res) / a_res).abs() < tolerance)
@@ -248,21 +242,17 @@ mod tests {
     #[test]
     fn test_resonance_semimajor_axis() {
         let res = Resonance::new(2, 1);
-        let a = res.semimajor_axis(700.0);
+        let a = (res.semimajor_axis_typed(700.0) / au(1.0)).value;
         // 2:1 → a = 700 * (1/2)^(2/3) ≈ 441
         assert!((a - 441.0).abs() < 1.0, "2:1 at {:.1} AU", a);
     }
 
     #[test]
-    fn typed_semimajor_axis_matches_f64_source() {
-        use uom::si::length::astronomical_unit;
+    fn typed_semimajor_axis_matches_formula() {
         let res = Resonance::new(2, 1);
-        assert!(
-            (res.semimajor_axis_typed(700.0).get::<astronomical_unit>()
-                - res.semimajor_axis(700.0))
-            .abs()
-                < 1e-9
-        );
+        let expected = 700.0 * res.period_ratio().powf(2.0 / 3.0);
+        assert!((res.semimajor_axis_typed(700.0) / au(1.0)).value - expected < 1e-9);
+        assert!(expected - (res.semimajor_axis_typed(700.0) / au(1.0)).value < 1e-9);
     }
 
     #[test]
@@ -345,7 +335,7 @@ mod tests {
         let a_p9 = 600.0;
 
         // Near 2:1 resonance: a = 600 * (1/2)^(2/3) ≈ 378
-        let a_21 = Resonance::new(2, 1).semimajor_axis(a_p9);
+        let a_21 = (Resonance::new(2, 1).semimajor_axis_typed(a_p9) / au(1.0)).value;
         let result = identify_resonance(a_21 + 1.0, a_p9, &catalog, 0.02);
         assert!(result.is_some());
         assert_eq!(result.unwrap().0, Resonance::new(2, 1));
@@ -373,7 +363,7 @@ mod tests {
     fn test_resonance_census() {
         let catalog = vec![Resonance::new(2, 1), Resonance::new(3, 1)];
         let a_p9 = 600.0;
-        let a_21 = Resonance::new(2, 1).semimajor_axis(a_p9);
+        let a_21 = (Resonance::new(2, 1).semimajor_axis_typed(a_p9) / au(1.0)).value;
 
         let elements = vec![
             OrbitalElements {

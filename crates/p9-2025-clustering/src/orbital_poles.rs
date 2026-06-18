@@ -42,31 +42,22 @@ impl OrbitalPole {
         }
     }
 
-    /// Magnitude (inclination in rad).
-    pub fn inclination(&self) -> f64 {
-        (self.x * self.x + self.y * self.y).sqrt()
-    }
-
-    /// Position angle (longitude of ascending node in rad).
-    pub fn omega_big(&self) -> f64 {
-        self.y.atan2(self.x)
-    }
-
-    /// Inclination as a dimension-checked [`Angle`].
+    /// Inclination (magnitude) as a dimension-checked [`Angle`].
     pub fn inclination_typed(&self) -> Angle {
-        radians(self.inclination())
+        radians((self.x * self.x + self.y * self.y).sqrt())
     }
 
-    /// Longitude of ascending node as a dimension-checked [`Angle`].
+    /// Longitude of ascending node (position angle) as a dimension-checked
+    /// [`Angle`].
     pub fn omega_big_typed(&self) -> Angle {
-        radians(self.omega_big())
+        radians(self.y.atan2(self.x))
     }
 
     /// Unit vector of the orbit normal in ecliptic coordinates:
     /// n̂ = (sin i sin Ω, −sin i cos Ω, cos i).
     pub fn unit_vector(&self) -> Vector3<f64> {
-        let i = self.inclination();
-        let node = self.omega_big();
+        let i = (self.inclination_typed() / radians(1.0)).value;
+        let node = (self.omega_big_typed() / radians(1.0)).value;
         Vector3::new(i.sin() * node.sin(), -i.sin() * node.cos(), i.cos())
     }
 }
@@ -143,7 +134,7 @@ pub fn pole_scatter(poles: &[OrbitalPole]) -> f64 {
 ///
 /// Giant-planet masses and semi-major axes come from the p9-core J2000
 /// states (no local table).
-pub fn nodal_precession_rate(a: f64, e: f64, i: f64) -> f64 {
+pub fn nodal_precession_rate_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
     let n = (GM_SUN / (a * a * a)).sqrt(); // rad/day
     let eta_sq = (1.0 - e * e) * (1.0 - e * e);
 
@@ -156,13 +147,8 @@ pub fn nodal_precession_rate(a: f64, e: f64, i: f64) -> f64 {
         .sum();
 
     let rate_day = -0.75 * n * i.cos() / eta_sq * sum;
-    rate_day * 365.25 // Convert to rad/yr
-}
-
-/// Nodal precession rate as a typed [`AngularVelocity`] (the rad/yr value of
-/// [`nodal_precession_rate`] carried with units).
-pub fn nodal_precession_rate_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
-    (radians(nodal_precession_rate(a, e, i)) / julian_year()).into()
+    let rate_yr = rate_day * 365.25; // rad/yr
+    (radians(rate_yr) / julian_year()).into()
 }
 
 #[cfg(test)]
@@ -179,20 +165,31 @@ mod tests {
         let pole = OrbitalPole::from_elements("t", 30.0 * DEG2RAD, 45.0 * DEG2RAD);
         assert_relative_eq!(
             pole.inclination_typed().get::<radian>(),
-            pole.inclination(),
+            (pole.x * pole.x + pole.y * pole.y).sqrt(),
             epsilon = 1e-12
         );
         assert_relative_eq!(
             pole.omega_big_typed().get::<radian>(),
-            pole.omega_big(),
+            pole.y.atan2(pole.x),
             epsilon = 1e-12
         );
-        // rad/yr rate read back in rad/s matches the f64 rate / seconds-per-year.
+        // rad/yr rate read back in rad/s matches the inline rad/yr formula
+        // divided by seconds-per-year.
         let yr_s = julian_year().get::<second>();
         let (a, e, i) = (300.0, 0.7, 20.0 * DEG2RAD);
+        let n = (GM_SUN / (a * a * a)).sqrt();
+        let eta_sq = (1.0 - e * e) * (1.0 - e * e);
+        let sum: f64 = giant_planets_j2000()
+            .iter()
+            .map(|body| {
+                let a_j = cartesian_to_elements(&body.state, GM_SUN).a;
+                body.mass * (a_j / a).powi(2)
+            })
+            .sum();
+        let rate_yr = -0.75 * n * i.cos() / eta_sq * sum * 365.25;
         assert_relative_eq!(
             nodal_precession_rate_typed(a, e, i).get::<radian_per_second>(),
-            nodal_precession_rate(a, e, i) / yr_s,
+            rate_yr / yr_s,
             max_relative = 1e-12
         );
     }
@@ -207,7 +204,7 @@ mod tests {
     #[test]
     fn test_pole_inclination() {
         let pole = OrbitalPole::from_elements("test", 30.0 * DEG2RAD, 45.0 * DEG2RAD);
-        assert!((pole.inclination() - 30.0 * DEG2RAD).abs() < 1e-10);
+        assert!((pole.inclination_typed().get::<radian>() - 30.0 * DEG2RAD).abs() < 1e-10);
     }
 
     #[test]
@@ -257,7 +254,7 @@ mod tests {
         // The giant-planet angular-momentum plane is inclined ≈ 1.58° to
         // the ecliptic.
         let lap = laplace_pole();
-        let i_deg = lap.inclination() / DEG2RAD;
+        let i_deg = lap.inclination_typed().get::<radian>() / DEG2RAD;
         assert!(
             i_deg > 1.0 && i_deg < 2.2,
             "Laplace-plane inclination = {i_deg:.2}°, expected ≈ 1.58°"
@@ -287,7 +284,7 @@ mod tests {
         let at_2017 = laplace_pole_at(&ts.utc((2017, 1, 1))).unwrap();
         let sep = misalignment(&pinned, &at_2017) / DEG2RAD;
         assert!(sep < 0.2, "2017 pole separation = {sep:.4}°");
-        let i_deg = at_2017.inclination() / DEG2RAD;
+        let i_deg = at_2017.inclination_typed().get::<radian>() / DEG2RAD;
         assert!(i_deg > 1.0 && i_deg < 2.2, "inclination = {i_deg:.2}°");
     }
 
@@ -323,7 +320,8 @@ mod tests {
     #[test]
     fn test_nodal_precession_negative() {
         // Prograde orbit (i < 90) should precess retrograde (negative rate)
-        let rate = nodal_precession_rate(300.0, 0.7, 20.0 * DEG2RAD);
+        let rate =
+            nodal_precession_rate_typed(300.0, 0.7, 20.0 * DEG2RAD).get::<radian_per_second>();
         assert!(
             rate < 0.0,
             "nodal precession rate should be negative for prograde"

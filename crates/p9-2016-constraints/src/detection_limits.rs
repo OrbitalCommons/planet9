@@ -27,14 +27,8 @@ pub fn predicted_v_magnitude(p9: &P9Params, true_anomaly: f64, albedo: f64, radi
 /// mass-radius relation (the previous local 3.0 R⊕ · M^0.27 fit made a
 /// 10 M⊕ planet larger than Neptune, ~40% too big, skewing detectability
 /// optimistic).
-pub fn estimate_radius_km(mass_earth: f64) -> f64 {
-    photometry::mass_radius_neptunian(mass_earth) * EARTH_RADIUS_KM
-}
-
-/// Planet Nine's physical radius as a typed [`Length`] (the [`estimate_radius_km`]
-/// value, in kilometers).
 pub fn estimate_radius(mass_earth: f64) -> Length {
-    km(estimate_radius_km(mass_earth))
+    km(photometry::mass_radius_neptunian(mass_earth) * EARTH_RADIUS_KM)
 }
 
 /// Compute the sky position (ecliptic longitude, latitude) of Planet Nine
@@ -71,7 +65,7 @@ pub fn sky_position(p9: &P9Params, true_anomaly: f64) -> (f64, f64) {
 
 /// Brightness curve: V magnitude vs true anomaly for the full orbit.
 pub fn brightness_curve(p9: &P9Params, albedo: f64, n_points: usize) -> Vec<(f64, f64, f64)> {
-    let radius_km = estimate_radius_km(p9.mass_earth);
+    let radius_km = (estimate_radius(p9.mass_earth) / km(1.0)).value;
 
     (0..n_points)
         .map(|i| {
@@ -98,7 +92,7 @@ pub fn survey_depths() -> Vec<(&'static str, f64)> {
 /// Fraction of the orbit brighter than a given V magnitude limit.
 pub fn detectable_fraction(p9: &P9Params, v_limit: f64, albedo: f64) -> f64 {
     let n = 1000;
-    let radius_km = estimate_radius_km(p9.mass_earth);
+    let radius_km = (estimate_radius(p9.mass_earth) / km(1.0)).value;
     let n_detectable = (0..n)
         .filter(|&i| {
             let nu = (i as f64 / n as f64) * 2.0 * PI - PI;
@@ -117,7 +111,7 @@ mod tests {
     fn test_brightness_at_perihelion_vs_aphelion() {
         let p9 = P9Params::nominal_2016();
 
-        let radius_km = estimate_radius_km(p9.mass_earth);
+        let radius_km = (estimate_radius(p9.mass_earth) / km(1.0)).value;
         let v_peri = predicted_v_magnitude(&p9, 0.0, 0.5, radius_km);
         let v_apo = predicted_v_magnitude(&p9, PI, 0.5, radius_km);
 
@@ -143,7 +137,7 @@ mod tests {
         for &m in &[1.0, 10.0, 20.0] {
             assert_relative_eq!(
                 (estimate_radius(m) / km(1.0)).value,
-                estimate_radius_km(m),
+                photometry::mass_radius_neptunian(m) * EARTH_RADIUS_KM,
                 max_relative = 1e-12
             );
         }
@@ -151,8 +145,8 @@ mod tests {
 
     #[test]
     fn test_radius_estimate() {
-        let r_10 = estimate_radius_km(10.0);
-        let r_1 = estimate_radius_km(1.0);
+        let r_10 = (estimate_radius(10.0) / km(1.0)).value;
+        let r_1 = (estimate_radius(1.0) / km(1.0)).value;
 
         // 10 Earth mass should have larger radius than 1 Earth mass
         assert!(r_10 > r_1);

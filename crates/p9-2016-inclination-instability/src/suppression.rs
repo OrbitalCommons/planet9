@@ -33,9 +33,9 @@
 
 use p9_core::constants::{A_NEPTUNE_AU, EARTH_MASS_SOLAR, MASS_NEPTUNE_SOLAR};
 use p9_core::forces::j2_secular::{combined_j2_jsu, effective_j2};
-use p9_core::units::{days, radians, solar_masses, AngularVelocity, Mass};
+use p9_core::units::{solar_masses, AngularVelocity, Mass};
 
-use crate::growth::{mean_motion, secular_frequency};
+use crate::growth::{mean_motion_typed, secular_frequency_typed};
 
 /// Effective J2 (AU^2) of the four giant planets: (1/2) sum_p (m_p/M_sun) a_p^2,
 /// built from the shared `p9_core` J2 helpers (J+S+U) plus Neptune. Identical
@@ -45,12 +45,13 @@ pub fn giant_planet_j2_eff() -> f64 {
     j2_jsu + effective_j2(MASS_NEPTUNE_SOLAR, A_NEPTUNE_AU, 1.0)
 }
 
-/// Giant-planet secular apsidal precession rate for a disc orbit at (a, e)
-/// [rad/day]:  g = (3/2) n J2_eff / [a^2 (1-e^2)^2].
-pub fn giant_planet_precession_rate(a: f64, e: f64) -> f64 {
+/// Giant-planet secular apsidal precession rate for a disc orbit at (a, e) as a
+/// typed [`AngularVelocity`]:  g = (3/2) n J2_eff / [a^2 (1-e^2)^2].
+pub fn giant_planet_precession_rate_typed(a: f64, e: f64) -> AngularVelocity {
     let j2_eff = giant_planet_j2_eff();
     let eta2 = 1.0 - e * e;
-    1.5 * mean_motion(a) * j2_eff / (a * a * eta2 * eta2)
+    let scale = 1.5 * j2_eff / (a * a * eta2 * eta2);
+    scale * mean_motion_typed(a)
 }
 
 /// Critical disc mass (solar masses) above which the inclination instability
@@ -66,12 +67,6 @@ pub fn critical_mass_solar(a: f64, e: f64) -> f64 {
 /// Critical disc mass in Earth masses.
 pub fn critical_mass_earth(a: f64, e: f64) -> f64 {
     critical_mass_solar(a, e) / EARTH_MASS_SOLAR
-}
-
-/// Giant-planet precession rate [`g`](giant_planet_precession_rate) as a typed
-/// [`AngularVelocity`].
-pub fn giant_planet_precession_rate_typed(a: f64, e: f64) -> AngularVelocity {
-    (radians(giant_planet_precession_rate(a, e)) / days(1.0)).into()
 }
 
 /// Critical disc mass [`M_crit`](critical_mass_solar) as a typed [`Mass`].
@@ -91,8 +86,8 @@ pub enum Stability {
 /// Apply the Das & Batygin suppression criterion: compare the disc self-gravity
 /// secular frequency against the giant-planet precession rate at (a, e).
 pub fn classify(m_disk_solar: f64, a: f64, e: f64) -> Stability {
-    let omega_disk = secular_frequency(m_disk_solar, a);
-    let g_planet = giant_planet_precession_rate(a, e);
+    let omega_disk = secular_frequency_typed(m_disk_solar, a);
+    let g_planet = giant_planet_precession_rate_typed(a, e);
     if omega_disk > g_planet {
         Stability::Unstable
     } else {
@@ -112,10 +107,17 @@ mod tests {
     const E_DISK: f64 = 0.6;
 
     #[test]
-    fn typed_accessors_match_f64_sources() {
+    fn typed_accessors_match_inline_formulas() {
+        // Inline reference g [rad/day] = (3/2) n J2_eff / [a^2 (1-e^2)^2].
+        let n = (mean_motion_typed(A_AU) * p9_core::units::days(1.0)
+            / p9_core::units::radians(1.0))
+        .value;
+        let j2_eff = giant_planet_j2_eff();
+        let eta2 = 1.0 - E_DISK * E_DISK;
+        let g_ref = 1.5 * n * j2_eff / (A_AU * A_AU * eta2 * eta2);
         assert_relative_eq!(
             giant_planet_precession_rate_typed(A_AU, E_DISK).get::<radian_per_second>(),
-            giant_planet_precession_rate(A_AU, E_DISK) / 86_400.0,
+            g_ref / 86_400.0,
             epsilon = 1e-30
         );
         assert_relative_eq!(

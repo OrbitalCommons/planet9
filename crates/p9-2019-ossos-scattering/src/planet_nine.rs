@@ -60,11 +60,6 @@ impl Default for PlanetNine {
 }
 
 impl PlanetNine {
-    /// Heliocentric gravitational parameter GM₉ (AU³/day²).
-    pub fn gm(&self) -> f64 {
-        self.mass_earth * EARTH_MASS_SOLAR * GM_SUN
-    }
-
     /// Mass as a typed [`Mass`].
     pub fn mass(&self) -> Mass {
         earth_masses(self.mass_earth)
@@ -75,9 +70,10 @@ impl PlanetNine {
         au(self.a_au)
     }
 
-    /// Gravitational parameter GM₉ as a typed [`GravitationalParameter`].
+    /// Heliocentric gravitational parameter GM₉ as a typed
+    /// [`GravitationalParameter`].
     pub fn gm_typed(&self) -> GravitationalParameter {
-        gm_from_au3_day2(self.gm())
+        gm_from_au3_day2(self.mass_earth * EARTH_MASS_SOLAR * GM_SUN)
     }
 }
 
@@ -126,7 +122,7 @@ const E_BRANCH_MIN: f64 = 0.7;
 /// roots past the peak.
 pub fn max_perihelion(p9: &PlanetNine, a_au: f64, q0_au: f64, dvarpi0: f64) -> f64 {
     let e0 = 1.0 - q0_au / a_au;
-    let gm = p9.gm();
+    let gm = (p9.gm_typed() / gm_from_au3_day2(1.0)).value;
     let soft = 0.01 * p9.a_au;
     if e0 <= E_BRANCH_MIN {
         return q0_au;
@@ -175,7 +171,7 @@ pub fn forcing_rate(p9: &PlanetNine, a_au: f64, q0_au: f64) -> f64 {
     if e0 <= E_BRANCH_MIN || e0 <= 0.0 {
         return 0.0;
     }
-    let gm = p9.gm();
+    let gm = (p9.gm_typed() / gm_from_au3_day2(1.0)).value;
     let soft = 0.01 * p9.a_au;
     let n = (GM_SUN / a_au.powi(3)).sqrt(); // mean motion (rad/day)
     let dphi = 1e-3;
@@ -254,6 +250,7 @@ mod tests {
 
     #[test]
     fn gm_scales_with_mass() {
+        let gm_au3_day2 = |p9: &PlanetNine| (p9.gm_typed() / gm_from_au3_day2(1.0)).value;
         let small = PlanetNine {
             mass_earth: 5.0,
             ..Default::default()
@@ -262,11 +259,15 @@ mod tests {
             mass_earth: 10.0,
             ..Default::default()
         };
-        assert_relative_eq!(big.gm() / small.gm(), 2.0, epsilon = 1e-12);
+        assert_relative_eq!(
+            gm_au3_day2(&big) / gm_au3_day2(&small),
+            2.0,
+            epsilon = 1e-12
+        );
         // Sanity: 6.2 M⊕ in solar masses times GM_SUN.
         let nominal = PlanetNine::default();
         assert_relative_eq!(
-            nominal.gm(),
+            gm_au3_day2(&nominal),
             6.2 * EARTH_MASS_SOLAR * GM_SUN,
             epsilon = 1e-18
         );
@@ -287,10 +288,10 @@ mod tests {
             p9.mass_earth * p9_core::units::EARTH_MASS_KG,
             epsilon = 1e12
         );
-        // GM round-trips from AU³/day² to SI base via the core converter.
+        // GM matches the inline AU³/day² formula, converted to SI base.
         assert_relative_eq!(
             p9.gm_typed().value,
-            gm_from_au3_day2(p9.gm()).value,
+            gm_from_au3_day2(p9.mass_earth * EARTH_MASS_SOLAR * GM_SUN).value,
             epsilon = 1e-30
         );
     }

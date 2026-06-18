@@ -24,10 +24,6 @@ impl StateVector {
         }
     }
 
-    pub fn distance(&self) -> f64 {
-        self.pos.norm()
-    }
-
     pub fn speed(&self) -> f64 {
         self.vel.norm()
     }
@@ -36,7 +32,7 @@ impl StateVector {
     /// storage stays `f64`/AU because `nalgebra`'s norm cannot carry units;
     /// this is the typed boundary accessor.)
     pub fn distance_typed(&self) -> Length {
-        units::au(self.distance())
+        units::au(self.pos.norm())
     }
 
     /// Speed as a dimension-checked [`Velocity`] (AU/day storage).
@@ -64,24 +60,9 @@ pub struct OrbitalElements {
 }
 
 impl OrbitalElements {
-    /// Perihelion distance q = a(1-e) in AU
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Aphelion distance Q = a(1+e) in AU
-    pub fn aphelion(&self) -> f64 {
-        self.a * (1.0 + self.e)
-    }
-
     /// Semi-latus rectum p = a(1-e^2)
     pub fn semi_latus_rectum(&self) -> f64 {
         self.a * (1.0 - self.e * self.e)
-    }
-
-    /// Orbital period in days (only meaningful for bound orbits)
-    pub fn period(&self, gm: f64) -> f64 {
-        TWO_PI * (self.a.powi(3) / gm).sqrt()
     }
 
     /// Longitude of perihelion (varpi = Omega + omega)
@@ -112,16 +93,16 @@ impl OrbitalElements {
     }
     /// Perihelion distance `q = a(1-e)` as a [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        units::au(self.perihelion())
+        units::au(self.a * (1.0 - self.e))
     }
     /// Aphelion distance `Q = a(1+e)` as a [`Length`].
     pub fn aphelion_typed(&self) -> Length {
-        units::au(self.aphelion())
+        units::au(self.a * (1.0 + self.e))
     }
     /// Orbital period as a [`Time`]. `gm` is the central-body gravitational
     /// parameter in AU³/day² (the workspace's native unit).
     pub fn period_typed(&self, gm: f64) -> Time {
-        units::days(self.period(gm))
+        units::days(TWO_PI * (self.a.powi(3) / gm).sqrt())
     }
 }
 
@@ -239,11 +220,6 @@ impl P9Params {
         self.mass_solar() * GM_SUN
     }
 
-    /// Perihelion distance in AU
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
     // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
 
     /// Planet Nine mass as a [`Mass`] (from the Earth-mass field).
@@ -260,7 +236,7 @@ impl P9Params {
     }
     /// Perihelion distance as a [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        units::au(self.perihelion())
+        units::au(self.a * (1.0 - self.e))
     }
     /// Gravitational parameter `GM` as a typed [`GravitationalParameter`].
     pub fn gm_typed(&self) -> GravitationalParameter {
@@ -760,7 +736,7 @@ mod typed_accessor_tests {
         );
         assert_relative_eq!(
             p.perihelion_typed().get::<astronomical_unit>(),
-            p.perihelion(),
+            p.a * (1.0 - p.e),
             epsilon = 1e-12
         );
         // 10 M⊕ in kilograms.
@@ -790,7 +766,7 @@ mod typed_accessor_tests {
         .to_state_vector(GM_SUN);
         assert_relative_eq!(
             sv.distance_typed().get::<astronomical_unit>(),
-            sv.distance(),
+            sv.pos.norm(),
             epsilon = 1e-12
         );
     }

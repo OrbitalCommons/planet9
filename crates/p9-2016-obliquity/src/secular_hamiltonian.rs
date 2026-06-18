@@ -66,29 +66,21 @@ impl SpinOrbitState {
         SpinOrbitState { l_gp, l_9, l_sun }
     }
 
-    /// Compute the angle between solar spin and giant planet angular momentum (solar obliquity).
-    pub fn obliquity(&self) -> f64 {
+    /// Angle between solar spin and giant planet angular momentum (solar
+    /// obliquity), as a typed [`Angle`].
+    pub fn obliquity_typed(&self) -> Angle {
         let dot = self.l_sun[0] * self.l_gp[0]
             + self.l_sun[1] * self.l_gp[1]
             + self.l_sun[2] * self.l_gp[2];
-        dot.clamp(-1.0, 1.0).acos()
+        radians(dot.clamp(-1.0, 1.0).acos())
     }
 
-    /// Compute the mutual inclination between giant planets and Planet Nine.
-    pub fn mutual_inclination(&self) -> f64 {
+    /// Mutual inclination between giant planets and Planet Nine, as a typed
+    /// [`Angle`].
+    pub fn mutual_inclination_typed(&self) -> Angle {
         let dot =
             self.l_gp[0] * self.l_9[0] + self.l_gp[1] * self.l_9[1] + self.l_gp[2] * self.l_9[2];
-        dot.clamp(-1.0, 1.0).acos()
-    }
-
-    /// Solar obliquity [`obliquity`](Self::obliquity) as a typed [`Angle`].
-    pub fn obliquity_typed(&self) -> Angle {
-        radians(self.obliquity())
-    }
-    /// Mutual inclination [`mutual_inclination`](Self::mutual_inclination) as a
-    /// typed [`Angle`].
-    pub fn mutual_inclination_typed(&self) -> Angle {
-        radians(self.mutual_inclination())
+        radians(dot.clamp(-1.0, 1.0).acos())
     }
 }
 
@@ -351,8 +343,11 @@ pub fn integrate_obliquity(
     for _ in 0..n_steps {
         // Time-dependent solar parameters
         let compute_solar_couplings = |t_now: f64| {
-            let omega_rot = solar_model::solar_omega_at_time(t_now, t_age);
-            let a_tilde = solar_model::solar_ring_semimajor_axis(omega_rot);
+            // ω in rad/day, extracted version-safely from the typed quantity.
+            let omega_rot = (solar_model::solar_omega_at_time_typed(t_now, t_age)
+                / (radians(1.0) / days(1.0)))
+            .value;
+            let a_tilde = (solar_model::solar_ring_semimajor_axis_typed(omega_rot) / au(1.0)).value;
             let l_sun_mag = solar_model::solar_spin_angular_momentum(omega_rot);
 
             // Effective mass of solar spin ring
@@ -409,8 +404,8 @@ pub fn integrate_obliquity(
 }
 
 fn make_snapshot(state: &SpinOrbitState, t: f64) -> ObliquitySnapshot {
-    let obliquity = state.obliquity();
-    let mutual_inclination = state.mutual_inclination();
+    let obliquity = (state.obliquity_typed() / radians(1.0)).value;
+    let mutual_inclination = (state.mutual_inclination_typed() / radians(1.0)).value;
 
     // Extract angles from unit vectors for diagnostics
     let i_9 = state.l_9[2].clamp(-1.0, 1.0).acos();
@@ -458,10 +453,21 @@ mod tests {
         assert_relative_eq!(params.timestep().get::<day>(), params.dt);
 
         let state = SpinOrbitState::from_inclinations(0.5, 1.0, 1.0, 0.3);
-        assert_relative_eq!(state.obliquity_typed().get::<radian>(), state.obliquity());
+        // obliquity = acos(L̂_sun · L̂_gp).
+        let dot_sun_gp = state.l_sun[0] * state.l_gp[0]
+            + state.l_sun[1] * state.l_gp[1]
+            + state.l_sun[2] * state.l_gp[2];
+        assert_relative_eq!(
+            state.obliquity_typed().get::<radian>(),
+            dot_sun_gp.clamp(-1.0, 1.0).acos()
+        );
+        // mutual inclination = acos(L̂_gp · L̂_9).
+        let dot_gp_9 = state.l_gp[0] * state.l_9[0]
+            + state.l_gp[1] * state.l_9[1]
+            + state.l_gp[2] * state.l_9[2];
         assert_relative_eq!(
             state.mutual_inclination_typed().get::<radian>(),
-            state.mutual_inclination()
+            dot_gp_9.clamp(-1.0, 1.0).acos()
         );
 
         let snap = ObliquitySnapshot {
@@ -532,7 +538,7 @@ mod tests {
         let l_9_mag = giant_planets::p9_angular_momentum(m9_solar, a9, e9);
 
         let initial = SpinOrbitState::from_inclinations(20.0 * DEG2RAD, PI, l_gp_mag, l_9_mag);
-        let theta = initial.mutual_inclination();
+        let theta = (initial.mutual_inclination_typed() / radians(1.0)).value;
         let epsilon_9 = (1.0_f64 - e9 * e9).sqrt();
         let c_gp_9 = coupling_gp_9(m9_solar, a9, epsilon_9);
 

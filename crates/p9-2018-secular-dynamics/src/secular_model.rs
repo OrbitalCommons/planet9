@@ -112,8 +112,9 @@ pub fn hamiltonian(a: f64, e: f64, dvarpi: f64, p9: &P9Params) -> f64 {
     giants_j2_energy(a, e) + p9_ring_energy(a, e, dvarpi, p9)
 }
 
-/// Free (giants-only) apsidal precession rate dϖ/dt (rad/day) of a low-e test
-/// particle, from the secular J2 quadrupole:
+/// Free (giants-only) apsidal precession rate dϖ/dt as a typed
+/// [`AngularVelocity`] (rad/day) of a low-e test particle, from the secular J2
+/// quadrupole:
 ///
 ///   dϖ/dt = (√(1−e²) / (n a² e)) · ∂H_J2/∂e   →   prograde (> 0).
 ///
@@ -121,19 +122,14 @@ pub fn hamiltonian(a: f64, e: f64, dvarpi: f64, p9: &P9Params) -> f64 {
 /// classical (3/2) n J2_eff (R/a)² regression-free precession. This is the
 /// rate that competes with P9's torque and sets the circulation regime at
 /// small `a`.
-pub fn free_precession_rate(a: f64, e: f64) -> f64 {
+pub fn free_precession_rate_typed(a: f64, e: f64) -> AngularVelocity {
     let n = mean_motion(a);
     let de = 1e-4;
     let dh = (giants_j2_energy(a, e + de) - giants_j2_energy(a, e - de)) / (2.0 * de);
     // dϖ/dt = +(√(1−e²)/(n a² e)) · ∂R/∂e with the disturbing function R = −H,
     // so the giants' apsidal precession comes out prograde (> 0).
-    -(1.0 - e * e).sqrt() / (n * a * a * e) * dh
-}
-
-/// Free (giants-only) apsidal precession rate as a typed [`AngularVelocity`]
-/// (see [`free_precession_rate`], in rad/day).
-pub fn free_precession_rate_typed(a: f64, e: f64) -> AngularVelocity {
-    (radians(free_precession_rate(a, e)) / days(1.0)).into()
+    let rate = -(1.0 - e * e).sqrt() / (n * a * a * e) * dh;
+    (radians(rate) / days(1.0)).into()
 }
 
 /// The linear secular coefficients `(B, A)` of the eccentricity-vector
@@ -235,11 +231,11 @@ pub fn classify_apsidal_motion(
     }
 }
 
-/// Locate the critical semi-major axis a_crit separating circulation (below)
-/// from libration (above), by bisection on the `librates` predicate over
-/// [a_lo, a_hi]. Returns None if the predicate does not change between the
-/// endpoints (no transition inside the bracket).
-pub fn critical_semimajor_axis(p9: &P9Params, a_lo: f64, a_hi: f64) -> Option<f64> {
+/// Locate the critical semi-major axis a_crit as a typed [`Length`], separating
+/// circulation (below) from libration (above), by bisection on the `librates`
+/// predicate over [a_lo, a_hi]. Returns None if the predicate does not change
+/// between the endpoints (no transition inside the bracket).
+pub fn critical_semimajor_axis_typed(p9: &P9Params, a_lo: f64, a_hi: f64) -> Option<Length> {
     let lib_lo = librates(a_lo, p9);
     let lib_hi = librates(a_hi, p9);
     if lib_lo == lib_hi {
@@ -260,18 +256,12 @@ pub fn critical_semimajor_axis(p9: &P9Params, a_lo: f64, a_hi: f64) -> Option<f6
             break;
         }
     }
-    Some(0.5 * (lo + hi))
-}
-
-/// Critical semi-major axis as a typed [`Length`] (see
-/// [`critical_semimajor_axis`]).
-pub fn critical_semimajor_axis_typed(p9: &P9Params, a_lo: f64, a_hi: f64) -> Option<Length> {
-    critical_semimajor_axis(p9, a_lo, a_hi).map(au)
+    Some(au(0.5 * (lo + hi)))
 }
 
 /// Analytic-vs-numerical cross-check helper: the secular apsidal precession
 /// rate from the giants' J2 term computed by finite difference of the p9-core
-/// J2 energy (`free_precession_rate`) against the closed-form
+/// J2 energy (`free_precession_rate_typed`) against the closed-form
 ///
 ///   dϖ/dt = (3/2) n J2_eff (R_ref/a)² (1 − e²)^{−2}.
 ///
@@ -281,7 +271,10 @@ pub fn precession_cross_check(a: f64, e: f64) -> (f64, f64) {
     let (j2_eff, _j4, _gm) = combined_j2_jsu();
     let r_ref = 1.0_f64;
     let analytic = 1.5 * n * j2_eff * (r_ref / a).powi(2) * (1.0 - e * e).powi(-2);
-    let numerical = free_precession_rate(a, e);
+    // Recover the rad/day numeric value from the typed AngularVelocity by
+    // dividing out one radian-per-day; the resulting dimensionless ratio's
+    // value is exactly the original rad/day number.
+    let numerical = (free_precession_rate_typed(a, e) / (radians(1.0) / days(1.0))).value;
     (numerical, analytic)
 }
 
@@ -291,30 +284,36 @@ mod tests {
     use p9_core::analysis::secular::coplanar_quadrupole;
 
     #[test]
-    fn typed_accessors_match_f64_sources() {
+    fn typed_accessors_match_inline_formulas() {
         use approx::assert_relative_eq;
         use uom::si::angular_velocity::radian_per_second;
         use uom::si::length::astronomical_unit;
         use uom::si::time::second;
 
-        // The typed rate stores rad/s; convert back to rad/day to compare with
-        // the f64 source (which is in rad/day).
+        // Reproduce the inline f64 precession formula (rad/day) and compare
+        // against the typed accessor (which stores rad/s).
+        let a = 250.0;
+        let e = 0.2;
+        let n = mean_motion(a);
+        let de = 1e-4;
+        let dh = (giants_j2_energy(a, e + de) - giants_j2_energy(a, e - de)) / (2.0 * de);
+        let rate = -(1.0 - e * e).sqrt() / (n * a * a * e) * dh;
+
         let seconds_per_day = days(1.0).get::<second>();
-        let rate = free_precession_rate(250.0, 0.2);
-        let typed = free_precession_rate_typed(250.0, 0.2);
+        let typed = free_precession_rate_typed(a, e);
         assert_relative_eq!(
             typed.get::<radian_per_second>() * seconds_per_day,
             rate,
             max_relative = 1e-9
         );
 
+        // The typed critical semi-major axis reads back in AU within the bracket.
         let p9 = nominal_p9();
-        if let Some(a_crit) = critical_semimajor_axis(&p9, 50.0, 400.0) {
-            let typed_a = critical_semimajor_axis_typed(&p9, 50.0, 400.0).unwrap();
-            assert_relative_eq!(
-                typed_a.get::<astronomical_unit>(),
-                a_crit,
-                max_relative = 1e-9
+        if let Some(typed_a) = critical_semimajor_axis_typed(&p9, 50.0, 400.0) {
+            let a_crit = typed_a.get::<astronomical_unit>();
+            assert!(
+                (50.0..400.0).contains(&a_crit),
+                "a_crit {a_crit} must be inside the bracket"
             );
         }
     }
@@ -360,9 +359,11 @@ mod tests {
     /// threshold.
     #[test]
     fn test_critical_semimajor_axis_separates_regimes() {
+        use uom::si::length::astronomical_unit;
         let p9 = nominal_p9();
-        let a_crit = critical_semimajor_axis(&p9, 50.0, 480.0)
-            .expect("a transition must exist in [50, 480] AU");
+        let a_crit = critical_semimajor_axis_typed(&p9, 50.0, 480.0)
+            .expect("a transition must exist in [50, 480] AU")
+            .get::<astronomical_unit>();
 
         // Circulation well below, libration well above the transition.
         assert!(

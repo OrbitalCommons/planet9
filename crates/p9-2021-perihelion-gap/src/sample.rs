@@ -39,11 +39,6 @@ pub struct DistantTno {
 }
 
 impl DistantTno {
-    /// Perihelion distance q = a(1 − e) in AU.
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
     /// Semi-major axis as a dimension-checked [`Length`].
     pub fn semi_major_axis(&self) -> Length {
         au(self.a)
@@ -51,7 +46,7 @@ impl DistantTno {
 
     /// Perihelion distance q = a(1 − e) as a dimension-checked [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 }
 
@@ -137,7 +132,11 @@ pub fn observed_perihelia() -> Vec<f64> {
     BROWN_2017_SAMPLE
         .iter()
         .map(|k| k.perihelion())
-        .chain(EXTENDED_DISTANT_TNOS.iter().map(|t| t.perihelion()))
+        .chain(
+            EXTENDED_DISTANT_TNOS
+                .iter()
+                .map(|t| (t.perihelion_typed() / au(1.0)).value),
+        )
         .collect()
 }
 
@@ -147,7 +146,11 @@ pub fn observed_perihelia_with_e() -> Vec<(f64, f64)> {
     BROWN_2017_SAMPLE
         .iter()
         .map(|k| (k.perihelion(), k.e))
-        .chain(EXTENDED_DISTANT_TNOS.iter().map(|t| (t.perihelion(), t.e)))
+        .chain(
+            EXTENDED_DISTANT_TNOS
+                .iter()
+                .map(|t| ((t.perihelion_typed() / au(1.0)).value, t.e)),
+        )
         .collect()
 }
 
@@ -182,7 +185,7 @@ mod tests {
         );
         assert_relative_eq!(
             t.perihelion_typed().get::<astronomical_unit>(),
-            t.perihelion(),
+            t.a * (1.0 - t.e),
             epsilon = 1e-9
         );
     }
@@ -204,12 +207,8 @@ mod tests {
             assert!(t.a >= 150.0, "{}: a = {}", t.name, t.a);
             assert!(t.e > 0.5 && t.e < 1.0, "{}: e = {}", t.name, t.e);
             // All in the distant trans-Neptunian q range.
-            assert!(
-                t.perihelion() > 30.0 && t.perihelion() < 120.0,
-                "{}: q = {:.1}",
-                t.name,
-                t.perihelion()
-            );
+            let q = t.perihelion_typed().get::<astronomical_unit>();
+            assert!(q > 30.0 && q < 120.0, "{}: q = {:.1}", t.name, q);
         }
     }
 

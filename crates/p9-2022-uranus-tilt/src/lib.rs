@@ -26,16 +26,10 @@ pub mod cassini;
 pub mod resonance_capture;
 pub mod spin_axis;
 
-use p9_core::constants::DEG2RAD;
 use p9_core::units::{degrees, Angle};
 
 /// Uranus' observed obliquity (deg). IAU value; the paper's target is 98°.
 pub const URANUS_OBLIQUITY_DEG: f64 = 97.77;
-
-/// Uranus' observed obliquity (rad).
-pub fn uranus_obliquity_rad() -> f64 {
-    URANUS_OBLIQUITY_DEG * DEG2RAD
-}
 
 /// Uranus' observed obliquity as a typed [`Angle`].
 pub fn uranus_obliquity() -> Angle {
@@ -46,19 +40,20 @@ pub fn uranus_obliquity() -> Angle {
 mod typed_tests {
     use super::*;
     use approx::assert_relative_eq;
+    use p9_core::constants::DEG2RAD;
     use uom::si::angle::radian;
 
     #[test]
     fn obliquity_typed_matches_rad() {
         assert_relative_eq!(
             uranus_obliquity().get::<radian>(),
-            uranus_obliquity_rad(),
+            URANUS_OBLIQUITY_DEG * DEG2RAD,
             epsilon = 1e-12
         );
     }
 }
 
 /// Lu & Laughlin (2022) headline spin-axis precession constant for Uranus
-/// today (arcsec/yr). Reference label only; [`spin_axis::alpha_arcsec_per_yr`]
+/// today (arcsec/yr). Reference label only; [`spin_axis::alpha_typed`]
 /// computes it.
 pub const ALPHA_PRESENT_ARCSEC_PER_YR: f64 = 0.045;

@@ -11,6 +11,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 approx = { workspace = true }
 nalgebra.workspace = true
-
-[dev-dependencies]
 uom = "0.38.0"

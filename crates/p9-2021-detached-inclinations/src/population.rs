@@ -35,7 +35,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Uniform};
 
-use crate::forcing::forced_inclination;
+use crate::forcing::forced_inclination_typed;
 
 /// A single detached test particle.
 #[derive(Debug, Clone, Copy)]
@@ -51,34 +51,23 @@ pub struct DetachedParticle {
 }
 
 impl DetachedParticle {
-    /// Perihelion distance q = a(1 − e) (AU).
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Observed inclination to the invariable plane (rad) given a forced
-    /// inclination `i_forced`: the spherical combination of the free
-    /// inclination on a cone about the forced pole at this precession phase.
-    pub fn observed_inclination(&self, i_forced: f64) -> f64 {
-        let cos_i = i_forced.cos() * self.i_free.cos()
-            + i_forced.sin() * self.i_free.sin() * self.phase.cos();
-        cos_i.clamp(-1.0, 1.0).acos()
-    }
-
     /// Semi-major axis as a typed [`Length`].
     pub fn semi_major_axis(&self) -> Length {
         au(self.a)
     }
 
-    /// Perihelion distance as a typed [`Length`].
+    /// Perihelion distance q = a(1 − e) as a typed [`Length`].
     pub fn perihelion_typed(&self) -> Length {
-        au(self.perihelion())
+        au(self.a * (1.0 - self.e))
     }
 
-    /// Observed inclination as a typed [`Angle`] (dimension-checked view of
-    /// [`observed_inclination`](Self::observed_inclination)).
+    /// Observed inclination to the invariable plane as a typed [`Angle`] given a
+    /// forced inclination `i_forced`: the spherical combination of the free
+    /// inclination on a cone about the forced pole at this precession phase.
     pub fn observed_inclination_typed(&self, i_forced: f64) -> Angle {
-        radians(self.observed_inclination(i_forced))
+        let cos_i = i_forced.cos() * self.i_free.cos()
+            + i_forced.sin() * self.i_free.sin() * self.phase.cos();
+        radians(cos_i.clamp(-1.0, 1.0).acos())
     }
 }
 
@@ -154,8 +143,8 @@ pub fn build_population(cfg: &PopulationConfig) -> Vec<DetachedParticle> {
 pub fn observed_inclinations(pop: &[DetachedParticle], p9: &P9Params) -> Vec<f64> {
     pop.iter()
         .map(|p| {
-            let i_forced = forced_inclination(p.a, p.e, p.i_free, p9);
-            p.observed_inclination(i_forced)
+            let i_forced = (forced_inclination_typed(p.a, p.e, p.i_free, p9) / radians(1.0)).value;
+            (p.observed_inclination_typed(i_forced) / radians(1.0)).value
         })
         .collect()
 }
@@ -198,7 +187,7 @@ pub fn fraction_above(values: &[f64], threshold: f64) -> f64 {
 pub fn mean_forced_inclination(pop: &[DetachedParticle], p9: &P9Params) -> f64 {
     let forced: Vec<f64> = pop
         .iter()
-        .map(|p| forced_inclination(p.a, p.e, p.i_free, p9))
+        .map(|p| (forced_inclination_typed(p.a, p.e, p.i_free, p9) / radians(1.0)).value)
         .collect();
     mean(&forced)
 }
@@ -213,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn typed_particle_accessors_match_f64() {
+    fn typed_particle_accessors_match_inline() {
         use approx::assert_relative_eq;
         use uom::si::angle::radian;
         use uom::si::length::astronomical_unit;
@@ -230,12 +219,15 @@ mod tests {
         );
         assert_relative_eq!(
             p.perihelion_typed().get::<astronomical_unit>(),
-            p.perihelion(),
+            p.a * (1.0 - p.e),
             epsilon = 1e-12
         );
+        let i_forced = 0.3_f64;
+        let cos_i =
+            i_forced.cos() * p.i_free.cos() + i_forced.sin() * p.i_free.sin() * p.phase.cos();
         assert_relative_eq!(
-            p.observed_inclination_typed(0.3).get::<radian>(),
-            p.observed_inclination(0.3),
+            p.observed_inclination_typed(i_forced).get::<radian>(),
+            cos_i.clamp(-1.0, 1.0).acos(),
             epsilon = 1e-12
         );
     }
@@ -246,7 +238,9 @@ mod tests {
         let pop = build_population(&cfg);
         assert_eq!(pop.len(), cfg.n);
         for p in &pop {
-            assert!(p.perihelion() >= cfg.q_min - 1e-9, "q = {}", p.perihelion());
+            use uom::si::length::astronomical_unit;
+            let q = p.perihelion_typed().get::<astronomical_unit>();
+            assert!(q >= cfg.q_min - 1e-9, "q = {q}");
             assert!(p.a >= cfg.a_min && p.a <= cfg.a_max);
             assert!((0.0..1.0).contains(&p.e));
         }

@@ -55,21 +55,6 @@ impl Bp519 {
         }
     }
 
-    /// Perihelion distance q = a(1 − e) in AU.
-    pub fn perihelion(&self) -> f64 {
-        self.a * (1.0 - self.e)
-    }
-
-    /// Aphelion distance Q = a(1 + e) in AU.
-    pub fn aphelion(&self) -> f64 {
-        self.a * (1.0 + self.e)
-    }
-
-    /// Longitude of perihelion ϖ = ω + Ω in radians, wrapped to [0, 2π).
-    pub fn longitude_of_perihelion(&self) -> f64 {
-        ((self.omega_deg + self.omega_big_deg) * DEG2RAD).rem_euclid(TWO_PI)
-    }
-
     /// Semi-major axis as a typed [`Length`] (via the core
     /// [`OrbitalElements`] accessor).
     pub fn semi_major_axis(&self) -> Length {
@@ -82,20 +67,20 @@ impl Bp519 {
         self.elements().inclination()
     }
 
-    /// Perihelion distance as a typed [`Length`] (see [`Self::perihelion`]).
+    /// Perihelion distance q = a(1 − e) as a typed [`Length`].
     pub fn perihelion_typed(&self) -> Length {
         self.elements().perihelion_typed()
     }
 
-    /// Aphelion distance as a typed [`Length`] (see [`Self::aphelion`]).
+    /// Aphelion distance Q = a(1 + e) as a typed [`Length`].
     pub fn aphelion_typed(&self) -> Length {
         self.elements().aphelion_typed()
     }
 
-    /// Longitude of perihelion as a typed [`Angle`] (see
-    /// [`Self::longitude_of_perihelion`]).
+    /// Longitude of perihelion ϖ = ω + Ω as a typed [`Angle`], wrapped to
+    /// [0, 2π).
     pub fn longitude_of_perihelion_typed(&self) -> Angle {
-        radians(self.longitude_of_perihelion())
+        radians(((self.omega_deg + self.omega_big_deg) * DEG2RAD).rem_euclid(TWO_PI))
     }
 }
 
@@ -133,28 +118,32 @@ mod tests {
 
     #[test]
     fn discovery_elements_pinned() {
+        use uom::si::length::astronomical_unit;
         let bp = discovery_2018();
         // Headline: highly inclined, eccentric, large-a detached ETNO.
         assert_relative_eq!(bp.a, 449.0, epsilon = 1.0);
         assert_relative_eq!(bp.e, 0.92, epsilon = 0.01);
         assert_relative_eq!(bp.i_deg, 54.0, epsilon = 1.0);
         // Detached: q well outside Neptune's reach (~35 AU).
-        assert!(
-            (33.0..40.0).contains(&bp.perihelion()),
-            "q = {:.1} AU",
-            bp.perihelion()
-        );
+        let q = bp.perihelion_typed().get::<astronomical_unit>();
+        assert!((33.0..40.0).contains(&q), "q = {q:.1} AU");
         // Aphelion deep in the P9-clustered distance range.
-        assert!(bp.aphelion() > 800.0, "Q = {:.0} AU", bp.aphelion());
+        let aph = bp.aphelion_typed().get::<astronomical_unit>();
+        assert!(aph > 800.0, "Q = {aph:.0} AU");
     }
 
     #[test]
     fn jpl_solution_drift_is_documented() {
+        use uom::si::length::astronomical_unit;
         let disc = discovery_2018();
         let jpl = jpl_current();
         // i, q stable across solutions; a, e drift up the fit degeneracy.
         assert_relative_eq!(disc.i_deg, jpl.i_deg, epsilon = 0.5);
-        assert_relative_eq!(disc.perihelion(), jpl.perihelion(), epsilon = 1.5);
+        assert_relative_eq!(
+            disc.perihelion_typed().get::<astronomical_unit>(),
+            jpl.perihelion_typed().get::<astronomical_unit>(),
+            epsilon = 1.5
+        );
         assert!(jpl.a > disc.a, "JPL a should drift upward");
     }
 
@@ -183,17 +172,17 @@ mod tests {
         );
         assert_relative_eq!(
             bp.perihelion_typed().get::<astronomical_unit>(),
-            bp.perihelion(),
+            bp.a * (1.0 - bp.e),
             epsilon = 1e-9
         );
         assert_relative_eq!(
             bp.aphelion_typed().get::<astronomical_unit>(),
-            bp.aphelion(),
+            bp.a * (1.0 + bp.e),
             epsilon = 1e-9
         );
         assert_relative_eq!(
             bp.longitude_of_perihelion_typed().get::<radian>(),
-            bp.longitude_of_perihelion(),
+            ((bp.omega_deg + bp.omega_big_deg) * DEG2RAD).rem_euclid(TWO_PI),
             epsilon = 1e-9
         );
     }
