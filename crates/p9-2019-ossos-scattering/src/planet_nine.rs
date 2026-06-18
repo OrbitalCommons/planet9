@@ -34,6 +34,7 @@
 use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN, TWO_PI};
 use p9_core::forces::j2_secular::combined_j2_jsu;
+use p9_core::units::{au, earth_masses, gm_from_au3_day2, GravitationalParameter, Length, Mass};
 
 /// Planet Nine orbital/mass parameters. Defaults are the Batygin & Brown
 /// (2021) nominal P9: 6.2 M⊕, a₉ = 380 AU, e₉ = 0.2.
@@ -62,6 +63,21 @@ impl PlanetNine {
     /// Heliocentric gravitational parameter GM₉ (AU³/day²).
     pub fn gm(&self) -> f64 {
         self.mass_earth * EARTH_MASS_SOLAR * GM_SUN
+    }
+
+    /// Mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Gravitational parameter GM₉ as a typed [`GravitationalParameter`].
+    pub fn gm_typed(&self) -> GravitationalParameter {
+        gm_from_au3_day2(self.gm())
     }
 }
 
@@ -253,6 +269,29 @@ mod tests {
             nominal.gm(),
             6.2 * EARTH_MASS_SOLAR * GM_SUN,
             epsilon = 1e-18
+        );
+    }
+
+    #[test]
+    fn planet_nine_typed_accessors_match_f64() {
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let p9 = PlanetNine::default();
+        assert_relative_eq!(
+            p9.semi_major_axis().get::<astronomical_unit>(),
+            p9.a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p9.mass().get::<kilogram>(),
+            p9.mass_earth * p9_core::units::EARTH_MASS_KG,
+            epsilon = 1e12
+        );
+        // GM round-trips from AU³/day² to SI base via the core converter.
+        assert_relative_eq!(
+            p9.gm_typed().value,
+            gm_from_au3_day2(p9.gm()).value,
+            epsilon = 1e-30
         );
     }
 

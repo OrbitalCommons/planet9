@@ -18,6 +18,7 @@
 use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::photometry::planet_apparent_magnitude;
+use p9_core::units::{au, earth_masses, Length, Mass};
 
 use crate::tess::TessStack;
 
@@ -56,6 +57,19 @@ impl Default for ReferenceBox {
 }
 
 impl ReferenceBox {
+    /// Mass range `[min, max]` as typed [`Mass`] values.
+    pub fn mass_range(&self) -> (Mass, Mass) {
+        (
+            earth_masses(self.mass_earth.0),
+            earth_masses(self.mass_earth.1),
+        )
+    }
+
+    /// Heliocentric distance range `[min, max]` as typed [`Length`] values.
+    pub fn distance_range(&self) -> (Length, Length) {
+        (au(self.distance_au.0), au(self.distance_au.1))
+    }
+
     fn mass_at(&self, j: usize) -> f64 {
         let (lo, hi) = self.mass_earth;
         if self.n_mass <= 1 {
@@ -114,6 +128,23 @@ pub fn p9_apparent_magnitude(mass_earth: f64, distance_au: f64, albedo: f64) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reference_box_typed_ranges_match_f64() {
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let bx = ReferenceBox::default();
+        let (m_lo, m_hi) = bx.mass_range();
+        assert!(
+            (m_lo.get::<kilogram>() - bx.mass_earth.0 * p9_core::units::EARTH_MASS_KG).abs() < 1e12
+        );
+        assert!(
+            (m_hi.get::<kilogram>() - bx.mass_earth.1 * p9_core::units::EARTH_MASS_KG).abs() < 1e12
+        );
+        let (d_lo, d_hi) = bx.distance_range();
+        assert!((d_lo.get::<astronomical_unit>() - bx.distance_au.0).abs() < 1e-9);
+        assert!((d_hi.get::<astronomical_unit>() - bx.distance_au.1).abs() < 1e-9);
+    }
 
     #[test]
     fn detectable_fraction_is_a_probability() {

@@ -36,6 +36,7 @@ use p9_core::analysis::thermal::{
     effective_temp, flux_to_magnitude, reflected_flux_jy, solar_equilibrium_temp, thermal_flux_jy,
     C_LIGHT,
 };
+use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Earth radius (m).
 const R_EARTH_M: f64 = 6.371e6;
@@ -89,6 +90,21 @@ impl P9Thermal {
     /// Physical radius in meters (Neptune-anchored mass-radius relation).
     pub fn radius_m(&self) -> f64 {
         mass_radius_neptunian(self.mass_earth) * R_EARTH_M
+    }
+
+    /// Mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
+
+    /// Physical radius as a typed [`Length`].
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
     }
 
     /// Solar equilibrium temperature (K) for a fast rotator radiating from
@@ -145,6 +161,16 @@ pub fn w1_magnitude(mass_earth: f64, distance_au: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use uom::si::length::{astronomical_unit, meter};
+        use uom::si::mass::kilogram;
+        let p = P9Thermal::new(10.0, 500.0);
+        assert!((p.distance().get::<astronomical_unit>() - 500.0).abs() < 1e-9);
+        assert!((p.radius().get::<meter>() - p.radius_m()).abs() < 1e-6);
+        assert!((p.mass().get::<kilogram>() - 10.0 * p9_core::units::EARTH_MASS_KG).abs() < 1e12);
+    }
 
     #[test]
     fn radius_matches_ice_giant_models() {

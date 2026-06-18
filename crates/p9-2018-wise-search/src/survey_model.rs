@@ -12,6 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::surveys::limiting_magnitude;
+use p9_core::units::{degrees, Angle};
 
 /// Published WISE W1 single-exposure / shift-and-stack depth (Vega mag),
 /// kept as a labelled reference constant; the live value comes from the
@@ -59,6 +60,11 @@ impl WiseSurvey {
         galactic_lat_deg.abs() >= self.galactic_mask_deg
     }
 
+    /// Half-width of the masked galactic-plane band as a typed [`Angle`].
+    pub fn galactic_mask(&self) -> Angle {
+        degrees(self.galactic_mask_deg)
+    }
+
     /// Fraction of the celestial sphere covered: all-sky minus the masked
     /// galactic band |b| < galactic_mask. The unmasked solid-angle fraction
     /// is cos-weighted: f = 1 − sin(b_mask).
@@ -84,6 +90,13 @@ mod tests {
         assert!(survey.detection_efficiency(14.0) > 0.99);
         assert!((survey.detection_efficiency(16.5) - 0.5).abs() < 1e-10);
         assert!(survey.detection_efficiency(19.0) < 0.01);
+    }
+
+    #[test]
+    fn galactic_mask_typed_matches_f64() {
+        use uom::si::angle::degree;
+        let survey = WiseSurvey::default();
+        assert!((survey.galactic_mask().get::<degree>() - survey.galactic_mask_deg).abs() < 1e-9);
     }
 
     #[test]

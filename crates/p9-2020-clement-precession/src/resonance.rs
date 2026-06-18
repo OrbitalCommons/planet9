@@ -15,6 +15,7 @@
 use p9_core::analysis::resonance::resonance_semi_major_axis;
 use p9_core::constants::A_NEPTUNE_AU;
 use p9_core::data::etno::{Etno, BROWN_2017_SAMPLE};
+use p9_core::units::{au, Length};
 
 /// A located Neptune exterior resonance.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,6 +40,11 @@ impl Resonance {
     /// "n:m" label, e.g. "5:1".
     pub fn label(&self) -> String {
         format!("{}:{}", self.n, self.m)
+    }
+
+    /// Resonance semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
     }
 }
 
@@ -95,6 +101,18 @@ pub struct EtnoResonance {
     /// Signed offset a_etno − a_res (AU); negative means interior to the
     /// resonance.
     pub offset_au: f64,
+}
+
+impl EtnoResonance {
+    /// ETNO semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Signed offset from the nearest resonance as a typed [`Length`].
+    pub fn offset(&self) -> Length {
+        au(self.offset_au)
+    }
 }
 
 /// Match every member of the Brown (2017) clustered sample to its nearest
@@ -159,6 +177,28 @@ mod tests {
         for w in all.windows(2) {
             assert!(w[0].a_au <= w[1].a_au, "catalog must be a-sorted");
         }
+    }
+
+    #[test]
+    fn test_typed_accessors_match_f64() {
+        use uom::si::length::astronomical_unit;
+        let matches = match_sample_to_resonances();
+        let m = &matches[0];
+        assert_relative_eq!(
+            m.semi_major_axis().get::<astronomical_unit>(),
+            m.a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            m.offset().get::<astronomical_unit>(),
+            m.offset_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            m.resonance.semi_major_axis().get::<astronomical_unit>(),
+            m.resonance.a_au,
+            epsilon = 1e-9
+        );
     }
 
     #[test]

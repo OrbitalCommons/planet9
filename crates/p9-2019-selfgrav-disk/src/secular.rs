@@ -44,6 +44,7 @@ use crate::disk::DiskProfile;
 use crate::laplace::softened_laplace;
 use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::constants::GM_SUN;
+use p9_core::units::{days, radians, Angle, AngularVelocity, Time};
 use std::f64::consts::PI;
 
 const N_LAPLACE_QUAD: usize = 512;
@@ -73,6 +74,31 @@ impl SecularSolution {
     /// (-pi, pi]). 0 means aligned with the disk apse, +-pi anti-aligned.
     pub fn forced_delta_varpi(&self) -> f64 {
         wrap_to_pi(self.varpi_forced - self.varpi_disk)
+    }
+
+    /// Free/self precession rate A as a typed [`AngularVelocity`] (rad/day).
+    pub fn precession_rate(&self) -> AngularVelocity {
+        (radians(self.a_coeff) / days(1.0)).into()
+    }
+
+    /// Secular precession period as a typed [`Time`].
+    pub fn precession_period(&self) -> Time {
+        days((2.0 * PI / self.a_coeff).abs())
+    }
+
+    /// Forced longitude of perihelion as a typed [`Angle`].
+    pub fn varpi_forced_angle(&self) -> Angle {
+        radians(self.varpi_forced)
+    }
+
+    /// Disk apse as a typed [`Angle`].
+    pub fn varpi_disk_angle(&self) -> Angle {
+        radians(self.varpi_disk)
+    }
+
+    /// Forced Delta varpi relative to the disk apse as a typed [`Angle`].
+    pub fn forced_delta_varpi_angle(&self) -> Angle {
+        radians(self.forced_delta_varpi())
     }
 }
 
@@ -225,6 +251,35 @@ pub fn apsidal_mode(a: f64, disk: &DiskProfile, e0: f64, dphi0: f64) -> ApsidalM
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+
+    #[test]
+    fn test_typed_accessors_match_f64() {
+        use p9_core::constants::{DAY_S, YEAR_DAYS};
+        use uom::si::angle::radian;
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::time::day;
+        let sol = solve(250.0, &DiskProfile::fiducial(10.0));
+        assert_relative_eq!(
+            sol.precession_rate().get::<radian_per_second>(),
+            sol.a_coeff / DAY_S,
+            epsilon = 1e-30
+        );
+        assert_relative_eq!(
+            sol.precession_period().get::<day>(),
+            sol.precession_period_yr() * YEAR_DAYS,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            sol.varpi_forced_angle().get::<radian>(),
+            sol.varpi_forced,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            sol.forced_delta_varpi_angle().get::<radian>(),
+            sol.forced_delta_varpi(),
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn test_precession_scales_linearly_with_disk_mass() {

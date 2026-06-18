@@ -19,6 +19,7 @@ use crate::sky::galactic_latitude_deg;
 use crate::survey_model::WiseSurvey;
 use crate::thermal_model::P9Thermal;
 use p9_core::types::OrbitalElements;
+use p9_core::units::{au, earth_masses, Length, Mass};
 
 /// One reference Planet Nine realization: orbital elements, mass, and the
 /// heliocentric distance at its current mean anomaly.
@@ -27,6 +28,18 @@ pub struct ReferenceP9 {
     pub elements: OrbitalElements,
     pub mass_earth: f64,
     pub distance_au: f64,
+}
+
+impl ReferenceP9 {
+    /// Mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.distance_au)
+    }
 }
 
 /// Result of the WISE exclusion analysis.
@@ -109,6 +122,35 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn reference_typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let p = ReferenceP9 {
+            elements: OrbitalElements {
+                a: 500.0,
+                e: 0.2,
+                i: 0.3,
+                omega: 0.0,
+                omega_big: 0.0,
+                mean_anomaly: 0.0,
+            },
+            mass_earth: 6.2,
+            distance_au: 480.0,
+        };
+        assert_relative_eq!(
+            p.distance().get::<astronomical_unit>(),
+            480.0,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.mass().get::<kilogram>(),
+            6.2 * p9_core::units::EARTH_MASS_KG,
+            epsilon = 1e12
+        );
     }
 
     #[test]

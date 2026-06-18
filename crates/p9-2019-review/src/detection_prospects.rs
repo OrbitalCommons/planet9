@@ -10,6 +10,7 @@ use p9_core::analysis::photometry;
 use p9_core::analysis::surveys::limiting_magnitude;
 use p9_core::constants::*;
 use p9_core::types::P9Params;
+use p9_core::units::{earth_masses, km, Length, Mass};
 
 /// Physical properties of Planet Nine for brightness estimation.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -21,6 +22,11 @@ pub struct P9PhysicalProperties {
 }
 
 impl P9PhysicalProperties {
+    /// Physical radius as a typed [`Length`] (Earth radii × Earth radius).
+    pub fn radius(&self) -> Length {
+        km(self.radius_earth * EARTH_RADIUS_KM)
+    }
+
     /// Conservative estimate for 5 M_Earth.
     pub fn five_me_conservative() -> Self {
         Self {
@@ -116,6 +122,13 @@ pub struct BrightnessEstimate {
     pub v_aphelion_faint: f64,
 }
 
+impl BrightnessEstimate {
+    /// Planet Nine mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+}
+
 /// Compute brightness estimates for the paper's best-fit parameters.
 pub fn brightness_table() -> Vec<BrightnessEstimate> {
     use crate::revised_parameters::{best_fit_10me, best_fit_5me};
@@ -196,6 +209,22 @@ mod tests {
             v_peri > 15.0 && v_peri < 25.0,
             "V perihelion = {:.1}",
             v_peri
+        );
+    }
+
+    #[test]
+    fn test_typed_accessors_match_f64() {
+        use uom::si::length::kilometer;
+        use uom::si::mass::kilogram;
+        let phys = P9PhysicalProperties::five_me_optimistic();
+        assert!(
+            (phys.radius().get::<kilometer>() - phys.radius_earth * EARTH_RADIUS_KM).abs() < 1e-6
+        );
+        let entry = &brightness_table()[0];
+        assert!(
+            (entry.mass().get::<kilogram>() - entry.mass_earth * p9_core::units::EARTH_MASS_KG)
+                .abs()
+                < 1e12
         );
     }
 

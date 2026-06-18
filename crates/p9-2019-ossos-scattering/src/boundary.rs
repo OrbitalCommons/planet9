@@ -13,6 +13,7 @@
 //! module maps the boundary curve and classifies orbits with it.
 
 use p9_core::analysis::resonance::{chirikov_overlap_parameter, critical_perihelion, is_chaotic};
+use p9_core::units::{au, Length};
 
 /// Dynamical state of a TNO relative to the Neptune-scattering region.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,6 +48,18 @@ pub fn boundary_perihelion(a_au: f64) -> f64 {
 pub struct BoundaryPoint {
     pub a_au: f64,
     pub q_crit_au: f64,
+}
+
+impl BoundaryPoint {
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Critical perihelion as a typed [`Length`].
+    pub fn critical_perihelion(&self) -> Length {
+        au(self.q_crit_au)
+    }
 }
 
 /// Sample the scattering/detached boundary q_crit(a) on a logarithmic grid in
@@ -147,6 +160,22 @@ mod tests {
         for w in nonzero.windows(2) {
             assert!(w[1] >= w[0] - 1e-9, "q_crit not monotone: {w:?}");
         }
+    }
+
+    #[test]
+    fn boundary_point_typed_accessors_match_f64() {
+        use uom::si::length::astronomical_unit;
+        let p = boundary_curve(50.0, 1000.0, 10)[5];
+        assert_relative_eq!(
+            p.semi_major_axis().get::<astronomical_unit>(),
+            p.a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            p.critical_perihelion().get::<astronomical_unit>(),
+            p.q_crit_au,
+            epsilon = 1e-9
+        );
     }
 
     #[test]

@@ -15,6 +15,7 @@
 use crate::boundary::{classify, DynamicalClass};
 use crate::planet_nine::{perihelion_lift, PlanetNine};
 use p9_core::constants::A_NEPTUNE_AU;
+use p9_core::units::{au, Length};
 use rand::SeedableRng;
 use rand_distr::{Distribution, Uniform};
 
@@ -23,6 +24,18 @@ use rand_distr::{Distribution, Uniform};
 pub struct ScatteringTno {
     pub a_au: f64,
     pub q_au: f64,
+}
+
+impl ScatteringTno {
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a_au)
+    }
+
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion(&self) -> Length {
+        au(self.q_au)
+    }
 }
 
 /// Draw `n` synthetic actively-scattering TNOs (seeded).
@@ -130,6 +143,23 @@ mod tests {
             assert_eq!(classify(t.a_au, t.q_au), DynamicalClass::Scattering);
             assert!(t.q_au > A_NEPTUNE_AU);
         }
+    }
+
+    #[test]
+    fn tno_typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::length::astronomical_unit;
+        let t = standard_population()[0];
+        assert_relative_eq!(
+            t.semi_major_axis().get::<astronomical_unit>(),
+            t.a_au,
+            epsilon = 1e-9
+        );
+        assert_relative_eq!(
+            t.perihelion().get::<astronomical_unit>(),
+            t.q_au,
+            epsilon = 1e-9
+        );
     }
 
     #[test]

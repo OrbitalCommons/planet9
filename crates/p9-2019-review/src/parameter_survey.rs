@@ -21,6 +21,7 @@ use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::*;
 use p9_core::forces::j2_secular::combined_j2_jsu;
 use p9_core::types::P9Params;
+use p9_core::units::{au, degrees, earth_masses, Angle, Length, Mass};
 
 /// Statistical success criterion for the survey: the critical semi-major
 /// axis should fall in the observed transition range (200, 300) AU
@@ -49,6 +50,13 @@ pub struct SimulationScore {
     pub passes: bool,
 }
 
+impl SimulationScore {
+    /// Critical semi-major axis as a typed [`Length`], if an island exists.
+    pub fn a_c_length(&self) -> Option<Length> {
+        self.a_c.map(au)
+    }
+}
+
 /// Summary of P9 parameters for serialization.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct P9ParamsSummary {
@@ -56,6 +64,23 @@ pub struct P9ParamsSummary {
     pub a: f64,
     pub e: f64,
     pub i_deg: f64,
+}
+
+impl P9ParamsSummary {
+    /// Planet Nine mass as a typed [`Mass`].
+    pub fn mass(&self) -> Mass {
+        earth_masses(self.mass_earth)
+    }
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Inclination as a typed [`Angle`].
+    pub fn inclination(&self) -> Angle {
+        degrees(self.i_deg)
+    }
 }
 
 impl From<&P9Params> for P9ParamsSummary {
@@ -277,6 +302,27 @@ mod tests {
     fn test_no_island_well_inside() {
         let p9 = P9Params::revised_2019();
         assert!(!has_anti_aligned_island(100.0, &p9, 48));
+    }
+
+    #[test]
+    fn test_typed_accessors_match_f64() {
+        use uom::si::angle::degree;
+        use uom::si::length::astronomical_unit;
+        use uom::si::mass::kilogram;
+        let score = evaluate_params(
+            &P9Params::revised_2019(),
+            &SuccessCriteria::paper_defaults(),
+        );
+        let s = &score.params;
+        assert!((s.semi_major_axis().get::<astronomical_unit>() - s.a).abs() < 1e-9);
+        assert!((s.inclination().get::<degree>() - s.i_deg).abs() < 1e-9);
+        assert!(
+            (s.mass().get::<kilogram>() - s.mass_earth * p9_core::units::EARTH_MASS_KG).abs()
+                < 1e12
+        );
+        if let Some(a_c) = score.a_c {
+            assert!((score.a_c_length().unwrap().get::<astronomical_unit>() - a_c).abs() < 1e-9);
+        }
     }
 
     #[test]
