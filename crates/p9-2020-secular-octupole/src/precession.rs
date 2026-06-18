@@ -22,6 +22,7 @@
 
 use crate::octupole::{hamiltonian_octupole, hamiltonian_quadrupole, octupole_coupling};
 use p9_core::constants::GM_SUN;
+use p9_core::units::{days, radians, AngularVelocity};
 
 /// Canonical apsidal momentum Gamma = sqrt(GM_sun a)(1 - sqrt(1-e^2)).
 pub fn gamma_of_e(a: f64, e: f64) -> f64 {
@@ -45,6 +46,18 @@ pub fn precession_rate_quadrupole(a: f64, e: f64, a_p: f64, e_p: f64, gm_p: f64)
     dh_de * de_dgamma(a, e)
 }
 
+/// QUADRUPOLE apsidal precession rate as a typed [`AngularVelocity`] (the
+/// dimension-checked view of [`precession_rate_quadrupole`], rad/day).
+pub fn precession_rate_quadrupole_typed(
+    a: f64,
+    e: f64,
+    a_p: f64,
+    e_p: f64,
+    gm_p: f64,
+) -> AngularVelocity {
+    (radians(precession_rate_quadrupole(a, e, a_p, e_p, gm_p)) / days(1.0)).into()
+}
+
 /// OCTUPOLE apsidal precession rate d(dvarpi)/dt (radians/day) at apsidal angle
 /// `dvarpi`. Carries the dvarpi-dependence from the octupole term; equals the
 /// quadrupole rate plus an octupole modulation proportional to cos(dvarpi).
@@ -54,6 +67,19 @@ pub fn precession_rate_octupole(a: f64, e: f64, dvarpi: f64, a_p: f64, e_p: f64,
         - hamiltonian_octupole(a, e - de, dvarpi, a_p, e_p, gm_p))
         / (2.0 * de);
     dh_de * de_dgamma(a, e)
+}
+
+/// OCTUPOLE apsidal precession rate as a typed [`AngularVelocity`] (the
+/// dimension-checked view of [`precession_rate_octupole`], rad/day).
+pub fn precession_rate_octupole_typed(
+    a: f64,
+    e: f64,
+    dvarpi: f64,
+    a_p: f64,
+    e_p: f64,
+    gm_p: f64,
+) -> AngularVelocity {
+    (radians(precession_rate_octupole(a, e, dvarpi, a_p, e_p, gm_p)) / days(1.0)).into()
 }
 
 /// Peak octupole modulation of the precession rate (radians/day): the
@@ -67,14 +93,54 @@ pub fn octupole_modulation_amplitude(a: f64, e: f64, a_p: f64, e_p: f64, gm_p: f
     c_oct * e_p * de_dgamma(a, e)
 }
 
+/// Peak octupole modulation of the precession rate as a typed
+/// [`AngularVelocity`] (the dimension-checked view of
+/// [`octupole_modulation_amplitude`], rad/day).
+pub fn octupole_modulation_amplitude_typed(
+    a: f64,
+    e: f64,
+    a_p: f64,
+    e_p: f64,
+    gm_p: f64,
+) -> AngularVelocity {
+    (radians(octupole_modulation_amplitude(a, e, a_p, e_p, gm_p)) / days(1.0)).into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use p9_core::constants::{EARTH_MASS_SOLAR, GM_SUN};
     use std::f64::consts::PI;
+    use uom::si::angular_velocity::radian_per_second;
 
     fn gm_p9(mass_earth: f64) -> f64 {
         mass_earth * EARTH_MASS_SOLAR * GM_SUN
+    }
+
+    #[test]
+    fn typed_precession_rates_match_f64() {
+        use approx::assert_relative_eq;
+        // 1 day = 86400 s, so a rate in rad/day reads back as rate/86400 in
+        // rad/s through the typed AngularVelocity.
+        const SEC_PER_DAY: f64 = 86_400.0;
+        let gm = gm_p9(10.0);
+        let (a, e, a_p, e_p, dv) = (250.0, 0.3, 700.0, 0.6, 0.4);
+
+        assert_relative_eq!(
+            precession_rate_quadrupole_typed(a, e, a_p, e_p, gm).get::<radian_per_second>(),
+            precession_rate_quadrupole(a, e, a_p, e_p, gm) / SEC_PER_DAY,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            precession_rate_octupole_typed(a, e, dv, a_p, e_p, gm).get::<radian_per_second>(),
+            precession_rate_octupole(a, e, dv, a_p, e_p, gm) / SEC_PER_DAY,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            octupole_modulation_amplitude_typed(a, e, a_p, e_p, gm).get::<radian_per_second>(),
+            octupole_modulation_amplitude(a, e, a_p, e_p, gm) / SEC_PER_DAY,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

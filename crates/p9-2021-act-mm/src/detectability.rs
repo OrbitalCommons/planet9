@@ -18,6 +18,7 @@ use p9_2018_wise_search::detectability::max_detectable_distance as wise_max_dist
 use p9_2018_wise_search::survey_model::WiseSurvey;
 use p9_core::analysis::thermal::planck_bnu;
 use p9_core::constants::AU_M;
+use p9_core::units::{au, Length};
 
 use crate::survey_model::ActSurvey;
 use crate::thermal_model::{P9Millimeter, MJY};
@@ -50,6 +51,19 @@ pub struct ReachComparison {
     pub act_mm_au: f64,
     /// WISE W1 maximum detectable distance (AU), or None if undetectable.
     pub wise_w1_au: Option<f64>,
+}
+
+impl ReachComparison {
+    /// ACT mm maximum detectable distance as a typed [`Length`].
+    pub fn act_mm_distance(&self) -> Length {
+        au(self.act_mm_au)
+    }
+
+    /// WISE W1 maximum detectable distance as a typed [`Length`], or `None` if
+    /// the body is undetectable in W1.
+    pub fn wise_w1_distance(&self) -> Option<Length> {
+        self.wise_w1_au.map(au)
+    }
 }
 
 /// Compare ACT mm vs WISE W1 reach for a given mass.
@@ -107,6 +121,25 @@ fn erfc(x: f64) -> f64 {
 mod tests {
     use super::*;
     use crate::survey_model::{CANDIDATE_COUNT, NU_150_GHZ};
+
+    #[test]
+    fn typed_reach_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::length::astronomical_unit;
+        let cmp = compare_reach(&ActSurvey::default(), 10.0);
+        assert_relative_eq!(
+            cmp.act_mm_distance().get::<astronomical_unit>(),
+            cmp.act_mm_au,
+            epsilon = 1e-9
+        );
+        match (cmp.wise_w1_distance(), cmp.wise_w1_au) {
+            (Some(d), Some(au_val)) => {
+                assert_relative_eq!(d.get::<astronomical_unit>(), au_val, epsilon = 1e-9)
+            }
+            (None, None) => {}
+            _ => panic!("typed/optional reach mismatch"),
+        }
+    }
 
     #[test]
     fn closed_form_matches_bisection() {

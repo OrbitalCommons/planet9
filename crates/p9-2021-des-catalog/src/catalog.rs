@@ -20,6 +20,7 @@
 //! vetted subset; see `super::reference::N_EXTREME_TNOS` for the labelled 16.
 
 use p9_core::constants::{DEG2RAD, TWO_PI};
+use p9_core::units::{self, au, degrees, radians, Length};
 
 /// A DES extreme TNO with the elements needed for clustering and completeness.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -63,6 +64,43 @@ impl DesTno {
     /// Longitude of perihelion ϖ = ω + Ω (radians, wrapped to [0, 2π)).
     pub fn varpi(&self) -> f64 {
         ((self.argp_deg + self.node_deg) * DEG2RAD).rem_euclid(TWO_PI)
+    }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance q = a(1 − e) as a typed [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
+    }
+
+    /// Aphelion distance Q = a(1 + e) as a typed [`Length`].
+    pub fn aphelion_typed(&self) -> Length {
+        au(self.aphelion())
+    }
+
+    /// Inclination as a typed [`units::Angle`].
+    pub fn inclination(&self) -> units::Angle {
+        degrees(self.i_deg)
+    }
+
+    /// Longitude of ascending node Ω as a typed [`units::Angle`].
+    pub fn node_typed(&self) -> units::Angle {
+        radians(self.node())
+    }
+
+    /// Argument of perihelion ω as a typed [`units::Angle`].
+    pub fn argp_typed(&self) -> units::Angle {
+        radians(self.argp())
+    }
+
+    /// Longitude of perihelion ϖ as a typed [`units::Angle`].
+    pub fn varpi_typed(&self) -> units::Angle {
+        radians(self.varpi())
     }
 }
 
@@ -204,6 +242,34 @@ mod tests {
         // 8 vetted objects, a documented subset of the paper's 16 extreme TNOs.
         assert_eq!(DES_EXTREME_TNOS.len(), 8);
         assert!(DES_EXTREME_TNOS.len() <= crate::reference::N_EXTREME_TNOS);
+    }
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::{degree, radian};
+        use uom::si::length::astronomical_unit;
+
+        let o = DES_EXTREME_TNOS[0];
+        assert_relative_eq!(
+            o.semi_major_axis().get::<astronomical_unit>(),
+            o.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.perihelion_typed().get::<astronomical_unit>(),
+            o.perihelion(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.aphelion_typed().get::<astronomical_unit>(),
+            o.aphelion(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(o.inclination().get::<degree>(), o.i_deg, epsilon = 1e-12);
+        assert_relative_eq!(o.node_typed().get::<radian>(), o.node(), epsilon = 1e-12);
+        assert_relative_eq!(o.argp_typed().get::<radian>(), o.argp(), epsilon = 1e-12);
+        assert_relative_eq!(o.varpi_typed().get::<radian>(), o.varpi(), epsilon = 1e-12);
     }
 
     #[test]

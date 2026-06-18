@@ -14,6 +14,8 @@
 //! single frame (T ≈ 15) but extremely well sampled in time — the regime where
 //! shift-and-stacking pays off.
 
+use p9_core::units::{arcseconds, Angle};
+
 /// TESS full-frame-image cadence during the prime mission, in minutes
 /// (Sectors 1–26 read the FFIs out every 30 minutes).
 pub const FFI_CADENCE_MIN: f64 = 30.0;
@@ -58,6 +60,12 @@ pub fn psf_sigma_arcsec(sigma_pixels: f64) -> f64 {
     sigma_pixels * PIXEL_SCALE_ARCSEC
 }
 
+/// Effective Gaussian PSF 1σ width as a typed [`Angle`] (the dimension-checked
+/// view of [`psf_sigma_arcsec`]).
+pub fn psf_sigma(sigma_pixels: f64) -> Angle {
+    arcseconds(psf_sigma_arcsec(sigma_pixels))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,5 +99,15 @@ mod tests {
     fn psf_sigma_scales_with_pixel_scale() {
         assert_relative_eq!(psf_sigma_arcsec(1.0), PIXEL_SCALE_ARCSEC, epsilon = 1e-12);
         assert_relative_eq!(psf_sigma_arcsec(0.5), 10.5, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn typed_psf_sigma_matches_f64() {
+        use uom::si::angle::second as arcsecond;
+        assert_relative_eq!(
+            psf_sigma(0.5).get::<arcsecond>(),
+            psf_sigma_arcsec(0.5),
+            epsilon = 1e-12
+        );
     }
 }

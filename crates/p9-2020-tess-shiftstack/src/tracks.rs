@@ -17,6 +17,7 @@ use p9_core::analysis::stacking::orbit_metric::{
     n_trial_orbits, p9_orbital_sky_rate, rate_resolution, snr_retained_exact,
 };
 use p9_core::types::P9Params;
+use p9_core::units::{arcseconds, days, Angle, AngularVelocity};
 
 use crate::tess;
 
@@ -32,6 +33,12 @@ pub const SNR_TOLERANCE: f64 = 0.9;
 /// Effective TESS PSF 1σ for track-grid purposes (≈0.5 px ≈ 10.5 arcsec).
 pub fn track_psf_arcsec() -> f64 {
     tess::psf_sigma_arcsec(0.5)
+}
+
+/// Effective TESS track-grid PSF 1σ as a typed [`Angle`] (dimension-checked
+/// view of [`track_psf_arcsec`]).
+pub fn track_psf() -> Angle {
+    arcseconds(track_psf_arcsec())
 }
 
 /// Number of trial tracks for a TESS shift-stack over `n_sectors` sectors,
@@ -55,10 +62,22 @@ pub fn rate_cell_arcsec_per_day(n_sectors: f64) -> f64 {
     )
 }
 
+/// Rate-cell half-width as a typed [`AngularVelocity`] (dimension-checked view
+/// of [`rate_cell_arcsec_per_day`], arcsec/day).
+pub fn rate_cell(n_sectors: f64) -> AngularVelocity {
+    (arcseconds(rate_cell_arcsec_per_day(n_sectors)) / days(1.0)).into()
+}
+
 /// Planet Nine's heliocentric on-sky angular rate (arcsec/day) for a model —
 /// reused from the shared metric to confirm P9 sits inside the search box.
 pub fn p9_sky_rate(p9: &P9Params) -> f64 {
     p9_orbital_sky_rate(p9)
+}
+
+/// Planet Nine's heliocentric on-sky angular rate as a typed
+/// [`AngularVelocity`] (dimension-checked view of [`p9_sky_rate`], arcsec/day).
+pub fn p9_sky_rate_typed(p9: &P9Params) -> AngularVelocity {
+    (arcseconds(p9_sky_rate(p9)) / days(1.0)).into()
 }
 
 /// Retained matched-filter SNR for a track whose rate is offset by `rate_error`
@@ -104,6 +123,39 @@ mod tests {
         let c1 = rate_cell_arcsec_per_day(1.0);
         let c2 = rate_cell_arcsec_per_day(2.0);
         assert_relative_eq!(c1 / c2, 2.0, epsilon = 1e-9);
+    }
+
+    #[test]
+    fn typed_track_quantities_match_f64() {
+        use uom::si::angle::{radian, second as arcsecond};
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::time::second;
+
+        // PSF angle round-trips to its arcsec source.
+        assert_relative_eq!(
+            track_psf().get::<arcsecond>(),
+            track_psf_arcsec(),
+            epsilon = 1e-12
+        );
+
+        // A rate in arcsec/day expressed through the typed AngularVelocity
+        // (read in rad/s) equals the source value converted by hand.
+        let sec_per_day = days(1.0).get::<second>();
+        let to_rad_per_s =
+            |arcsec_per_day: f64| arcseconds(arcsec_per_day).get::<radian>() / sec_per_day;
+
+        assert_relative_eq!(
+            rate_cell(1.0).get::<radian_per_second>(),
+            to_rad_per_s(rate_cell_arcsec_per_day(1.0)),
+            max_relative = 1e-12
+        );
+
+        let p9 = P9Params::mcmc_2021();
+        assert_relative_eq!(
+            p9_sky_rate_typed(&p9).get::<radian_per_second>(),
+            to_rad_per_s(p9_sky_rate(&p9)),
+            max_relative = 1e-12
+        );
     }
 
     #[test]

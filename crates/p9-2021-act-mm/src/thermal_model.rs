@@ -25,6 +25,7 @@ use std::f64::consts::PI;
 use p9_2018_wise_search::thermal_model::P9Thermal;
 use p9_core::analysis::thermal::{planck_bnu, rayleigh_jeans_bnu, JY as CORE_JY};
 use p9_core::constants::AU_M;
+use p9_core::units::{au, meters, Length};
 
 /// 1 Jansky in W/m²/Hz.
 pub const JY: f64 = CORE_JY;
@@ -66,6 +67,17 @@ impl P9Millimeter {
         self.body.radius_m()
     }
 
+    /// Physical radius as a typed [`Length`] (dimension-checked view of
+    /// [`radius_m`](Self::radius_m)).
+    pub fn radius(&self) -> Length {
+        meters(self.radius_m())
+    }
+
+    /// Heliocentric distance as a typed [`Length`].
+    pub fn distance(&self) -> Length {
+        au(self.body.distance_au)
+    }
+
     /// Thermal mm flux density (W/m²/Hz) at frequency `nu_hz`, unit-emissivity
     /// grey body: F_ν = π B_ν(T) (R/d)².
     pub fn flux_density_si(&self, nu_hz: f64) -> f64 {
@@ -105,6 +117,19 @@ mod tests {
 
     /// ACT 150 GHz in Hz.
     const NU_150: f64 = 150.0e9;
+
+    #[test]
+    fn typed_radius_and_distance_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::length::{astronomical_unit, meter};
+        let p = P9Millimeter::new(10.0, 500.0);
+        assert_relative_eq!(p.radius().get::<meter>(), p.radius_m(), epsilon = 1e-3);
+        assert_relative_eq!(
+            p.distance().get::<astronomical_unit>(),
+            p.body.distance_au,
+            epsilon = 1e-12
+        );
+    }
 
     #[test]
     fn cold_body_is_on_the_rayleigh_jeans_tail_at_mm() {

@@ -9,6 +9,7 @@
 use crate::classification::{classify, Class, ResonanceLandscape};
 use crate::published;
 use p9_core::constants::EARTH_MASS_SOLAR;
+use p9_core::units::{au, Length};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Uniform};
@@ -28,6 +29,16 @@ impl Tno {
     /// Perihelion distance q = a(1 − e) (AU).
     pub fn perihelion(&self) -> f64 {
         self.a * (1.0 - self.e)
+    }
+
+    /// Semimajor axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance as a typed [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
     }
 }
 
@@ -176,6 +187,23 @@ pub fn default_landscape(a_min: f64, a_max: f64) -> ResonanceLandscape {
 mod tests {
     use super::*;
     use crate::classification::resonance_overlap_k;
+    use approx::assert_relative_eq;
+    use uom::si::length::astronomical_unit;
+
+    #[test]
+    fn typed_tno_accessors_match_f64() {
+        let t = Tno { a: 300.0, e: 0.7 };
+        assert_relative_eq!(
+            t.semi_major_axis().get::<astronomical_unit>(),
+            t.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            t.perihelion_typed().get::<astronomical_unit>(),
+            t.perihelion(),
+            epsilon = 1e-12
+        );
+    }
 
     const A_MIN: f64 = 150.0;
     const A_MAX: f64 = 499.0;

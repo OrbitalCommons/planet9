@@ -20,6 +20,7 @@
 //! separate entry and excluded from the Case membership predicates.
 
 use p9_core::constants::{DEG2RAD, TWO_PI};
+use p9_core::units::{self, au, degrees, radians, Length};
 
 /// A DES eTNO with the orbital angles relevant to the isotropy tests.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -59,6 +60,38 @@ impl DesEtno {
     /// Longitude of perihelion ϖ = ω + Ω in radians, wrapped to [0, 2π).
     pub fn varpi(&self) -> f64 {
         ((self.argp_deg + self.node_deg) * DEG2RAD).rem_euclid(TWO_PI)
+    }
+
+    // ---- typed boundary accessors (dimension-checked views of the f64 fields) ----
+
+    /// Semi-major axis as a typed [`Length`].
+    pub fn semi_major_axis(&self) -> Length {
+        au(self.a)
+    }
+
+    /// Perihelion distance q = a(1 − e) as a typed [`Length`].
+    pub fn perihelion_typed(&self) -> Length {
+        au(self.perihelion())
+    }
+
+    /// Inclination as a typed [`units::Angle`].
+    pub fn inclination(&self) -> units::Angle {
+        degrees(self.i_deg)
+    }
+
+    /// Longitude of ascending node Ω as a typed [`units::Angle`].
+    pub fn node_typed(&self) -> units::Angle {
+        radians(self.node())
+    }
+
+    /// Argument of perihelion ω as a typed [`units::Angle`].
+    pub fn argp_typed(&self) -> units::Angle {
+        radians(self.argp())
+    }
+
+    /// Longitude of perihelion ϖ as a typed [`units::Angle`].
+    pub fn varpi_typed(&self) -> units::Angle {
+        radians(self.varpi())
     }
 }
 
@@ -240,6 +273,29 @@ mod tests {
         let ra109 = DES_ETNOS.iter().find(|o| o.name == "2013 RA109").unwrap();
         let varpi_deg = ra109.varpi() * p9_core::constants::RAD2DEG;
         assert!((varpi_deg - 7.70).abs() < 0.05, "varpi = {varpi_deg:.2}");
+    }
+
+    #[test]
+    fn typed_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::{degree, radian};
+        use uom::si::length::astronomical_unit;
+
+        let o = DES_ETNOS[0];
+        assert_relative_eq!(
+            o.semi_major_axis().get::<astronomical_unit>(),
+            o.a,
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            o.perihelion_typed().get::<astronomical_unit>(),
+            o.perihelion(),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(o.inclination().get::<degree>(), o.i_deg, epsilon = 1e-12);
+        assert_relative_eq!(o.node_typed().get::<radian>(), o.node(), epsilon = 1e-12);
+        assert_relative_eq!(o.argp_typed().get::<radian>(), o.argp(), epsilon = 1e-12);
+        assert_relative_eq!(o.varpi_typed().get::<radian>(), o.varpi(), epsilon = 1e-12);
     }
 
     #[test]

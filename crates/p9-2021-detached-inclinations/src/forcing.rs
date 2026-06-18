@@ -35,6 +35,7 @@ use p9_core::analysis::secular::quadrupole_hamiltonian;
 use p9_core::constants::GM_SUN;
 use p9_core::initial_conditions::planets::giant_planets_j2000;
 use p9_core::types::{cartesian_to_elements, P9Params};
+use p9_core::units::{julian_year, radians, Angle, AngularVelocity};
 
 /// Giant-planet nodal precession frequency `B_gp` for a particle at (a, e, i),
 /// in rad/yr. This is the secular self-frequency that anchors the particle to
@@ -61,6 +62,12 @@ pub fn giant_planet_frequency(a: f64, e: f64, i: f64) -> f64 {
         .sum();
     let rate_day = 0.75 * n * i.cos() / eta_sq * sum;
     (rate_day * 365.25).abs() // rad/yr
+}
+
+/// Giant-planet nodal precession frequency as a typed [`AngularVelocity`]
+/// (dimension-checked view of [`giant_planet_frequency`], rad/yr).
+pub fn giant_planet_frequency_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
+    (radians(giant_planet_frequency(a, e, i)) / julian_year()).into()
 }
 
 /// Planet Nine secular inclination-coupling frequency `B_p9` for a test
@@ -92,6 +99,13 @@ pub fn planet_nine_frequency(a: f64, p9: &P9Params) -> f64 {
     let ecc_factor = (1.0 - p9.e * p9.e).powf(-1.5);
     let rate_day = 0.75 * n * m9 * alpha * alpha * ecc_factor;
     rate_day * 365.25 // rad/yr
+}
+
+/// Planet Nine secular inclination-coupling frequency as a typed
+/// [`AngularVelocity`] (dimension-checked view of [`planet_nine_frequency`],
+/// rad/yr).
+pub fn planet_nine_frequency_typed(a: f64, p9: &P9Params) -> AngularVelocity {
+    (radians(planet_nine_frequency(a, p9)) / julian_year()).into()
 }
 
 /// Curvature of the p9-core quadrupole Hamiltonian in inclination at I = 0,
@@ -126,6 +140,12 @@ pub fn forced_inclination(a: f64, e: f64, i: f64, p9: &P9Params) -> f64 {
     b_p9 / (b_gp + b_p9) * p9.i
 }
 
+/// Forced inclination as a typed [`Angle`] (dimension-checked view of
+/// [`forced_inclination`]).
+pub fn forced_inclination_typed(a: f64, e: f64, i: f64, p9: &P9Params) -> Angle {
+    radians(forced_inclination(a, e, i, p9))
+}
+
 /// Forced inclination in the Planet-Nine-free Solar System: identically zero
 /// (the particle's plane relaxes to the giant-planet invariable plane).
 pub fn forced_inclination_no_p9(_a: f64, _e: f64, _i: f64) -> f64 {
@@ -139,6 +159,34 @@ mod tests {
 
     fn nominal() -> P9Params {
         P9Params::nominal_2016() // 10 M⊕, a = 700, e = 0.6, i = 30°
+    }
+
+    #[test]
+    fn typed_forcing_accessors_match_f64() {
+        use approx::assert_relative_eq;
+        use uom::si::angle::radian;
+        use uom::si::angular_velocity::radian_per_second;
+        use uom::si::time::second;
+        // rad/yr → rad/s divisor (Julian year in seconds).
+        let yr_s = julian_year().get::<second>();
+        let p9 = nominal();
+        let (a, e, i) = (300.0, 0.5, 10.0 * DEG2RAD);
+
+        assert_relative_eq!(
+            forced_inclination_typed(a, e, i, &p9).get::<radian>(),
+            forced_inclination(a, e, i, &p9),
+            epsilon = 1e-12
+        );
+        assert_relative_eq!(
+            giant_planet_frequency_typed(a, e, i).get::<radian_per_second>(),
+            giant_planet_frequency(a, e, i) / yr_s,
+            max_relative = 1e-12
+        );
+        assert_relative_eq!(
+            planet_nine_frequency_typed(a, &p9).get::<radian_per_second>(),
+            planet_nine_frequency(a, &p9) / yr_s,
+            max_relative = 1e-12
+        );
     }
 
     #[test]

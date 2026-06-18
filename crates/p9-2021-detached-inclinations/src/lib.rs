@@ -31,6 +31,7 @@ pub mod population;
 /// computes its own inclination statistics and the tests compare against these.
 pub mod reference {
     use p9_core::constants::DEG2RAD;
+    use p9_core::units::{degrees, Angle};
 
     /// Planet Nine inclination used by Anderson & Kaib (2021), ≈ 20° to the
     /// invariable plane (their adopted Batygin-Brown-class orbit).
@@ -53,6 +54,12 @@ pub mod reference {
     /// Helper: Planet Nine inclination in radians.
     pub fn p9_inclination_rad() -> f64 {
         P9_INCLINATION_DEG * DEG2RAD
+    }
+
+    /// Planet Nine inclination as a typed [`Angle`] (dimension-checked view of
+    /// [`P9_INCLINATION_DEG`]).
+    pub fn p9_inclination() -> Angle {
+        degrees(P9_INCLINATION_DEG)
     }
 }
 
@@ -142,5 +149,14 @@ mod tests {
         assert!((reference::p9_inclination_rad() - 20.0 * DEG2RAD).abs() < 1e-12);
         assert_eq!(nominal_inclined_p9().mass_earth, reference::P9_MASS_EARTH);
         assert!((nominal_inclined_p9().i * RAD2DEG - reference::P9_INCLINATION_DEG).abs() < 1e-9);
+    }
+
+    #[test]
+    fn typed_reference_inclination_matches_rad() {
+        use uom::si::angle::radian;
+        assert!(
+            (reference::p9_inclination().get::<radian>() - reference::p9_inclination_rad()).abs()
+                < 1e-12
+        );
     }
 }
