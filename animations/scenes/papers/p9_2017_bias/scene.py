@@ -1,0 +1,39 @@
+"""Brown (2017) -- Observational bias and the clustering of distant KBOs.
+
+A careful treatment of each survey's detection probability: even after debiasing,
+a residual clustering signal remains -- the counter-argument to pure-bias claims.
+Reproduced in p9-2017-bias (bias_function).
+"""
+import numpy as np
+from manim import (
+    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+)
+
+import p9_manim as P
+from p9_manim import layout, paper
+
+CRATE = "p9-2017-bias"
+
+
+class Bias2017(Scene):
+    def construct(self):
+        tb = paper.title_block(CRATE, "Debiasing the sky")
+        self.play(Write(tb[0]), FadeIn(tb[1]))
+        self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
+
+        ax = Axes(x_range=[0, 360, 90], y_range=[0, 1.05, 0.5], x_length=9.3, y_length=3.9,
+                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
+        ax.shift(DOWN * 0.4)
+        xl = Text("longitude of perihelion ϖ (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+        self.play(Create(ax), FadeIn(xl))
+
+        # survey sensitivity vs ϖ (the bias), and the debiased residual excess
+        sens = ax.plot(lambda v: 0.5 + 0.35 * np.cos(np.deg2rad(v - 60)), x_range=[0, 360, 2], color=P.PURPLE)
+        excess = ax.plot(lambda v: 0.55 + 0.3 * np.cos(np.deg2rad(v - 250)), x_range=[0, 360, 2], color=P.GREEN)
+        self.play(Create(sens))
+        self.add(Text("survey sensitivity (bias)", font_size=15, color=P.PURPLE).next_to(ax.c2p(60, 0.85), UP, buff=0.05))
+        self.play(Create(excess))
+        self.add(Text("debiased object excess", font_size=15, color=P.GREEN).next_to(ax.c2p(250, 0.85), UP, buff=0.05))
+        self.play(FadeIn(layout.takeaway(
+            "The excess peaks where sensitivity does NOT -- so bias alone cannot explain it.")))
+        self.wait(0.9)
