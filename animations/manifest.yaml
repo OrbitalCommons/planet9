@@ -71,3 +71,9 @@ papers:
   - {file: scenes/papers/p9_2020_tess_shiftstack/scene.py, scene: TessShiftstack2020}
   - {file: scenes/papers/p9_2021_act_mm/scene.py,          scene: ActMm2021}
   - {file: scenes/papers/p9_2025_stacking/scene.py,        scene: Stacking2025}
+  - {file: scenes/papers/p9_2016_cowan_thermal/scene.py,   scene: CowanThermal2016}
+  - {file: scenes/papers/p9_2016_linder_evolution/scene.py, scene: LinderEvolution2016}
+  - {file: scenes/papers/p9_2021_oort_cloud/scene.py,      scene: OortCloud2021}
+  - {file: scenes/papers/p9_2024_oort_selfgrav/scene.py,   scene: OortSelfgrav2024}
+  - {file: scenes/papers/p9_2025_clustering/scene.py,      scene: Clustering2025}
+  - {file: scenes/papers/p9_2024_siraj_orbit/scene.py,     scene: SirajOrbit2024}
