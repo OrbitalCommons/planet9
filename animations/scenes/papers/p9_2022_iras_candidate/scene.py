@@ -1,0 +1,29 @@
+"""(2022) -- an IRAS far-IR Planet Nine candidate.
+
+An earlier IRAS-based candidate search: flag moving far-IR sources consistent
+with a cold, distant body's flux and motion -- the precursor to the IRAS+AKARI
+pair search. Reproduced in p9-2022-iras-candidate.
+"""
+import numpy as np
+from manim import Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, Dot
+import p9_manim as P
+from p9_manim import layout, paper
+
+CRATE = "p9-2022-iras-candidate"
+
+
+class IrasCandidate2022(Scene):
+    def construct(self):
+        tb = paper.title_block(CRATE, "Combing the IRAS archive")
+        self.play(Write(tb[0]), FadeIn(tb[1]))
+        self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
+        rng = np.random.default_rng(1983)
+        bg = VGroup(*[Dot([rng.uniform(-6, 6), rng.uniform(-2.2, 2.0), 0], radius=0.02, color=P.MUTED).set_opacity(0.5)
+                      for _ in range(90)])
+        self.play(FadeIn(bg, lag_ratio=0.004))
+        cand = Dot([1.0, 0.3, 0], radius=0.12, color=P.RED)
+        self.play(FadeIn(cand))
+        self.add(Text("IRAS 60 µm candidate", font_size=16, color=P.RED).next_to(cand, UP, buff=0.15))
+        self.add(Text("flux ⇒ implied distance ~ few hundred AU", font_size=15, color=P.ORANGE).to_edge(DOWN, buff=1.5))
+        self.play(FadeIn(layout.takeaway("A tantalising single-epoch flag -- needing a second epoch to confirm motion.")))
+        self.wait(0.9)

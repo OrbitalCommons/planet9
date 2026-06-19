@@ -87,3 +87,14 @@ papers:
   - {file: scenes/papers/p9_2018_kuiper_belt/scene.py,     scene: KuiperBelt2018}
   - {file: scenes/papers/p9_2019_clustering/scene.py,      scene: Clustering2019}
   - {file: scenes/papers/p9_2019_ossos_scattering/scene.py, scene: OssosScattering2019}
+  - {file: scenes/papers/p9_2016_commensurabilities/scene.py, scene: Commensurabilities2016}
+  - {file: scenes/papers/p9_2016_resonance_prediction/scene.py, scene: ResonancePrediction2016}
+  - {file: scenes/papers/p9_2021_perihelion_gap/scene.py,  scene: PerihelionGap2021}
+  - {file: scenes/papers/p9_2024_neptune_crossing/scene.py, scene: NeptuneCrossing2024}
+  - {file: scenes/papers/p9_2025_perturbation/scene.py,    scene: Perturbation2025}
+  - {file: scenes/papers/p9_2020_clement_precession/scene.py, scene: ClementPrecession2020}
+  - {file: scenes/papers/p9_2021_orbit/scene.py,           scene: Orbit2021}
+  - {file: scenes/papers/p9_2020_des_isotropy/scene.py,    scene: DesIsotropy2020}
+  - {file: scenes/papers/p9_2021_des_catalog/scene.py,     scene: DesCatalog2021}
+  - {file: scenes/papers/p9_2022_iras_candidate/scene.py,  scene: IrasCandidate2022}
+  - {file: scenes/papers/p9_2026_iorio_precession/scene.py, scene: Iorio2026}
