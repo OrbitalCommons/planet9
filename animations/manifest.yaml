@@ -45,8 +45,13 @@ papers:
   - {file: scenes/papers/p9_2021_ztf/scene.py,             scene: Ztf2021}
   - {file: scenes/papers/p9_2024_panstarrs/scene.py,       scene: PanStarrs2024}
   - {file: scenes/papers/p9_2019_tess_yield/scene.py,      scene: TessYield2019}
+  - {file: scenes/papers/p9_2016_wise_coadd/scene.py,      scene: WiseCoadd2016}
+  - {file: scenes/papers/p9_2025_ps1_holman/scene.py,      scene: Ps1Holman2025}
   - {file: scenes/papers/p9_2025_iras_akari/scene.py,      scene: IrasAkari2025}
+  - {file: scenes/papers/p9_2025_akari_refutation/scene.py, scene: AkariRefutation2025}
+  - {file: scenes/papers/p9_2016_fortney_thermal/scene.py, scene: FortneyThermal2016}
   - {file: scenes/papers/p9_2025_simons_forecast/scene.py, scene: SimonsForecast2025}
+  - {file: scenes/papers/p9_2025_parallax_search/scene.py, scene: ParallaxSearch2025}
   - {file: scenes/papers/p9_2023_lsst_strategy/scene.py,   scene: LsstStrategy2023}
   # Act V -- alternatives
   - {file: scenes/papers/p9_2023_mond_efe/scene.py,        scene: MondEfe2023}
