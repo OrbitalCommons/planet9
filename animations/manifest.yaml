@@ -77,3 +77,13 @@ papers:
   - {file: scenes/papers/p9_2024_oort_selfgrav/scene.py,   scene: OortSelfgrav2024}
   - {file: scenes/papers/p9_2025_clustering/scene.py,      scene: Clustering2025}
   - {file: scenes/papers/p9_2024_siraj_orbit/scene.py,     scene: SirajOrbit2024}
+  - {file: scenes/papers/p9_2016_sheppard_etnos/scene.py,  scene: SheppardEtnos2016}
+  - {file: scenes/papers/p9_2016_resonance_prediction/scene.py, scene: ResonancePrediction2016}
+  - {file: scenes/papers/p9_2017_resonance_hopping/scene.py, scene: ResonanceHopping2017}
+  - {file: scenes/papers/p9_2018_resonance/scene.py,       scene: Resonance2018}
+  - {file: scenes/papers/p9_2020_resonance_hopping/scene.py, scene: ResonanceHopping2020}
+  - {file: scenes/papers/p9_2019_review/scene.py,          scene: Review2019}
+  - {file: scenes/papers/p9_2016_obliquity_gomes/scene.py, scene: ObliquityGomes2016}
+  - {file: scenes/papers/p9_2018_kuiper_belt/scene.py,     scene: KuiperBelt2018}
+  - {file: scenes/papers/p9_2019_clustering/scene.py,      scene: Clustering2019}
+  - {file: scenes/papers/p9_2019_ossos_scattering/scene.py, scene: OssosScattering2019}
