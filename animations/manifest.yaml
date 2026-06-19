@@ -65,3 +65,9 @@ papers:
   - {file: scenes/papers/p9_2024_primordial_alignment/scene.py, scene: PrimordialAlignment2024}
   - {file: scenes/papers/p9_2019_selfgrav_disk/scene.py,   scene: SelfgravDisk2019}
   - {file: scenes/papers/p9_2025_planet_y/scene.py,        scene: PlanetY2025}
+  # further coverage
+  - {file: scenes/papers/p9_2016_obliquity_lai/scene.py,   scene: ObliquityLai2016}
+  - {file: scenes/papers/p9_2018_low_perihelion/scene.py,  scene: LowPerihelion2018}
+  - {file: scenes/papers/p9_2020_tess_shiftstack/scene.py, scene: TessShiftstack2020}
+  - {file: scenes/papers/p9_2021_act_mm/scene.py,          scene: ActMm2021}
+  - {file: scenes/papers/p9_2025_stacking/scene.py,        scene: Stacking2025}
