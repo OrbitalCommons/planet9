@@ -53,7 +53,15 @@ papers:
   - {file: scenes/papers/p9_2025_simons_forecast/scene.py, scene: SimonsForecast2025}
   - {file: scenes/papers/p9_2025_parallax_search/scene.py, scene: ParallaxSearch2025}
   - {file: scenes/papers/p9_2023_lsst_strategy/scene.py,   scene: LsstStrategy2023}
+  # Act I additions
+  - {file: scenes/papers/p9_2018_bp519/scene.py,           scene: Bp519Discovery2018}
+  - {file: scenes/papers/p9_2025_new_discoveries/scene.py, scene: NewDiscoveries2025}
+  # Act II additions
+  - {file: scenes/papers/p9_2020_secular_octupole/scene.py, scene: SecularOctupole2020}
+  # Act III additions
+  - {file: scenes/papers/p9_2016_iorio_precession/scene.py, scene: Iorio2016}
   # Act V -- alternatives
   - {file: scenes/papers/p9_2023_mond_efe/scene.py,        scene: MondEfe2023}
   - {file: scenes/papers/p9_2024_primordial_alignment/scene.py, scene: PrimordialAlignment2024}
+  - {file: scenes/papers/p9_2019_selfgrav_disk/scene.py,   scene: SelfgravDisk2019}
   - {file: scenes/papers/p9_2025_planet_y/scene.py,        scene: PlanetY2025}
