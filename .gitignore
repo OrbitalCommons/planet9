@@ -14,3 +14,4 @@ media/
 animations/media/
 __pycache__/
 *.pyc
+animations/out/

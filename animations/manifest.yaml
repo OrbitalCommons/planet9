@@ -88,7 +88,6 @@ papers:
   - {file: scenes/papers/p9_2019_clustering/scene.py,      scene: Clustering2019}
   - {file: scenes/papers/p9_2019_ossos_scattering/scene.py, scene: OssosScattering2019}
   - {file: scenes/papers/p9_2016_commensurabilities/scene.py, scene: Commensurabilities2016}
-  - {file: scenes/papers/p9_2016_resonance_prediction/scene.py, scene: ResonancePrediction2016}
   - {file: scenes/papers/p9_2021_perihelion_gap/scene.py,  scene: PerihelionGap2021}
   - {file: scenes/papers/p9_2024_neptune_crossing/scene.py, scene: NeptuneCrossing2024}
   - {file: scenes/papers/p9_2025_perturbation/scene.py,    scene: Perturbation2025}
