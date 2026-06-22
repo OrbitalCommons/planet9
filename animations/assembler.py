@@ -17,6 +17,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import yaml
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from p9_manim import content  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 OUT = os.path.join(HERE, "out")
@@ -37,6 +40,22 @@ def manifest_entries():
                 seen.add(key)
                 ordered.append(e)
     return ordered
+
+
+def with_companions(entries):
+    """Interleave each scene's auto-generated discussion/learning beat after it."""
+    out = []
+    for e in entries:
+        out.append(e)
+        f = e["file"]
+        if "/preface/" in f and e["scene"] in content.PREFACE_LEARNING:
+            out.append({"file": "scenes/discussion.py", "scene": "Learn_" + e["scene"]})
+        elif "/papers/" in f:
+            crate = os.path.basename(os.path.dirname(f)).replace("_", "-")
+            if crate in content.PAPER_TEXT:
+                out.append({"file": "scenes/discussion.py",
+                            "scene": "Discuss_" + crate.replace("-", "_")})
+    return out
 
 
 def scene_mp4(idx, entry, qdir):
@@ -75,8 +94,8 @@ def main():
     args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     qdir = QMAP[args.quality]
-    entries = manifest_entries()
-    print(f"{len(entries)} scenes, {args.jobs} parallel jobs", flush=True)
+    entries = with_companions(manifest_entries())
+    print(f"{len(entries)} scenes (incl. discussion/learning), {args.jobs} parallel jobs", flush=True)
 
     results = {}
     with ThreadPoolExecutor(max_workers=args.jobs) as ex:
