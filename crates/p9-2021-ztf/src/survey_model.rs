@@ -5,7 +5,7 @@
 //! used in Brown & Batygin (2021). The depth limit comes from the shared
 //! survey table in `p9_core::analysis::surveys`.
 
-use p9_core::analysis::surveys::limiting_magnitude;
+use p9_core::analysis::surveys::{limiting_magnitude, NORTHERN_SURVEY_DEC_LIMIT_DEG};
 use p9_core::units::{degrees, Angle};
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +28,7 @@ impl Default for ZtfSurvey {
         Self {
             depth_limit: limiting_magnitude("ZTF").expect("ZTF in shared survey table"),
             efficiency_steepness: 4.0,
-            dec_limit_deg: -30.0,
+            dec_limit_deg: NORTHERN_SURVEY_DEC_LIMIT_DEG,
         }
     }
 }

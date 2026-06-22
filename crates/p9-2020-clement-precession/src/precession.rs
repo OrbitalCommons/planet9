@@ -34,6 +34,7 @@
 //! (the exact Gauss-ring average), which captures the same dϖ/dt = +∂H/∂(action)
 //! structure without any α expansion.
 
+use p9_core::analysis::elements::mean_motion;
 use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::{
     GM_SUN, GYR_DAYS, MASS_JUPITER_SOLAR, MASS_NEPTUNE_SOLAR, MASS_SATURN_SOLAR, MASS_URANUS_SOLAR,
@@ -85,11 +86,6 @@ pub fn giant_planets() -> [Perturber; 4] {
             mass_solar: MASS_NEPTUNE_SOLAR,
         },
     ]
-}
-
-/// Mean motion n = √(GM_⊙ / a³) in rad/day for a heliocentric orbit.
-pub fn mean_motion(a_au: f64) -> f64 {
-    (GM_SUN / a_au.powi(3)).sqrt()
 }
 
 /// Leading-order quadrupole apsidal precession rate dϖ/dt (rad/day) imposed on

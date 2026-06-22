@@ -7,7 +7,9 @@
 //! cuts, and the measured 99.2% linking efficiency. The single-exposure
 //! depth comes from the shared `p9_core::analysis::surveys` table.
 
-use p9_core::analysis::surveys::{limiting_magnitude, poisson_binomial_tail};
+use p9_core::analysis::surveys::{
+    limiting_magnitude, poisson_binomial_tail, NORTHERN_SURVEY_DEC_LIMIT_DEG,
+};
 use p9_core::coords::observer::{Time, Timescale};
 use serde::{Deserialize, Serialize};
 
@@ -51,7 +53,7 @@ impl Default for Ps1Survey {
     fn default() -> Self {
         Self {
             depth_limit: limiting_magnitude("PS1 3pi").expect("PS1 in shared survey table"),
-            dec_limit_deg: -30.0,
+            dec_limit_deg: NORTHERN_SURVEY_DEC_LIMIT_DEG,
             n_epochs: 17,
             linking_threshold: 9,
             efficiency_steepness: 3.0,

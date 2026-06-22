@@ -29,7 +29,7 @@ use std::f64::consts::{PI, TAU};
 
 use nalgebra::Vector3;
 
-use p9_core::constants::GM_SUN;
+use p9_core::analysis::elements::mean_motion;
 use p9_core::units::{days, radians, AngularVelocity};
 
 use crate::efe::efe_potential;
@@ -111,7 +111,7 @@ pub fn averaged_disturbing(
 /// Mean motion n = sqrt(GM_sun / a³) as a typed [`AngularVelocity`] (rad per
 /// day).
 pub fn mean_motion_typed(a: f64) -> AngularVelocity {
-    (radians((GM_SUN / (a * a * a)).sqrt()) / days(1.0)).into()
+    (radians(mean_motion(a)) / days(1.0)).into()
 }
 
 /// Secular apsidal precession rate dϖ/dt (rad/day) from Lagrange's planetary
@@ -255,6 +255,7 @@ mod tests {
     use super::*;
     use crate::efe::galactic_center_ecliptic;
     use approx::assert_relative_eq;
+    use p9_core::constants::GM_SUN;
 
     /// A representative ETNO orbital plane. We use the ecliptic plane (small
     /// ETNO inclinations) so the GC projection's ecliptic longitude is the

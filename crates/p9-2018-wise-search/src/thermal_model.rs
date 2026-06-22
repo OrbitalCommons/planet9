@@ -31,7 +31,7 @@
 //! is the shared Neptune-anchored mass-radius relation in
 //! `p9_core::analysis::photometry` (R ≈ 3.34 R⊕ at 10 M⊕).
 
-use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
 use p9_core::analysis::thermal::{
     effective_temp, flux_to_magnitude, reflected_flux_jy, solar_equilibrium_temp, thermal_flux_jy,
     C_LIGHT,
@@ -48,10 +48,6 @@ pub const W1_WAVELENGTH_M: f64 = 3.3526e-6;
 /// has F_ν = 309.540 Jy at W1 (Wright et al. 2010, Table 1). A source of
 /// flux F has W1 = −2.5 log10(F / F_ν0).
 pub const W1_ZERO_POINT_JY: f64 = 309.540;
-
-/// Default geometric/Bond-like albedo for the reflected-light channel
-/// (Neptune-like, used by the workspace photometry).
-pub const DEFAULT_ALBEDO: f64 = 0.41;
 
 /// Internal-luminosity temperature floor (K). A cold ice giant retains
 /// formation/radiogenic heat; Fortney et al. (2016) and the Meisner et al.
@@ -82,7 +78,7 @@ impl P9Thermal {
         Self {
             mass_earth,
             distance_au,
-            albedo: DEFAULT_ALBEDO,
+            albedo: ALBEDO_NEPTUNE,
             internal_temp_k: INTERNAL_TEMP_FLOOR_K,
         }
     }

@@ -34,14 +34,10 @@
 //! Giant-planet masses and semi-major axes are taken from the p9-core J2000
 //! ephemeris states (no local planet table), matching the nodal-rate code.
 
+use p9_core::analysis::elements::mean_motion;
 use p9_core::constants::{GM_SUN, YEAR_DAYS};
 use p9_core::initial_conditions::planets::giant_planets_j2000;
 use p9_core::types::cartesian_to_elements;
-
-/// Mean motion n = √(GM_sun/a³) in rad/day.
-pub fn mean_motion(a: f64) -> f64 {
-    (GM_SUN / (a * a * a)).sqrt()
-}
 
 /// The dimensionless secular forcing sum Σ_j (m_j/M_sun)(a_j/a)³ from the four
 /// giant planets (Jupiter…Neptune), evaluated from their J2000 ephemeris

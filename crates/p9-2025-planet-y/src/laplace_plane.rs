@@ -51,8 +51,9 @@
 //! the Laplace-surface treatment of §5.3; Siraj, Loeb & Siegel (2025),
 //! arXiv:2508.14156.
 
+use p9_core::analysis::elements::mean_motion;
 use p9_core::constants::{
-    DEG2RAD, EARTH_MASS_SOLAR, GM_SUN, MASS_JUPITER_SOLAR, MASS_NEPTUNE_SOLAR, MASS_SATURN_SOLAR,
+    DEG2RAD, EARTH_MASS_SOLAR, MASS_JUPITER_SOLAR, MASS_NEPTUNE_SOLAR, MASS_SATURN_SOLAR,
     MASS_URANUS_SOLAR,
 };
 use p9_core::forces::j2_secular::effective_j2;
@@ -124,11 +125,6 @@ impl PlanetY {
     pub fn inclination_angle(&self) -> Angle {
         radians(self.inclination)
     }
-}
-
-/// Mean motion of a test particle (rad/day) about the Sun.
-fn mean_motion(a_au: f64) -> f64 {
-    (GM_SUN / (a_au * a_au * a_au)).sqrt()
 }
 
 /// Inner (giant-planet quadrupole) nodal-precession coefficient at semi-major
