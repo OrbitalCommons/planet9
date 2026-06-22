@@ -1,0 +1,11 @@
+[package]
+name = "p9-anim-data"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+p9-2016-cassini-ranging = { version = "0.1.0", path = "../p9-2016-cassini-ranging" }
+p9-2024-panstarrs = { version = "0.1.0", path = "../p9-2024-panstarrs" }
+p9-core = { version = "0.1.0", path = "../p9-core" }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

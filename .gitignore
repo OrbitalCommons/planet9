@@ -15,3 +15,6 @@ animations/media/
 __pycache__/
 *.pyc
 animations/out/
+
+# generated anim data (regenerate: cargo run -p p9-anim-data)
+animations/data/*.json

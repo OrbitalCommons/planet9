@@ -61,6 +61,26 @@ def etno_swarm(specs, color=T.GREEN, stroke_width=1.6, opacity=0.8):
     return g
 
 
+def real_etno_swarm(which="kbo", display_a=2.7, color=T.GREEN, stroke_width=1.9, opacity=0.85):
+    """A VGroup of the REAL observed objects' orbits (true e and ϖ), plus the
+    measured clustering R-bar. ``which`` = 'kbo' or 'etno'. Semi-major axes are
+    range-compressed to scene units so every orbit is visible; eccentricity and
+    longitude of perihelion are the real measured values. Returns (group, r_bar).
+    """
+    from . import dataio
+
+    objs, r_bar = dataio.real_etnos(which)
+    g = VGroup()
+    if not objs:
+        return g, r_bar
+    amax = max(o["a"] for o in objs)
+    for o in objs:
+        a_disp = display_a * (o["a"] / amax) ** 0.5
+        g.add(ellipse_orbit(a_disp, min(o["e"], 0.86), color=color,
+                            varpi=o["varpi_rad"], stroke_width=stroke_width, opacity=opacity))
+    return g, r_bar
+
+
 def mean_resultant_length(varpis):
     """Circular mean resultant length R-bar in [0, 1]; 0 random, 1 aligned."""
     v = np.asarray(varpis)
