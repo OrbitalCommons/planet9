@@ -121,7 +121,8 @@ def main():
 
     if args.render_only:
         return
-    out_path = os.path.join(OUT, "planet9_film.mp4")
+    name = "planet9_film.mp4" if args.quality == "l" else f"planet9_film_{qdir}.mp4"
+    out_path = os.path.join(OUT, name)
     concat(mp4s, out_path)
     print(f"FILM: {out_path}  ({len(mp4s)} scenes)", flush=True)
 
