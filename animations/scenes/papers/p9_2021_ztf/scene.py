@@ -20,9 +20,20 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2021-ztf"
+
+
+def _exclusion(key, fallback):
+    """Real per-orbit exclusion fraction from dataio.section('exclusion')."""
+    try:
+        val = dataio.section("exclusion").get(key)
+        if val is not None:
+            return float(val)
+    except Exception:
+        pass
+    return fallback
 
 
 class Ztf2021(Scene):
@@ -39,14 +50,14 @@ class Ztf2021(Scene):
         foot_lbl = Text("ZTF footprint (dec > −30°), r ≈ 20.5", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1)
         self.play(Create(sky), Create(foot), FadeIn(foot_lbl))
 
-        # exclusion bar filling to 56.4%
-        frac = 0.564
+        # exclusion bar filling to the real ZTF-ruled-out fraction
+        frac = _exclusion("ztf", 0.564)
         track = Rectangle(width=8.0, height=0.8, color=P.MUTED, stroke_width=2).shift(DOWN * 1.4)
         fill = Rectangle(width=8.0 * frac, height=0.8, color=P.RED, stroke_width=0).set_fill(P.RED, opacity=0.5)
         fill.align_to(track, LEFT).align_to(track, UP)
         self.play(Create(track))
         self.play(Create(fill), run_time=1.5)
-        pct = Text("56.4% of parameter space ruled out", font_size=22, color=P.RED).next_to(track, DOWN, buff=0.25)
+        pct = Text(f"{frac*100:.1f}% of parameter space ruled out", font_size=22, color=P.RED).next_to(track, DOWN, buff=0.25)
         self.play(Write(pct))
         self.play(FadeIn(layout.takeaway(
             "No planet found yet -- but more than half the hiding places are now gone.")))

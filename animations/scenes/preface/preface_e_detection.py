@@ -38,6 +38,24 @@ def _reflected_mag(mass_earth, r_au):
     return H + 5.0 * np.log10(r_au * delta)
 
 
+def _mag_curve(mass_earth):
+    """Real (distance_au, v_mag) points for a mass from viability().mag_curves.
+
+    Returns the curve whose mass_earth is closest to the request; falls back to
+    the inline reflected-light model if data is unavailable.
+    """
+    try:
+        v = dataio.viability()
+        dist = v["distance_au"]
+        curves = v["mag_curves"]
+        if dist and curves:
+            best = min(curves, key=lambda c: abs(c["mass_earth"] - mass_earth))
+            return list(zip(dist, best["v_mag"]))
+    except Exception:
+        pass
+    return [(r, _reflected_mag(mass_earth, r)) for r in np.arange(100, 1500.1, 10)]
+
+
 class P09ReflectedLight(Scene):
     def construct(self):
         self.add(layout.concept_badge("PREFACE 09"))
@@ -58,7 +76,10 @@ class P09ReflectedLight(Scene):
         self.play(Create(ax), FadeIn(xlab), FadeIn(ylab))
 
         for mass, col in [(5, P.TEAL), (10, P.BLUE)]:
-            curve = ax.plot(lambda r, m=mass: _reflected_mag(m, r), x_range=[100, 1500, 10], color=col)
+            pts = [(r, m_v) for r, m_v in _mag_curve(mass) if 100 <= r <= 1500]
+            curve = ax.plot_line_graph(
+                [r for r, _ in pts], [m_v for _, m_v in pts],
+                line_color=col, add_vertex_dots=False)["line_graph"]
             lbl = Text(f"{mass} M⊕", font_size=18, color=col).next_to(curve.get_end(), UP, buff=0.1)
             self.play(Create(curve), FadeIn(lbl), run_time=1.0)
 
@@ -125,6 +146,25 @@ class P10Thermal(Scene):
         self.wait(0.4)
         self.play(Tt.animate.set_value(40.0), run_time=4.5, rate_func=rate_functions.smooth)
         self.wait(0.3)
+
+        data = dataio.section("thermal")
+        if data:
+            # overlay the REAL normalised 40 K Planck spectrum as the final state
+            wl_um = np.asarray(data["wavelength_um"], dtype=float)
+            pn = np.asarray(data["planck_norm_40k"], dtype=float)
+            lx = np.log10(wl_um)
+            mask = (lx >= -1) & (lx <= 3)
+            real_curve = ax.plot_line_graph(lx[mask], pn[mask], add_vertex_dots=False, line_color=P.YELLOW)
+            self.remove(curve)
+            self.play(Create(real_curve), run_time=1.2)
+            wien = float(data["wien_peak_um"])
+            wln = Line(ax.c2p(np.log10(wien), 0), ax.c2p(np.log10(wien), 1.05),
+                       color=P.TEAL, stroke_width=2).set_stroke(opacity=0.7)
+            wlbl = Text(f"Wien peak {wien:.0f} µm", font_size=13, color=P.TEAL)
+            wlbl.next_to(ax.c2p(np.log10(wien), 1.05), UP, buff=0.05)
+            self.play(Create(wln), FadeIn(wlbl))
+            self.wait(0.3)
+
         self.play(FadeIn(layout.takeaway("A ~40 K world glows in the far-IR / mm -- a second way to find it.")))
         self.wait(0.8)
 

@@ -28,7 +28,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits
+from p9_manim import dataio, layout, orbits
 
 
 class P05Clustering(Scene):
@@ -40,10 +40,16 @@ class P05Clustering(Scene):
                      color=P.FG, font_size=30, weight="BOLD").to_edge(UP, buff=0.6)
         self.play(Write(title))
 
-        rng = np.random.default_rng(7)
-        n = 9
-        random_varpi = rng.uniform(0, 2 * np.pi, n)
-        clustered_varpi = np.deg2rad(60) + rng.normal(0, np.deg2rad(14), n)
+        # The ALIGNED state is the REAL six stable KBOs (Batygin & Brown 2016);
+        # the random state stays illustrative as the contrast.
+        objs, r_bar = dataio.real_etnos("kbo")
+        if objs:
+            clustered_varpi = np.array([o["varpi_rad"] for o in objs])
+            n = len(objs)
+        else:
+            n = 9
+            clustered_varpi = np.deg2rad(60) + np.random.default_rng(7).normal(0, np.deg2rad(14), n)
+        random_varpi = np.random.default_rng(7).uniform(0, 2 * np.pi, n)
 
         sun = orbits.sun(radius=0.1)
         circle = Circle(radius=3.0, color=P.MUTED, stroke_width=1).set_stroke(opacity=0.4)
@@ -63,10 +69,10 @@ class P05Clustering(Scene):
         self.play(Create(arr, lag_ratio=0.1), FadeIn(lbl0))
         self.wait(0.6)
 
-        # rotate each arrow to its clustered direction
+        # rotate each arrow to its real (or illustrative) clustered direction
         target = arrows(clustered_varpi)
-        rbar1 = orbits.mean_resultant_length(clustered_varpi)
-        lbl1 = MathTex(rf"\bar{{R}} = {rbar1:.2f}\ \text{{(aligned!)}}", color=P.TEAL).scale(0.7)
+        rbar1 = r_bar if r_bar is not None else orbits.mean_resultant_length(clustered_varpi)
+        lbl1 = MathTex(rf"\bar{{R}} = {rbar1:.2f}\ \text{{(real KBOs)}}", color=P.TEAL).scale(0.7)
         lbl1.to_edge(DOWN, buff=0.9)
         self.play(*[a.animate.become(t) for a, t in zip(arr, target)], run_time=2.2)
         self.play(FadeOut(lbl0), FadeIn(lbl1))

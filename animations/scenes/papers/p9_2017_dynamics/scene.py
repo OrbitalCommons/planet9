@@ -26,7 +26,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2017-dynamics"
 
@@ -44,28 +44,72 @@ class Dynamics2017(Scene):
         yl = Text("eccentricity", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
-        # libration loops (closed contours) centred at Delta-varpi = 180
-        def loop(scale):
-            return ParametricFunction(
-                lambda t: ax.c2p(180 + 70 * scale * np.cos(t), 0.42 + 0.26 * scale * np.sin(t)),
-                t_range=[0, 2 * np.pi], color=P.TEAL)
-        loops = VGroup(*[loop(s) for s in (0.35, 0.65, 1.0)])
-        self.play(Create(loops, lag_ratio=0.2), run_time=1.8)
+        data = dataio.section("phase_portrait")
+        if data:
+            # Real secular Hamiltonian grid H(e, Delta-varpi). Wrap Delta-varpi
+            # into [0, 360) so the libration island around 180 is centred.
+            e = np.asarray(data["e"])
+            dv = np.mod(np.asarray(data["dvarpi_deg"]), 360.0)
+            h = np.asarray(data["h"])
+            hmin, hmax = float(np.nanmin(h)), float(np.nanmax(h))
+            span = (hmax - hmin) or 1.0
 
-        # circulating trajectories (top): Delta-varpi sweeps all values
-        circ = VGroup(*[ax.plot(lambda x, c=c: c, x_range=[0, 360, 5], color=P.MUTED).set_stroke(opacity=0.5)
-                        for c in (0.66, 0.74)])
-        self.play(Create(circ))
+            # Scatter every grid cell, coloured by H (blue = low, teal = high).
+            dots = VGroup()
+            for i, ev in enumerate(e):
+                if ev > 0.8:
+                    continue
+                for j, dvv in enumerate(dv):
+                    frac = (h[i, j] - hmin) / span
+                    col = P.BLUE if frac < 0.5 else P.TEAL
+                    dots.add(Dot(ax.c2p(float(dvv), float(ev)), radius=0.022,
+                                 color=col).set_opacity(0.18 + 0.55 * frac))
+            self.play(FadeIn(dots), run_time=1.4)
 
-        center = Dot(ax.c2p(180, 0.42), color=P.BLUE, radius=0.06)
-        self.play(FadeIn(center))
-        # a test particle librating around the centre
-        t = ValueTracker(0.0)
-        body = always_redraw(lambda: Dot(
-            ax.c2p(180 + 60 * np.cos(t.get_value()), 0.42 + 0.22 * np.sin(t.get_value())),
-            color=P.GREEN, radius=0.07))
-        self.add(body)
-        self.play(t.animate.set_value(2.2 * np.pi), run_time=4.0, rate_func=rate_functions.linear)
+            # The libration island = the H extremum near Delta-varpi = 180.
+            mask = (dv > 120) & (dv < 240)
+            sub = h[:, mask]
+            ii = int(np.nanargmax(sub) // sub.shape[1])
+            island_e = float(e[ii])
+            center = Dot(ax.c2p(180, island_e), color=P.GREEN, radius=0.07)
+            self.play(FadeIn(center))
+
+            # Mark cells closest to the island extremum (iso-H island shading).
+            thresh = hmax - 0.12 * span
+            island = VGroup(*[
+                Dot(ax.c2p(float(dv[j]), float(e[i])), radius=0.03, color=P.TEAL)
+                for i in range(len(e)) for j in range(len(dv))
+                if e[i] <= 0.8 and 120 < dv[j] < 240 and h[i, j] >= thresh])
+            self.play(Create(island, lag_ratio=0.01), run_time=1.2)
+
+            # A test particle librating around the real island centre.
+            t = ValueTracker(0.0)
+            amp_e = min(island_e, 0.8 - island_e, 0.22)
+            body = always_redraw(lambda: Dot(
+                ax.c2p(180 + 55 * np.cos(t.get_value()),
+                       island_e + amp_e * np.sin(t.get_value())),
+                color=P.GREEN, radius=0.07))
+            self.add(body)
+            self.play(t.animate.set_value(2.2 * np.pi), run_time=4.0,
+                      rate_func=rate_functions.linear)
+        else:
+            def loop(scale):
+                return ParametricFunction(
+                    lambda t: ax.c2p(180 + 70 * scale * np.cos(t), 0.42 + 0.26 * scale * np.sin(t)),
+                    t_range=[0, 2 * np.pi], color=P.TEAL)
+            loops = VGroup(*[loop(s) for s in (0.35, 0.65, 1.0)])
+            self.play(Create(loops, lag_ratio=0.2), run_time=1.8)
+            circ = VGroup(*[ax.plot(lambda x, c=c: c, x_range=[0, 360, 5], color=P.MUTED).set_stroke(opacity=0.5)
+                            for c in (0.66, 0.74)])
+            self.play(Create(circ))
+            center = Dot(ax.c2p(180, 0.42), color=P.BLUE, radius=0.06)
+            self.play(FadeIn(center))
+            t = ValueTracker(0.0)
+            body = always_redraw(lambda: Dot(
+                ax.c2p(180 + 60 * np.cos(t.get_value()), 0.42 + 0.22 * np.sin(t.get_value())),
+                color=P.GREEN, radius=0.07))
+            self.add(body)
+            self.play(t.animate.set_value(2.2 * np.pi), run_time=4.0, rate_func=rate_functions.linear)
 
         lbl = Text("libration: Δϖ stays confined", font_size=18, color=P.TEAL).to_corner(UR, buff=0.5)
         self.play(Write(lbl))

@@ -10,9 +10,23 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2018-wise-search"
+
+
+def _reach_points(survey_name):
+    """Real (mass, reach) pairs for a survey from viability(), nulls skipped."""
+    try:
+        v = dataio.viability()
+        masses = v["mass_earth"]
+        for s in v["surveys"]:
+            if s["name"] == survey_name:
+                reach = s.get("reach") or []
+                return [(m, r) for m, r in zip(masses, reach) if r is not None]
+    except Exception:
+        pass
+    return []
 
 
 class WiseSearch2018(Scene):
@@ -29,7 +43,13 @@ class WiseSearch2018(Scene):
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         # shallow reach ~ grows slowly with mass (cold body faint at 3.4 um)
-        reach = ax.plot(lambda m: 120 + 9.0 * m, x_range=[2, 20, 0.5], color=P.ORANGE)
+        pts = [(m, r) for m, r in _reach_points("WISE W1") if 2 <= m <= 20]
+        if pts:
+            reach = ax.plot_line_graph(
+                [m for m, _ in pts], [r for _, r in pts],
+                line_color=P.ORANGE, add_vertex_dots=False)["line_graph"]
+        else:
+            reach = ax.plot(lambda m: 120 + 9.0 * m, x_range=[2, 20, 0.5], color=P.ORANGE)
         self.play(Create(reach), run_time=1.4)
         note = Text("a 40 K world barely emits at 3.4 µm", font_size=16, color=P.ORANGE).next_to(ax, UP, buff=0.1)
         self.play(FadeIn(note))

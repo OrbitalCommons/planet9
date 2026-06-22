@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper
 
 CRATE = "p9-2025-new-discoveries"
 
@@ -22,9 +22,12 @@ class NewDiscoveries2025(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         sun = orbits.sun()
-        rng = np.random.default_rng(2025)
-        known = np.deg2rad(250) + rng.normal(0, np.deg2rad(15), 7)
-        swarm = orbits.etno_swarm([(2.6, 0.72, v) for v in known], color=P.GREEN, opacity=0.7)
+        # the REAL known clustered ETNO sample as the base
+        swarm, _ = orbits.real_etno_swarm("etno", color=P.GREEN, opacity=0.7)
+        if not swarm.submobjects:
+            rng = np.random.default_rng(2025)
+            known = np.deg2rad(250) + rng.normal(0, np.deg2rad(15), 7)
+            swarm = orbits.etno_swarm([(2.6, 0.72, v) for v in known], color=P.GREEN, opacity=0.7)
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.08), run_time=1.6)
         self.add(Text("known clustered ETNOs", font_size=15, color=P.GREEN).to_edge(UP, buff=1.5))
 

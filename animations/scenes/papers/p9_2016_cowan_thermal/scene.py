@@ -5,9 +5,9 @@ predict the best wavebands for a thermal detection. Reproduced in
 p9-2016-cowan-thermal (SED).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, Line, Scene, Text, UP, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, dataio
 
 CRATE = "p9-2016-cowan-thermal"
 
@@ -25,12 +25,27 @@ class CowanThermal2016(Scene):
         for lx, t in [(0, "1"), (1, "10"), (2, "100"), (3, "1000")]:
             self.add(Text(t, font_size=13, color=P.MUTED).next_to(ax.c2p(lx, 0), DOWN, buff=0.1))
 
-        def sed(lx):
-            wl = 10 ** lx
-            x = 60.0 / wl  # ~peak near 60-90 um for ~40 K
-            return float(np.clip((1.0 / wl ** 4) / (np.exp(min(x, 50)) - 1 + 1e-9) * 8e6, 0, 1.05))
-        curve = ax.plot(sed, x_range=[0, 3, 0.03], color=P.YELLOW)
-        self.play(Create(curve), run_time=1.4)
+        data = dataio.section("thermal")
+        if data:
+            # real normalised Planck spectrum of a 40 K body (log wavelength)
+            wl_um = np.asarray(data["wavelength_um"], dtype=float)
+            pn = np.asarray(data["planck_norm_40k"], dtype=float)
+            lx = np.log10(wl_um)
+            mask = (lx >= 0) & (lx <= 3)  # axis covers 1..1000 µm
+            curve = ax.plot_line_graph(lx[mask], pn[mask], add_vertex_dots=False, line_color=P.YELLOW)
+            self.play(Create(curve), run_time=1.4)
+            wien = float(data["wien_peak_um"])
+            self.add(Line(ax.c2p(np.log10(wien), 0), ax.c2p(np.log10(wien), 1.05),
+                          color=P.TEAL, stroke_width=2).set_stroke(opacity=0.7))
+            self.add(Text(f"Wien peak {wien:.0f} µm", font_size=13, color=P.TEAL)
+                     .next_to(ax.c2p(np.log10(wien), 1.05), UP, buff=0.05))
+        else:
+            def sed(lx):
+                wl = 10 ** lx
+                x = 60.0 / wl  # ~peak near 60-90 um for ~40 K
+                return float(np.clip((1.0 / wl ** 4) / (np.exp(min(x, 50)) - 1 + 1e-9) * 8e6, 0, 1.05))
+            curve = ax.plot(sed, x_range=[0, 3, 0.03], color=P.YELLOW)
+            self.play(Create(curve), run_time=1.4)
         for wl, name, col in [(60, "IRAS", P.RED), (90, "AKARI", P.ORANGE), (1000, "mm", P.PURPLE)]:
             self.add(Text(name, font_size=14, color=col).move_to(ax.c2p(np.log10(wl), 0.9)))
         self.play(FadeIn(layout.takeaway("A ~40 K body's SED peaks near 60–90 µm -- the far-IR is the sweet spot.")))

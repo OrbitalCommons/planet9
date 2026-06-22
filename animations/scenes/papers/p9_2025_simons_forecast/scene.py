@@ -10,9 +10,23 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2025-simons-forecast"
+
+
+def _reach_points(survey_name):
+    """Real (mass, reach) pairs for a survey from viability(), nulls skipped."""
+    try:
+        v = dataio.viability()
+        masses = v["mass_earth"]
+        for s in v["surveys"]:
+            if s["name"] == survey_name:
+                reach = s.get("reach") or []
+                return [(m, r) for m, r in zip(masses, reach) if r is not None]
+    except Exception:
+        pass
+    return []
 
 
 class SimonsForecast2025(Scene):
@@ -28,8 +42,20 @@ class SimonsForecast2025(Scene):
         yl = Text("reach (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
-        act = ax.plot(lambda m: 430 + 24 * m, x_range=[2, 20, 0.5], color=P.PURPLE)
-        so = ax.plot(lambda m: 760 + 32 * m, x_range=[2, 20, 0.5], color=P.TEAL)
+        act_pts = [(m, r) for m, r in _reach_points("ACT (mm)") if 2 <= m <= 20]
+        so_pts = [(m, r) for m, r in _reach_points("Simons Obs. (mm)") if 2 <= m <= 20]
+        if act_pts:
+            act = ax.plot_line_graph(
+                [m for m, _ in act_pts], [r for _, r in act_pts],
+                line_color=P.PURPLE, add_vertex_dots=False)["line_graph"]
+        else:
+            act = ax.plot(lambda m: 430 + 24 * m, x_range=[2, 20, 0.5], color=P.PURPLE)
+        if so_pts:
+            so = ax.plot_line_graph(
+                [m for m, _ in so_pts], [r for _, r in so_pts],
+                line_color=P.TEAL, add_vertex_dots=False)["line_graph"]
+        else:
+            so = ax.plot(lambda m: 760 + 32 * m, x_range=[2, 20, 0.5], color=P.TEAL)
         self.play(Create(act))
         self.play(Create(so))
         self.add(Text("ACT", font_size=16, color=P.PURPLE).next_to(act.get_end(), DOWN, buff=0.1))

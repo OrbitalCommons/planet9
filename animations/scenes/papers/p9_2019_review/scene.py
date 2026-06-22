@@ -7,7 +7,7 @@ p9-2019-review (revised parameters, detection prospects).
 import numpy as np
 from manim import Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper
 
 CRATE = "p9-2019-review"
 
@@ -21,7 +21,15 @@ class Review2019(Scene):
         p9 = orbits.ellipse_orbit(3.2, 0.25, color=P.BLUE, varpi=np.deg2rad(20))
         swarm = orbits.etno_swarm([(2.3, 0.7, np.deg2rad(200 + 8 * k)) for k in range(5)], color=P.GREEN)
         self.play(FadeIn(sun), Create(p9), Create(swarm, lag_ratio=0.1))
-        ro = paper.result_readout("revised best-fit", "≈ 5 M⊕,  a ≈ 500 AU,  e ≈ 0.25", color=P.BLUE)
+        noms = dataio.section("nominal_orbits")
+        nom = None
+        if noms:
+            nom = next((o for o in noms if "review" in o["name"] or "2019" in o["name"]), None)
+        if nom:
+            value = f"≈ {nom['mass_earth']:.0f} M⊕,  a ≈ {nom['a']:.0f} AU,  e ≈ {nom['e']:.2g}"
+        else:
+            value = "≈ 5 M⊕,  a ≈ 500 AU,  e ≈ 0.25"
+        ro = paper.result_readout("revised best-fit", value, color=P.BLUE)
         ro.scale(0.8).to_edge(DOWN, buff=1.2)
         self.play(FadeIn(ro))
         self.play(FadeIn(layout.takeaway("By 2019 the favoured planet got smaller and closer -- and the case, broader.")))

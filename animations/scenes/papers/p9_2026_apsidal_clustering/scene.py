@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper
 
 CRATE = "p9-2026-apsidal-clustering"
 
@@ -25,13 +25,18 @@ class ApsidalClustering2026(Scene):
         circle = Circle(radius=2.8, color=P.MUTED, stroke_width=1).set_stroke(opacity=0.4)
         self.play(FadeIn(sun), Create(circle))
 
-        rng = np.random.default_rng(2026)
-        varpis = np.deg2rad(60) + rng.normal(0, np.deg2rad(20), 11)
+        # REAL apsidal directions and measured R-bar of the ETNO sample
+        objs, r_bar = dataio.real_etnos("etno")
+        if objs:
+            varpis = np.array([o["varpi_rad"] for o in objs])
+        else:
+            rng = np.random.default_rng(2026)
+            varpis = np.deg2rad(60) + rng.normal(0, np.deg2rad(20), 11)
         arr = VGroup(*[Arrow(np.zeros(3), 2.5 * np.array([np.cos(v), np.sin(v), 0]),
                              color=P.GREEN, buff=0, stroke_width=3) for v in varpis])
         self.play(Create(arr, lag_ratio=0.08))
 
-        rbar = orbits.mean_resultant_length(varpis)
+        rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
         # the mean direction (resultant) arrow
         mx, my = np.mean(np.cos(varpis)), np.mean(np.sin(varpis))
         res = Arrow(np.zeros(3), 2.5 * rbar * np.array([mx, my, 0]) / np.hypot(mx, my),

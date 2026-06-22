@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper
 
 CRATE = "p9-2016-constraints"
 
@@ -22,12 +22,16 @@ class Constraints2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         sun = orbits.sun()
-        rng = np.random.default_rng(5)
-        varpis = np.deg2rad(250) + rng.normal(0, np.deg2rad(15), 8)
-        swarm = orbits.etno_swarm([(2.6, 0.74, v) for v in varpis], color=P.GREEN)
+        # the REAL six stable KBOs with their measured clustering R-bar
+        swarm, r_bar = orbits.real_etno_swarm("kbo", color=P.GREEN)
+        if r_bar is None:
+            rng = np.random.default_rng(5)
+            varpis = np.deg2rad(250) + rng.normal(0, np.deg2rad(15), 8)
+            swarm = orbits.etno_swarm([(2.6, 0.74, v) for v in varpis], color=P.GREEN)
+            r_bar = orbits.mean_resultant_length(varpis)
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.1), run_time=2.0)
 
-        rbar = orbits.mean_resultant_length(varpis)
+        rbar = r_bar
         m1 = MathTex(rf"\bar{{R}}_{{\Delta\varpi}} \approx {rbar:.2f}", color=P.TEAL).scale(0.7)
         m2 = MathTex(r"f_{q>60\,\mathrm{AU}}\ \text{high}", color=P.GREEN).scale(0.7)
         VGroup(m1, m2).arrange(DOWN, buff=0.35).to_corner(UR, buff=0.5)

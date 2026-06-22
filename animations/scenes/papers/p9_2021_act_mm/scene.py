@@ -10,9 +10,23 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2021-act-mm"
+
+
+def _reach_points(survey_name):
+    """Real (mass, reach) pairs for a survey from viability(), nulls skipped."""
+    try:
+        v = dataio.viability()
+        masses = v["mass_earth"]
+        for s in v["surveys"]:
+            if s["name"] == survey_name:
+                reach = s.get("reach") or []
+                return [(m, r) for m, r in zip(masses, reach) if r is not None]
+    except Exception:
+        pass
+    return []
 
 
 class ActMm2021(Scene):
@@ -28,7 +42,13 @@ class ActMm2021(Scene):
         yl = Text("ACT reach (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
-        reach = ax.plot(lambda m: 430 + 24 * m, x_range=[2, 20, 0.5], color=P.PURPLE)
+        pts = [(m, r) for m, r in _reach_points("ACT (mm)") if 2 <= m <= 20]
+        if pts:
+            reach = ax.plot_line_graph(
+                [m for m, _ in pts], [r for _, r in pts],
+                line_color=P.PURPLE, add_vertex_dots=False)["line_graph"]
+        else:
+            reach = ax.plot(lambda m: 430 + 24 * m, x_range=[2, 20, 0.5], color=P.PURPLE)
         self.play(Create(reach), run_time=1.3)
         self.add(Text("229 GHz, ~8 mJy point-source limit", font_size=16, color=P.PURPLE).next_to(ax, UP, buff=0.4))
         self.play(FadeIn(layout.takeaway(

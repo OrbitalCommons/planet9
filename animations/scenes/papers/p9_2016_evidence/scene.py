@@ -24,7 +24,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper
 
 CRATE = "p9-2016-evidence"
 
@@ -36,17 +36,23 @@ class Evidence2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         sun = orbits.sun()
-        # the six stable KBOs: long, eccentric, apsides clustered to one side
-        rng = np.random.default_rng(2016)
-        varpis = np.deg2rad(255) + rng.normal(0, np.deg2rad(13), 6)
-        swarm = orbits.etno_swarm([(2.7, 0.72, v) for v in varpis], color=P.GREEN)
+        # the six REAL stable KBOs (Batygin & Brown 2016): real e and apsidal
+        # directions, with the measured clustering R-bar.
+        swarm, r_bar = orbits.real_etno_swarm("kbo", color=P.GREEN)
+        objs, _ = dataio.real_etnos("kbo")
+        if objs:
+            varpis = np.array([o["varpi_rad"] for o in objs])
+        else:
+            rng = np.random.default_rng(2016)
+            varpis = np.deg2rad(255) + rng.normal(0, np.deg2rad(13), 6)
+            swarm = orbits.etno_swarm([(2.7, 0.72, v) for v in varpis], color=P.GREEN)
         apses = VGroup(*[orbits.apse_arrow(2.7, 0.72, v, color=P.GREEN, scale=1.0) for v in varpis])
         self.play(FadeIn(sun))
         self.play(Create(swarm, lag_ratio=0.15), run_time=2.0)
         self.play(*[Create(a) for a in apses], run_time=1.0)
         self.play(Indicate(apses, color=P.TEAL, scale_factor=1.05))
 
-        rbar = orbits.mean_resultant_length(varpis)
+        rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
         stat = MathTex(rf"\bar{{R}}_\varpi \approx {rbar:.2f}", color=P.TEAL).scale(0.8)
         stat.to_corner(UR, buff=0.6).shift(DOWN * 0.6)
         self.play(Write(stat))

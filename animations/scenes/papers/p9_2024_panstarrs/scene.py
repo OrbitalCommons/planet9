@@ -19,9 +19,17 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2024-panstarrs"
+
+
+def _exclusion():
+    """Real exclusion fractions from dataio.section('exclusion'); {} on failure."""
+    try:
+        return dataio.section("exclusion") or {}
+    except Exception:
+        return {}
 
 
 class PanStarrs2024(Scene):
@@ -34,7 +42,12 @@ class PanStarrs2024(Scene):
         track = Rectangle(width=W, height=1.0, color=P.MUTED, stroke_width=2)
         self.play(Create(track))
 
-        segs = [("ZTF", 0.564, P.RED), ("DES", 0.050, P.ORANGE), ("PS1", 0.171, P.PURPLE)]
+        ex = _exclusion()
+        segs = [
+            ("ZTF", ex.get("ztf", 0.564), P.RED),
+            ("DES", ex.get("des_unique", 0.050), P.ORANGE),
+            ("PS1", ex.get("ps1_unique", 0.171), P.PURPLE),
+        ]
         x = -W / 2
         cum = 0.0
         for name, frac, col in segs:
@@ -45,13 +58,15 @@ class PanStarrs2024(Scene):
             x += W * frac
             cum += frac
 
-        # remaining viable slice
-        rem = Rectangle(width=W * (1 - cum), height=1.0, color=P.TEAL, stroke_width=0).set_fill(P.TEAL, opacity=0.25)
-        rem.move_to([x + W * (1 - cum) / 2, 0, 0])
-        rem_lbl = Text(f"viable\n{(1-cum)*100:.1f}%", font_size=16, color=P.TEAL).move_to(rem.get_center())
+        # remaining viable slice (real value if available, else 1 - cumulative)
+        remaining = ex.get("remaining", 1 - cum)
+        rem = Rectangle(width=W * remaining, height=1.0, color=P.TEAL, stroke_width=0).set_fill(P.TEAL, opacity=0.25)
+        rem.move_to([x + W * remaining / 2, 0, 0])
+        rem_lbl = Text(f"viable\n{remaining*100:.1f}%", font_size=16, color=P.TEAL).move_to(rem.get_center())
         self.play(Create(rem), FadeIn(rem_lbl))
 
-        head = Text("combined: 78.5% excluded", font_size=24, color=P.RED).next_to(track, UP, buff=0.5)
+        combined = ex.get("combined", cum)
+        head = Text(f"combined: {combined*100:.1f}% excluded", font_size=24, color=P.RED).next_to(track, UP, buff=0.5)
         self.play(Write(head))
         self.play(FadeIn(layout.takeaway(
             "About one-fifth of the parameter space survives -- and that is where Rubin looks.")))

@@ -6,11 +6,11 @@ shapes which P9 orbits are dynamically allowed. Reproduced in p9-2021-stability.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, Line, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import dataio, layout, paper
 
 CRATE = "p9-2021-stability"
 
@@ -21,17 +21,47 @@ class Stability2021(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[200, 1000, 200], y_range=[30, 120, 30], x_length=9.5, y_length=4.0,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.4)
-        xl = Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
-        yl = Text("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
-        self.play(Create(ax), FadeIn(xl), FadeIn(yl))
+        data = dataio.section("stability")
+        if data:
+            a = np.asarray(data["a_au"])
+            q = np.asarray(data["q_crit_au"])
+            amin, amax = float(a.min()), float(a.max())
+            qmax = float(np.nanmax(q))
+            ytop = float(np.ceil(qmax / 20.0) * 20.0)
+            ax = Axes(x_range=[amin, amax, (amax - amin) / 4], y_range=[0, ytop, ytop / 3],
+                      x_length=9.5, y_length=4.0,
+                      axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
+            ax.shift(DOWN * 0.4)
+            xl = Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+            yl = Text("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
+            self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
-        boundary = ax.plot(lambda a: 40 + 0.045 * (a - 200), x_range=[200, 1000, 5], color=P.RED)
-        self.play(Create(boundary), run_time=1.4)
-        unstable = Text("cleared (unstable)", font_size=18, color=P.RED).move_to(ax.c2p(420, 45))
-        stable = Text("survives", font_size=20, color=P.TEAL, weight="BOLD").move_to(ax.c2p(700, 100))
+            pts = [ax.c2p(float(av), float(qv)) for av, qv in zip(a, q)]
+            boundary = VGroup()
+            for k in range(len(pts) - 1):
+                boundary.add(Line(pts[k], pts[k + 1], color=P.RED, stroke_width=4))
+            self.play(Create(boundary), run_time=1.6)
+
+            # Place region labels relative to the real boundary.
+            a_lo = amin + 0.25 * (amax - amin)
+            q_lo = float(np.interp(a_lo, a, q))
+            a_hi = amin + 0.65 * (amax - amin)
+            q_hi = float(np.interp(a_hi, a, q))
+            unstable = Text("cleared (unstable)", font_size=18, color=P.RED).move_to(
+                ax.c2p(a_lo, max(q_lo * 0.45, ytop * 0.12)))
+            stable = Text("survives", font_size=20, color=P.TEAL, weight="BOLD").move_to(
+                ax.c2p(a_hi, min(q_hi + 0.45 * (ytop - q_hi), ytop * 0.92)))
+        else:
+            ax = Axes(x_range=[200, 1000, 200], y_range=[30, 120, 30], x_length=9.5, y_length=4.0,
+                      axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
+            ax.shift(DOWN * 0.4)
+            xl = Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+            yl = Text("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
+            self.play(Create(ax), FadeIn(xl), FadeIn(yl))
+            boundary = ax.plot(lambda a: 40 + 0.045 * (a - 200), x_range=[200, 1000, 5], color=P.RED)
+            self.play(Create(boundary), run_time=1.4)
+            unstable = Text("cleared (unstable)", font_size=18, color=P.RED).move_to(ax.c2p(420, 45))
+            stable = Text("survives", font_size=20, color=P.TEAL, weight="BOLD").move_to(ax.c2p(700, 100))
         self.play(FadeIn(unstable), FadeIn(stable))
         self.play(FadeIn(layout.takeaway(
             "Only detached-enough orbits last 4.5 Gyr -- which bounds the allowed P9 family.")))
