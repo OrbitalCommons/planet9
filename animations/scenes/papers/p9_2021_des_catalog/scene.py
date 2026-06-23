@@ -5,9 +5,9 @@ magnitudes, and the orbits used to test clustering and exclusion. Reproduced in
 p9-2021-des-catalog.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, FadeOut, Rectangle, Scene, Text, UP, UR, VGroup, Write, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write, Dot
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, widgets
 
 CRATE = "p9-2021-des-catalog"
 
@@ -18,8 +18,7 @@ class DesCatalog2021(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
         # the DES footprint patch with catalogued detections
-        patch = Rectangle(width=6.0, height=3.2, color=P.PURPLE, stroke_width=2).shift(DOWN * 0.2)
-        patch.set_fill(P.PURPLE, opacity=0.06)
+        patch = widgets.footprint_rect(6.0, 3.2, fill_opacity=0.06, stroke_width=2).shift(DOWN * 0.2)
         self.play(Create(patch), FadeIn(Text("DES footprint", font_size=16, color=P.PURPLE).next_to(patch, UP, buff=0.1)))
         rng = np.random.default_rng(2021)
         dets = VGroup(*[Dot([rng.uniform(-2.8, 2.8), rng.uniform(-1.4, 1.4), 0], radius=0.05, color=P.GREEN)

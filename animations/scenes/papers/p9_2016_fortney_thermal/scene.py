@@ -6,11 +6,11 @@ detectable it is. Reproduced in p9-2016-fortney-thermal.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, UR, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, UR, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, widgets
 
 CRATE = "p9-2016-fortney-thermal"
 
@@ -21,9 +21,7 @@ class FortneyThermal2016(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[2, 20, 4], y_range=[0, 60, 20], x_length=9.0, y_length=3.9,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([2, 20, 4], [0, 60, 20], x_length=9.0, y_length=3.9, font_size=18, shift_down=0.5)
         xl = Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
         yl = Text("effective temperature (K)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))

@@ -5,9 +5,9 @@ median (~6 M⊕, a ~ 380 AU, e ~ 0.3) seeds this workspace's reference populatio
 Reproduced in p9-2021-orbit.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, Dot, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write
+from manim import Create, DOWN, Dot, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, widgets
 
 CRATE = "p9-2021-orbit"
 
@@ -17,9 +17,7 @@ class Orbit2021(Scene):
         tb = paper.title_block(CRATE, "The posterior that anchors it all")
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
-        ax = Axes(x_range=[200, 600, 100], y_range=[0, 0.6, 0.2], x_length=9.0, y_length=4.0,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.4)
+        ax = widgets.axes([200, 600, 100], [0, 0.6, 0.2], x_length=9.0, y_length=4.0, font_size=16, shift_down=0.4)
         self.play(Create(ax),
                   FadeIn(Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
                   FadeIn(Text("eccentricity", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))

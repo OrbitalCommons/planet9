@@ -5,9 +5,9 @@ detached orbits, populating the high-q region the data show. Reproduced in
 p9-2019-ossos-scattering (boundary, population).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write, Dot
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, widgets
 
 CRATE = "p9-2019-ossos-scattering"
 
@@ -17,9 +17,7 @@ class OssosScattering2019(Scene):
         tb = paper.title_block(CRATE, "Lifting orbits out of reach")
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
-        ax = Axes(x_range=[150, 700, 100], y_range=[30, 90, 20], x_length=9.3, y_length=3.9,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.4)
+        ax = widgets.axes([150, 700, 100], [30, 90, 20], x_length=9.3, y_length=3.9, font_size=16, shift_down=0.4)
         self.play(Create(ax),
                   FadeIn(Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
                   FadeIn(Text("perihelion q (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))

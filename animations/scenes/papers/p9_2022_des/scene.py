@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper, timing
+from p9_manim import dataio, layout, paper, timing, widgets
 
 CRATE = "p9-2022-des"
 
@@ -35,8 +35,8 @@ class Des2022(Scene):
         sky = Rectangle(width=10, height=2.5, color=P.MUTED, stroke_width=1.5).shift(UP * 0.7)
         sky.set_fill(P.MUTED, opacity=0.05)
         # ~12% footprint
-        foot = Rectangle(width=10 * 0.12, height=1.0, color=P.PURPLE, stroke_width=2)
-        foot.set_fill(P.PURPLE, opacity=0.2).move_to(sky.get_center() + LEFT * 3.0 + DOWN * 0.6)
+        foot = widgets.footprint_rect(10 * 0.12, 1.0, fill_opacity=0.2, stroke_width=2)
+        foot.move_to(sky.get_center() + LEFT * 3.0 + DOWN * 0.6)
         self.play(Create(sky), Create(foot))
         self.add(Text("DES footprint ~5000 deg² (deep: r ≈ 23.8)", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1))
         self.add(Text("~88% of sky unsearched by DES", font_size=15, color=P.MUTED).move_to(sky.get_center() + UP * 0.4))

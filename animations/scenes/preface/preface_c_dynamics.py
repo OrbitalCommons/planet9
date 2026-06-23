@@ -4,7 +4,6 @@ Scenes: P05Clustering, P06Precession, P07Resonance.
 """
 import numpy as np
 from manim import (
-    Arrow,
     Circle,
     Create,
     DOWN,
@@ -55,11 +54,7 @@ class P05Clustering(Scene):
         self.play(FadeIn(sun), Create(circle))
 
         def arrows(varpis):
-            g = VGroup()
-            for v in varpis:
-                g.add(Arrow(np.zeros(3), 2.7 * np.array([np.cos(v), np.sin(v), 0]),
-                            color=P.GREEN, buff=0, stroke_width=3))
-            return g
+            return orbits.apse_arrows(varpis, length=2.7, color=P.GREEN, stroke_width=3)
 
         # the mean resultant length R-bar: how confined the directions are
         rbar_def = layout.explain_equation(

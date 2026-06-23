@@ -5,9 +5,9 @@ captured by a neighbour, random-walking in semimajor axis. Reproduced in
 p9-2017-resonance-hopping.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
+from manim import Create, DOWN, FadeIn, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
 import p9_manim as P
-from p9_manim import layout, paper, timing
+from p9_manim import layout, paper, timing, widgets
 
 CRATE = "p9-2017-resonance-hopping"
 
@@ -17,9 +17,7 @@ class ResonanceHopping2017(Scene):
         tb = paper.title_block(CRATE, "Sticking, then hopping")
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
-        ax = Axes(x_range=[0, 10, 2], y_range=[300, 500, 50], x_length=9.0, y_length=3.9,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.4)
+        ax = widgets.axes([0, 10, 2], [300, 500, 50], x_length=9.0, y_length=3.9, font_size=16, shift_down=0.4)
         self.play(Create(ax),
                   FadeIn(Text("time", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)),
                   FadeIn(Text("semi-major axis (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))

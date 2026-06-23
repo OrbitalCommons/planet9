@@ -6,7 +6,6 @@ anomaly near ~108 deg. Reproduced in p9-2016-cassini-ranging.
 """
 import numpy as np
 from manim import (
-    Axes,
     Create,
     DOWN,
     Dot,
@@ -25,7 +24,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper, dataio, timing
+from p9_manim import layout, orbits, paper, dataio, timing, widgets
 
 CRATE = "p9-2016-cassini-ranging"
 
@@ -37,9 +36,7 @@ class CassiniRanging2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         # residual amplitude vs P9 true anomaly, minimum near 108 deg
-        ax = Axes(x_range=[0, 360, 90], y_range=[0, 1.1, 0.5], x_length=9.5, y_length=3.6,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.6)
+        ax = widgets.axes([0, 360, 90], [0, 1.1, 0.5], x_length=9.5, y_length=3.6, font_size=18, shift_down=0.6)
         xl = Text("Planet Nine true anomaly ν (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
         yl = Text("Earth–Saturn range residual", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, RIGHT * -1, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))

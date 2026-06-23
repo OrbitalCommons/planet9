@@ -6,7 +6,6 @@ import numpy as np
 from manim import (
     Arc,
     Arrow,
-    Axes,
     Circle,
     Create,
     DOWN,
@@ -25,7 +24,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, dataio, timing
+from p9_manim import layout, orbits, dataio, timing, widgets
 
 
 class P12Indirect(Scene):
@@ -103,9 +102,8 @@ class P13Map(Scene):
             deep = 950 + 13 * mass
             noms = [(10, 628, "BB 2016"), (5, 532, "review 2019"), (6.2, 404, "MCMC 2021")]
 
-        ax = Axes(x_range=[1, 20, 5], y_range=[100, 2000, 400], x_length=9.5, y_length=4.4,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([1, 20, 5], [100, 2000, 400], x_length=9.5, y_length=4.4,
+                          font_size=18, shift_down=0.5)
         xlab = Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
         ylab = Text("distance (AU)", font_size=18, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.15)
         self.play(Create(ax), FadeIn(xlab), FadeIn(ylab))

@@ -4,7 +4,7 @@ Uses Poincare-style variables and the mean resultant length to put a number and 
 significance on the ETNO clustering. Reproduced in p9-2019-clustering.
 """
 import numpy as np
-from manim import Arrow, Circle, Create, DOWN, FadeIn, FadeOut, Scene, UP, UR, VGroup, Write
+from manim import Circle, Create, DOWN, FadeIn, FadeOut, Scene, UP, UR, VGroup, Write
 import p9_manim as P
 from p9_manim import dataio, layout, orbits, paper, timing
 
@@ -26,8 +26,7 @@ class Clustering2019(Scene):
         else:
             rng = np.random.default_rng(2019)
             varpis = np.deg2rad(255) + rng.normal(0, np.deg2rad(16), 10)
-        arr = VGroup(*[Arrow(np.zeros(3), 2.5 * np.array([np.cos(v), np.sin(v), 0]), color=P.GREEN, buff=0, stroke_width=3)
-                       for v in varpis])
+        arr = orbits.apse_arrows(varpis, length=2.5, color=P.GREEN, stroke_width=3)
         self.play(Create(arr, lag_ratio=0.06))
         rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
         # the main circular-statistics estimator, walked term by term

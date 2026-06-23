@@ -5,9 +5,9 @@ predict the best wavebands for a thermal detection. Reproduced in
 p9-2016-cowan-thermal (SED).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, UR, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, UR, Write
 import p9_manim as P
-from p9_manim import layout, paper, dataio
+from p9_manim import layout, paper, dataio, widgets
 
 CRATE = "p9-2016-cowan-thermal"
 
@@ -18,9 +18,7 @@ class CowanThermal2016(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[0, 3, 1], y_range=[0, 1.1, 0.5], x_length=9.3, y_length=3.8,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([0, 3, 1], [0, 1.1, 0.5], x_length=9.3, y_length=3.8, font_size=16, shift_down=0.5)
         self.play(Create(ax), FadeIn(Text("wavelength (µm, log)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)))
         for lx, t in [(0, "1"), (1, "10"), (2, "100"), (3, "1000")]:
             self.add(Text(t, font_size=13, color=P.MUTED).next_to(ax.c2p(lx, 0), DOWN, buff=0.1))

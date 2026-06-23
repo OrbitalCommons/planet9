@@ -6,11 +6,11 @@ librate around it. Reproduced in p9-2018-secular-dynamics (free precession rate)
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, Dot, FadeIn, FadeOut, LEFT, ParametricFunction, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, Dot, FadeIn, FadeOut, LEFT, ParametricFunction, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper, timing
+from p9_manim import dataio, layout, paper, timing, widgets
 
 CRATE = "p9-2018-secular-dynamics"
 
@@ -21,9 +21,7 @@ class SecularDynamics2018(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[-0.8, 0.8, 0.4], y_range=[-0.8, 0.8, 0.4], x_length=5.6, y_length=5.6,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.3)
+        ax = widgets.axes([-0.8, 0.8, 0.4], [-0.8, 0.8, 0.4], x_length=5.6, y_length=5.6, font_size=16, shift_down=0.3)
         xl = layout.equation(r"k = e\cos\Delta\varpi", color=P.FG).scale(0.5).next_to(ax, DOWN, buff=0.15)
         yl = layout.equation(r"h = e\sin\Delta\varpi", color=P.FG).scale(0.5).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))

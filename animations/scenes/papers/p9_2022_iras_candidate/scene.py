@@ -4,10 +4,9 @@ An earlier IRAS-based candidate search: flag moving far-IR sources consistent
 with a cold, distant body's flux and motion -- the precursor to the IRAS+AKARI
 pair search. Reproduced in p9-2022-iras-candidate.
 """
-import numpy as np
-from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write, Dot
 import p9_manim as P
-from p9_manim import layout, paper, timing
+from p9_manim import layout, paper, timing, widgets
 
 CRATE = "p9-2022-iras-candidate"
 
@@ -17,9 +16,7 @@ class IrasCandidate2022(Scene):
         tb = paper.title_block(CRATE, "Combing the IRAS archive")
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
-        rng = np.random.default_rng(1983)
-        bg = VGroup(*[Dot([rng.uniform(-6, 6), rng.uniform(-2.2, 2.0), 0], radius=0.02, color=P.MUTED).set_opacity(0.5)
-                      for _ in range(90)])
+        bg = widgets.star_field(n=90, seed=1983, x=(-6, 6), y=(-2.2, 2.0), radius=0.02, opacity=0.5)
         self.play(FadeIn(bg, lag_ratio=0.004))
         cand = Dot([1.0, 0.3, 0], radius=0.12, color=P.RED)
         self.play(FadeIn(cand))

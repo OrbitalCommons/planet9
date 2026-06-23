@@ -5,7 +5,6 @@ A cold Planet Nine would have moved measurably between the IRAS (1983) and AKARI
 the right ~23-year motion yields a short candidate list. Reproduced in
 p9-2025-iras-akari.
 """
-import numpy as np
 from manim import (
     Arrow,
     Create,
@@ -18,12 +17,11 @@ from manim import (
     Scene,
     Text,
     UP,
-    VGroup,
     Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper, timing
+from p9_manim import layout, paper, timing, widgets
 
 CRATE = "p9-2025-iras-akari"
 
@@ -34,9 +32,7 @@ class IrasAkari2025(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        rng = np.random.default_rng(1983)
-        bg = VGroup(*[Dot([rng.uniform(-6, 6), rng.uniform(-2.2, 2.0), 0], radius=0.02, color=P.MUTED)
-                      .set_opacity(0.5) for _ in range(80)])
+        bg = widgets.star_field(n=80, seed=1983, x=(-6, 6), y=(-2.2, 2.0), radius=0.02, opacity=0.5)
         self.play(FadeIn(bg, lag_ratio=0.005))
 
         # IRAS 1983 detection, AKARI 2006 detection, shifted by proper motion

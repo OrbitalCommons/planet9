@@ -6,7 +6,6 @@ than circulating freely. Reproduced in p9-2017-dynamics (phase-space/Hamiltonian
 """
 import numpy as np
 from manim import (
-    Axes,
     Create,
     DOWN,
     Dot,
@@ -26,7 +25,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper, timing
+from p9_manim import dataio, layout, paper, timing, widgets
 
 CRATE = "p9-2017-dynamics"
 
@@ -37,9 +36,7 @@ class Dynamics2017(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[0, 360, 90], y_range=[0, 0.8, 0.2], x_length=9.5, y_length=4.2,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.4)
+        ax = widgets.axes([0, 360, 90], [0, 0.8, 0.2], x_length=9.5, y_length=4.2, font_size=18, shift_down=0.4)
         xl = layout.equation(r"\Delta\varpi\ \text{(deg, relative to P9)}", color=P.FG).scale(0.6).next_to(ax, DOWN, buff=0.2)
         yl = Text("eccentricity", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))

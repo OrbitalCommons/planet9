@@ -32,8 +32,7 @@ class ApsidalClustering2026(Scene):
         else:
             rng = np.random.default_rng(2026)
             varpis = np.deg2rad(60) + rng.normal(0, np.deg2rad(20), 11)
-        arr = VGroup(*[Arrow(np.zeros(3), 2.5 * np.array([np.cos(v), np.sin(v), 0]),
-                             color=P.GREEN, buff=0, stroke_width=3) for v in varpis])
+        arr = orbits.apse_arrows(varpis, length=2.5, color=P.GREEN, stroke_width=3)
         self.play(Create(arr, lag_ratio=0.08))
 
         rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)

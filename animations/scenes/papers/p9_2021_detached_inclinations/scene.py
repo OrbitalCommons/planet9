@@ -6,11 +6,11 @@ in p9-2021-detached-inclinations (forced inclination).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper, timing
+from p9_manim import layout, paper, timing, widgets
 
 CRATE = "p9-2021-detached-inclinations"
 
@@ -21,9 +21,7 @@ class DetachedInclinations2021(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[0, 40, 10], y_range=[0, 1.05, 0.5], x_length=9.3, y_length=3.9,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.4)
+        ax = widgets.axes([0, 40, 10], [0, 1.05, 0.5], x_length=9.3, y_length=3.9, font_size=18, shift_down=0.4)
         xl = Text("inclination (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
         yl = Text("relative number", font_size=16, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))

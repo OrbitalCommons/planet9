@@ -5,9 +5,9 @@ its present-day brightness in reflected and thermal light. Reproduced in
 p9-2016-linder-evolution.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, widgets
 
 CRATE = "p9-2016-linder-evolution"
 
@@ -18,9 +18,7 @@ class LinderEvolution2016(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[0, 4.5, 1], y_range=[0, 120, 30], x_length=9.0, y_length=3.8,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([0, 4.5, 1], [0, 120, 30], x_length=9.0, y_length=3.8, font_size=16, shift_down=0.5)
         self.play(Create(ax),
                   FadeIn(Text("age (Gyr)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
                   FadeIn(Text("effective temperature (K)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))

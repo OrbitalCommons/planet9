@@ -6,7 +6,6 @@ solutions. Reproduced in p9-2019-tess-yield (TessStack, detectable_fraction).
 """
 import numpy as np
 from manim import (
-    Axes,
     Create,
     DOWN,
     FadeIn,
@@ -20,7 +19,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper, timing
+from p9_manim import dataio, layout, paper, timing, widgets
 
 CRATE = "p9-2019-tess-yield"
 
@@ -42,9 +41,7 @@ class TessYield2019(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        ax = Axes(x_range=[18, 24, 1], y_range=[0, 1.05, 0.5], x_length=9.0, y_length=3.8,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([18, 24, 1], [0, 1.05, 0.5], x_length=9.0, y_length=3.8, font_size=18, shift_down=0.5)
         xl = Text("apparent magnitude (I_C)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
         yl = Text("detection efficiency", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, [-1, 0, 0], buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))

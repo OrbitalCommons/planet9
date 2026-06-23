@@ -5,9 +5,9 @@ some objects to large q ("broad" vs "narrow" outcomes). Reproduced in
 p9-2018-kuiper-belt (population analysis).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, widgets
 
 CRATE = "p9-2018-kuiper-belt"
 
@@ -17,9 +17,7 @@ class KuiperBelt2018(Scene):
         tb = paper.title_block(CRATE, "Spreading the perihelia")
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
-        ax = Axes(x_range=[30, 100, 20], y_range=[0, 1.05, 0.5], x_length=9.0, y_length=3.8,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([30, 100, 20], [0, 1.05, 0.5], x_length=9.0, y_length=3.8, font_size=16, shift_down=0.5)
         self.play(Create(ax), FadeIn(Text("perihelion q (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)))
 
         def g(x, mu, s):

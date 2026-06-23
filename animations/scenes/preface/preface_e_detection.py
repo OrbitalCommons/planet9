@@ -13,7 +13,6 @@ from manim import (
     LEFT,
     Line,
     RIGHT,
-    Rectangle,
     Scene,
     Text,
     UP,
@@ -25,7 +24,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, dataio, timing
+from p9_manim import layout, orbits, dataio, timing, widgets
 
 
 def _reflected_mag(mass_earth, r_au):
@@ -150,9 +149,8 @@ class P10Thermal(Scene):
         self.play(FadeOut(planck))
 
         # x axis = log10(wavelength / micron) from -1 (0.1) to 3 (1000)
-        ax = Axes(x_range=[-1, 3, 1], y_range=[0, 1.1, 0.5], x_length=9.5, y_length=3.8,
-                  axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
-        ax.shift(DOWN * 0.5)
+        ax = widgets.axes([-1, 3, 1], [0, 1.1, 0.5], x_length=9.5, y_length=3.8,
+                          font_size=18, shift_down=0.5)
         xlab = Text("wavelength (µm)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.3)
         self.play(Create(ax), FadeIn(xlab))
         # tick relabels
@@ -243,14 +241,12 @@ class P11Surveys(Scene):
                      color=P.FG, font_size=30, weight="BOLD").to_edge(UP, buff=0.6)
         self.play(Write(title))
 
-        rng = np.random.default_rng(11)
-        stars = VGroup(*[Dot(np.array([rng.uniform(-6, 6), rng.uniform(-2.6, 2.4), 0]),
-                             radius=0.02, color=P.FG).set_opacity(0.5) for _ in range(120)])
+        stars = widgets.star_field(n=120, seed=11, x=(-6, 6), y=(-2.6, 2.4),
+                                   color=P.FG, radius=0.02, opacity=0.5)
         self.play(FadeIn(stars, lag_ratio=0.005), run_time=1.2)
 
         # a survey footprint (covers part of the sky)
-        foot = Rectangle(width=6.5, height=3.2, color=P.PURPLE, stroke_width=2).shift(LEFT * 2.3 + DOWN * 0.1)
-        foot.set_fill(P.PURPLE, opacity=0.06)
+        foot = widgets.footprint_rect(6.5, 3.2, fill_opacity=0.06, stroke_width=2).shift(LEFT * 2.3 + DOWN * 0.1)
         foot_lbl = Text("survey footprint (limited sky + depth)", font_size=16, color=P.PURPLE)
         foot_lbl.next_to(foot, UP, buff=0.08)
         self.play(Create(foot), FadeIn(foot_lbl))
