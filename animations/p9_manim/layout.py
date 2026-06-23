@@ -1,4 +1,5 @@
-"""Reusable on-screen furniture: title cards, citation chips, captions, takeaways."""
+"""Reusable on-screen furniture: title cards, citation chips, captions, takeaways,
+classy equations, and reading-paced end-of-section beats."""
 from manim import (
     DOWN,
     LEFT,
@@ -6,14 +7,17 @@ from manim import (
     UP,
     UR,
     DL,
+    FadeIn,
     MathTex,
     Rectangle,
     SurroundingRectangle,
     Text,
     VGroup,
+    Write,
 )
 
 from . import theme as T
+from . import timing
 
 
 def title_card(title, subtitle=None):
@@ -61,3 +65,39 @@ def footer_credit(text="p9-core models"):
     t = Text(text, color=T.MUTED, font_size=14)
     t.to_corner(DL, buff=0.25)
     return t
+
+
+# ---- classy equations -------------------------------------------------------
+
+def equation(tex, color=None, scale=1.0, t2c=None):
+    """A LaTeX equation in the house style: serif math, accent colour, optional
+    per-symbol colouring via ``t2c`` (a {substring: color} map)."""
+    m = MathTex(tex, color=color or T.TEAL, tex_to_color_map=t2c or {})
+    return m.scale(scale)
+
+
+def equation_card(tex, color=None, scale=1.0, t2c=None):
+    """A feature equation seated on a faint rounded card — the classy 'hero'
+    treatment for a scene's governing relation."""
+    m = equation(tex, color=color or T.FG, scale=scale, t2c=t2c)
+    card = SurroundingRectangle(m, color=T.MUTED, buff=0.32, corner_radius=0.16)
+    card.set_stroke(T.MUTED, width=1.3, opacity=0.6).set_fill("#222436", opacity=0.7)
+    return VGroup(card, m)
+
+
+def show_equation(scene, mobj, settle=1.0, run_time=1.1):
+    """Write an equation in and hold it long enough to read (reading-paced)."""
+    scene.play(Write(mobj), run_time=run_time)
+    timing.hold_to_read(scene, mobj, settle=settle)
+    return mobj
+
+
+# ---- reading-paced end-of-section beat --------------------------------------
+
+def show_takeaway(scene, text, settle=2.5):
+    """Fade in the takeaway and HOLD it long enough to read without pausing the
+    video (reading time + a still settle pause). Use at the end of every scene."""
+    box = takeaway(text)
+    scene.play(FadeIn(box, shift=UP * 0.15))
+    timing.hold_to_read(scene, text, settle=settle)
+    return box
