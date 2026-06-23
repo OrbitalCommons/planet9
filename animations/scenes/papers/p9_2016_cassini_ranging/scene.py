@@ -25,7 +25,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper, dataio
+from p9_manim import layout, orbits, paper, dataio, timing
 
 CRATE = "p9-2016-cassini-ranging"
 
@@ -77,8 +77,17 @@ class CassiniRanging2016(Scene):
         ro = paper.result_readout("least disturbance to Cassini at", "ν ≈ 108°–129°", color=P.ORANGE)
         ro.scale(0.8).to_corner(UP + RIGHT, buff=0.4)
         self.play(FadeIn(ro))
-        self.wait(0.4)
+        timing.hold_to_read(self, ro)
         self.play(FadeOut(ro))
-        self.play(FadeIn(layout.takeaway(
-            "Spacecraft ranging both constrains the mass and points to where P9 hides.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\Delta\rho \propto GM_9\!\left[\dfrac{\mathbf r_9-\mathbf r_S}"
+            r"{|\mathbf r_9-\mathbf r_S|^3} - \dfrac{\mathbf r_9}{r_9^3}\right]",
+            scale=0.9)
+        eq.shift(DOWN * 0.6)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self,
+            "Spacecraft ranging both constrains the mass and points to where P9 hides.")

@@ -6,7 +6,7 @@ Reproduced in p9-2025-planet-y (Laplace-plane warp).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, ParametricFunction, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, ParametricFunction, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -35,6 +35,12 @@ class PlanetY2025(Scene):
         py = orbits.body_dot(1.4, 0.2, np.deg2rad(40), color=P.BLUE, radius=0.1)
         py_lbl = Text("'Planet Y' (smaller, closer, inclined)", font_size=15, color=P.BLUE).next_to(py, UP, buff=0.1)
         self.play(FadeIn(py), FadeIn(py_lbl))
-        self.play(FadeIn(layout.takeaway(
-            "Not every anomaly needs Planet Nine -- a nearer small world can warp the belt's plane.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\text{Laplace-plane warp:}\ \ i_{\rm forced}(a)",
+            scale=0.85).to_edge(UP, buff=1.4)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Not every anomaly needs Planet Nine -- a nearer small world can warp the belt's plane.")

@@ -5,7 +5,7 @@ the precession pattern that maintains their alignment. Reproduced in
 p9-2020-clement-precession.
 """
 import numpy as np
-from manim import Create, FadeIn, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw
+from manim import Create, FadeIn, FadeOut, Scene, Text, UP, UR, Write, rate_functions, ValueTracker, always_redraw
 import p9_manim as P
 from p9_manim import layout, orbits, paper
 
@@ -28,5 +28,12 @@ class ClementPrecession2020(Scene):
         self.add(live)
         self.add(Text("apsides drift together → stay clustered", font_size=17, color=P.TEAL).to_edge(UP, buff=1.5))
         self.play(d.animate.set_value(np.pi), run_time=4.0, rate_func=rate_functions.linear)
-        self.play(FadeIn(layout.takeaway("Coupled precession keeps the cluster intact as it slowly rotates.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\dot\varpi_k \approx \text{const}\ \Rightarrow\ \Delta\varpi\ \text{preserved}",
+            scale=0.78).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Coupled precession keeps the cluster intact as it slowly rotates.")

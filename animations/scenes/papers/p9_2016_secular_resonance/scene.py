@@ -6,12 +6,12 @@ in the alignment. Reproduced in p9-2016-secular-resonance (libration center/amp)
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write, always_redraw,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write, always_redraw,
     rate_functions, ValueTracker, Dot,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2016-secular-resonance"
 
@@ -36,7 +36,16 @@ class SecularResonance2016(Scene):
                                         color=P.GREEN, radius=0.07))
         self.add(dot)
         self.play(t.animate.set_value(10.0), run_time=3.0, rate_func=rate_functions.linear)
-        self.play(FadeIn(Text("Δϖ oscillates -- it never runs away", font_size=18, color=P.TEAL).to_edge(UP, buff=1.5)))
-        self.play(FadeIn(layout.takeaway(
-            "A secular resonance holds the apsidal angle fixed -- alignment without luck.")))
-        self.wait(0.9)
+        msg = Text("Δϖ oscillates -- it never runs away", font_size=18, color=P.TEAL).to_edge(UP, buff=1.5)
+        self.play(FadeIn(msg))
+        timing.hold_to_read(self, msg, settle=0.6)
+        self.play(FadeOut(msg))
+
+        eq = layout.equation_card(
+            r"\dot\phi = 0,\quad \phi = \varpi - \varpi_9"
+            r"\qquad \ddot{\Delta\varpi} = -\,\omega_{\rm lib}^2\,\Delta\varpi"
+        ).scale(0.72).to_edge(UP, buff=1.2)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "A secular resonance holds the apsidal angle fixed -- alignment without luck.")

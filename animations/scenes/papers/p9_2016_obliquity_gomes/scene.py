@@ -5,9 +5,9 @@ plane away from the Sun's equator, accumulating to ~6 deg. Reproduced in
 p9-2016-obliquity-gomes.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Line, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw
+from manim import Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2016-obliquity-gomes"
 
@@ -27,5 +27,12 @@ class ObliquityGomes2016(Scene):
         deg = always_redraw(lambda: Text(f"{tilt.get_value():.1f}°", font_size=22, color=P.BLUE).to_corner(UP, buff=1.4).shift([3.5, 0, 0]))
         self.add(plane, deg, Text("planets' plane", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.6))
         self.play(tilt.animate.set_value(6.0), run_time=3.5, rate_func=rate_functions.smooth)
-        self.play(FadeIn(layout.takeaway("Same 6° puzzle, same culprit -- whether you tilt the Sun or the planets.")))
-        self.wait(0.9)
+        self.wait(0.5)
+
+        eq = layout.equation_card(r"\varepsilon \to 6^\circ", scale=1.0)
+        eq.to_edge(DOWN, buff=1.6).shift([3.2, 0, 0])
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Same 6° puzzle, same culprit -- whether you tilt the Sun or the planets.")

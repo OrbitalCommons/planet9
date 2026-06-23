@@ -23,7 +23,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2025-iras-akari"
 
@@ -48,14 +48,17 @@ class IrasAkari2025(Scene):
         arr = Arrow(p1.get_center(), p2.get_center(), color=P.TEAL, buff=0.12, stroke_width=3)
         self.play(FadeIn(p2), FadeIn(l2), Create(arr))
         mv = Text("proper motion over 23 yr matches a ~500–700 AU body",
-                  font_size=16, color=P.TEAL).next_to(arr, DOWN, buff=0.4)
+                  font_size=16, color=P.TEAL).next_to(arr, DOWN, buff=0.3)
         self.play(FadeIn(mv))
-        self.wait(0.3)
+        timing.hold_to_read(self, mv, settle=0.6)
 
-        ro = paper.result_readout("candidates after flux + motion cuts", "1 good candidate", color=P.ORANGE)
-        ro.scale(0.8).to_edge(DOWN, buff=1.4)
+        eq = layout.equation(r"\mu = \dfrac{\Delta\theta}{\Delta t}\ (23\ \mathrm{yr})", color=P.TEAL, scale=0.7)
+        ro = paper.result_readout("candidates after flux + motion cuts", "1 good candidate", color=P.ORANGE).scale(0.7)
+        row = VGroup(eq, ro).arrange(RIGHT, buff=0.8)
+        row.next_to(mv, DOWN, buff=0.45)
+        self.play(Write(eq))
         self.play(FadeIn(ro))
-        self.wait(0.4)
-        self.play(FadeIn(layout.takeaway(
-            "Thermal surveys give an independent channel -- candidates still need follow-up.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, eq, ro, settle=0.8)
+
+        layout.show_takeaway(
+            self, "Thermal surveys give an independent channel -- candidates still need follow-up.")

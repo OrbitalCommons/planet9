@@ -4,7 +4,7 @@ Combines the dynamical and survey constraints into a posterior on P9's orbit
 (mass, a, e, i), narrowing where to point. Reproduced in p9-2024-siraj-orbit.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write, Dot, VGroup
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write, Dot, VGroup
 import p9_manim as P
 from p9_manim import dataio, layout, paper
 
@@ -53,5 +53,11 @@ class SirajOrbit2024(Scene):
             best = Dot(ax.c2p(6, 460), radius=0.08, color=P.GREEN)
             self.play(FadeIn(best))
             self.add(Text("best estimate", font_size=15, color=P.GREEN).next_to(best, UP, buff=0.1))
-        self.play(FadeIn(layout.takeaway("Folding every constraint together points to a few-Earth-mass body near ~450 AU.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"P(m,\,a,\,e,\,i \mid \mathcal{D})", scale=0.85).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Folding every constraint together points to a few-Earth-mass body near ~450 AU.")

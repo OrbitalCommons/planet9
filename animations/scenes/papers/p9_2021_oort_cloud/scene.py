@@ -5,9 +5,9 @@ cluster, parked in the inner Oort cloud (a ~ 2000-20000 AU) -- which is also a
 source of detached objects. Reproduced in p9-2021-oort-cloud.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2021-oort-cloud"
 
@@ -24,9 +24,19 @@ class OortCloud2021(Scene):
         swarm = orbits.etno_swarm([(rng.uniform(2.0, 3.4), rng.uniform(0.6, 0.85), rng.uniform(0, 2 * np.pi))
                                    for _ in range(9)], color=P.GREEN, opacity=0.6)
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.06), run_time=2.0)
-        self.add(Text("inner Oort cloud: a ≈ 2000–20000 AU", font_size=17, color=P.GREEN).to_edge(UP, buff=1.5))
+        ilbl = Text("inner Oort cloud: a ≈ 2000–20000 AU", font_size=17, color=P.GREEN).to_edge(UP, buff=1.5)
+        self.play(FadeIn(ilbl))
+        timing.hold_to_read(self, ilbl, settle=0.4)
         p9 = orbits.ellipse_orbit(3.0, 0.4, color=P.BLUE, varpi=np.deg2rad(40), stroke_width=3)
         self.play(Create(p9))
-        self.add(Text("P9: a scattered ice giant?", font_size=16, color=P.BLUE).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway("The Sun's birth cluster could have made -- and parked -- Planet Nine.")))
-        self.wait(0.9)
+        plbl = Text("P9: a scattered ice giant?", font_size=16, color=P.BLUE).to_edge(DOWN, buff=1.5)
+        self.play(FadeIn(plbl))
+        timing.hold_to_read(self, plbl, settle=0.4)
+
+        eq = layout.equation_card(
+            r"a \sim 2{,}000\text{--}20{,}000\ \mathrm{AU}"
+        ).scale(0.8).to_corner(UP + RIGHT, buff=0.5).shift(DOWN * 0.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "The Sun's birth cluster could have made -- and parked -- Planet Nine.")

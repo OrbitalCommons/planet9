@@ -5,9 +5,9 @@ and their fractions -- testing whether P9 leaves a resonant fingerprint.
 Reproduced in p9-2020-resonance-hopping (classification).
 """
 import numpy as np
-from manim import AnnularSector, Create, FadeIn, Scene, Text, UP, VGroup, Write
+from manim import AnnularSector, Create, FadeIn, LEFT, Scene, Text, UP, VGroup, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2020-resonance-hopping"
 
@@ -30,5 +30,9 @@ class ResonanceHopping2020(Scene):
             start += ang
         for wg in wedges:
             self.play(Create(wg[0]), FadeIn(wg[1]), run_time=0.7)
-        self.play(FadeIn(layout.takeaway("A resonant sub-population would be a smoking gun for Planet Nine.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(r"\phi_{p:q} \ \text{librates}").scale(0.7).to_edge(LEFT, buff=0.4)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "A resonant sub-population would be a smoking gun for Planet Nine.")

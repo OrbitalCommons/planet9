@@ -27,7 +27,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits
+from p9_manim import layout, orbits, timing
 
 
 class P00Hook(Scene):
@@ -61,12 +61,11 @@ class P01Ellipse(Scene):
         badge = layout.concept_badge("PREFACE 01")
         self.add(badge)
 
-        law = MathTex(r"\vec{F} = -\,\frac{G M m}{r^2}\,\hat{r}", color=P.FG).scale(1.1)
-        self.play(Write(law))
-        self.wait(0.5)
+        law = layout.equation_card(r"\vec{F} = -\,\frac{G M m}{r^2}\,\hat{r}").scale(1.1)
+        layout.show_equation(self, law)
         sub = layout.caption("one inverse-square pull -> the bound orbit is an ELLIPSE")
         self.play(law.animate.scale(0.6).to_edge(UP, buff=0.9), FadeIn(sub))
-        self.wait(0.4)
+        timing.hold_to_read(self, sub, settle=0.6)
         self.play(FadeOut(sub))
 
         a, e = 3.3, 0.6
@@ -83,26 +82,31 @@ class P01Ellipse(Scene):
         center = (peri + apo) / 2.0
         major = Line(apo, peri, color=P.MUTED, stroke_width=2)
         a_line = Line(center, peri, color=P.TEAL, stroke_width=4)
-        a_lbl = MathTex("a", color=P.TEAL).scale(0.8).next_to(a_line, UP, buff=0.12)
+        a_lbl = layout.equation("a", color=P.TEAL).scale(0.8).next_to(a_line, UP, buff=0.12)
         self.play(Create(major))
         self.play(Create(a_line), FadeIn(a_lbl))
 
         # perihelion / aphelion markers
         q_dot = orbits.body_dot(a, e, 0.0, color=P.GREEN)
         Q_dot = orbits.body_dot(a, e, np.pi, color=P.RED)
-        q_lbl = MathTex(r"q = a(1-e)", color=P.GREEN).scale(0.6).next_to(q_dot, RIGHT, buff=0.15)
-        Q_lbl = MathTex(r"Q = a(1+e)", color=P.RED).scale(0.6).next_to(Q_dot, LEFT, buff=0.15)
+        q_lbl = layout.equation(r"q = a(1-e)", color=P.GREEN).scale(0.6).next_to(q_dot, RIGHT, buff=0.15)
+        Q_lbl = layout.equation(r"Q = a(1+e)", color=P.RED).scale(0.6).next_to(Q_dot, LEFT, buff=0.15)
         self.play(FadeIn(q_dot, q_lbl), FadeIn(Q_dot, Q_lbl))
-        self.wait(0.3)
+        timing.hold_to_read(self, q_lbl, Q_lbl, settle=0.6)
 
-        e_lbl = MathTex(r"e:\ \text{eccentricity (how stretched)}", color=P.FG).scale(0.6)
+        # the orbit equation r(nu) as a brief hero beat
+        r_eq = layout.equation_card(r"r(\nu) = \dfrac{a(1-e^2)}{1 + e\cos\nu}").scale(0.8)
+        r_eq.to_edge(DOWN, buff=0.9)
+        layout.show_equation(self, r_eq)
+        self.play(FadeOut(r_eq))
+
+        e_lbl = layout.equation(r"e:\ \text{eccentricity (how stretched)}", color=P.FG).scale(0.6)
         e_lbl.to_edge(DOWN, buff=0.6)
         self.play(FadeIn(e_lbl))
-        self.wait(0.4)
+        timing.hold_to_read(self, e_lbl, settle=0.4)
         self.play(FadeOut(e_lbl))
 
-        self.play(FadeIn(layout.takeaway("A bound orbit is an ellipse; the Sun sits at one focus.")))
-        self.wait(0.8)
+        layout.show_takeaway(self, "A bound orbit is an ellipse; the Sun sits at one focus.")
 
 
 class P02KeplerLaws(Scene):
@@ -128,6 +132,12 @@ class P02KeplerLaws(Scene):
         apo_sec = sector(np.deg2rad(150), np.deg2rad(210))
         self.play(FadeIn(peri_sec), FadeIn(apo_sec))
 
+        area_eq = layout.equation(
+            r"\dfrac{dA}{dt} = \tfrac12 r^2\dot\nu = \text{const}", color=P.GREEN
+        ).scale(0.7).to_corner(UP + RIGHT, buff=0.5)
+        self.play(Write(area_eq))
+        timing.hold_to_read(self, area_eq, settle=0.4)
+
         M = ValueTracker(0.0)
         body = always_redraw(
             lambda: orbits.body_dot(a, e, orbits.nu_from_mean_anomaly(e, M.get_value()), color=P.GREEN)
@@ -139,12 +149,19 @@ class P02KeplerLaws(Scene):
         self.add(radius, body)
         self.play(M.animate.set_value(2 * np.pi), run_time=5.0, rate_func=rate_functions.linear)
         self.wait(0.2)
-        self.play(FadeOut(peri_sec), FadeOut(apo_sec), FadeOut(radius), FadeOut(body), FadeOut(k2))
+        self.play(FadeOut(peri_sec), FadeOut(apo_sec), FadeOut(radius), FadeOut(body),
+                  FadeOut(k2), FadeOut(area_eq))
+
+        # --- vis-viva: speed at any point on the orbit ---
+        vv = layout.equation(r"v^2 = GM\!\left(\dfrac{2}{r}-\dfrac{1}{a}\right)", color=P.TEAL)
+        vv.to_edge(UP, buff=0.9)
+        self.play(Write(vv))
+        timing.hold_to_read(self, vv, settle=0.5)
+        self.play(FadeOut(vv))
 
         # --- Kepler III ---
-        k3 = MathTex(r"P^2 \;=\; a^3 \quad (\text{years, AU})", color=P.FG)
+        k3 = layout.equation_card(r"P^2 \;=\; a^3 \quad (\text{years, AU})")
         k3.to_edge(UP, buff=1.0)
-        self.play(Write(k3))
-        self.play(FadeIn(layout.takeaway(
-            "Farther = slower. Planet Nine's orbit takes ~10,000 yr -- we cannot wait one.")))
-        self.wait(0.8)
+        layout.show_equation(self, k3)
+        layout.show_takeaway(
+            self, "Farther = slower. Planet Nine's orbit takes ~10,000 yr -- we cannot wait one.")

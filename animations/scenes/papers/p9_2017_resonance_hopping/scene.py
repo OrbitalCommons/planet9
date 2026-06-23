@@ -7,7 +7,7 @@ p9-2017-resonance-hopping.
 import numpy as np
 from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2017-resonance-hopping"
 
@@ -34,5 +34,11 @@ class ResonanceHopping2017(Scene):
         dot = always_redraw(lambda: Dot(ax.c2p(tr.get_value(), val(tr.get_value())), color=P.GREEN, radius=0.08))
         self.add(dot)
         self.play(tr.animate.set_value(8.9), run_time=5.0, rate_func=rate_functions.linear)
-        self.play(FadeIn(layout.takeaway("Resonances trap, release, and re-trap -- so a's spread over time.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"a:\ \text{random walk among } a_{\rm res}"
+        ).scale(0.85).to_edge(DOWN, buff=1.6)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Resonances trap, release, and re-trap -- so a's spread over time.")

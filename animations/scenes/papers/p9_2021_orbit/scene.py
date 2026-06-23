@@ -5,7 +5,7 @@ median (~6 M⊕, a ~ 380 AU, e ~ 0.3) seeds this workspace's reference populatio
 Reproduced in p9-2021-orbit.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, Dot, FadeIn, Scene, Text, UP, VGroup, Write
+from manim import Axes, Create, DOWN, Dot, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write
 import p9_manim as P
 from p9_manim import dataio, layout, paper
 
@@ -41,5 +41,12 @@ class Orbit2021(Scene):
         self.play(FadeIn(med), FadeIn(Text(
             f"median: {med_m:.1f} M⊕, {med_a:.0f} AU, e={med_e:.2g}",
             font_size=15, color=P.GREEN).next_to(med, UP, buff=0.15)))
-        self.play(FadeIn(layout.takeaway("Every survey-reach figure in this project samples from this posterior.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\hat\theta_{\rm MCMC} = (6.2\,M_\oplus,\ 380\,\mathrm{AU},\ 0.3)",
+            scale=0.8).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Every survey-reach figure in this project samples from this posterior.")

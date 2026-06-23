@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2018-secular-dynamics"
 
@@ -24,8 +24,8 @@ class SecularDynamics2018(Scene):
         ax = Axes(x_range=[-0.8, 0.8, 0.4], y_range=[-0.8, 0.8, 0.4], x_length=5.6, y_length=5.6,
                   axis_config={"color": P.MUTED, "include_tip": False, "font_size": 16})
         ax.shift(DOWN * 0.3)
-        xl = Text("k = e·cos Δϖ", font_size=16, color=P.FG).next_to(ax, DOWN, buff=0.15)
-        yl = Text("h = e·sin Δϖ", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
+        xl = layout.equation(r"k = e\cos\Delta\varpi", color=P.FG).scale(0.5).next_to(ax, DOWN, buff=0.15)
+        yl = layout.equation(r"h = e\sin\Delta\varpi", color=P.FG).scale(0.5).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         data = dataio.section("phase_portrait")
@@ -75,6 +75,12 @@ class SecularDynamics2018(Scene):
                                    t_range=[0, 2 * np.pi], color=P.TEAL).set_stroke(opacity=0.8)
                 for r in (0.12, 0.24, 0.36)])
             self.play(Create(loops, lag_ratio=0.2), run_time=1.8)
-        self.play(FadeIn(layout.takeaway(
-            "P9's torque sets a forced eccentricity; orbits cycle around it, anti-aligned.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"(k,h) = e\,(\cos\Delta\varpi,\ \sin\Delta\varpi)"
+            r"\qquad \rightarrow\ e_{\rm forced}"
+        ).scale(0.78).to_edge(DOWN, buff=1.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "P9's torque sets a forced eccentricity; orbits cycle around it, anti-aligned.")

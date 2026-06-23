@@ -6,11 +6,11 @@ Reproduced in p9-2018-low-perihelion.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2018-low-perihelion"
 
@@ -28,7 +28,12 @@ class LowPerihelion2018(Scene):
         self.play(FadeIn(sun), Create(high))
         self.add(Text("high-perihelion P9", font_size=14, color=P.MUTED).next_to(high, UP, buff=0.05))
         self.play(Create(low))
-        self.add(Text("low-perihelion P9 (more eccentric)", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway(
-            "P9's own perihelion is a free parameter -- and it changes how it sculpts the belt.")))
-        self.wait(0.9)
+        llbl = Text("low-perihelion P9 (more eccentric)", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.5)
+        self.play(FadeIn(llbl))
+        timing.hold_to_read(self, llbl, settle=0.4)
+
+        eq = layout.equation_card(r"q_9 = a_9\,(1-e_9)").scale(0.8).to_corner(UP + RIGHT, buff=0.5).shift(DOWN * 0.6)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "P9's own perihelion is a free parameter -- and it changes how it sculpts the belt.")

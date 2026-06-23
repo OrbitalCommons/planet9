@@ -20,7 +20,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2017-ossos-bias"
 
@@ -41,7 +41,7 @@ class OssosBias2017(Scene):
         r0 = orbits.mean_resultant_length(varpis)
         lab0 = Text(f"intrinsic sample: isotropic (R̄ ≈ {r0:.2f})", font_size=18, color=P.GREEN).to_corner(UR, buff=0.4)
         self.play(Write(lab0))
-        self.wait(0.3)
+        timing.hold_to_read(self, lab0, settle=1.0)
 
         # the survey can only DETECT objects whose perihelion falls in a sky wedge
         wedge = AnnularSector(inner_radius=0.2, outer_radius=3.4, angle=np.deg2rad(70),
@@ -50,6 +50,12 @@ class OssosBias2017(Scene):
         wlab = Text("where/when the survey can actually see them", font_size=15, color=P.PURPLE)
         wlab.to_edge(DOWN, buff=1.5)
         self.play(FadeIn(wedge), FadeIn(wlab))
+        timing.hold_to_read(self, wlab, settle=0.6)
+
+        # detections trace the intrinsic parent modulated by the selection function
+        eq = layout.equation(r"N_{\rm det}(\varpi) \propto N_0\, S(\varpi)", color=P.PURPLE).scale(0.7)
+        eq.next_to(wlab, UP, buff=0.3)
+        layout.show_equation(self, eq, settle=1.0)
 
         # highlight only the detectable subset -> looks clustered
         detected = [v for v in varpis if np.deg2rad(20) <= (v % (2 * np.pi)) <= np.deg2rad(90)]
@@ -58,6 +64,6 @@ class OssosBias2017(Scene):
         rd = orbits.mean_resultant_length(detected) if len(detected) > 1 else 1.0
         lab1 = Text(f"detected subset looks clustered (R̄ ≈ {rd:.2f})", font_size=18, color=P.TEAL).to_corner(UR, buff=0.4)
         self.play(FadeOut(lab0), Write(lab1))
-        self.play(FadeIn(layout.takeaway(
-            "Selection can manufacture clustering -- the debate the field still argues.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, lab1, settle=1.2)
+        layout.show_takeaway(
+            self, "Selection can manufacture clustering -- the debate the field still argues.")

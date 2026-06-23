@@ -6,11 +6,11 @@ can produce, and hard to make otherwise. Reproduced in p9-2018-bp519
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2018-bp519"
 
@@ -29,10 +29,15 @@ class Bp519Discovery2018(Scene):
         self.play(FadeIn(sun), Create(ecl))
         self.add(Text("ecliptic", font_size=14, color=P.MUTED).next_to(ecl, DOWN, buff=0.05))
         self.play(Create(bp))
-        self.add(Text("2015 BP519: i ≈ 54°", font_size=18, color=P.GREEN).to_edge(UP, buff=1.5))
+        clab = Text("2015 BP519: i ≈ 54°", font_size=18, color=P.GREEN).to_edge(UP, buff=1.5)
+        self.play(FadeIn(clab))
+        timing.hold_to_read(self, clab, settle=0.6)
+        # the extreme inclination that marks it as a P9 product
+        eq = layout.equation(r"i \approx 54^\circ", color=P.GREEN).scale(0.9).to_corner(UP + RIGHT, buff=0.5)
+        layout.show_equation(self, eq, settle=1.0)
         ro = paper.result_readout("inclination (a P9 fingerprint)", "i ≈ 54°", color=P.GREEN)
         ro.scale(0.8).to_edge(DOWN, buff=1.3)
         self.play(FadeIn(ro))
-        self.play(FadeIn(layout.takeaway(
-            "Steeply-inclined ETNOs are hard to make WITHOUT a sculptor like Planet Nine.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, ro, settle=1.2)
+        layout.show_takeaway(
+            self, "Steeply-inclined ETNOs are hard to make WITHOUT a sculptor like Planet Nine.")

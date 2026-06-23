@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2018-wise-search"
 
@@ -53,6 +53,13 @@ class WiseSearch2018(Scene):
         self.play(Create(reach), run_time=1.4)
         note = Text("a 40 K world barely emits at 3.4 µm", font_size=16, color=P.ORANGE).next_to(ax, UP, buff=0.1)
         self.play(FadeIn(note))
-        self.play(FadeIn(layout.takeaway(
-            "Whole-sky thermal coverage -- but shallow for the coldest, most distant cases.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, note, settle=0.8)
+
+        eq = layout.equation_card(
+            r"d_{\max}:\ m_{W1}(d_{\max}) = W1_{\rm lim}\,,\quad F_\nu = \pi B_\nu(T)\left(\tfrac{R}{d}\right)^2",
+            scale=0.8)
+        eq.to_edge(DOWN, buff=1.5)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Whole-sky thermal coverage -- but shallow for the coldest, most distant cases.")

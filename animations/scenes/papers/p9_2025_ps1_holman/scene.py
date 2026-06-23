@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2025-ps1-holman"
 
@@ -32,7 +32,13 @@ class Ps1Holman2025(Scene):
         stacked = Text("●", font_size=44, color=P.GREEN).move_to([2.5, 0.6, 0])
         arrow = Line([-1.5, 0.6, 0], [2.0, 0.6, 0], color=P.MUTED, stroke_width=2)
         self.play(Create(arrow), FadeIn(stacked))
-        self.add(Text("co-add along trial orbit → +1 mag depth (r ≈ 22.5)", font_size=17, color=P.TEAL).to_edge(DOWN, buff=1.4))
-        self.play(FadeIn(layout.takeaway(
-            "Digital tracking digs below the single-image limit -- at the cost of many trials.")))
-        self.wait(0.9)
+        note = Text("co-add along trial orbit → +1 mag depth (r ≈ 22.5)", font_size=17, color=P.TEAL).to_edge(DOWN, buff=1.9)
+        self.play(FadeIn(note))
+        timing.hold_to_read(self, note, settle=0.6)
+
+        eq = layout.equation(r"\Delta m \approx 1\ \text{mag (shift--stack)}", color=P.TEAL, scale=0.8)
+        eq.next_to(note, UP, buff=0.3)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Digital tracking digs below the single-image limit -- at the cost of many trials.")

@@ -6,11 +6,11 @@ world. Reproduced in p9-2025-simons-forecast (max_detectable_distance).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2025-simons-forecast"
 
@@ -58,8 +58,17 @@ class SimonsForecast2025(Scene):
             so = ax.plot(lambda m: 760 + 32 * m, x_range=[2, 20, 0.5], color=P.TEAL)
         self.play(Create(act))
         self.play(Create(so))
-        self.add(Text("ACT", font_size=16, color=P.PURPLE).next_to(act.get_end(), DOWN, buff=0.1))
-        self.add(Text("Simons Obs.", font_size=16, color=P.TEAL).next_to(so.get_end(), UP, buff=0.1))
-        self.play(FadeIn(layout.takeaway(
-            "At the body's blackbody peak, mm surveys reach ~900 AU for a 5 M⊕ world.")))
-        self.wait(0.9)
+        labels = VGroup(
+            Text("ACT", font_size=16, color=P.PURPLE).next_to(act.get_end(), DOWN, buff=0.1),
+            Text("Simons Obs.", font_size=16, color=P.TEAL).next_to(so.get_end(), UP, buff=0.1),
+        )
+        self.play(FadeIn(labels))
+        timing.hold_to_read(self, labels, settle=0.6)
+
+        eq = layout.equation(
+            r"d_{\max}:\ F_\nu^{\rm mm}(d_{\max}) = F_{\rm lim}", color=P.TEAL, scale=0.8)
+        eq.next_to(ax, UP, buff=0.25)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "At the body's blackbody peak, mm surveys reach ~900 AU for a 5 M⊕ world.")

@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2021-detached-inclinations"
 
@@ -36,7 +36,12 @@ class DetachedInclinations2021(Scene):
         self.play(Create(no_p9))
         self.add(Text("no Planet Nine", font_size=15, color=P.MUTED).next_to(ax.c2p(6, 1.0), UP, buff=0.05))
         self.play(Create(with_p9))
-        self.add(Text("with Planet Nine", font_size=15, color=P.GREEN).next_to(ax.c2p(22, gauss(22, 18, 9)), UP, buff=0.1))
-        self.play(FadeIn(layout.takeaway(
-            "P9 forces broader, higher inclinations in the detached belt than no-planet models.")))
-        self.wait(0.9)
+        wlbl = Text("with Planet Nine", font_size=15, color=P.GREEN).next_to(ax.c2p(22, gauss(22, 18, 9)), UP, buff=0.1)
+        self.play(FadeIn(wlbl))
+        timing.hold_to_read(self, wlbl, settle=0.4)
+
+        eq = layout.equation_card(r"i_{\rm forced}(a)").scale(0.95).to_edge(DOWN, buff=1.6)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "P9 forces broader, higher inclinations in the detached belt than no-planet models.")

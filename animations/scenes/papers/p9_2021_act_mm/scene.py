@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2021-act-mm"
 
@@ -50,7 +50,15 @@ class ActMm2021(Scene):
         else:
             reach = ax.plot(lambda m: 430 + 24 * m, x_range=[2, 20, 0.5], color=P.PURPLE)
         self.play(Create(reach), run_time=1.3)
-        self.add(Text("229 GHz, ~8 mJy point-source limit", font_size=16, color=P.PURPLE).next_to(ax, UP, buff=0.4))
-        self.play(FadeIn(layout.takeaway(
-            "CMB telescopes double as outer-solar-system surveys at millimetre wavelengths.")))
-        self.wait(0.9)
+        note = Text("229 GHz, ~8 mJy point-source limit", font_size=16, color=P.PURPLE).next_to(ax, UP, buff=0.4)
+        self.play(FadeIn(note))
+        timing.hold_to_read(self, note, settle=0.6)
+
+        eq = layout.equation_card(
+            r"F_\nu \approx \dfrac{2k T \nu^2}{c^2}\dfrac{\pi R^2}{d^2}\quad(\text{Rayleigh--Jeans})",
+            scale=0.72)
+        eq.to_edge(DOWN, buff=1.5)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "CMB telescopes double as outer-solar-system surveys at millimetre wavelengths.")

@@ -6,11 +6,11 @@ shapes which P9 orbits are dynamically allowed. Reproduced in p9-2021-stability.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Line, Scene, Text, UP, VGroup, Write,
+    Axes, Create, DOWN, FadeIn, LEFT, Line, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2021-stability"
 
@@ -63,6 +63,13 @@ class Stability2021(Scene):
             unstable = Text("cleared (unstable)", font_size=18, color=P.RED).move_to(ax.c2p(420, 45))
             stable = Text("survives", font_size=20, color=P.TEAL, weight="BOLD").move_to(ax.c2p(700, 100))
         self.play(FadeIn(unstable), FadeIn(stable))
-        self.play(FadeIn(layout.takeaway(
-            "Only detached-enough orbits last 4.5 Gyr -- which bounds the allowed P9 family.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, unstable, stable, settle=0.5)
+
+        eq = layout.equation_card(
+            r"q_{\rm crit}(a) = a_N\sqrt{\ln\!\left[\tfrac{576}{5}\tfrac{m_N}{M_\odot}"
+            r"\!\left(\tfrac{a}{a_N}\right)^{5/2}\right]}"
+        ).scale(0.62).to_corner(UP + LEFT, buff=0.5).shift(DOWN * 0.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Only detached-enough orbits last 4.5 Gyr -- which bounds the allowed P9 family.")

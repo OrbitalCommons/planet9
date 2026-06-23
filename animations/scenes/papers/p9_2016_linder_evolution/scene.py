@@ -5,7 +5,7 @@ its present-day brightness in reflected and thermal light. Reproduced in
 p9-2016-linder-evolution.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
 import p9_manim as P
 from p9_manim import layout, paper
 
@@ -29,5 +29,12 @@ class LinderEvolution2016(Scene):
             self.play(Create(curve), run_time=1.0)
             self.add(Text(f"{m} M⊕", font_size=15, color=col).next_to(curve.get_start(), UP, buff=0.05))
         self.add(ax.get_vertical_line(ax.c2p(4.5, 40), color=P.MUTED, stroke_width=1.5))
-        self.play(FadeIn(layout.takeaway("Today it sits near ~40 K -- warm enough to glow faintly in the far-IR.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"T_{\rm eff}(t)\downarrow\,,\qquad L \propto R^{2}\,T^{4}",
+            scale=0.8).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Today it sits near ~40 K -- warm enough to glow faintly in the far-IR.")

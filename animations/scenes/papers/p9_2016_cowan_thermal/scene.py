@@ -5,7 +5,7 @@ predict the best wavebands for a thermal detection. Reproduced in
 p9-2016-cowan-thermal (SED).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Line, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, UR, Write
 import p9_manim as P
 from p9_manim import layout, paper, dataio
 
@@ -48,5 +48,12 @@ class CowanThermal2016(Scene):
             self.play(Create(curve), run_time=1.4)
         for wl, name, col in [(60, "IRAS", P.RED), (90, "AKARI", P.ORANGE), (1000, "mm", P.PURPLE)]:
             self.add(Text(name, font_size=14, color=col).move_to(ax.c2p(np.log10(wl), 0.9)))
-        self.play(FadeIn(layout.takeaway("A ~40 K body's SED peaks near 60–90 µm -- the far-IR is the sweet spot.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"F_\nu = \pi\, B_\nu(T)\left(\dfrac{R}{d}\right)^{2}",
+            scale=0.8).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "A ~40 K body's SED peaks near 60-90 µm -- the far-IR is the sweet spot.")

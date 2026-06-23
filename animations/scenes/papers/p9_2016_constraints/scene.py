@@ -6,11 +6,11 @@ orbits. Reproduced in p9-2016-constraints (clustering_metric, parameter_grid).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, MathTex, Scene, Text, UP, UR, VGroup, Write,
+    Create, DOWN, FadeIn, Scene, UP, UR, VGroup, Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper, timing
 
 CRATE = "p9-2016-constraints"
 
@@ -32,10 +32,12 @@ class Constraints2016(Scene):
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.1), run_time=2.0)
 
         rbar = r_bar
-        m1 = MathTex(rf"\bar{{R}}_{{\Delta\varpi}} \approx {rbar:.2f}", color=P.TEAL).scale(0.7)
-        m2 = MathTex(r"f_{q>60\,\mathrm{AU}}\ \text{high}", color=P.GREEN).scale(0.7)
+        m1 = layout.equation(rf"\bar{{R}}_{{\Delta\varpi}} \approx {rbar:.2f}", color=P.TEAL).scale(0.7)
+        m2 = layout.equation(r"f_{q>60\,\mathrm{AU}}\ \text{high}", color=P.GREEN).scale(0.7)
         VGroup(m1, m2).arrange(DOWN, buff=0.35).to_corner(UR, buff=0.5)
-        self.play(Write(m1)); self.play(Write(m2))
-        self.play(FadeIn(layout.takeaway(
-            "Two testable metrics: apsidal confinement and a surplus of detached orbits.")))
-        self.wait(0.9)
+        self.play(Write(m1))
+        timing.hold_to_read(self, m1, settle=1.0)
+        self.play(Write(m2))
+        timing.hold_to_read(self, m2, settle=1.2)
+        layout.show_takeaway(
+            self, "Two testable metrics: apsidal confinement and a surplus of detached orbits.")

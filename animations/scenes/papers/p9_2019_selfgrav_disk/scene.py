@@ -6,11 +6,11 @@ p9-2019-selfgrav-disk.
 """
 import numpy as np
 from manim import (
-    Annulus, Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, rate_functions,
+    Annulus, Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, VGroup, Write, rate_functions,
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2019-selfgrav-disk"
 
@@ -34,6 +34,11 @@ class SelfgravDisk2019(Scene):
         self.play(Create(swarm, lag_ratio=0.1), run_time=1.6)
         targ = [orbits.ellipse_orbit(2.5, 0.65, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.85) for v in target]
         self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0, rate_func=rate_functions.smooth)
-        self.play(FadeIn(layout.takeaway(
-            "Collective disk gravity can mimic a planet -- if enough mass survives out there.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\dot\varpi_{\rm disk} \propto \dfrac{M_{\rm disk}}{M_\odot}\,n"
+        ).scale(0.8).to_corner(UP + RIGHT, buff=0.5).shift(DOWN * 0.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Collective disk gravity can mimic a planet -- if enough mass survives out there.")

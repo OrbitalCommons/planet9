@@ -11,7 +11,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2020-tess-shiftstack"
 
@@ -32,6 +32,11 @@ class TessShiftstack2020(Scene):
         self.play(ang.animate.set_value(0.25), run_time=3.0, rate_func=rate_functions.smooth)
         found = Text("● recovered source", font_size=22, color=P.GREEN).move_to([1.5, 0.6, 0])
         self.play(FadeIn(found))
-        self.play(FadeIn(layout.takeaway(
-            "Pick the right track and the moving signal adds up; pick wrong and it smears.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, found, settle=0.6)
+
+        eq = layout.equation(r"\Delta m = 1.25\,\log_{10} N", color=P.GREEN, scale=0.85)
+        eq.to_edge(DOWN, buff=1.5)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Pick the right track and the moving signal adds up; pick wrong and it smears.")

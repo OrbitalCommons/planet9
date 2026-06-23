@@ -6,11 +6,11 @@ each distance. Reproduced in p9-2016-holman-payne (range residual model).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2016-holman-payne"
 
@@ -34,6 +34,13 @@ class HolmanPayne2016(Scene):
         excl = Text("excluded by Cassini ranging", font_size=18, color=P.RED).move_to(ax.c2p(420, 14))
         ok = Text("allowed", font_size=20, color=P.TEAL, weight="BOLD").move_to(ax.c2p(820, 4))
         self.play(FadeIn(excl), FadeIn(ok))
-        self.play(FadeIn(layout.takeaway(
-            "Ranging caps the mass at each distance -- closer planets must be lighter.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, excl, ok)
+
+        eq = layout.equation_card(r"m_{\max}(d) \propto d^{3}", scale=1.0)
+        eq.next_to(ax, UP, buff=0.15)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self,
+            "Ranging caps the mass at each distance -- closer planets must be lighter.")

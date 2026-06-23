@@ -6,11 +6,11 @@ Reproduced in p9-2016-obliquity-lai.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2016-obliquity-lai"
 
@@ -31,7 +31,14 @@ class ObliquityLai2016(Scene):
         curve = ax.plot(lambda i: 6.0 * np.sin(np.deg2rad(2 * i)) / np.sin(np.deg2rad(40)), x_range=[0, 30, 0.5], color=P.ORANGE)
         self.play(Create(curve), run_time=1.4)
         target = ax.get_horizontal_line(ax.c2p(30, 6.0), color=P.TEAL, stroke_width=2)
-        self.add(target, Text("observed 6°", font_size=15, color=P.TEAL).next_to(ax.c2p(2, 6), UP, buff=0.05))
-        self.play(FadeIn(layout.takeaway(
-            "Analytic theory reproduces the 6° tilt for plausible P9 inclinations.")))
-        self.wait(0.9)
+        obs = Text("observed 6°", font_size=15, color=P.TEAL).next_to(ax.c2p(2, 6), UP, buff=0.05)
+        self.play(Create(target), FadeIn(obs))
+        timing.hold_to_read(self, obs)
+
+        eq = layout.equation_card(r"\varepsilon_\odot \propto \sin 2i_9", scale=1.0)
+        eq.next_to(ax, UP, buff=0.1)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Analytic theory reproduces the 6° tilt for plausible P9 inclinations.")

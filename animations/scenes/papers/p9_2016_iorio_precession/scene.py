@@ -6,11 +6,11 @@ distance. Reproduced in p9-2016-iorio-precession.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2016-iorio-precession"
 
@@ -32,7 +32,14 @@ class Iorio2016(Scene):
         bound = ax.plot(lambda d: 1.0, x_range=[200, 1000, 5], color=P.RED)
         self.play(Create(pred))
         self.play(Create(bound))
-        self.add(Text("observed upper bound", font_size=15, color=P.RED).next_to(ax.c2p(800, 1), UP, buff=0.05))
-        self.play(FadeIn(layout.takeaway(
-            "No measured excess precession -> nearby/massive solutions are excluded.")))
-        self.wait(0.9)
+        bnd = Text("observed upper bound", font_size=15, color=P.RED).next_to(ax.c2p(800, 1), UP, buff=0.05)
+        self.play(FadeIn(bnd))
+        timing.hold_to_read(self, bnd)
+
+        eq = layout.equation_card(r"\dot\varpi_{\rm anom} \propto \dfrac{m_9}{d^3}", scale=1.0)
+        eq.next_to(ax, UP, buff=0.1)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "No measured excess precession -> nearby/massive solutions are excluded.")

@@ -11,7 +11,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2016-inclined-tnos"
 
@@ -39,8 +39,15 @@ class InclinedTnos2016(Scene):
 
         live = always_redraw(orbset)
         self.add(live)
-        self.play(FadeIn(Text("initially near the ecliptic", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)))
+        msg = Text("initially near the ecliptic", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)
+        self.play(FadeIn(msg))
+        timing.hold_to_read(self, msg, settle=0.4)
         self.play(tilt.animate.set_value(0.12), run_time=3.5, rate_func=rate_functions.smooth)
-        self.play(FadeIn(layout.takeaway(
-            "P9 can also lift orbits to steep -- even retrograde -- inclinations.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\sqrt{1-e^2}\,\cos i \approx \text{const}"
+        ).scale(0.9).to_edge(DOWN, buff=1.6)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "P9 can also lift orbits to steep -- even retrograde -- inclinations.")

@@ -5,9 +5,9 @@ away, turning the qualitative picture into a measurable, time-dependent statisti
 Reproduced in p9-2025-clustering.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
+from manim import Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2025-clustering"
 
@@ -26,9 +26,12 @@ class Clustering2025(Scene):
                   FadeIn(Text("clustering strength  R̄", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
         decay = ax.plot(lambda t: 0.85 * np.exp(-t / 2.2), x_range=[0, 4, 0.03], color=P.GREEN)
         self.play(Create(decay), run_time=1.5)
+        # the clustering strength relaxes exponentially with a diffusion timescale
+        eq = layout.equation_card(r"\bar R(t) \sim \bar R_0\, e^{-t/\tau}").scale(0.7)
+        eq.to_corner(UP + LEFT, buff=0.9)
+        layout.show_equation(self, eq, settle=1.2)
         t = ValueTracker(0.0)
         dot = always_redraw(lambda: Dot(ax.c2p(t.get_value(), 0.85 * np.exp(-t.get_value() / 2.2)), color=P.TEAL, radius=0.07))
         self.add(dot)
         self.play(t.animate.set_value(4.0), run_time=3.0, rate_func=rate_functions.linear)
-        self.play(FadeIn(layout.takeaway("Clustering diffuses with time -- so seeing it today demands a maintaining force.")))
-        self.wait(0.9)
+        layout.show_takeaway(self, "Clustering diffuses with time -- so seeing it today demands a maintaining force.")

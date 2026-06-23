@@ -12,7 +12,6 @@ from manim import (
     FadeOut,
     LEFT,
     Line,
-    MathTex,
     RIGHT,
     Rectangle,
     Scene,
@@ -26,7 +25,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, dataio
+from p9_manim import layout, orbits, dataio, timing
 
 
 def _reflected_mag(mass_earth, r_au):
@@ -62,9 +61,17 @@ class P09ReflectedLight(Scene):
         title = Text("Seeing it I: borrowed sunlight", color=P.FG, font_size=30, weight="BOLD")
         title.to_edge(UP, buff=0.55)
         self.play(Write(title))
-        flux = MathTex(r"\text{flux} \;\propto\; \frac{\text{albedo}\cdot R^2}{r^2\,\Delta^2}\;\approx\;\frac{1}{r^4}",
-                       color=P.FG).scale(0.7).next_to(title, DOWN, buff=0.2)
+        flux = layout.equation(
+            r"F \propto \dfrac{p\,R^2}{r^2\Delta^2} \approx \dfrac{1}{r^4}",
+            color=P.FG).scale(0.7).next_to(title, DOWN, buff=0.2)
         self.play(Write(flux))
+        timing.hold_to_read(self, flux, settle=0.4)
+
+        mag = layout.equation(r"m = H + 5\log_{10}(r\,\Delta)", color=P.TEAL).scale(0.6)
+        mag.next_to(flux, DOWN, buff=0.15)
+        self.play(Write(mag))
+        timing.hold_to_read(self, mag, settle=0.4)
+        self.play(FadeOut(mag))
 
         ax = Axes(x_range=[100, 1500, 200], y_range=[16, 28, 2],
                   x_length=9.0, y_length=4.0,
@@ -90,8 +97,7 @@ class P09ReflectedLight(Scene):
             tag = Text(f"{name} depth", font_size=14, color=P.MUTED).next_to(line, RIGHT, buff=0.05)
             self.play(Create(line), FadeIn(tag), run_time=0.6)
 
-        self.play(FadeIn(layout.takeaway("Brightness falls as ~1/r^4: at 600 AU, Planet Nine is ~mag 22.")))
-        self.wait(0.8)
+        layout.show_takeaway(self, "Brightness falls as ~1/r^4: at 600 AU, Planet Nine is ~mag 22.")
 
 
 class P10Thermal(Scene):
@@ -102,6 +108,14 @@ class P10Thermal(Scene):
         title = Text("Seeing it II: its own faint heat", color=P.FG, font_size=30, weight="BOLD")
         title.to_edge(UP, buff=0.55)
         self.play(Write(title))
+
+        # Planck's law and Wien's displacement law govern the glow
+        planck = layout.equation_card(
+            r"B_\nu(T) = \dfrac{2h\nu^3/c^2}{e^{h\nu/kT}-1}"
+            r"\qquad \lambda_{\rm peak} = \dfrac{b}{T}").scale(0.7)
+        planck.next_to(title, DOWN, buff=0.2)
+        layout.show_equation(self, planck)
+        self.play(FadeOut(planck))
 
         # x axis = log10(wavelength / micron) from -1 (0.1) to 3 (1000)
         ax = Axes(x_range=[-1, 3, 1], y_range=[0, 1.1, 0.5], x_length=9.5, y_length=3.8,
@@ -165,8 +179,14 @@ class P10Thermal(Scene):
             self.play(Create(wln), FadeIn(wlbl))
             self.wait(0.3)
 
-        self.play(FadeIn(layout.takeaway("A ~40 K world glows in the far-IR / mm -- a second way to find it.")))
-        self.wait(0.8)
+        teq = layout.equation(
+            r"T_{\rm eq} = T_\odot\sqrt{\dfrac{R_\odot}{2d}}\,(1-A)^{1/4}", color=P.TEAL).scale(0.65)
+        teq.to_edge(DOWN, buff=1.1)
+        self.play(Write(teq))
+        timing.hold_to_read(self, teq, settle=0.4)
+        self.play(FadeOut(teq))
+
+        layout.show_takeaway(self, "A ~40 K world glows in the far-IR / mm -- a second way to find it.")
 
 
 class P11Surveys(Scene):
@@ -197,9 +217,18 @@ class P11Surveys(Scene):
             ghost = mover.copy().set_opacity(0.35)
             self.add(ghost)
             self.play(mover.animate.shift(RIGHT * dx), run_time=0.5)
-        self.play(FadeIn(Text("a real planet shifts vs the stars -> link the epochs",
-                              font_size=16, color=P.GREEN).next_to(mover, DOWN, buff=0.3)))
-        self.wait(0.4)
-        self.play(FadeIn(layout.takeaway(
-            "You only find what your survey can see -- so coverage can fake (or hide) clustering.")))
-        self.wait(0.8)
+        shift_txt = Text("a real planet shifts vs the stars -> link the epochs",
+                         font_size=16, color=P.GREEN).next_to(mover, DOWN, buff=0.3)
+        self.play(FadeIn(shift_txt))
+        timing.hold_to_read(self, shift_txt, settle=0.4)
+
+        # detection criterion and on-sky motion between epochs
+        det_eq = layout.equation_card(
+            r"\text{detect} \iff m < m_{\rm lim}"
+            r"\qquad \Delta\theta = \mu\,\Delta t").scale(0.65)
+        det_eq.to_edge(DOWN, buff=1.15)
+        layout.show_equation(self, det_eq)
+        self.play(FadeOut(det_eq), FadeOut(shift_txt))
+
+        layout.show_takeaway(
+            self, "You only find what your survey can see -- so coverage can fake (or hide) clustering.")

@@ -19,7 +19,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2019-tess-yield"
 
@@ -56,7 +56,12 @@ class TessYield2019(Scene):
         dline = ax.get_vertical_line(ax.c2p(depth, 0.5), color=P.TEAL, stroke_width=2)
         dlbl = Text(f"stacked depth ≈ {depth:.1f}", font_size=18, color=P.TEAL).next_to(ax.c2p(depth, 1.0), UP, buff=0.1)
         self.play(Create(dline), FadeIn(dlbl))
+        timing.hold_to_read(self, dlbl, settle=0.6)
 
-        self.play(FadeIn(layout.takeaway(
-            "Even a survey built for exoplanets can be re-aimed at the outer dark.")))
-        self.wait(0.9)
+        eq = layout.equation(
+            r"m_{\rm stack} = m_1 + 1.25\,\log_{10} N", color=P.TEAL, scale=0.85)
+        eq.next_to(ax, DOWN, buff=0.95)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Even a survey built for exoplanets can be re-aimed at the outer dark.")

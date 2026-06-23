@@ -12,6 +12,7 @@ from manim import (
     DOWN,
     Dot,
     FadeIn,
+    FadeOut,
     Line,
     MathTex,
     Scene,
@@ -24,7 +25,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2016-obliquity"
 
@@ -59,12 +60,25 @@ class Obliquity2016(Scene):
         p9_lbl = Text("inclined Planet Nine", font_size=15, color=P.BLUE).next_to(p9, UP, buff=0.05)
         self.play(Create(p9), FadeIn(p9_lbl))
 
+        prec = layout.equation(
+            r"\dot{\boldsymbol{s}} \propto \boldsymbol{s}\times\boldsymbol{\ell}_9",
+            scale=0.85)
+        prec.next_to(p9_lbl, UP, buff=0.2)
+        layout.show_equation(self, prec)
+
         self.play(tilt.animate.set_value(6.0), run_time=4.0, rate_func=rate_functions.smooth)
         self.wait(0.3)
         ro = paper.result_readout("solar obliquity produced", "≈ 6°", color=P.ORANGE)
         ro.scale(0.8).to_edge(DOWN, buff=1.4)
         self.play(FadeIn(ro))
-        self.wait(0.4)
-        self.play(FadeIn(layout.takeaway(
-            "The Sun's 6° tilt -- a long-standing puzzle -- falls out for free.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, ro)
+        self.play(FadeOut(ro), FadeOut(prec))
+
+        eq = layout.equation_card(r"\varepsilon_\odot \approx 6^\circ", scale=1.0)
+        eq.to_edge(DOWN, buff=1.4)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self,
+            "The Sun's 6° tilt -- a long-standing puzzle -- falls out for free.")

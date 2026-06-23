@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2025-stacking"
 
@@ -32,8 +32,15 @@ class Stacking2025(Scene):
         self.play(FadeIn(cells, lag_ratio=0.01))
         peak = Text("●", font_size=40, color=P.GREEN).move_to([-3.6 + 4 * 1.2, -0.4 + 2 * 0.9, 0])
         self.play(FadeIn(peak))
-        self.add(Text("matched-filter peak in (a, e, angles)", font_size=16, color=P.GREEN).to_edge(UP, buff=1.5))
-        self.add(Text("...but huge trials → look-elsewhere penalty", font_size=16, color=P.RED).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway(
-            "Stacking years of data is powerful -- if you count your trials honestly.")))
-        self.wait(0.9)
+        top = Text("matched-filter peak in (a, e, angles)", font_size=16, color=P.GREEN).to_edge(UP, buff=1.5)
+        bot = Text("...but huge trials → look-elsewhere penalty", font_size=16, color=P.RED).to_edge(DOWN, buff=1.9)
+        self.play(FadeIn(top), FadeIn(bot))
+        timing.hold_to_read(self, top, bot, settle=0.5)
+
+        eq = layout.equation(
+            r"\mathrm{SNR} \propto \sqrt{N}\,,\quad \text{trials penalty}", color=P.GREEN, scale=0.8)
+        eq.next_to(bot, UP, buff=0.3)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Stacking years of data is powerful -- if you count your trials honestly.")

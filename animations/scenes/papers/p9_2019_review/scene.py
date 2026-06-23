@@ -5,7 +5,7 @@ masses, ~500 AU) and laid out the full evidentiary case. Reproduced in
 p9-2019-review (revised parameters, detection prospects).
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write
 import p9_manim as P
 from p9_manim import dataio, layout, orbits, paper
 
@@ -32,5 +32,12 @@ class Review2019(Scene):
         ro = paper.result_readout("revised best-fit", value, color=P.BLUE)
         ro.scale(0.8).to_edge(DOWN, buff=1.2)
         self.play(FadeIn(ro))
-        self.play(FadeIn(layout.takeaway("By 2019 the favoured planet got smaller and closer -- and the case, broader.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\approx 5\,M_\oplus,\ \ a\approx500\,\mathrm{AU},\ \ e\approx0.25",
+            scale=0.78).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "By 2019 the favoured planet got smaller and closer -- and the case, broader.")

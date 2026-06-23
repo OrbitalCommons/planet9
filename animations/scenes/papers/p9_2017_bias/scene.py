@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2017-bias"
 
@@ -31,9 +31,20 @@ class Bias2017(Scene):
         sens = ax.plot(lambda v: 0.5 + 0.35 * np.cos(np.deg2rad(v - 60)), x_range=[0, 360, 2], color=P.PURPLE)
         excess = ax.plot(lambda v: 0.55 + 0.3 * np.cos(np.deg2rad(v - 250)), x_range=[0, 360, 2], color=P.GREEN)
         self.play(Create(sens))
-        self.add(Text("survey sensitivity (bias)", font_size=15, color=P.PURPLE).next_to(ax.c2p(60, 0.85), UP, buff=0.05))
+        slab = Text("survey sensitivity (bias)", font_size=15, color=P.PURPLE).next_to(ax.c2p(60, 0.85), UP, buff=0.05)
+        self.play(FadeIn(slab))
+        timing.hold_to_read(self, slab, settle=0.6)
         self.play(Create(excess))
-        self.add(Text("debiased object excess", font_size=15, color=P.GREEN).next_to(ax.c2p(250, 0.85), UP, buff=0.05))
-        self.play(FadeIn(layout.takeaway(
-            "The excess peaks where sensitivity does NOT -- so bias alone cannot explain it.")))
-        self.wait(0.9)
+        elab = Text("debiased object excess", font_size=15, color=P.GREEN).next_to(ax.c2p(250, 0.85), UP, buff=0.05)
+        self.play(FadeIn(elab))
+        timing.hold_to_read(self, elab, settle=0.6)
+
+        # debiasing: recover the intrinsic distribution by dividing out S(varpi)
+        eq = layout.equation_card(
+            r"N_{\rm intrinsic}(\varpi) = \frac{N_{\rm obs}(\varpi)}{S(\varpi)}"
+        ).scale(0.7)
+        eq.to_edge(UP, buff=1.05)
+        layout.show_equation(self, eq, settle=1.2)
+
+        layout.show_takeaway(
+            self, "The excess peaks where sensitivity does NOT -- so bias alone cannot explain it.")

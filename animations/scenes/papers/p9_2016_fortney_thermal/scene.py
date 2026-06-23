@@ -6,7 +6,7 @@ detectable it is. Reproduced in p9-2016-fortney-thermal.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, UR, Write,
 )
 
 import p9_manim as P
@@ -34,6 +34,12 @@ class FortneyThermal2016(Scene):
         self.add(Text("solar equilibrium only", font_size=14, color=P.MUTED).next_to(ax.c2p(14, 10), UP, buff=0.05))
         self.play(Create(warm))
         self.add(Text("with internal heat", font_size=14, color=P.ORANGE).next_to(ax.c2p(14, 38), UP, buff=0.05))
-        self.play(FadeIn(layout.takeaway(
-            "Leftover formation heat makes P9 warmer -- and easier for IR/mm surveys.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"T_{\rm eff} = \max\!\left(T_{\rm eq},\ T_{\rm int}\right)",
+            scale=0.8).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Leftover formation heat makes P9 warmer -- and easier for IR/mm surveys.")

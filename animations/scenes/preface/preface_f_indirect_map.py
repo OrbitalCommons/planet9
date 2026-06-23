@@ -15,7 +15,6 @@ from manim import (
     FadeOut,
     LEFT,
     Line,
-    MathTex,
     Polygon,
     RIGHT,
     Scene,
@@ -26,7 +25,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, dataio
+from p9_manim import layout, orbits, dataio, timing
 
 
 class P12Indirect(Scene):
@@ -52,7 +51,7 @@ class P12Indirect(Scene):
         # (2) anomalous precession
         ell = orbits.ellipse_orbit(0.9, 0.5, color=P.BLUE, varpi=0.0).shift(DOWN * 0.2)
         ell2 = orbits.ellipse_orbit(0.9, 0.5, color=P.BLUE, varpi=0.5).shift(DOWN * 0.2).set_stroke(opacity=0.4)
-        prec_lbl = MathTex(r"\dot{\varpi}_{\rm anom}", color=P.ORANGE).scale(0.7).shift(UP * 1.2)
+        prec_lbl = layout.equation(r"\dot{\varpi}_{\rm anom}", color=P.ORANGE).scale(0.7).shift(UP * 1.2)
         self.play(Create(ell), Create(ell2), FadeIn(prec_lbl))
 
         # (3) solar obliquity
@@ -64,9 +63,16 @@ class P12Indirect(Scene):
         self.play(FadeIn(sun3), Create(vert), Create(axis), FadeIn(obl_lbl))
         self.wait(0.4)
 
-        self.play(FadeIn(layout.takeaway(
-            "Even without a photo, dynamics constrain where (and how massive) Planet Nine can be.")))
-        self.wait(0.8)
+        # the ranging perturbation scale and the solar obliquity it implies
+        sig_eq = layout.equation_card(
+            r"\Delta\rho \propto \dfrac{GM_9}{d^3}"
+            r"\qquad \varepsilon_\odot \approx 6^\circ").scale(0.72)
+        sig_eq.to_edge(DOWN, buff=1.15)
+        layout.show_equation(self, sig_eq)
+        self.play(FadeOut(sig_eq))
+
+        layout.show_takeaway(
+            self, "Even without a photo, dynamics constrain where (and how massive) Planet Nine can be.")
 
 
 class P13Map(Scene):
@@ -123,6 +129,5 @@ class P13Map(Scene):
             lbl = Text(name, font_size=13, color=P.GREEN).next_to(dot, UP, buff=0.08)
             self.play(FadeIn(dot), FadeIn(lbl), run_time=0.5)
 
-        self.play(FadeIn(layout.takeaway(
-            "Rubin/LSST will sweep most of the viable box within a few years.")))
-        self.wait(0.9)
+        layout.show_takeaway(
+            self, "Rubin/LSST will sweep most of the viable box within a few years.")

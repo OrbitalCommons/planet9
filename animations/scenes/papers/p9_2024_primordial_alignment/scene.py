@@ -6,11 +6,11 @@ planet. Reproduced in p9-2024-primordial-alignment (lookback convergence).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, rate_functions,
+    Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, VGroup, Write, rate_functions,
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2024-primordial-alignment"
 
@@ -30,10 +30,15 @@ class PrimordialAlignment2024(Scene):
         swarm = VGroup(*[orbits.ellipse_orbit(2.6, 0.72, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8)
                          for v in today])
         self.play(Create(swarm, lag_ratio=0.1), run_time=1.6)
-        self.play(FadeIn(Text("rewind to the Sun's birth cluster...", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)))
+        rwlab = Text("rewind to the Sun's birth cluster...", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)
+        self.play(FadeIn(rwlab))
+        timing.hold_to_read(self, rwlab, settle=0.5)
+        # integrating apsidal precession backward to the primordial direction
+        eq = layout.equation(r"\varpi(t) = \varpi_0 - \dot\varpi\,(t_0 - t)").scale(0.7)
+        eq.to_corner(UP + RIGHT, buff=0.5)
+        layout.show_equation(self, eq, settle=1.0)
         targ = [orbits.ellipse_orbit(2.6, 0.72, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8) for v in birth]
         self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0,
                   rate_func=rate_functions.smooth)
-        self.play(FadeIn(layout.takeaway(
-            "Maybe they were aligned at birth and froze -- no present-day planet required.")))
-        self.wait(0.9)
+        layout.show_takeaway(
+            self, "Maybe they were aligned at birth and froze -- no present-day planet required.")

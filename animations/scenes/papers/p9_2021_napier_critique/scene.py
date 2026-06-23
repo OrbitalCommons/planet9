@@ -6,11 +6,11 @@ in p9-2021-napier-critique.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, MathTex, Scene, Text, UP, UR, Write,
+    Create, DOWN, FadeIn, Scene, UP, UR, Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper, timing
 
 CRATE = "p9-2021-napier-critique"
 
@@ -31,8 +31,12 @@ class NapierCritique2021(Scene):
             swarm = orbits.etno_swarm([(2.6, 0.72, v) for v in varpis], color=P.GREEN)
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.1), run_time=1.8)
 
-        p = MathTex(r"p\text{-value consistent with uniform}", color=P.RED).scale(0.6).to_corner(UR, buff=0.4)
+        # the Rayleigh test for uniformity of the apsidal directions
+        eq = layout.equation_card(r"p_{\rm Rayleigh} = e^{-N\bar R^2}").scale(0.7).to_corner(UR, buff=0.4)
+        layout.show_equation(self, eq, settle=1.2)
+        p = layout.equation(r"p\text{-value consistent with uniform}", color=P.RED).scale(0.6)
+        p.next_to(eq, DOWN, buff=0.35)
         self.play(Write(p))
-        self.play(FadeIn(layout.takeaway(
-            "Account for where the surveys looked, and the 'clustering' may melt away.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, p, settle=1.2)
+        layout.show_takeaway(
+            self, "Account for where the surveys looked, and the 'clustering' may melt away.")

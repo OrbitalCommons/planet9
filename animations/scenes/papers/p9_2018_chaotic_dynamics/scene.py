@@ -6,12 +6,12 @@ and objects diffuse. Reproduced in p9-2018-chaotic-dynamics (libration widths).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Line, Rectangle, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, Line, Rectangle, RIGHT, Scene, Text, UP, VGroup, Write,
     rate_functions, ValueTracker, always_redraw,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2018-chaotic-dynamics"
 
@@ -36,11 +36,17 @@ class ChaoticDynamics2018(Scene):
             for c in centers])
         ticks = VGroup(*[Text(t, font_size=14, color=P.PURPLE).move_to([c, 1.1, 0]) for c, t in zip(centers, labels)])
         self.add(bands); self.play(FadeIn(ticks))
-        self.play(FadeIn(Text("each resonance has a width", font_size=18, color=P.PURPLE).to_edge(UP, buff=1.6)))
-        self.wait(0.3)
+        msg = Text("each resonance has a width", font_size=18, color=P.PURPLE).to_edge(UP, buff=1.6)
+        self.play(FadeIn(msg))
+        timing.hold_to_read(self, msg, settle=0.4)
 
         # widen until they overlap -> chaos
         self.play(w.animate.set_value(1.6), run_time=3.0, rate_func=rate_functions.smooth)
-        self.play(FadeIn(layout.takeaway(
-            "Overlapping resonances -> chaos: distant orbits diffuse over billions of years.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"K = \dfrac{\delta a_{\rm res}}{\Delta a_{\rm sep}} \gtrsim 1"
+        ).scale(0.8).to_corner(UP + RIGHT, buff=0.6).shift(DOWN * 0.55)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Overlapping resonances -> chaos: distant orbits diffuse over billions of years.")

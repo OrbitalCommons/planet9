@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2025-parallax-search"
 
@@ -31,7 +31,14 @@ class ParallaxSearch2025(Scene):
         l1 = Arrow(e1.get_center(), p9.get_center(), color=P.MUTED, buff=0.1, stroke_width=2)
         l2 = Arrow(e2.get_center(), p9.get_center(), color=P.MUTED, buff=0.1, stroke_width=2)
         self.play(FadeIn(p9), Create(l1), Create(l2))
-        self.add(Text("apparent shift = parallax → distance", font_size=16, color=P.TEAL).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway(
-            "Two epochs and Earth's baseline can pin a nearby planet's distance directly.")))
-        self.wait(0.9)
+        note = Text("apparent shift = parallax → distance", font_size=16, color=P.TEAL).to_edge(DOWN, buff=1.9)
+        self.play(FadeIn(note))
+        timing.hold_to_read(self, note, settle=0.5)
+
+        eq = layout.equation(
+            r"p = \dfrac{1\ \mathrm{AU}}{d}\,,\quad \Delta\theta_{\rm refl}", color=P.TEAL, scale=0.8)
+        eq.next_to(note, UP, buff=0.3)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Two epochs and Earth's baseline can pin a nearby planet's distance directly.")

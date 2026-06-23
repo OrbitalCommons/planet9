@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2023-lsst-strategy"
 
@@ -33,10 +33,15 @@ class LsstStrategy2023(Scene):
             fill.align_to(track, LEFT).align_to(track, UP)
             lab = Text(name, font_size=17, color=P.FG).next_to(track, UP, buff=0.08)
             rows.add(VGroup(track, fill, lab))
-        rows.arrange(DOWN, buff=0.7).shift(DOWN * 0.4)
+        rows.arrange(DOWN, buff=0.7).shift(DOWN * 0.6)
         for r in rows:
             self.play(Create(r[0]), Create(r[1]), FadeIn(r[2]), run_time=0.7)
+        timing.hold_to_read(self, rows, settle=0.6)
 
-        self.play(FadeIn(layout.takeaway(
-            "Tune depth, linking, and footprint -- and LSST discovers most of the viable region.")))
-        self.wait(0.9)
+        eq = layout.equation(
+            r"f_{\rm disc} = f(\text{depth},\,N_{\rm link},\,\delta_{\min})", color=P.TEAL, scale=0.8)
+        eq.next_to(rows, UP, buff=0.4)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Tune depth, linking, and footprint -- and LSST discovers most of the viable region.")

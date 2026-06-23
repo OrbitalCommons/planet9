@@ -6,11 +6,11 @@ Reproduced in p9-2020-secular-octupole (octupole modulation amplitude).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2020-secular-octupole"
 
@@ -32,7 +32,14 @@ class SecularOctupole2020(Scene):
         self.play(Create(quad))
         self.add(Text("quadrupole only", font_size=15, color=P.MUTED).next_to(ax.c2p(10, 70), UP, buff=0.05))
         self.play(Create(oct_))
-        self.add(Text("+ octupole modulation", font_size=15, color=P.TEAL).next_to(ax.c2p(3, 90), UP, buff=0.05))
-        self.play(FadeIn(layout.takeaway(
-            "Higher-order terms reshape the libration -- and enlarge the confined zone.")))
-        self.wait(0.9)
+        olbl = Text("+ octupole modulation", font_size=15, color=P.TEAL).next_to(ax.c2p(3, 90), UP, buff=0.05)
+        self.play(FadeIn(olbl))
+        timing.hold_to_read(self, olbl, settle=0.4)
+
+        eq = layout.equation_card(
+            r"\epsilon_{\rm oct} = \dfrac{a}{a_9}\dfrac{e_9}{1-e_9^2}"
+        ).scale(0.66).to_corner(UP + RIGHT, buff=0.4).shift(DOWN * 0.5)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Higher-order terms reshape the libration -- and enlarge the confined zone.")

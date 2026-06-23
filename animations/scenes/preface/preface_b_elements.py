@@ -14,7 +14,6 @@ from manim import (
     GrowArrow,
     LEFT,
     Line,
-    MathTex,
     RIGHT,
     Scene,
     Text,
@@ -24,7 +23,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits
+from p9_manim import layout, orbits, timing
 
 
 class P03Elements(Scene):
@@ -56,7 +55,7 @@ class P03Elements(Scene):
         node_lbl = Text("ascending node", color=P.PURPLE, font_size=15)
         node_lbl.next_to(node.get_end(), UP, buff=0.05)
         Om_arc = Arc(radius=1.0, start_angle=0, angle=Omega, color=P.PURPLE)
-        Om_lbl = MathTex(r"\Omega", color=P.PURPLE).scale(0.7).move_to(
+        Om_lbl = layout.equation(r"\Omega", color=P.PURPLE).scale(0.7).move_to(
             1.3 * np.array([np.cos(Omega / 2), np.sin(Omega / 2), 0]))
         self.play(Create(node), FadeIn(node_lbl), Create(Om_arc), FadeIn(Om_lbl))
         self.wait(0.3)
@@ -70,27 +69,34 @@ class P03Elements(Scene):
 
         # argument of perihelion omega (node -> perihelion)
         om_arc = Arc(radius=1.6, start_angle=Omega, angle=omega, color=P.GREEN)
-        om_lbl = MathTex(r"\omega", color=P.GREEN).scale(0.7).move_to(
+        om_lbl = layout.equation(r"\omega", color=P.GREEN).scale(0.7).move_to(
             1.9 * np.array([np.cos(Omega + omega / 2), np.sin(Omega + omega / 2), 0]))
         self.play(Create(om_arc), FadeIn(om_lbl))
         self.wait(0.3)
 
         # longitude of perihelion varpi = Omega + omega
-        var_eq = MathTex(r"\varpi = \Omega + \omega", color=P.TEAL).scale(0.8).to_corner(UP + RIGHT, buff=0.5)
+        var_eq = layout.equation(
+            r"\varpi = \Omega + \omega", t2c={r"\Omega": P.PURPLE, r"\omega": P.GREEN}
+        ).scale(0.8).to_corner(UP + RIGHT, buff=0.5)
         self.play(Write(var_eq))
         self.play(apse.animate.set_color(P.TEAL))
-        self.wait(0.3)
+        timing.hold_to_read(self, var_eq, settle=0.5)
+
+        # Kepler's equation: where the body is along the orbit at a given time
+        kep = layout.equation_card(r"M = E - e\sin E").scale(0.8)
+        kep.to_edge(DOWN, buff=0.9)
+        layout.show_equation(self, kep)
+        self.play(FadeOut(kep))
 
         # inclination note
-        inc = MathTex(r"i:\ \text{tilt of the orbit out of this plane}", color=P.FG).scale(0.55)
+        inc = layout.equation(r"i:\ \text{tilt of the orbit out of this plane}", color=P.FG).scale(0.55)
         inc.to_edge(DOWN, buff=0.9)
         self.play(FadeIn(inc))
-        self.wait(0.3)
+        timing.hold_to_read(self, inc, settle=0.4)
         self.play(FadeOut(inc))
 
-        self.play(FadeIn(layout.takeaway(
-            "Clustering is about ϖ (and the tilt direction): which way orbits point.")))
-        self.wait(0.8)
+        layout.show_takeaway(
+            self, "Clustering is about ϖ (and the tilt direction): which way orbits point.")
 
 
 class P04Geography(Scene):
@@ -126,6 +132,11 @@ class P04Geography(Scene):
             val = Text(f"{au:g}", color=P.MUTED, font_size=13).next_to(tick, DOWN, buff=0.12)
             self.play(Create(tick), FadeIn(lbl), FadeIn(val), run_time=0.55)
         self.wait(0.4)
-        self.play(FadeIn(layout.takeaway(
-            "Beyond Neptune lies a vast, barely-mapped realm -- where Planet Nine would hide.")))
-        self.wait(0.8)
+
+        per_eq = layout.equation_card(r"P \approx a^{3/2}\ \text{(yr, AU)}").scale(0.8)
+        per_eq.next_to(title, DOWN, buff=0.3)
+        layout.show_equation(self, per_eq)
+        self.play(FadeOut(per_eq))
+
+        layout.show_takeaway(
+            self, "Beyond Neptune lies a vast, barely-mapped realm -- where Planet Nine would hide.")

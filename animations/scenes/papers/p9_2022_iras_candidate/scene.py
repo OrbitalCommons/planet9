@@ -7,7 +7,7 @@ pair search. Reproduced in p9-2022-iras-candidate.
 import numpy as np
 from manim import Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, Dot
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2022-iras-candidate"
 
@@ -23,7 +23,14 @@ class IrasCandidate2022(Scene):
         self.play(FadeIn(bg, lag_ratio=0.004))
         cand = Dot([1.0, 0.3, 0], radius=0.12, color=P.RED)
         self.play(FadeIn(cand))
-        self.add(Text("IRAS 60 µm candidate", font_size=16, color=P.RED).next_to(cand, UP, buff=0.15))
-        self.add(Text("flux ⇒ implied distance ~ few hundred AU", font_size=15, color=P.ORANGE).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway("A tantalising single-epoch flag -- needing a second epoch to confirm motion.")))
-        self.wait(0.9)
+        clbl = Text("IRAS 60 µm candidate", font_size=16, color=P.RED).next_to(cand, UP, buff=0.15)
+        self.play(FadeIn(clbl))
+        timing.hold_to_read(self, clbl, settle=0.5)
+
+        eq = layout.equation(
+            r"F_{60} \Rightarrow d \sim \text{few}\times10^2\ \mathrm{AU}", color=P.ORANGE, scale=0.8)
+        eq.to_edge(DOWN, buff=1.5)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "A tantalising single-epoch flag -- needing a second epoch to confirm motion.")

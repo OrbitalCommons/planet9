@@ -6,11 +6,11 @@ p9-2026-apsidal-clustering.
 """
 import numpy as np
 from manim import (
-    Arrow, Circle, Create, DOWN, FadeIn, MathTex, Scene, Text, UP, UR, VGroup, Write,
+    Arrow, Circle, Create, DOWN, FadeIn, Scene, UP, UR, VGroup, Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper, timing
 
 CRATE = "p9-2026-apsidal-clustering"
 
@@ -41,8 +41,15 @@ class ApsidalClustering2026(Scene):
         mx, my = np.mean(np.cos(varpis)), np.mean(np.sin(varpis))
         res = Arrow(np.zeros(3), 2.5 * rbar * np.array([mx, my, 0]) / np.hypot(mx, my),
                     color=P.TEAL, buff=0, stroke_width=6)
-        stat = MathTex(rf"\bar{{R}} = {rbar:.2f}", color=P.TEAL).scale(0.9).to_corner(UR, buff=0.5)
-        self.play(Create(res), Write(stat))
-        self.play(FadeIn(layout.takeaway(
-            "A calibrated statistic turns 'they look aligned' into a significance you can defend.")))
-        self.wait(0.9)
+        # the estimator the paper formalises
+        eq = layout.equation(
+            r"\bar R = \left|\tfrac1N\sum e^{\,i\varpi_k}\right|"
+        ).scale(0.7).to_corner(UR, buff=0.5)
+        self.play(Create(res), Write(eq))
+        timing.hold_to_read(self, eq, settle=1.0)
+        stat = layout.equation(rf"\bar{{R}} = {rbar:.2f}", color=P.TEAL).scale(0.9)
+        stat.next_to(eq, DOWN, buff=0.35)
+        self.play(Write(stat))
+        timing.hold_to_read(self, stat, settle=1.2)
+        layout.show_takeaway(
+            self, "A calibrated statistic turns 'they look aligned' into a significance you can defend.")

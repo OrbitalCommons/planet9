@@ -7,7 +7,7 @@ p9-2016-resonance-prediction.
 import numpy as np
 from manim import Create, DOWN, FadeIn, Line, Scene, Text, UP, VGroup, Write
 import p9_manim as P
-from p9_manim import layout, paper, dataio
+from p9_manim import layout, paper, dataio, timing
 
 CRATE = "p9-2016-resonance-prediction"
 
@@ -36,5 +36,11 @@ class ResonancePrediction2016(Scene):
             x = -6 + (a - amin) / (amax - amin) * 11
             tick = Line([x, -0.8, 0], [x, 0.4, 0], color=P.PURPLE, stroke_width=3)
             self.play(Create(tick), FadeIn(Text(name, font_size=15, color=P.PURPLE).next_to(tick, UP, buff=0.05)), run_time=0.5)
-        self.play(FadeIn(layout.takeaway("A testable prediction: TNOs should cluster at P9's resonant distances.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"a_{\rm res} = a_9\,(p/q)^{2/3}"
+        ).scale(0.9).to_edge(DOWN, buff=1.6)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "A testable prediction: TNOs should cluster at P9's resonant distances.")

@@ -5,7 +5,7 @@ detached orbits, populating the high-q region the data show. Reproduced in
 p9-2019-ossos-scattering (boundary, population).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, Dot
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, VGroup, Write, Dot
 import p9_manim as P
 from p9_manim import layout, paper
 
@@ -31,5 +31,12 @@ class OssosScattering2019(Scene):
                             for _ in range(20)])
         self.play(Create(detached, lag_ratio=0.03))
         self.add(Text("detached (lifted by P9)", font_size=15, color=P.GREEN).move_to(ax.c2p(400, 78)))
-        self.play(FadeIn(layout.takeaway("P9 ferries objects above the scattering line into the detached belt.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"q = a(1-e) \gtrsim 40\ \mathrm{AU}\ \Rightarrow\ \text{detached}",
+            scale=0.78).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "P9 ferries objects above the scattering line into the detached belt.")

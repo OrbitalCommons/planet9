@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, paper
+from p9_manim import layout, orbits, paper, timing
 
 CRATE = "p9-2025-akari-refutation"
 
@@ -30,7 +30,13 @@ class AkariRefutation2025(Scene):
 
         x = Cross(scale_factor=1.6, stroke_color=P.RED, stroke_width=8).move_to(cand.get_center())
         self.play(Create(x))
-        self.add(Text("inconsistent with the orbit / motion constraints", font_size=16, color=P.RED).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway(
-            "Extraordinary claims need follow-up -- this candidate did not hold up.")))
-        self.wait(0.9)
+        note = Text("inconsistent with the orbit / motion constraints", font_size=16, color=P.RED).to_edge(DOWN, buff=1.9)
+        self.play(FadeIn(note))
+        timing.hold_to_read(self, note, settle=0.5)
+
+        eq = layout.equation(r"\text{orbit} \nRightarrow \text{consistency}", color=P.RED, scale=0.85)
+        eq.next_to(note, UP, buff=0.3)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Extraordinary claims need follow-up -- this candidate did not hold up.")

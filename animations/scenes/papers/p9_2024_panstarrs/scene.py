@@ -19,7 +19,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2024-panstarrs"
 
@@ -68,6 +68,12 @@ class PanStarrs2024(Scene):
         combined = ex.get("combined", cum)
         head = Text(f"combined: {combined*100:.1f}% excluded", font_size=24, color=P.RED).next_to(track, UP, buff=0.5)
         self.play(Write(head))
-        self.play(FadeIn(layout.takeaway(
-            "About one-fifth of the parameter space survives -- and that is where Rubin looks.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, head, settle=0.6)
+
+        eq = layout.equation(
+            r"f_{\rm comb} = 1 - \prod_s (1 - P_s)", color=P.RED, scale=0.85)
+        eq.next_to(head, UP, buff=0.25)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "About one-fifth of the parameter space survives -- and that is where Rubin looks.")

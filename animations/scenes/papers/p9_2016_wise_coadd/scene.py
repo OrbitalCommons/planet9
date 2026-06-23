@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2016-wise-coadd"
 
@@ -30,7 +30,11 @@ class WiseCoadd2016(Scene):
 
         depth = ax.plot(lambda n: 16.5 + 1.25 * np.log10(max(n, 1)), x_range=[1, 1000, 5], color=P.ORANGE)
         self.play(Create(depth), run_time=1.6)
-        self.add(Text("∝ 2.5·log₁₀√N", font_size=18, color=P.ORANGE).next_to(ax.c2p(600, 16.5 + 1.25 * np.log10(600)), UP, buff=0.1))
-        self.play(FadeIn(layout.takeaway(
-            "Stacking + the W2 band stretch WISE's cold-body reach -- but only so far.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"m_{\rm lim} \to m_0 + 1.25\,\log_{10}\!\sqrt{N}", color=P.ORANGE, scale=0.85)
+        eq.next_to(ax.c2p(550, 16.5 + 1.25 * np.log10(550)), UP, buff=0.15)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Stacking + the W2 band stretch WISE's cold-body reach -- but only so far.")

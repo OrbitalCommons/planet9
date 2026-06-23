@@ -5,7 +5,7 @@ separating the scattering disk from the detached population -- a feature P9 can
 carve. Reproduced in p9-2021-perihelion-gap.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
 import p9_manim as P
 from p9_manim import layout, paper
 
@@ -28,5 +28,12 @@ class PerihelionGap2021(Scene):
         self.play(Create(curve), run_time=1.5)
         gapline = ax.get_vertical_line(ax.c2p(48, dist(48)), color=P.RED, stroke_width=2)
         self.add(gapline, Text("the gap (~42–55 AU)", font_size=15, color=P.RED).next_to(ax.c2p(48, 0.5), UP, buff=0.1))
-        self.play(FadeIn(layout.takeaway("A scarcity at middling perihelia separates scattered from detached -- a P9 carve-out.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"N(q):\ \text{deficit at}\ 42 \lesssim q \lesssim 55\ \mathrm{AU}",
+            scale=0.74).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "A scarcity at middling perihelia separates scattered from detached -- a P9 carve-out.")

@@ -5,7 +5,7 @@ some objects to large q ("broad" vs "narrow" outcomes). Reproduced in
 p9-2018-kuiper-belt (population analysis).
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
 import p9_manim as P
 from p9_manim import layout, paper
 
@@ -30,5 +30,10 @@ class KuiperBelt2018(Scene):
         self.add(Text("no P9 (narrow)", font_size=14, color=P.MUTED).next_to(ax.c2p(38, 1.0), UP, buff=0.05))
         self.play(Create(broad))
         self.add(Text("with P9 (broad, detached)", font_size=14, color=P.GREEN).next_to(ax.c2p(66, g(66, 60, 18)), UP, buff=0.1))
-        self.play(FadeIn(layout.takeaway("P9 lifts a tail of objects to high perihelion -- detaching them from Neptune.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(r"e = 1 - \dfrac{q}{a}", scale=0.85).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "P9 lifts a tail of objects to high perihelion -- detaching them from Neptune.")

@@ -6,12 +6,12 @@ under Planet Nine. Reproduced in p9-2022-uranus-tilt.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, Dot, FadeIn, Line, Scene, Text, UP, Write, rate_functions,
+    Create, DOWN, Dot, FadeIn, FadeOut, Line, Scene, Text, UP, Write, rate_functions,
     ValueTracker, always_redraw,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2022-uranus-tilt"
 
@@ -34,6 +34,13 @@ class UranusTilt2022(Scene):
                             .to_edge(UP, buff=1.6))
         self.add(vert, axis, deg)
         self.play(tilt.animate.set_value(98.0), run_time=4.0, rate_func=rate_functions.smooth)
-        self.play(FadeIn(layout.takeaway(
-            "Resonant obliquity sweeps are real -- the same physics the Sun's 6° tilt invokes.")))
-        self.wait(0.9)
+        self.wait(0.5)
+
+        eq = layout.equation_card(r"\varepsilon:\ 0^\circ \to 98^\circ", scale=1.0)
+        eq.to_edge(DOWN, buff=1.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self,
+            "Resonant obliquity sweeps are real -- the same physics the Sun's 6° tilt invokes.")

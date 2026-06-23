@@ -5,9 +5,9 @@ destabilises) scattered-disk orbits, complementing the numerical stability maps.
 Reproduced in p9-2025-perturbation.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2025-perturbation"
 
@@ -25,6 +25,14 @@ class Perturbation2025(Scene):
                   FadeIn(Text("survival probability", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
         curve = ax.plot(lambda a: 1.0 / (1.0 + np.exp(-(a - 420) / 50.0)), x_range=[200, 800, 5], color=P.TEAL)
         self.play(Create(curve), run_time=1.5)
-        self.add(Text("analytic boundary matches N-body", font_size=16, color=P.TEAL).next_to(ax, UP, buff=0.4))
-        self.play(FadeIn(layout.takeaway("Perturbation theory reproduces the stability edge without giant simulations.")))
-        self.wait(0.9)
+        albl = Text("analytic boundary matches N-body", font_size=16, color=P.TEAL).next_to(ax, UP, buff=0.4)
+        self.play(FadeIn(albl))
+        timing.hold_to_read(self, albl, settle=0.4)
+
+        eq = layout.equation_card(
+            r"\langle H\rangle = \langle H_0\rangle + \epsilon\,\langle H_1\rangle"
+        ).scale(0.8).to_corner(UP + RIGHT, buff=0.5).shift(DOWN * 0.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Perturbation theory reproduces the stability edge without giant simulations.")

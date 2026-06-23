@@ -5,9 +5,9 @@ probability -- the statistical backbone of the resonance picture. Reproduced in
 p9-2018-resonance (resonance catalog, capture probability).
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, LEFT, Rectangle, Scene, Text, UP, VGroup, Write
+from manim import Create, DOWN, FadeIn, LEFT, Rectangle, RIGHT, Scene, Text, UP, VGroup, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2018-resonance"
 
@@ -28,5 +28,9 @@ class Resonance2018(Scene):
         rows.arrange(DOWN, buff=0.35).shift(DOWN * 0.3)
         for r in rows:
             self.play(FadeIn(r[0]), Create(r[1]), Create(r[2]), run_time=0.5)
-        self.play(FadeIn(layout.takeaway("Capture is most likely into the strong low-order resonances.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(r"P_{\rm capture}(p{:}q)").scale(0.75).to_corner(UP + RIGHT, buff=0.6).shift(DOWN * 0.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Capture is most likely into the strong low-order resonances.")

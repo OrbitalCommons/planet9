@@ -5,7 +5,7 @@ magnitudes, and the orbits used to test clustering and exclusion. Reproduced in
 p9-2021-des-catalog.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Rectangle, Scene, Text, UP, VGroup, Write, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, Rectangle, Scene, Text, UP, UR, VGroup, Write, Dot
 import p9_manim as P
 from p9_manim import layout, paper
 
@@ -26,5 +26,12 @@ class DesCatalog2021(Scene):
                         for _ in range(24)])
         self.play(Create(dets, lag_ratio=0.03))
         self.add(Text("catalogued distant TNOs (g,r,i,z,Y)", font_size=15, color=P.GREEN).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway("A deep, well-characterised catalogue -- the raw material for the exclusion tests.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"\text{catalogued} \iff m < m_{\rm lim}",
+            scale=0.78).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "A deep, well-characterised catalogue -- the raw material for the exclusion tests.")

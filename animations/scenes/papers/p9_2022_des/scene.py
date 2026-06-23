@@ -10,7 +10,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2022-des"
 
@@ -32,7 +32,7 @@ class Des2022(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
-        sky = Rectangle(width=10, height=3.0, color=P.MUTED, stroke_width=1.5).shift(UP * 0.4)
+        sky = Rectangle(width=10, height=2.5, color=P.MUTED, stroke_width=1.5).shift(UP * 0.7)
         sky.set_fill(P.MUTED, opacity=0.05)
         # ~12% footprint
         foot = Rectangle(width=10 * 0.12, height=1.0, color=P.PURPLE, stroke_width=2)
@@ -41,10 +41,17 @@ class Des2022(Scene):
         self.add(Text("DES footprint ~5000 deg² (deep: r ≈ 23.8)", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1))
         self.add(Text("~88% of sky unsearched by DES", font_size=15, color=P.MUTED).move_to(sky.get_center() + UP * 0.4))
 
+        eq = layout.equation(
+            r"f_{\rm DES}^{\rm unique} = \langle P_{\rm DES}\,(1-P_{\rm ZTF})\rangle",
+            color=P.ORANGE, scale=0.72)
+        eq.next_to(sky, DOWN, buff=0.2)
+        layout.show_equation(self, eq)
+
         des_unique = _exclusion("des_unique", 0.050)
         ro = paper.result_readout("unique exclusion added (after ZTF)", f"+{des_unique*100:.1f}%", color=P.ORANGE)
-        ro.scale(0.8).to_edge(DOWN, buff=1.3)
+        ro.scale(0.62).next_to(eq, DOWN, buff=0.2)
         self.play(FadeIn(ro))
-        self.play(FadeIn(layout.takeaway(
-            "Depth buys little if the footprint is small -- coverage is king.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, ro, settle=0.8)
+
+        layout.show_takeaway(
+            self, "Depth buys little if the footprint is small -- coverage is king.")

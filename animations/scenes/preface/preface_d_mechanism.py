@@ -5,10 +5,10 @@ Scene: P08Sculpting.
 import numpy as np
 from manim import (
     Create,
+    DOWN,
     FadeIn,
     FadeOut,
     Indicate,
-    MathTex,
     Scene,
     Text,
     UP,
@@ -18,7 +18,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits
+from p9_manim import layout, orbits, timing
 
 
 class P08Sculpting(Scene):
@@ -54,9 +54,16 @@ class P08Sculpting(Scene):
         self.play(FadeOut(cap))
         self.play(Indicate(swarm, color=P.TEAL, scale_factor=1.03))
 
-        eq = MathTex(r"\Delta\varpi \approx 180^\circ", color=P.TEAL).scale(0.8)
+        eq = layout.equation(r"\Delta\varpi \approx 180^\circ", color=P.TEAL).scale(0.8)
         eq.to_corner(UR, buff=0.6)
         self.play(Write(eq))
-        self.play(FadeIn(layout.takeaway(
-            "Confined apsides, lifted perihelia, tilted orbits -- one planet explains them all.")))
-        self.wait(0.8)
+        timing.hold_to_read(self, eq, settle=0.4)
+
+        # the secular Hamiltonian governs the apsidal confinement
+        ham = layout.equation_card(r"\langle H\rangle = H(e,\,\Delta\varpi)").scale(0.8)
+        ham.to_edge(DOWN, buff=1.1)
+        layout.show_equation(self, ham)
+        self.play(FadeOut(ham))
+
+        layout.show_takeaway(
+            self, "Confined apsides, lifted perihelia, tilted orbits -- one planet explains them all.")

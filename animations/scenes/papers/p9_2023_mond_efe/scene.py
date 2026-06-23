@@ -11,6 +11,7 @@ from manim import (
     Create,
     DOWN,
     FadeIn,
+    FadeOut,
     RIGHT,
     Scene,
     Text,
@@ -48,6 +49,12 @@ class MondEfe2023(Scene):
         targ = [orbits.ellipse_orbit(2.4, 0.7, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8)
                 for v in target]
         self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0)
-        self.play(FadeIn(layout.takeaway(
-            "A serious alternative: the clustering may need modified gravity, not a planet.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"a_0 \approx 1.2\times10^{-10}\ \mathrm{m\,s^{-2}}\ ;\quad g_{\rm ext}\ \text{(galactic)}",
+            scale=0.8).to_edge(DOWN, buff=1.3)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "A serious alternative: the clustering may need modified gravity, not a planet.")

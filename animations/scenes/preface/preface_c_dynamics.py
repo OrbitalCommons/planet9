@@ -14,7 +14,6 @@ from manim import (
     FadeOut,
     LEFT,
     Line,
-    MathTex,
     RIGHT,
     Rotate,
     Scene,
@@ -28,7 +27,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, orbits
+from p9_manim import dataio, layout, orbits, timing
 
 
 class P05Clustering(Scene):
@@ -62,9 +61,16 @@ class P05Clustering(Scene):
                             color=P.GREEN, buff=0, stroke_width=3))
             return g
 
+        # the mean resultant length R-bar: how confined the directions are
+        rbar_def = layout.equation_card(
+            r"\bar R = \left|\dfrac{1}{N}\sum_{k=1}^{N} e^{\,i\varpi_k}\right|").scale(0.8)
+        rbar_def.next_to(title, DOWN, buff=0.25)
+        layout.show_equation(self, rbar_def)
+        self.play(FadeOut(rbar_def))
+
         arr = arrows(random_varpi)
         rbar0 = orbits.mean_resultant_length(random_varpi)
-        lbl0 = MathTex(rf"\bar{{R}} = {rbar0:.2f}\ \text{{(random)}}", color=P.RED).scale(0.7)
+        lbl0 = layout.equation(rf"\bar{{R}} = {rbar0:.2f}\ \text{{(random)}}", color=P.RED).scale(0.7)
         lbl0.to_edge(DOWN, buff=0.9)
         self.play(Create(arr, lag_ratio=0.1), FadeIn(lbl0))
         self.wait(0.6)
@@ -72,14 +78,13 @@ class P05Clustering(Scene):
         # rotate each arrow to its real (or illustrative) clustered direction
         target = arrows(clustered_varpi)
         rbar1 = r_bar if r_bar is not None else orbits.mean_resultant_length(clustered_varpi)
-        lbl1 = MathTex(rf"\bar{{R}} = {rbar1:.2f}\ \text{{(real KBOs)}}", color=P.TEAL).scale(0.7)
+        lbl1 = layout.equation(rf"\bar{{R}} = {rbar1:.2f}\ \text{{(real KBOs)}}", color=P.TEAL).scale(0.7)
         lbl1.to_edge(DOWN, buff=0.9)
         self.play(*[a.animate.become(t) for a, t in zip(arr, target)], run_time=2.2)
         self.play(FadeOut(lbl0), FadeIn(lbl1))
-        self.wait(0.4)
-        self.play(FadeIn(layout.takeaway(
-            "R-bar near 1 means the orbits are confined -- something is herding them.")))
-        self.wait(0.8)
+        timing.hold_to_read(self, lbl1, settle=0.5)
+        layout.show_takeaway(
+            self, "R-bar near 1 means the orbits are confined -- something is herding them.")
 
 
 class P06Precession(Scene):
@@ -108,11 +113,19 @@ class P06Precession(Scene):
         self.add(live, apse)
         self.play(vt.animate.set_value(1.6 * np.pi), run_time=4.0, rate_func=rate_functions.linear)
 
-        eq = MathTex(r"\dot{\varpi}\ \neq\ 0", color=P.ORANGE).scale(0.9).to_corner(UP + RIGHT, buff=0.6)
+        eq = layout.equation(r"\dot{\varpi}\ \neq\ 0", color=P.ORANGE).scale(0.9).to_corner(UP + RIGHT, buff=0.6)
         self.play(Write(eq))
-        self.play(FadeIn(layout.takeaway(
-            "Differential precession scrambles alignment -- so confinement needs a cause.")))
-        self.wait(0.8)
+        timing.hold_to_read(self, eq, settle=0.4)
+
+        rate_eq = layout.equation_card(
+            r"\dot\varpi \approx \tfrac34\, n\, \dfrac{m_p}{M_\odot}"
+            r"\left(\dfrac{a_p}{a}\right)^{2}\dfrac{1}{(1-e^2)^2}").scale(0.75)
+        rate_eq.to_edge(DOWN, buff=1.1)
+        layout.show_equation(self, rate_eq)
+        self.play(FadeOut(rate_eq))
+
+        layout.show_takeaway(
+            self, "Differential precession scrambles alignment -- so confinement needs a cause.")
 
 
 class P07Resonance(Scene):
@@ -130,8 +143,16 @@ class P07Resonance(Scene):
         o1 = Circle(radius=a1, color=P.GREEN, stroke_width=2)
         o2 = Circle(radius=a2, color=P.BLUE, stroke_width=2)
         self.play(FadeIn(sun), Create(o1), Create(o2))
-        lbl = MathTex(r"P_{\rm out} : P_{\rm in} = 2 : 1", color=P.FG).scale(0.7).to_corner(UP + RIGHT, buff=0.6)
+        lbl = layout.equation(r"P_{\rm out} : P_{\rm in} = 2 : 1", color=P.FG).scale(0.7).to_corner(UP + RIGHT, buff=0.6)
         self.play(Write(lbl))
+
+        # resonant semi-major axis and the critical (resonant) angle
+        res_eq = layout.equation_card(
+            r"a_{\rm res} = a_p\left(\dfrac{p}{q}\right)^{2/3}"
+            r"\qquad \phi = (p+q)\lambda' - p\lambda - q\varpi").scale(0.62)
+        res_eq.to_edge(UP, buff=1.2)
+        layout.show_equation(self, res_eq)
+        self.play(FadeOut(res_eq))
 
         vt = ValueTracker(0.0)
         d1 = always_redraw(lambda: Dot(a1 * np.array([np.cos(2 * vt.get_value()), np.sin(2 * vt.get_value()), 0]),
@@ -143,6 +164,5 @@ class P07Resonance(Scene):
         conj = Line(np.zeros(3), RIGHT * (a2 + 0.4), color=P.ORANGE, stroke_width=2).set_stroke(opacity=0.6)
         self.add(conj)
         self.play(vt.animate.set_value(4 * np.pi), run_time=6.0, rate_func=rate_functions.linear)
-        self.play(FadeIn(layout.takeaway(
-            "When periods form a simple ratio, perturbations repeat and accumulate.")))
-        self.wait(0.8)
+        layout.show_takeaway(
+            self, "When periods form a simple ratio, perturbations repeat and accumulate.")

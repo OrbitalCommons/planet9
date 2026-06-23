@@ -5,9 +5,9 @@ Saturn's perihelion precession changes -- tightening the planetary-ephemeris
 bound. Reproduced in p9-2026-iorio-precession.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write
 import p9_manim as P
-from p9_manim import layout, paper
+from p9_manim import layout, paper, timing
 
 CRATE = "p9-2026-iorio-precession"
 
@@ -25,7 +25,16 @@ class Iorio2026(Scene):
                   FadeIn(Text("Saturn precession effect", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
         point = ax.plot(lambda d: 40.0 / (d / 250.0) ** 3, x_range=[320, 800, 5], color=P.MUTED)
         disten = ax.plot(lambda d: 52.0 / (d / 250.0) ** 3, x_range=[320, 800, 5], color=P.ORANGE)
-        self.play(Create(point)); self.add(Text("point mass", font_size=14, color=P.MUTED).next_to(ax.c2p(700, 40 / (700 / 250) ** 3), UP, buff=0.05))
-        self.play(Create(disten)); self.add(Text("distended P9", font_size=14, color=P.ORANGE).next_to(ax.c2p(450, 52 / (450 / 250) ** 3), UP, buff=0.05))
-        self.play(FadeIn(layout.takeaway("Even P9's mass distribution leaves a (tiny) fingerprint on Saturn.")))
-        self.wait(0.9)
+        pm_lbl = Text("point mass", font_size=14, color=P.MUTED).next_to(ax.c2p(700, 40 / (700 / 250) ** 3), UP, buff=0.05)
+        self.play(Create(point), FadeIn(pm_lbl))
+        d_lbl = Text("distended P9", font_size=14, color=P.ORANGE).next_to(ax.c2p(450, 52 / (450 / 250) ** 3), UP, buff=0.05)
+        self.play(Create(disten), FadeIn(d_lbl))
+        timing.hold_to_read(self, pm_lbl, d_lbl)
+
+        eq = layout.equation_card(r"\dot\varpi_{\rm Saturn}^{\rm distended}", scale=1.0)
+        eq.next_to(ax, UP, buff=0.1)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Even P9's mass distribution leaves a (tiny) fingerprint on Saturn.")

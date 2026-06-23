@@ -20,7 +20,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2021-ztf"
 
@@ -49,6 +49,7 @@ class Ztf2021(Scene):
         foot.set_fill(P.PURPLE, opacity=0.12).align_to(sky, RIGHT).align_to(sky, UP)
         foot_lbl = Text("ZTF footprint (dec > −30°), r ≈ 20.5", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1)
         self.play(Create(sky), Create(foot), FadeIn(foot_lbl))
+        timing.hold_to_read(self, foot_lbl, settle=0.6)
 
         # exclusion bar filling to the real ZTF-ruled-out fraction
         frac = _exclusion("ztf", 0.564)
@@ -59,6 +60,11 @@ class Ztf2021(Scene):
         self.play(Create(fill), run_time=1.5)
         pct = Text(f"{frac*100:.1f}% of parameter space ruled out", font_size=22, color=P.RED).next_to(track, DOWN, buff=0.25)
         self.play(Write(pct))
-        self.play(FadeIn(layout.takeaway(
-            "No planet found yet -- but more than half the hiding places are now gone.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, pct, settle=0.8)
+
+        eq = layout.equation(r"f_{\rm excl} = \langle P_{\rm det}\rangle", color=P.RED, scale=0.85)
+        eq.next_to(pct, DOWN, buff=0.3)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "No planet found yet -- but more than half the hiding places are now gone.")

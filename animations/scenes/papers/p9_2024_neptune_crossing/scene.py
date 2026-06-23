@@ -5,7 +5,7 @@ and supply rate test the P9 + scattering picture. Reproduced in
 p9-2024-neptune-crossing (observed TNOs, simulation).
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Scene, Text, UP, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write
 import p9_manim as P
 from p9_manim import layout, orbits, paper
 
@@ -28,5 +28,12 @@ class NeptuneCrossing2024(Scene):
         peri = orbits.body_dot(3.2, 0.78, 0.0, color=P.RED, radius=0.08)
         self.play(FadeIn(peri))
         self.add(Text("perihelion crosses Neptune", font_size=15, color=P.RED).to_edge(DOWN, buff=1.5))
-        self.play(FadeIn(layout.takeaway("Neptune-crossers are short-lived -- their supply constrains the distant disk.")))
-        self.wait(0.9)
+
+        eq = layout.equation_card(
+            r"q = a(1-e) < a_N\ (30\ \mathrm{AU})",
+            scale=0.78).to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq)
+        self.play(FadeOut(eq))
+
+        layout.show_takeaway(
+            self, "Neptune-crossers are short-lived -- their supply constrains the distant disk.")

@@ -12,7 +12,6 @@ from manim import (
     Dot,
     FadeIn,
     LEFT,
-    MathTex,
     ParametricFunction,
     Scene,
     Text,
@@ -26,7 +25,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper
+from p9_manim import dataio, layout, paper, timing
 
 CRATE = "p9-2017-dynamics"
 
@@ -40,7 +39,7 @@ class Dynamics2017(Scene):
         ax = Axes(x_range=[0, 360, 90], y_range=[0, 0.8, 0.2], x_length=9.5, y_length=4.2,
                   axis_config={"color": P.MUTED, "include_tip": False, "font_size": 18})
         ax.shift(DOWN * 0.4)
-        xl = MathTex(r"\Delta\varpi\ \text{(deg, relative to P9)}", color=P.FG).scale(0.6).next_to(ax, DOWN, buff=0.2)
+        xl = layout.equation(r"\Delta\varpi\ \text{(deg, relative to P9)}", color=P.FG).scale(0.6).next_to(ax, DOWN, buff=0.2)
         yl = Text("eccentricity", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
@@ -113,6 +112,12 @@ class Dynamics2017(Scene):
 
         lbl = Text("libration: Δϖ stays confined", font_size=18, color=P.TEAL).to_corner(UR, buff=0.5)
         self.play(Write(lbl))
-        self.play(FadeIn(layout.takeaway(
-            "Inside the island, orbits stay anti-aligned with P9 -- that is the clustering.")))
-        self.wait(0.9)
+        timing.hold_to_read(self, lbl, settle=0.5)
+
+        eq = layout.equation_card(
+            r"\langle H\rangle(e,\,\Delta\varpi):\ \text{libration about}\ \Delta\varpi = 180^\circ"
+        ).scale(0.62).to_corner(UP + LEFT, buff=0.5).shift(DOWN * 0.7)
+        layout.show_equation(self, eq)
+
+        layout.show_takeaway(
+            self, "Inside the island, orbits stay anti-aligned with P9 -- that is the clustering.")

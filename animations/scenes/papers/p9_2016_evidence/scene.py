@@ -24,7 +24,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, orbits, paper
+from p9_manim import dataio, layout, orbits, paper, timing
 
 CRATE = "p9-2016-evidence"
 
@@ -53,18 +53,26 @@ class Evidence2016(Scene):
         self.play(Indicate(apses, color=P.TEAL, scale_factor=1.05))
 
         rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
+        # the mean-resultant-length estimator for apsidal clustering
+        eq = layout.equation(
+            r"\bar R_\varpi = \left|\frac{1}{N}\sum_{k=1}^{N} e^{\,i\varpi_k}\right|"
+        ).scale(0.75)
+        eq.to_corner(UR, buff=0.5)
+        layout.show_equation(self, eq, settle=1.2)
         stat = MathTex(rf"\bar{{R}}_\varpi \approx {rbar:.2f}", color=P.TEAL).scale(0.8)
-        stat.to_corner(UR, buff=0.6).shift(DOWN * 0.6)
+        stat.next_to(eq, DOWN, buff=0.4)
         self.play(Write(stat))
-        self.wait(0.3)
+        timing.hold_to_read(self, stat, settle=1.2)
 
         # the headline significance the crate reproduces
         readout = paper.result_readout("joint false-alarm probability", "P ≈ 0.007%", color=P.GREEN)
         readout.scale(0.9).to_edge(DOWN, buff=0.5)
         self.play(FadeIn(readout))
-        self.wait(0.6)
-        self.play(FadeOut(readout))
+        pjoint = layout.equation(r"P_{\rm joint} \approx 7\times10^{-5}", color=P.GREEN).scale(0.7)
+        pjoint.next_to(readout, UP, buff=0.3)
+        self.play(Write(pjoint))
+        timing.hold_to_read(self, readout, pjoint, settle=1.0)
+        self.play(FadeOut(readout), FadeOut(pjoint))
 
-        self.play(FadeIn(layout.takeaway(
-            "Random orbits would not do this -- a massive shepherd is implied.")))
-        self.wait(0.9)
+        layout.show_takeaway(
+            self, "Random orbits would not do this -- a massive shepherd is implied.")
