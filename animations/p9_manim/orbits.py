@@ -61,6 +61,16 @@ def etno_swarm(specs, color=T.GREEN, stroke_width=1.6, opacity=0.8):
     return g
 
 
+def apse_arrows(varpis, length=2.5, color=T.GREEN, stroke_width=3):
+    """A VGroup of apsidal-direction arrows from the Sun, one per longitude of
+    perihelion in ``varpis`` (radians). Used by the clustering scenes."""
+    g = VGroup()
+    for v in varpis:
+        tip = length * np.array([np.cos(v), np.sin(v), 0.0])
+        g.add(Arrow(np.zeros(3), tip, color=color, buff=0, stroke_width=stroke_width))
+    return g
+
+
 def real_etno_swarm(which="kbo", display_a=2.7, color=T.GREEN, stroke_width=1.9, opacity=0.85):
     """A VGroup of the REAL observed objects' orbits (true e and ϖ), plus the
     measured clustering R-bar. ``which`` = 'kbo' or 'etno'. Semi-major axes are
