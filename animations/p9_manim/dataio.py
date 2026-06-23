@@ -48,6 +48,23 @@ def section(name):
     return anim().get(name)
 
 
+def solar_system():
+    """Real solar-system reference scales (bodies with a/e/q/Q/period/speed,
+    plus reference magnitudes, temperatures, and survey depths)."""
+    return section("solar_system")
+
+
+def body(name):
+    """One solar-system body's real parameters by name (or None)."""
+    s = section("solar_system")
+    if not s:
+        return None
+    for b in s["bodies"]:
+        if b["name"].startswith(name):
+            return b
+    return None
+
+
 def real_etnos(which="kbo"):
     """Real observed-object list as dicts plus the clustering R-bar.
 

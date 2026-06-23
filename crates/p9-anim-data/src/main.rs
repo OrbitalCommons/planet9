@@ -10,6 +10,8 @@ use serde_json::{json, Value};
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
 use p9_core::analysis::resonance::{critical_perihelion, resonance_semi_major_axis};
 use p9_core::analysis::secular::phase_portrait;
+use p9_core::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
+use p9_core::analysis::surveys::SURVEY_DEPTHS;
 use p9_core::analysis::thermal::{effective_temp, planck_bnu, solar_equilibrium_temp, C_LIGHT};
 use p9_core::data::etno::BROWN_2017_SAMPLE;
 use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos};
@@ -178,6 +180,64 @@ fn stability() -> Value {
     json!({ "a_au": a, "q_crit_au": q_crit })
 }
 
+/// Physically-realistic solar-system reference scales for the background scenes:
+/// real distances/eccentricities with derived periods & speeds, plus reference
+/// magnitudes and temperatures.
+fn solar_system() -> Value {
+    // (name, a_AU, e, i_deg) — real measured values.
+    let bodies: [(&str, f64, f64, f64); 6] = [
+        ("Earth", 1.000, 0.017, 0.0),
+        ("Jupiter", 5.203, 0.048, 1.3),
+        ("Neptune", 30.07, 0.009, 1.8),
+        ("Pluto", 39.48, 0.249, 17.2),
+        ("Sedna", 506.0, 0.85, 11.9),
+        ("Planet Nine (nominal)", 500.0, 0.25, 20.0),
+    ];
+    let body_json: Vec<Value> = bodies
+        .iter()
+        .map(|&(name, a, e, i)| {
+            json!({
+                "name": name,
+                "a_au": a,
+                "e": e,
+                "i_deg": i,
+                "q_au": a * (1.0 - e),
+                "Q_au": a * (1.0 + e),
+                "period_yr": a.powf(1.5),          // Kepler III in (yr, AU)
+                "speed_kms": 29.78 / a.sqrt(),       // circular-orbit speed (Earth = 29.78)
+            })
+        })
+        .collect();
+
+    // Apparent magnitudes at opposition: real observed for Neptune/Pluto;
+    // computed for Planet Nine from the Neptune-anchored photometry.
+    let magnitudes = json!([
+        {"name": "Neptune", "dist_au": 30.0, "app_mag": 7.8},     // observed
+        {"name": "Pluto", "dist_au": 39.5, "app_mag": 14.4},      // observed
+        {"name": "Planet Nine", "dist_au": 600.0,
+         "app_mag": planet_apparent_magnitude(6.0, ALBEDO_NEPTUNE, 600.0)},
+    ]);
+
+    // Effective temperatures: Neptune observed; Planet Nine computed; CMB fact.
+    let temperatures = json!([
+        {"name": "Neptune", "t_k": 59.0},
+        {"name": "Planet Nine", "t_k": effective_temp(600.0, 0.41, 40.0)},
+        {"name": "CMB", "t_k": 2.725},
+    ]);
+
+    let depths: Vec<Value> = SURVEY_DEPTHS
+        .iter()
+        .map(|d| json!({"survey": d.survey, "band": d.band, "limiting_mag": d.limiting_mag}))
+        .collect();
+
+    json!({
+        "bodies": body_json,
+        "magnitudes": magnitudes,
+        "temperatures": temperatures,
+        "survey_depths": depths,
+    })
+}
+
 fn main() {
     let mut out: BTreeMap<&str, Value> = BTreeMap::new();
     out.insert(
@@ -197,6 +257,7 @@ fn main() {
     out.insert("exclusion", exclusion());
     out.insert("cassini", cassini());
     out.insert("stability", stability());
+    out.insert("solar_system", solar_system());
 
     let json = serde_json::to_string_pretty(&out).unwrap();
     std::fs::create_dir_all("animations/data").unwrap();
