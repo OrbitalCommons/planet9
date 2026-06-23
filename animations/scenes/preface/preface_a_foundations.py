@@ -165,11 +165,17 @@ class P02KeplerLaws(Scene):
         self.play(FadeOut(peri_sec), FadeOut(apo_sec), FadeOut(radius), FadeOut(body),
                   FadeOut(k2), FadeOut(area_eq))
 
-        # --- vis-viva: speed at any point on the orbit ---
-        vv = layout.equation(r"v^2 = GM\!\left(\dfrac{2}{r}-\dfrac{1}{a}\right)", color=P.TEAL)
-        vv.to_edge(UP, buff=0.9)
-        self.play(Write(vv))
-        timing.hold_to_read(self, vv, settle=0.5)
+        # --- vis-viva: speed at any point on the orbit (term by term) ---
+        vv = layout.explain_equation(
+            self,
+            [r"v^2", "=", "GM", r"\left(", r"\frac{2}{r}", "-", r"\frac{1}{a}", r"\right)"],
+            [
+                (0, "orbital speed of the body"),
+                (2, "Sun's gravitational parameter (G·M_sun)"),
+                (4, "2 / current distance from the Sun"),
+                (6, "1 / semi-major axis (orbit size)"),
+            ],
+        )
         self.play(FadeOut(vv))
 
         # --- real physically-realistic scales: the headline example table ---

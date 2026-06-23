@@ -7,7 +7,9 @@ from manim import (
     UP,
     UR,
     DL,
+    Create,
     FadeIn,
+    FadeOut,
     MathTex,
     Rectangle,
     SurroundingRectangle,
@@ -90,6 +92,47 @@ def show_equation(scene, mobj, settle=1.0, run_time=1.1):
     scene.play(Write(mobj), run_time=run_time)
     timing.hold_to_read(scene, mobj, settle=settle)
     return mobj
+
+
+def explain_equation(scene, parts, explain, color=None, accent=None, scale=1.0,
+                     card=True, where=None):
+    """Show an equation, then walk through it TERM BY TERM: highlight each term
+    and show a plain-language label for it, in turn, before a final reading hold.
+
+    ``parts`` is a list of LaTeX fragments (e.g. ``[r"v^2", "=", "GM",
+    r"\\left(\\frac{2}{r}-\\frac{1}{a}\\right)"]``); each becomes an indexable
+    submobject (this avoids the command-splitting pitfalls of substring
+    isolation). ``explain`` is a list of ``(part_index, "what it means")``.
+    Returns the equation group so the caller can fade it out.
+    """
+    color = color or T.FG
+    accent = accent or T.TEAL
+    eq = MathTex(*parts).set_color(color).scale(scale)
+    eq.move_to(where if where is not None else UP * 1.7)
+    group = eq
+    if card:
+        rect = SurroundingRectangle(eq, color=T.MUTED, buff=0.3, corner_radius=0.16)
+        rect.set_stroke(T.MUTED, width=1.3, opacity=0.6).set_fill("#222436", opacity=0.7)
+        group = VGroup(rect, eq)
+        scene.play(Create(rect), Write(eq), run_time=1.2)
+    else:
+        scene.play(Write(eq), run_time=1.1)
+
+    for idx, meaning in explain:
+        part = eq[idx] if 0 <= idx < len(eq) else None
+        lbl = Text(meaning, color=accent, font_size=T.SMALL_SIZE)
+        lbl.to_edge(DOWN, buff=0.7)
+        if part is not None:
+            box = SurroundingRectangle(part, color=accent, buff=0.06, corner_radius=0.05)
+            scene.play(part.animate.set_color(accent), Create(box), FadeIn(lbl), run_time=0.45)
+            timing.hold_to_read(scene, meaning, settle=0.4)
+            scene.play(part.animate.set_color(color), FadeOut(box), FadeOut(lbl), run_time=0.4)
+        else:
+            scene.play(FadeIn(lbl), run_time=0.4)
+            timing.hold_to_read(scene, meaning, settle=0.4)
+            scene.play(FadeOut(lbl), run_time=0.35)
+    timing.hold_to_read(scene, eq, settle=1.0)
+    return group
 
 
 # ---- reading-paced end-of-section beat --------------------------------------
