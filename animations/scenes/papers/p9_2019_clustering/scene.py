@@ -4,7 +4,7 @@ Uses Poincare-style variables and the mean resultant length to put a number and 
 significance on the ETNO clustering. Reproduced in p9-2019-clustering.
 """
 import numpy as np
-from manim import Arrow, Circle, Create, DOWN, FadeIn, Scene, UP, UR, VGroup, Write
+from manim import Arrow, Circle, Create, DOWN, FadeIn, FadeOut, Scene, UP, UR, VGroup, Write
 import p9_manim as P
 from p9_manim import dataio, layout, orbits, paper, timing
 
@@ -30,17 +30,23 @@ class Clustering2019(Scene):
                        for v in varpis])
         self.play(Create(arr, lag_ratio=0.06))
         rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
-        # the two circular-statistics quantities: resultant length and its p-value
-        defs = VGroup(
-            layout.equation(r"\bar R = \left|\tfrac1N\sum e^{\,i\varpi_k}\right|").scale(0.6),
-            layout.equation(r"p_{\rm Rayleigh} = e^{-N\bar R^2}", color=P.GREEN).scale(0.6),
-        ).arrange(DOWN, buff=0.3).to_corner(UR, buff=0.5)
-        self.play(Write(defs[0]))
-        timing.hold_to_read(self, defs[0], settle=0.8)
-        self.play(Write(defs[1]))
-        timing.hold_to_read(self, defs[1], settle=1.0)
+        # the main circular-statistics estimator, walked term by term
+        eq = layout.explain_equation(
+            self,
+            [r"\bar R", "=", r"\left|", r"\tfrac1N\sum e^{\,i\varpi_k}", r"\right|"],
+            [
+                (0, "mean resultant length (0=random, 1=aligned)"),
+                (3, "average of the unit apsidal vectors"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
+        # its companion significance test, and the measured value
+        pray = layout.equation(r"p_{\rm Rayleigh} = e^{-N\bar R^2}", color=P.GREEN).scale(0.6)
         stat = layout.equation(rf"\bar{{R}} = {rbar:.2f}", color=P.TEAL).scale(0.9)
-        stat.next_to(defs, DOWN, buff=0.35)
+        VGroup(pray, stat).arrange(DOWN, buff=0.35).to_corner(UR, buff=0.5)
+        self.play(Write(pray))
+        timing.hold_to_read(self, pray, settle=0.8)
         self.play(Write(stat))
         timing.hold_to_read(self, stat, settle=1.2)
         layout.show_takeaway(self, "Circular statistics convert 'looks aligned' into a defensible significance.")

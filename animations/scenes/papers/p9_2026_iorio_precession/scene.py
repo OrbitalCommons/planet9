@@ -31,9 +31,14 @@ class Iorio2026(Scene):
         self.play(Create(disten), FadeIn(d_lbl))
         timing.hold_to_read(self, pm_lbl, d_lbl)
 
-        eq = layout.equation_card(r"\dot\varpi_{\rm Saturn}^{\rm distended}", scale=1.0)
-        eq.next_to(ax, UP, buff=0.1)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\dot\varpi_{\rm Saturn}^{\rm distended}"],
+            [
+                (0, "Saturn's precession if P9's mass is spread out, not a point"),
+            ],
+            scale=0.95,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

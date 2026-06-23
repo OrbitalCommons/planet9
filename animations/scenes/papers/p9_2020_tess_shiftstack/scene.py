@@ -6,7 +6,7 @@ p9-2020-tess-shiftstack (depth gain, trial-track grid).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Line, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, VGroup, Write,
     ValueTracker, always_redraw, rate_functions,
 )
 
@@ -34,9 +34,13 @@ class TessShiftstack2020(Scene):
         self.play(FadeIn(found))
         timing.hold_to_read(self, found, settle=0.6)
 
-        eq = layout.equation(r"\Delta m = 1.25\,\log_{10} N", color=P.GREEN, scale=0.85)
-        eq.to_edge(DOWN, buff=1.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\Delta m", "=", "1.25", r"\log_{10} N"],
+            [(0, "extra depth gained by stacking"),
+             (3, "grows with the log of the number of frames N")],
+            color=P.GREEN, scale=0.85, where=DOWN * 2.2)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Pick the right track and the moving signal adds up; pick wrong and it smears.")

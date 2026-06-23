@@ -6,7 +6,7 @@ Reproduced in p9-2025-ps1-holman (stack depth, reach).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Line, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -36,9 +36,14 @@ class Ps1Holman2025(Scene):
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.6)
 
-        eq = layout.equation(r"\Delta m \approx 1\ \text{mag (shift--stack)}", color=P.TEAL, scale=0.8)
-        eq.next_to(note, UP, buff=0.3)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\Delta m", r"\approx", "1", r"\ \text{mag}", r"\ (\text{shift--stack})"],
+            [(0, "depth gained over a single image"),
+             (2, "about one magnitude deeper"),
+             (4, "from co-adding pixels along a trial orbit")],
+            color=P.TEAL, scale=0.8, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Digital tracking digs below the single-image limit -- at the cost of many trials.")

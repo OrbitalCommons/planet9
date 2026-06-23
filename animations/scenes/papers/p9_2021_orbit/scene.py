@@ -42,10 +42,15 @@ class Orbit2021(Scene):
             f"median: {med_m:.1f} M⊕, {med_a:.0f} AU, e={med_e:.2g}",
             font_size=15, color=P.GREEN).next_to(med, UP, buff=0.15)))
 
-        eq = layout.equation_card(
-            r"\hat\theta_{\rm MCMC} = (6.2\,M_\oplus,\ 380\,\mathrm{AU},\ 0.3)",
-            scale=0.8).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\hat\theta_{\rm MCMC}", r"=", r"(6.2\,M_\oplus,\ 380\,\mathrm{AU},\ 0.3)"],
+            [
+                (0, "the best-fit orbit from MCMC sampling"),
+                (2, "≈6 Earth masses, 380 AU, eccentricity 0.3"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

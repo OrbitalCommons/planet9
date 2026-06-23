@@ -39,13 +39,19 @@ class SecularResonance2016(Scene):
         msg = Text("Δϖ oscillates -- it never runs away", font_size=18, color=P.TEAL).to_edge(UP, buff=1.5)
         self.play(FadeIn(msg))
         timing.hold_to_read(self, msg, settle=0.6)
-        self.play(FadeOut(msg))
+        self.play(FadeOut(msg), FadeOut(yl))
 
-        eq = layout.equation_card(
-            r"\dot\phi = 0,\quad \phi = \varpi - \varpi_9"
-            r"\qquad \ddot{\Delta\varpi} = -\,\omega_{\rm lib}^2\,\Delta\varpi"
-        ).scale(0.72).to_edge(UP, buff=1.2)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\ddot{\Delta\varpi}", "=", "-", r"\,\omega_{\rm lib}^2", r"\,\Delta\varpi"],
+            [
+                (0, "how the apsidal angle accelerates"),
+                (3, "the libration frequency, squared"),
+                (4, "restoring force pulls it back -- it oscillates"),
+            ],
+            scale=0.95,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "A secular resonance holds the apsidal angle fixed -- alignment without luck.")

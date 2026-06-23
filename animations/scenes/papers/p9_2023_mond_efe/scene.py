@@ -50,10 +50,17 @@ class MondEfe2023(Scene):
                 for v in target]
         self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0)
 
-        eq = layout.equation_card(
-            r"a_0 \approx 1.2\times10^{-10}\ \mathrm{m\,s^{-2}}\ ;\quad g_{\rm ext}\ \text{(galactic)}",
-            scale=0.8).to_edge(DOWN, buff=1.3)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"a_0", r"\approx", r"1.2\times10^{-10}\ \mathrm{m\,s^{-2}}", r";\quad",
+             r"g_{\rm ext}\ \text{(galactic)}"],
+            [
+                (0, "the MOND acceleration scale, where gravity goes weird"),
+                (2, "tiny — comparable to deep-space accelerations"),
+                (4, "the Milky Way's external field tugs the whole Solar System"),
+            ],
+            scale=0.78,
+            where=DOWN * 1.2)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

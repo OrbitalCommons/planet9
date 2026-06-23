@@ -31,8 +31,15 @@ class KuiperBelt2018(Scene):
         self.play(Create(broad))
         self.add(Text("with P9 (broad, detached)", font_size=14, color=P.GREEN).next_to(ax.c2p(66, g(66, 60, 18)), UP, buff=0.1))
 
-        eq = layout.equation_card(r"e = 1 - \dfrac{q}{a}", scale=0.85).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"e", r"=", r"1", r"-", r"\dfrac{q}{a}"],
+            [
+                (0, "eccentricity — how stretched the orbit is"),
+                (4, "perihelion over semi-major axis"),
+            ],
+            scale=0.9,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

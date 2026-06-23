@@ -9,6 +9,7 @@ from manim import (
     Create,
     DOWN,
     FadeIn,
+    FadeOut,
     LEFT,
     Rectangle,
     Scene,
@@ -70,10 +71,13 @@ class PanStarrs2024(Scene):
         self.play(Write(head))
         timing.hold_to_read(self, head, settle=0.6)
 
-        eq = layout.equation(
-            r"f_{\rm comb} = 1 - \prod_s (1 - P_s)", color=P.RED, scale=0.85)
-        eq.next_to(head, UP, buff=0.25)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"f_{\rm comb}", "=", "1", "-", r"\prod_s (1 - P_s)"],
+            [(0, "combined fraction of P9 space ruled out"),
+             (4, "product over surveys of 'not detected'")],
+            color=P.RED, scale=0.85, where=UP * 2.5)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "About one-fifth of the parameter space survives -- and that is where Rubin looks.")

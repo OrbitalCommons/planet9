@@ -74,13 +74,19 @@ class P03Elements(Scene):
         self.play(Create(om_arc), FadeIn(om_lbl))
         self.wait(0.3)
 
-        # longitude of perihelion varpi = Omega + omega
-        var_eq = layout.equation(
-            r"\varpi = \Omega + \omega", t2c={r"\Omega": P.PURPLE, r"\omega": P.GREEN}
-        ).scale(0.8).to_corner(UP + RIGHT, buff=0.5)
-        self.play(Write(var_eq))
+        # longitude of perihelion varpi = Omega + omega (the clustering clue)
         self.play(apse.animate.set_color(P.TEAL))
-        timing.hold_to_read(self, var_eq, settle=0.5)
+        layout.explain_equation(
+            self,
+            [r"\varpi", "=", r"\Omega", "+", r"\omega"],
+            [
+                (0, "longitude of perihelion: which way the orbit points"),
+                (2, "longitude of the ascending node"),
+                (4, "argument of perihelion"),
+            ],
+            scale=0.9,
+            where=UP * 1.7,
+        )
 
         # Kepler's equation: where the body is along the orbit at a given time
         kep = layout.equation_card(r"M = E - e\sin E").scale(0.8)

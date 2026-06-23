@@ -6,7 +6,7 @@ and objects diffuse. Reproduced in p9-2018-chaotic-dynamics (libration widths).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Line, Rectangle, RIGHT, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, Line, Rectangle, Scene, Text, UP, VGroup, Write,
     rate_functions, ValueTracker, always_redraw,
 )
 
@@ -43,10 +43,17 @@ class ChaoticDynamics2018(Scene):
         # widen until they overlap -> chaos
         self.play(w.animate.set_value(1.6), run_time=3.0, rate_func=rate_functions.smooth)
 
-        eq = layout.equation_card(
-            r"K = \dfrac{\delta a_{\rm res}}{\Delta a_{\rm sep}} \gtrsim 1"
-        ).scale(0.8).to_corner(UP + RIGHT, buff=0.6).shift(DOWN * 0.55)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"K", "=", r"\dfrac{\delta a_{\rm res}}{\Delta a_{\rm sep}}", r"\gtrsim", "1"],
+            [
+                (0, "Chirikov resonance-overlap parameter"),
+                (2, "resonance width divided by spacing to its neighbour"),
+                (4, "once they touch (K>1), motion turns chaotic"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Overlapping resonances -> chaos: distant orbits diffuse over billions of years.")

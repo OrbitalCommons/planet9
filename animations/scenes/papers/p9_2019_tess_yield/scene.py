@@ -10,6 +10,7 @@ from manim import (
     Create,
     DOWN,
     FadeIn,
+    FadeOut,
     Line,
     RIGHT,
     Scene,
@@ -58,10 +59,14 @@ class TessYield2019(Scene):
         self.play(Create(dline), FadeIn(dlbl))
         timing.hold_to_read(self, dlbl, settle=0.6)
 
-        eq = layout.equation(
-            r"m_{\rm stack} = m_1 + 1.25\,\log_{10} N", color=P.TEAL, scale=0.85)
-        eq.next_to(ax, DOWN, buff=0.95)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"m_{\rm stack}", "=", "m_1", "+", "1.25", r"\log_{10} N"],
+            [(0, "depth reached after co-adding"),
+             (2, "single-frame limiting magnitude"),
+             (5, "gain grows with the log of frame count N")],
+            color=P.TEAL, scale=0.8, where=UP * 2.45)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Even a survey built for exoplanets can be re-aimed at the outer dark.")

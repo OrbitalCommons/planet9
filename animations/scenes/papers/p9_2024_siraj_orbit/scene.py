@@ -54,9 +54,16 @@ class SirajOrbit2024(Scene):
             self.play(FadeIn(best))
             self.add(Text("best estimate", font_size=15, color=P.GREEN).next_to(best, UP, buff=0.1))
 
-        eq = layout.equation_card(
-            r"P(m,\,a,\,e,\,i \mid \mathcal{D})", scale=0.85).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"P", r"\left(m,\,a,\,e,\,i", r"\mid", r"\mathcal{D}\right)"],
+            [
+                (0, "probability over P9's orbit"),
+                (1, "its mass, distance, stretch and tilt"),
+                (3, "given all the observational data"),
+            ],
+            scale=0.9,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

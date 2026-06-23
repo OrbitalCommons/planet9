@@ -30,10 +30,16 @@ class LinderEvolution2016(Scene):
             self.add(Text(f"{m} M⊕", font_size=15, color=col).next_to(curve.get_start(), UP, buff=0.05))
         self.add(ax.get_vertical_line(ax.c2p(4.5, 40), color=P.MUTED, stroke_width=1.5))
 
-        eq = layout.equation_card(
-            r"T_{\rm eff}(t)\downarrow\,,\qquad L \propto R^{2}\,T^{4}",
-            scale=0.8).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"T_{\rm eff}(t)\downarrow", r",\qquad", r"L", r"\propto", r"R^{2}\,T^{4}"],
+            [
+                (0, "the planet cools as it ages"),
+                (2, "its luminosity (how bright it glows)"),
+                (4, "falls with surface area times temperature⁴"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

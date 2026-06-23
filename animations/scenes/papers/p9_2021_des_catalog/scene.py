@@ -27,10 +27,16 @@ class DesCatalog2021(Scene):
         self.play(Create(dets, lag_ratio=0.03))
         self.add(Text("catalogued distant TNOs (g,r,i,z,Y)", font_size=15, color=P.GREEN).to_edge(DOWN, buff=1.5))
 
-        eq = layout.equation_card(
-            r"\text{catalogued} \iff m < m_{\rm lim}",
-            scale=0.78).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\text{catalogued}", r"\iff", r"m", r"<", r"m_{\rm lim}"],
+            [
+                (0, "an object makes it into the catalogue"),
+                (2, "only if it's bright enough"),
+                (4, "i.e. above the survey's depth limit"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

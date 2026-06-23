@@ -6,7 +6,7 @@ Reproduced in p9-2018-low-perihelion.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -32,8 +32,17 @@ class LowPerihelion2018(Scene):
         self.play(FadeIn(llbl))
         timing.hold_to_read(self, llbl, settle=0.4)
 
-        eq = layout.equation_card(r"q_9 = a_9\,(1-e_9)").scale(0.8).to_corner(UP + RIGHT, buff=0.5).shift(DOWN * 0.6)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"q_9", "=", "a_9", r"\,(1-e_9)"],
+            [
+                (0, "Planet Nine's perihelion -- its closest approach"),
+                (2, "its semimajor axis (orbit size)"),
+                (3, "pulled inward as P9's eccentricity rises"),
+            ],
+            scale=1.0,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "P9's own perihelion is a free parameter -- and it changes how it sculpts the belt.")

@@ -49,10 +49,16 @@ class CowanThermal2016(Scene):
         for wl, name, col in [(60, "IRAS", P.RED), (90, "AKARI", P.ORANGE), (1000, "mm", P.PURPLE)]:
             self.add(Text(name, font_size=14, color=col).move_to(ax.c2p(np.log10(wl), 0.9)))
 
-        eq = layout.equation_card(
-            r"F_\nu = \pi\, B_\nu(T)\left(\dfrac{R}{d}\right)^{2}",
-            scale=0.8).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"F_\nu", r"=", r"\pi", r"B_\nu(T)", r"\left(\dfrac{R}{d}\right)^{2}"],
+            [
+                (0, "thermal flux we receive at frequency ν"),
+                (3, "Planck glow set by the body's temperature T"),
+                (4, "diluted by size over distance², squared"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

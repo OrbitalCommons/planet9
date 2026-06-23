@@ -6,7 +6,7 @@ footprint -- adding ~5% unique exclusion. Reproduced in p9-2022-des.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, LEFT, Rectangle, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Rectangle, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -41,11 +41,12 @@ class Des2022(Scene):
         self.add(Text("DES footprint ~5000 deg² (deep: r ≈ 23.8)", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1))
         self.add(Text("~88% of sky unsearched by DES", font_size=15, color=P.MUTED).move_to(sky.get_center() + UP * 0.4))
 
-        eq = layout.equation(
-            r"f_{\rm DES}^{\rm unique} = \langle P_{\rm DES}\,(1-P_{\rm ZTF})\rangle",
-            color=P.ORANGE, scale=0.72)
-        eq.next_to(sky, DOWN, buff=0.2)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"f_{\rm DES}^{\rm unique}", "=", r"\langle P_{\rm DES}\,(1-P_{\rm ZTF})\rangle"],
+            [(0, "exclusion DES adds that ZTF didn't already cover"),
+             (2, "DES detections, but only where ZTF missed")],
+            color=P.ORANGE, scale=0.78, where=DOWN * 1.5)
 
         des_unique = _exclusion("des_unique", 0.050)
         ro = paper.result_readout("unique exclusion added (after ZTF)", f"+{des_unique*100:.1f}%", color=P.ORANGE)

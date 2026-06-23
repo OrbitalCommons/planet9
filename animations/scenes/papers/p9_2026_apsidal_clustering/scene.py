@@ -6,7 +6,7 @@ p9-2026-apsidal-clustering.
 """
 import numpy as np
 from manim import (
-    Arrow, Circle, Create, DOWN, FadeIn, Scene, UP, UR, VGroup, Write,
+    Arrow, Circle, Create, DOWN, FadeIn, FadeOut, Scene, UP, UR, VGroup, Write,
 )
 
 import p9_manim as P
@@ -41,14 +41,20 @@ class ApsidalClustering2026(Scene):
         mx, my = np.mean(np.cos(varpis)), np.mean(np.sin(varpis))
         res = Arrow(np.zeros(3), 2.5 * rbar * np.array([mx, my, 0]) / np.hypot(mx, my),
                     color=P.TEAL, buff=0, stroke_width=6)
+        self.play(Create(res))
         # the estimator the paper formalises
-        eq = layout.equation(
-            r"\bar R = \left|\tfrac1N\sum e^{\,i\varpi_k}\right|"
-        ).scale(0.7).to_corner(UR, buff=0.5)
-        self.play(Create(res), Write(eq))
-        timing.hold_to_read(self, eq, settle=1.0)
+        eq = layout.explain_equation(
+            self,
+            [r"\bar R", "=", r"\left|", r"\tfrac1N\sum e^{\,i\varpi_k}", r"\right|"],
+            [
+                (0, "mean resultant length (0=random, 1=aligned)"),
+                (3, "average of the unit apsidal vectors"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
         stat = layout.equation(rf"\bar{{R}} = {rbar:.2f}", color=P.TEAL).scale(0.9)
-        stat.next_to(eq, DOWN, buff=0.35)
+        stat.to_corner(UR, buff=0.5)
         self.play(Write(stat))
         timing.hold_to_read(self, stat, settle=1.2)
         layout.show_takeaway(

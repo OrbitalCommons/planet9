@@ -80,12 +80,17 @@ class CassiniRanging2016(Scene):
         timing.hold_to_read(self, ro)
         self.play(FadeOut(ro))
 
-        eq = layout.equation_card(
-            r"\Delta\rho \propto GM_9\!\left[\dfrac{\mathbf r_9-\mathbf r_S}"
-            r"{|\mathbf r_9-\mathbf r_S|^3} - \dfrac{\mathbf r_9}{r_9^3}\right]",
-            scale=0.9)
-        eq.shift(DOWN * 0.6)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\Delta\rho", r"\propto", r"GM_9",
+             r"\left[\dfrac{\mathbf r_9-\mathbf r_S}{|\mathbf r_9-\mathbf r_S|^3} - \dfrac{\mathbf r_9}{r_9^3}\right]"],
+            [
+                (0, "shift in the measured Earth–Saturn range"),
+                (2, "P9's gravitational pull (its mass)"),
+                (3, "tidal tug on Saturn minus the tug on the Sun"),
+            ],
+            scale=0.82,
+            where=DOWN * 0.6)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

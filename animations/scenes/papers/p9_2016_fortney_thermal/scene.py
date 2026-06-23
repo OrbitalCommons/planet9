@@ -35,10 +35,16 @@ class FortneyThermal2016(Scene):
         self.play(Create(warm))
         self.add(Text("with internal heat", font_size=14, color=P.ORANGE).next_to(ax.c2p(14, 38), UP, buff=0.05))
 
-        eq = layout.equation_card(
-            r"T_{\rm eff} = \max\!\left(T_{\rm eq},\ T_{\rm int}\right)",
-            scale=0.8).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"T_{\rm eff}", r"=", r"\max", r"\left(T_{\rm eq},\ T_{\rm int}\right)"],
+            [
+                (0, "the temperature P9 actually radiates at"),
+                (2, "whichever source dominates"),
+                (3, "sunlight-only equilibrium vs leftover internal heat"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

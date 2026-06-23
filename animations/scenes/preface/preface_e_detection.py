@@ -67,10 +67,17 @@ class P09ReflectedLight(Scene):
         self.play(Write(flux))
         timing.hold_to_read(self, flux, settle=0.4)
 
-        mag = layout.equation(r"m = H + 5\log_{10}(r\,\Delta)", color=P.TEAL).scale(0.6)
-        mag.next_to(flux, DOWN, buff=0.15)
-        self.play(Write(mag))
-        timing.hold_to_read(self, mag, settle=0.4)
+        mag = layout.explain_equation(
+            self,
+            [r"m", "=", r"H", "+", r"5\log_{10}(r\,\Delta)"],
+            [
+                (0, "apparent magnitude (how bright we see it)"),
+                (2, "absolute magnitude: intrinsic size and reflectivity"),
+                (4, "dimming from Sun-distance r and Earth-distance Δ"),
+            ],
+            scale=0.8,
+            where=DOWN * 1.5,
+        )
         self.play(FadeOut(mag))
 
         ax = Axes(x_range=[100, 1500, 200], y_range=[16, 28, 2],
@@ -127,11 +134,19 @@ class P10Thermal(Scene):
         self.play(Write(title))
 
         # Planck's law and Wien's displacement law govern the glow
-        planck = layout.equation_card(
-            r"B_\nu(T) = \dfrac{2h\nu^3/c^2}{e^{h\nu/kT}-1}"
-            r"\qquad \lambda_{\rm peak} = \dfrac{b}{T}").scale(0.7)
-        planck.next_to(title, DOWN, buff=0.2)
-        layout.show_equation(self, planck)
+        planck = layout.explain_equation(
+            self,
+            [r"B_\nu(T)", "=", r"\dfrac{2h\nu^3/c^2}{e^{h\nu/kT}-1}",
+             r"\qquad", r"\lambda_{\rm peak}", "=", r"\dfrac{b}{T}"],
+            [
+                (0, "brightness per frequency ν of a body at temperature T"),
+                (2, "the Planck spectrum: sets how much glows at each frequency"),
+                (4, "wavelength of peak emission"),
+                (6, "Wien's law: colder bodies peak at longer wavelengths"),
+            ],
+            scale=0.7,
+            where=UP * 1.7,
+        )
         self.play(FadeOut(planck))
 
         # x axis = log10(wavelength / micron) from -1 (0.1) to 3 (1000)
@@ -253,11 +268,18 @@ class P11Surveys(Scene):
         timing.hold_to_read(self, shift_txt, settle=0.4)
 
         # detection criterion and on-sky motion between epochs
-        det_eq = layout.equation_card(
-            r"\text{detect} \iff m < m_{\rm lim}"
-            r"\qquad \Delta\theta = \mu\,\Delta t").scale(0.65)
-        det_eq.to_edge(DOWN, buff=1.15)
-        layout.show_equation(self, det_eq)
+        det_eq = layout.explain_equation(
+            self,
+            [r"\text{detect}", r"\iff", r"m < m_{\rm lim}",
+             r"\qquad", r"\Delta\theta", "=", r"\mu\,\Delta t"],
+            [
+                (2, "seen only if brighter than the survey's depth limit"),
+                (4, "how far it moves on the sky between epochs"),
+                (6, "proper motion μ times the time gap Δt"),
+            ],
+            scale=0.7,
+            where=DOWN * 1.4,
+        )
         self.play(FadeOut(det_eq), FadeOut(shift_txt))
 
         layout.show_takeaway(

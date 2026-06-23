@@ -62,10 +62,16 @@ class P05Clustering(Scene):
             return g
 
         # the mean resultant length R-bar: how confined the directions are
-        rbar_def = layout.equation_card(
-            r"\bar R = \left|\dfrac{1}{N}\sum_{k=1}^{N} e^{\,i\varpi_k}\right|").scale(0.8)
-        rbar_def.next_to(title, DOWN, buff=0.25)
-        layout.show_equation(self, rbar_def)
+        rbar_def = layout.explain_equation(
+            self,
+            [r"\bar R", "=", r"\left|\dfrac{1}{N}\sum_{k=1}^{N} e^{\,i\varpi_k}\right|"],
+            [
+                (0, "mean resultant length: 0 = scattered, 1 = perfectly aligned"),
+                (2, "average each orbit's direction ϖ as a unit vector, take the length"),
+            ],
+            scale=0.85,
+            where=UP * 1.3,
+        )
         self.play(FadeOut(rbar_def))
 
         arr = arrows(random_varpi)
@@ -117,11 +123,20 @@ class P06Precession(Scene):
         self.play(Write(eq))
         timing.hold_to_read(self, eq, settle=0.4)
 
-        rate_eq = layout.equation_card(
-            r"\dot\varpi \approx \tfrac34\, n\, \dfrac{m_p}{M_\odot}"
-            r"\left(\dfrac{a_p}{a}\right)^{2}\dfrac{1}{(1-e^2)^2}").scale(0.75)
-        rate_eq.to_edge(DOWN, buff=1.1)
-        layout.show_equation(self, rate_eq)
+        rate_eq = layout.explain_equation(
+            self,
+            [r"\dot\varpi", r"\approx", r"\tfrac34", "n", r"\dfrac{m_p}{M_\odot}",
+             r"\left(\dfrac{a_p}{a}\right)^{2}", r"\dfrac{1}{(1-e^2)^2}"],
+            [
+                (0, "how fast the orbit's apse direction precesses"),
+                (3, "mean motion: faster orbits precess faster"),
+                (4, "perturber's mass relative to the Sun"),
+                (5, "(perturber's distance / this orbit's), squared"),
+                (6, "eccentric orbits precess faster"),
+            ],
+            scale=0.72,
+            where=DOWN * 1.4,
+        )
         self.play(FadeOut(rate_eq))
 
         layout.show_takeaway(
@@ -146,12 +161,18 @@ class P07Resonance(Scene):
         lbl = layout.equation(r"P_{\rm out} : P_{\rm in} = 2 : 1", color=P.FG).scale(0.7).to_corner(UP + RIGHT, buff=0.6)
         self.play(Write(lbl))
 
-        # resonant semi-major axis and the critical (resonant) angle
-        res_eq = layout.equation_card(
-            r"a_{\rm res} = a_p\left(\dfrac{p}{q}\right)^{2/3}"
-            r"\qquad \phi = (p+q)\lambda' - p\lambda - q\varpi").scale(0.62)
-        res_eq.to_edge(UP, buff=1.2)
-        layout.show_equation(self, res_eq)
+        # resonant semi-major axis: where periods lock into a p:q ratio
+        res_eq = layout.explain_equation(
+            self,
+            [r"a_{\rm res}", "=", r"a_p", r"\left(\dfrac{p}{q}\right)^{2/3}"],
+            [
+                (0, "the orbit size that locks into resonance"),
+                (2, "perturber's semi-major axis"),
+                (3, "integer period ratio p:q, raised to the 2/3 power"),
+            ],
+            scale=0.85,
+            where=UP * 1.7,
+        )
         self.play(FadeOut(res_eq))
 
         vt = ValueTracker(0.0)

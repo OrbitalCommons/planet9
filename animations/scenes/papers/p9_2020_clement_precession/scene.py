@@ -29,10 +29,15 @@ class ClementPrecession2020(Scene):
         self.add(Text("apsides drift together → stay clustered", font_size=17, color=P.TEAL).to_edge(UP, buff=1.5))
         self.play(d.animate.set_value(np.pi), run_time=4.0, rate_func=rate_functions.linear)
 
-        eq = layout.equation_card(
-            r"\dot\varpi_k \approx \text{const}\ \Rightarrow\ \Delta\varpi\ \text{preserved}",
-            scale=0.78).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\dot\varpi_k", r"\approx", r"\text{const}", r"\Rightarrow", r"\Delta\varpi\ \text{preserved}"],
+            [
+                (0, "each object's apsides precess at nearly the same rate"),
+                (4, "so the spread between them stays fixed — the cluster holds"),
+            ],
+            scale=0.78,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

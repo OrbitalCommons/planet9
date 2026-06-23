@@ -33,10 +33,17 @@ class Review2019(Scene):
         ro.scale(0.8).to_edge(DOWN, buff=1.2)
         self.play(FadeIn(ro))
 
-        eq = layout.equation_card(
-            r"\approx 5\,M_\oplus,\ \ a\approx500\,\mathrm{AU},\ \ e\approx0.25",
-            scale=0.78).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        self.play(FadeOut(ro))
+        eq = layout.explain_equation(
+            self,
+            [r"\approx 5\,M_\oplus,", r"a\approx500\,\mathrm{AU},", r"e\approx0.25"],
+            [
+                (0, "about 5 Earth masses — lighter than first thought"),
+                (1, "semi-major axis near 500 AU"),
+                (2, "a mildly stretched orbit, e ≈ 0.25"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

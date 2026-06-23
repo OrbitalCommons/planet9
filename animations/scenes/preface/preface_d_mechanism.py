@@ -60,9 +60,16 @@ class P08Sculpting(Scene):
         timing.hold_to_read(self, eq, settle=0.4)
 
         # the secular Hamiltonian governs the apsidal confinement
-        ham = layout.equation_card(r"\langle H\rangle = H(e,\,\Delta\varpi)").scale(0.8)
-        ham.to_edge(DOWN, buff=1.1)
-        layout.show_equation(self, ham)
+        ham = layout.explain_equation(
+            self,
+            [r"\langle H\rangle", "=", r"H(e,\,\Delta\varpi)"],
+            [
+                (0, "orbit-averaged (secular) energy"),
+                (2, "depends only on eccentricity e and apsidal offset Δϖ"),
+            ],
+            scale=0.9,
+            where=DOWN * 1.4,
+        )
         self.play(FadeOut(ham))
 
         layout.show_takeaway(

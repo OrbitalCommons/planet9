@@ -6,7 +6,7 @@ in p9-2016-inclined-tnos.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, rate_functions,
+    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write, rate_functions,
     ValueTracker, always_redraw,
 )
 
@@ -44,10 +44,17 @@ class InclinedTnos2016(Scene):
         timing.hold_to_read(self, msg, settle=0.4)
         self.play(tilt.animate.set_value(0.12), run_time=3.5, rate_func=rate_functions.smooth)
 
-        eq = layout.equation_card(
-            r"\sqrt{1-e^2}\,\cos i \approx \text{const}"
-        ).scale(0.9).to_edge(DOWN, buff=1.6)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\sqrt{1-e^2}", r"\,\cos i", r"\approx", r"\text{const}"],
+            [
+                (0, "a factor that shrinks as eccentricity grows"),
+                (1, "times the cosine of the inclination"),
+                (3, "this combination (Kozai) is roughly conserved"),
+            ],
+            scale=1.0,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "P9 can also lift orbits to steep -- even retrograde -- inclinations.")

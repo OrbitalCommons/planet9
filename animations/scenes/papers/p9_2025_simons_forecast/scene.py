@@ -6,7 +6,7 @@ world. Reproduced in p9-2025-simons-forecast (max_detectable_distance).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, VGroup, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -65,10 +65,14 @@ class SimonsForecast2025(Scene):
         self.play(FadeIn(labels))
         timing.hold_to_read(self, labels, settle=0.6)
 
-        eq = layout.equation(
-            r"d_{\max}:\ F_\nu^{\rm mm}(d_{\max}) = F_{\rm lim}", color=P.TEAL, scale=0.8)
-        eq.next_to(ax, UP, buff=0.25)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"d_{\max}", ":", r"F_\nu^{\rm mm}(d_{\max})", "=", r"F_{\rm lim}"],
+            [(0, "the farthest distance still detectable"),
+             (2, "the body's millimetre flux at that distance"),
+             (4, "just equals the survey's flux limit")],
+            color=P.TEAL, scale=0.8, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "At the body's blackbody peak, mm surveys reach ~900 AU for a 5 M⊕ world.")

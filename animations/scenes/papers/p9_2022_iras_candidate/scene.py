@@ -5,7 +5,7 @@ with a cold, distant body's flux and motion -- the precursor to the IRAS+AKARI
 pair search. Reproduced in p9-2022-iras-candidate.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write, Dot
 import p9_manim as P
 from p9_manim import layout, paper, timing
 
@@ -27,10 +27,14 @@ class IrasCandidate2022(Scene):
         self.play(FadeIn(clbl))
         timing.hold_to_read(self, clbl, settle=0.5)
 
-        eq = layout.equation(
-            r"F_{60} \Rightarrow d \sim \text{few}\times10^2\ \mathrm{AU}", color=P.ORANGE, scale=0.8)
-        eq.to_edge(DOWN, buff=1.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"F_{60}", r"\Rightarrow", "d", r"\sim", r"\text{few}\times10^2\ \mathrm{AU}"],
+            [(0, "measured 60-micron far-IR flux"),
+             (2, "implied distance to the body"),
+             (4, "a few hundred AU for a cold planet")],
+            color=P.ORANGE, scale=0.8, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "A tantalising single-epoch flag -- needing a second epoch to confirm motion.")

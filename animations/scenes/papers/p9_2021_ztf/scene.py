@@ -9,6 +9,7 @@ from manim import (
     Create,
     DOWN,
     FadeIn,
+    FadeOut,
     LEFT,
     Rectangle,
     RIGHT,
@@ -62,9 +63,13 @@ class Ztf2021(Scene):
         self.play(Write(pct))
         timing.hold_to_read(self, pct, settle=0.8)
 
-        eq = layout.equation(r"f_{\rm excl} = \langle P_{\rm det}\rangle", color=P.RED, scale=0.85)
-        eq.next_to(pct, DOWN, buff=0.3)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"f_{\rm excl}", "=", r"\langle P_{\rm det}\rangle"],
+            [(0, "fraction of P9 parameter space ruled out"),
+             (2, "average detection probability over the prior")],
+            color=P.RED, scale=0.78, where=UP * 2.55)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "No planet found yet -- but more than half the hiding places are now gone.")

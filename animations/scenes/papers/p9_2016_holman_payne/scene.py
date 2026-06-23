@@ -36,9 +36,15 @@ class HolmanPayne2016(Scene):
         self.play(FadeIn(excl), FadeIn(ok))
         timing.hold_to_read(self, excl, ok)
 
-        eq = layout.equation_card(r"m_{\max}(d) \propto d^{3}", scale=1.0)
-        eq.next_to(ax, UP, buff=0.15)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"m_{\max}(d)", r"\propto", r"d^{3}"],
+            [
+                (0, "heaviest P9 still allowed at distance d"),
+                (2, "the cap rises steeply with distance³"),
+            ],
+            scale=0.95,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

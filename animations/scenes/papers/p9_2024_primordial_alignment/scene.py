@@ -6,7 +6,7 @@ planet. Reproduced in p9-2024-primordial-alignment (lookback convergence).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, VGroup, Write, rate_functions,
+    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write, rate_functions,
 )
 
 import p9_manim as P
@@ -34,9 +34,17 @@ class PrimordialAlignment2024(Scene):
         self.play(FadeIn(rwlab))
         timing.hold_to_read(self, rwlab, settle=0.5)
         # integrating apsidal precession backward to the primordial direction
-        eq = layout.equation(r"\varpi(t) = \varpi_0 - \dot\varpi\,(t_0 - t)").scale(0.7)
-        eq.to_corner(UP + RIGHT, buff=0.5)
-        layout.show_equation(self, eq, settle=1.0)
+        eq = layout.explain_equation(
+            self,
+            [r"\varpi(t)", "=", r"\varpi_0", "-", r"\dot\varpi", r"\,(t_0 - t)"],
+            [
+                (0, "apsidal direction at an earlier time t"),
+                (2, "today's measured direction"),
+                (4, "the precession rate that we rewind by"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
         targ = [orbits.ellipse_orbit(2.6, 0.72, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8) for v in birth]
         self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0,
                   rate_func=rate_functions.smooth)

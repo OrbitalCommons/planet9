@@ -35,9 +35,15 @@ class ObliquityLai2016(Scene):
         self.play(Create(target), FadeIn(obs))
         timing.hold_to_read(self, obs)
 
-        eq = layout.equation_card(r"\varepsilon_\odot \propto \sin 2i_9", scale=1.0)
-        eq.next_to(ax, UP, buff=0.1)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\varepsilon_\odot", r"\propto", r"\sin 2i_9"],
+            [
+                (0, "the Sun's induced obliquity"),
+                (2, "strongest for P9 inclinations near 45°"),
+            ],
+            scale=0.95,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

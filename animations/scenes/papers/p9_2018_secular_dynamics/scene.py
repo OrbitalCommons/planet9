@@ -6,7 +6,7 @@ librate around it. Reproduced in p9-2018-secular-dynamics (free precession rate)
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, Dot, FadeIn, LEFT, ParametricFunction, Scene, Text, UP, VGroup, Write,
+    Axes, Create, DOWN, Dot, FadeIn, FadeOut, LEFT, ParametricFunction, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -76,11 +76,17 @@ class SecularDynamics2018(Scene):
                 for r in (0.12, 0.24, 0.36)])
             self.play(Create(loops, lag_ratio=0.2), run_time=1.8)
 
-        eq = layout.equation_card(
-            r"(k,h) = e\,(\cos\Delta\varpi,\ \sin\Delta\varpi)"
-            r"\qquad \rightarrow\ e_{\rm forced}"
-        ).scale(0.78).to_edge(DOWN, buff=1.7)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"(k,h)", "=", r"e\,(\cos\Delta\varpi,\ \sin\Delta\varpi)", r"\rightarrow", r"e_{\rm forced}"],
+            [
+                (0, "the eccentricity vector (a point in this plane)"),
+                (2, "its length is e, its angle is the apsidal angle"),
+                (4, "P9 shifts the centre to a forced eccentricity"),
+            ],
+            scale=0.85,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "P9's torque sets a forced eccentricity; orbits cycle around it, anti-aligned.")

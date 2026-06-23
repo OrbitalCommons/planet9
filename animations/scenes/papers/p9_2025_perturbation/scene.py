@@ -5,7 +5,7 @@ destabilises) scattered-disk orbits, complementing the numerical stability maps.
 Reproduced in p9-2025-perturbation.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write
 import p9_manim as P
 from p9_manim import layout, paper, timing
 
@@ -29,10 +29,17 @@ class Perturbation2025(Scene):
         self.play(FadeIn(albl))
         timing.hold_to_read(self, albl, settle=0.4)
 
-        eq = layout.equation_card(
-            r"\langle H\rangle = \langle H_0\rangle + \epsilon\,\langle H_1\rangle"
-        ).scale(0.8).to_corner(UP + RIGHT, buff=0.5).shift(DOWN * 0.7)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\langle H\rangle", "=", r"\langle H_0\rangle", "+", r"\epsilon\,\langle H_1\rangle"],
+            [
+                (0, "the full orbit-averaged energy"),
+                (2, "the simple, solvable leading part"),
+                (4, "plus a small correction from P9 (the perturbation)"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Perturbation theory reproduces the stability edge without giant simulations.")

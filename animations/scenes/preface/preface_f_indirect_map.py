@@ -64,11 +64,19 @@ class P12Indirect(Scene):
         self.wait(0.4)
 
         # the ranging perturbation scale and the solar obliquity it implies
-        sig_eq = layout.equation_card(
-            r"\Delta\rho \propto \dfrac{GM_9}{d^3}"
-            r"\qquad \varepsilon_\odot \approx 6^\circ").scale(0.72)
-        sig_eq.to_edge(DOWN, buff=1.15)
-        layout.show_equation(self, sig_eq)
+        sig_eq = layout.explain_equation(
+            self,
+            [r"\Delta\rho", r"\propto", r"\dfrac{GM_9}{d^3}",
+             r"\qquad", r"\varepsilon_\odot", r"\approx", r"6^\circ"],
+            [
+                (0, "the tiny range tug a spacecraft would feel"),
+                (2, "Planet Nine's pull (GM₉), falling off as 1/distance³"),
+                (4, "the Sun's tilt versus the planets"),
+                (6, "about 6 degrees -- a possible fingerprint"),
+            ],
+            scale=0.72,
+            where=DOWN * 1.4,
+        )
         self.play(FadeOut(sig_eq))
 
         layout.show_takeaway(

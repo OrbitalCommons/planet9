@@ -6,7 +6,7 @@ can produce, and hard to make otherwise. Reproduced in p9-2018-bp519
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -33,8 +33,16 @@ class Bp519Discovery2018(Scene):
         self.play(FadeIn(clab))
         timing.hold_to_read(self, clab, settle=0.6)
         # the extreme inclination that marks it as a P9 product
-        eq = layout.equation(r"i \approx 54^\circ", color=P.GREEN).scale(0.9).to_corner(UP + RIGHT, buff=0.5)
-        layout.show_equation(self, eq, settle=1.0)
+        eq = layout.explain_equation(
+            self,
+            [r"i", r"\approx", r"54^\circ"],
+            [
+                (0, "orbital tilt out of the planets' plane"),
+                (2, "steeply inclined -- hard to make without P9"),
+            ],
+            scale=1.1,
+        )
+        self.play(FadeOut(eq))
         ro = paper.result_readout("inclination (a P9 fingerprint)", "i ≈ 54°", color=P.GREEN)
         ro.scale(0.8).to_edge(DOWN, buff=1.3)
         self.play(FadeIn(ro))

@@ -74,9 +74,15 @@ class Obliquity2016(Scene):
         timing.hold_to_read(self, ro)
         self.play(FadeOut(ro), FadeOut(prec))
 
-        eq = layout.equation_card(r"\varepsilon_\odot \approx 6^\circ", scale=1.0)
-        eq.to_edge(DOWN, buff=1.4)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\varepsilon_\odot", r"\approx", r"6^\circ"],
+            [
+                (0, "tilt between the Sun's spin and the planets' plane"),
+                (2, "the long-standing ≈6° solar obliquity"),
+            ],
+            scale=0.95,
+            where=DOWN * 1.2)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

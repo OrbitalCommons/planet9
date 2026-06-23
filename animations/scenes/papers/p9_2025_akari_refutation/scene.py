@@ -6,7 +6,7 @@ counter-result. Reproduced in p9-2025-akari-refutation.
 """
 import numpy as np
 from manim import (
-    Cross, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Cross, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -34,9 +34,13 @@ class AkariRefutation2025(Scene):
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.5)
 
-        eq = layout.equation(r"\text{orbit} \nRightarrow \text{consistency}", color=P.RED, scale=0.85)
-        eq.next_to(note, UP, buff=0.3)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\text{orbit}", r"\nRightarrow", r"\text{consistency}"],
+            [(0, "the candidate's implied orbit"),
+             (2, "fails the dynamical / motion constraints")],
+            color=P.RED, scale=0.85, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Extraordinary claims need follow-up -- this candidate did not hold up.")

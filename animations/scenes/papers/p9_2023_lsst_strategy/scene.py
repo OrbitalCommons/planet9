@@ -6,7 +6,7 @@ footprint's declination reach. Reproduced in p9-2023-lsst-strategy.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, LEFT, Rectangle, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Rectangle, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -38,10 +38,13 @@ class LsstStrategy2023(Scene):
             self.play(Create(r[0]), Create(r[1]), FadeIn(r[2]), run_time=0.7)
         timing.hold_to_read(self, rows, settle=0.6)
 
-        eq = layout.equation(
-            r"f_{\rm disc} = f(\text{depth},\,N_{\rm link},\,\delta_{\min})", color=P.TEAL, scale=0.8)
-        eq.next_to(rows, UP, buff=0.4)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"f_{\rm disc}", "=", r"f(\text{depth},\,N_{\rm link},\,\delta_{\min})"],
+            [(0, "fraction of P9 orbits LSST can discover"),
+             (2, "set by depth, nights to link, declination reach")],
+            color=P.TEAL, scale=0.78, where=UP * 2.5)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Tune depth, linking, and footprint -- and LSST discovers most of the viable region.")

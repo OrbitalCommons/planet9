@@ -6,7 +6,7 @@ in p9-2021-napier-critique.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, UP, UR, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, UR, Write,
 )
 
 import p9_manim as P
@@ -32,10 +32,18 @@ class NapierCritique2021(Scene):
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.1), run_time=1.8)
 
         # the Rayleigh test for uniformity of the apsidal directions
-        eq = layout.equation_card(r"p_{\rm Rayleigh} = e^{-N\bar R^2}").scale(0.7).to_corner(UR, buff=0.4)
-        layout.show_equation(self, eq, settle=1.2)
+        eq = layout.explain_equation(
+            self,
+            [r"p_{\rm Rayleigh}", "=", r"e^{-N\bar R^2}"],
+            [
+                (0, "probability the alignment is just chance"),
+                (2, "shrinks fast as N and clustering R grow"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
         p = layout.equation(r"p\text{-value consistent with uniform}", color=P.RED).scale(0.6)
-        p.next_to(eq, DOWN, buff=0.35)
+        p.to_corner(UR, buff=0.4)
         self.play(Write(p))
         timing.hold_to_read(self, p, settle=1.2)
         layout.show_takeaway(

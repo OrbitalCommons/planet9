@@ -36,9 +36,16 @@ class UranusTilt2022(Scene):
         self.play(tilt.animate.set_value(98.0), run_time=4.0, rate_func=rate_functions.smooth)
         self.wait(0.5)
 
-        eq = layout.equation_card(r"\varepsilon:\ 0^\circ \to 98^\circ", scale=1.0)
-        eq.to_edge(DOWN, buff=1.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\varepsilon:", r"0^\circ", r"\to", r"98^\circ"],
+            [
+                (0, "a planet's axial tilt (obliquity)"),
+                (1, "starts upright"),
+                (3, "a resonance can topple it sideways, like Uranus"),
+            ],
+            scale=0.95,
+            where=DOWN * 1.2)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

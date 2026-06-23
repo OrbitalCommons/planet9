@@ -6,7 +6,7 @@ in p9-2025-stacking.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -37,10 +37,14 @@ class Stacking2025(Scene):
         self.play(FadeIn(top), FadeIn(bot))
         timing.hold_to_read(self, top, bot, settle=0.5)
 
-        eq = layout.equation(
-            r"\mathrm{SNR} \propto \sqrt{N}\,,\quad \text{trials penalty}", color=P.GREEN, scale=0.8)
-        eq.next_to(bot, UP, buff=0.3)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\mathrm{SNR}", r"\propto", r"\sqrt{N}", ",", r"\ \text{trials penalty}"],
+            [(0, "signal-to-noise of the stacked detection"),
+             (2, "grows with the square root of frames N"),
+             (4, "but more trial orbits raise the bar to claim a find")],
+            color=P.GREEN, scale=0.8, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Stacking years of data is powerful -- if you count your trials honestly.")

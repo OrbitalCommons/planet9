@@ -6,7 +6,7 @@ orbits. Reproduced in p9-2016-constraints (clustering_metric, parameter_grid).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, Scene, UP, UR, VGroup, Write,
+    Create, FadeIn, FadeOut, Scene, UP, UR, Write,
 )
 
 import p9_manim as P
@@ -32,12 +32,15 @@ class Constraints2016(Scene):
         self.play(FadeIn(sun), Create(swarm, lag_ratio=0.1), run_time=2.0)
 
         rbar = r_bar
-        m1 = layout.equation(rf"\bar{{R}}_{{\Delta\varpi}} \approx {rbar:.2f}", color=P.TEAL).scale(0.7)
-        m2 = layout.equation(r"f_{q>60\,\mathrm{AU}}\ \text{high}", color=P.GREEN).scale(0.7)
-        VGroup(m1, m2).arrange(DOWN, buff=0.35).to_corner(UR, buff=0.5)
-        self.play(Write(m1))
-        timing.hold_to_read(self, m1, settle=1.0)
-        self.play(Write(m2))
-        timing.hold_to_read(self, m2, settle=1.2)
+        eq = layout.explain_equation(
+            self,
+            [r"\bar R_{\Delta\varpi}", r"\approx", rf"{rbar:.2f}", r",\qquad", r"f_{q>60\,\mathrm{AU}}", r"\ \text{high}"],
+            [
+                (0, "how tightly the apsides are confined (1=perfect)"),
+                (4, "fraction of detached, high-perihelion orbits"),
+            ],
+            scale=0.85,
+        )
+        self.play(FadeOut(eq))
         layout.show_takeaway(
             self, "Two testable metrics: apsidal confinement and a surplus of detached orbits.")

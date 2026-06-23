@@ -6,7 +6,7 @@ in p9-2025-parallax-search.
 """
 import numpy as np
 from manim import (
-    Arrow, Create, DOWN, Dot, FadeIn, Scene, Text, UP, VGroup, Write,
+    Arrow, Create, DOWN, Dot, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -35,10 +35,13 @@ class ParallaxSearch2025(Scene):
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.5)
 
-        eq = layout.equation(
-            r"p = \dfrac{1\ \mathrm{AU}}{d}\,,\quad \Delta\theta_{\rm refl}", color=P.TEAL, scale=0.8)
-        eq.next_to(note, UP, buff=0.3)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            ["p", "=", r"\dfrac{1\ \mathrm{AU}}{d}"],
+            [(0, "the parallax angle from Earth's baseline"),
+             (2, "one AU divided by the body's distance d")],
+            color=P.TEAL, scale=0.8, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Two epochs and Earth's baseline can pin a nearby planet's distance directly.")

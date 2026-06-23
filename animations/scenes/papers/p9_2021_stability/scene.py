@@ -6,7 +6,7 @@ shapes which P9 orbits are dynamically allowed. Reproduced in p9-2021-stability.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, LEFT, Line, Scene, Text, UP, VGroup, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Line, Scene, Text, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -65,11 +65,20 @@ class Stability2021(Scene):
         self.play(FadeIn(unstable), FadeIn(stable))
         timing.hold_to_read(self, unstable, stable, settle=0.5)
 
-        eq = layout.equation_card(
-            r"q_{\rm crit}(a) = a_N\sqrt{\ln\!\left[\tfrac{576}{5}\tfrac{m_N}{M_\odot}"
-            r"\!\left(\tfrac{a}{a_N}\right)^{5/2}\right]}"
-        ).scale(0.62).to_corner(UP + LEFT, buff=0.5).shift(DOWN * 0.7)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [
+                r"q_{\rm crit}(a)", "=", "a_N",
+                r"\sqrt{\ln\!\left[\tfrac{576}{5}\tfrac{m_N}{M_\odot}\!\left(\tfrac{a}{a_N}\right)^{5/2}\right]}",
+            ],
+            [
+                (0, "the smallest perihelion that survives, vs a"),
+                (2, "scaled by Planet Nine's semimajor axis"),
+                (3, "grows slowly with P9's mass and the orbit size"),
+            ],
+            scale=0.8,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Only detached-enough orbits last 4.5 Gyr -- which bounds the allowed P9 family.")

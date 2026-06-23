@@ -29,10 +29,16 @@ class NeptuneCrossing2024(Scene):
         self.play(FadeIn(peri))
         self.add(Text("perihelion crosses Neptune", font_size=15, color=P.RED).to_edge(DOWN, buff=1.5))
 
-        eq = layout.equation_card(
-            r"q = a(1-e) < a_N\ (30\ \mathrm{AU})",
-            scale=0.78).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"q", r"=", r"a(1-e)", r"<", r"a_N\ (30\ \mathrm{AU})"],
+            [
+                (0, "perihelion — closest approach to the Sun"),
+                (2, "set by the orbit's size and stretch"),
+                (4, "dips inside Neptune's orbit, so they cross"),
+            ],
+            scale=0.8,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

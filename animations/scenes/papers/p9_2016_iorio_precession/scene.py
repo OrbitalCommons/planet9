@@ -36,9 +36,15 @@ class Iorio2016(Scene):
         self.play(FadeIn(bnd))
         timing.hold_to_read(self, bnd)
 
-        eq = layout.equation_card(r"\dot\varpi_{\rm anom} \propto \dfrac{m_9}{d^3}", scale=1.0)
-        eq.next_to(ax, UP, buff=0.1)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\dot\varpi_{\rm anom}", r"\propto", r"\dfrac{m_9}{d^3}"],
+            [
+                (0, "extra perihelion precession of the planets"),
+                (2, "grows with P9 mass, falls with distance³"),
+            ],
+            scale=0.95,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

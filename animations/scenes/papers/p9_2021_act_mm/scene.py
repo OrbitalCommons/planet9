@@ -6,7 +6,7 @@ p9-2021-act-mm (mm detectability).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -54,11 +54,15 @@ class ActMm2021(Scene):
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.6)
 
-        eq = layout.equation_card(
-            r"F_\nu \approx \dfrac{2k T \nu^2}{c^2}\dfrac{\pi R^2}{d^2}\quad(\text{Rayleigh--Jeans})",
-            scale=0.72)
-        eq.to_edge(DOWN, buff=1.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"F_\nu", r"\approx", r"\dfrac{2k T \nu^2}{c^2}", r"\dfrac{\pi R^2}{d^2}",
+             r"\ (\text{Rayleigh--Jeans})"],
+            [(0, "millimetre flux we receive"),
+             (2, "long-wavelength limit of the blackbody"),
+             (3, "size R over distance d, squared")],
+            scale=0.78, where=DOWN * 1.6)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "CMB telescopes double as outer-solar-system surveys at millimetre wavelengths.")

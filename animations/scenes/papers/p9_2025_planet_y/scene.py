@@ -36,10 +36,15 @@ class PlanetY2025(Scene):
         py_lbl = Text("'Planet Y' (smaller, closer, inclined)", font_size=15, color=P.BLUE).next_to(py, UP, buff=0.1)
         self.play(FadeIn(py), FadeIn(py_lbl))
 
-        eq = layout.equation_card(
-            r"\text{Laplace-plane warp:}\ \ i_{\rm forced}(a)",
-            scale=0.85).to_edge(UP, buff=1.4)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\text{Laplace-plane warp:}", r"i_{\rm forced}(a)"],
+            [
+                (0, "a tilt in the belt's natural reference plane"),
+                (1, "forced inclination that varies with orbit size a"),
+            ],
+            scale=0.85,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

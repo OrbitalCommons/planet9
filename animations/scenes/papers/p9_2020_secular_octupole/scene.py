@@ -6,7 +6,7 @@ Reproduced in p9-2020-secular-octupole (octupole modulation amplitude).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -36,10 +36,17 @@ class SecularOctupole2020(Scene):
         self.play(FadeIn(olbl))
         timing.hold_to_read(self, olbl, settle=0.4)
 
-        eq = layout.equation_card(
-            r"\epsilon_{\rm oct} = \dfrac{a}{a_9}\dfrac{e_9}{1-e_9^2}"
-        ).scale(0.66).to_corner(UP + RIGHT, buff=0.4).shift(DOWN * 0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\epsilon_{\rm oct}", "=", r"\dfrac{a}{a_9}", r"\dfrac{e_9}{1-e_9^2}"],
+            [
+                (0, "strength of the octupole (next-order) term"),
+                (2, "the TNO's size relative to P9's orbit"),
+                (3, "grows with how eccentric Planet Nine is"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Higher-order terms reshape the libration -- and enlarge the confined zone.")

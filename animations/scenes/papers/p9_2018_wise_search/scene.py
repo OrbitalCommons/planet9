@@ -6,7 +6,7 @@ massive Planet Nine solutions. Reproduced in p9-2018-wise-search.
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -55,11 +55,14 @@ class WiseSearch2018(Scene):
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.8)
 
-        eq = layout.equation_card(
-            r"d_{\max}:\ m_{W1}(d_{\max}) = W1_{\rm lim}\,,\quad F_\nu = \pi B_\nu(T)\left(\tfrac{R}{d}\right)^2",
-            scale=0.8)
-        eq.to_edge(DOWN, buff=1.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"F_\nu", "=", r"\pi", r"B_\nu(T)", r"\left(\tfrac{R}{d}\right)^2"],
+            [(0, "thermal flux we'd receive from the planet"),
+             (3, "blackbody brightness at temperature T"),
+             (4, "shrinks with size R over distance d, squared")],
+            scale=0.85, where=DOWN * 1.6)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Whole-sky thermal coverage -- but shallow for the coldest, most distant cases.")

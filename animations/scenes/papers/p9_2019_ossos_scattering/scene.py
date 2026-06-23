@@ -32,10 +32,17 @@ class OssosScattering2019(Scene):
         self.play(Create(detached, lag_ratio=0.03))
         self.add(Text("detached (lifted by P9)", font_size=15, color=P.GREEN).move_to(ax.c2p(400, 78)))
 
-        eq = layout.equation_card(
-            r"q = a(1-e) \gtrsim 40\ \mathrm{AU}\ \Rightarrow\ \text{detached}",
-            scale=0.78).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"q", r"=", r"a(1-e)", r"\gtrsim", r"40\ \mathrm{AU}", r"\Rightarrow", r"\text{detached}"],
+            [
+                (0, "perihelion — closest approach to the Sun"),
+                (2, "set by the orbit's size and stretch"),
+                (4, "lifted well beyond Neptune"),
+                (6, "no longer scattered by Neptune"),
+            ],
+            scale=0.75,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

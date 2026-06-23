@@ -53,9 +53,17 @@ class OssosBias2017(Scene):
         timing.hold_to_read(self, wlab, settle=0.6)
 
         # detections trace the intrinsic parent modulated by the selection function
-        eq = layout.equation(r"N_{\rm det}(\varpi) \propto N_0\, S(\varpi)", color=P.PURPLE).scale(0.7)
-        eq.next_to(wlab, UP, buff=0.3)
-        layout.show_equation(self, eq, settle=1.0)
+        eq = layout.explain_equation(
+            self,
+            [r"N_{\rm det}(\varpi)", r"\propto", "N_0", r"\,S(\varpi)"],
+            [
+                (0, "objects the survey actually detects vs direction"),
+                (2, "the true (isotropic) underlying population"),
+                (3, "modulated by the survey selection function"),
+            ],
+            scale=0.85,
+        )
+        self.play(FadeOut(eq))
 
         # highlight only the detectable subset -> looks clustered
         detected = [v for v in varpis if np.deg2rad(20) <= (v % (2 * np.pi)) <= np.deg2rad(90)]

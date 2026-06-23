@@ -4,7 +4,7 @@ A two-angle correlation test on the DES distant-object sample: are the orbital
 angles consistent with isotropy, or clustered? Reproduced in p9-2020-des-isotropy.
 """
 import numpy as np
-from manim import Arrow, Circle, Create, FadeIn, Scene, UP, UR, VGroup, Write
+from manim import Arrow, Circle, Create, FadeIn, FadeOut, Scene, UP, UR, VGroup, Write
 import p9_manim as P
 from p9_manim import dataio, layout, orbits, paper
 
@@ -30,8 +30,18 @@ class DesIsotropy2020(Scene):
                        for v in varpis])
         self.play(Create(arr, lag_ratio=0.07))
         rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
-        eq = layout.equation(rf"\bar{{R}} = {rbar:.2f}", color=P.RED, scale=0.7).to_corner(UR, buff=0.4)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\bar R", r"=", r"\left|\dfrac{1}{N}\sum_k e^{\,i\varpi_k}\right|"],
+            [
+                (0, "clustering strength of the orbits' orientations"),
+                (2, "average direction of all the apsidal angles; 0 = isotropic, 1 = aligned"),
+            ],
+            scale=0.85,
+            where=UP * 2.4)
+        self.play(FadeOut(eq))
+        val = layout.equation(rf"\bar{{R}} = {rbar:.2f}", color=P.RED, scale=0.7).to_corner(UR, buff=0.4)
+        layout.show_equation(self, val)
 
         layout.show_takeaway(
             self, "DES's own footprint sees its objects fairly isotropic -- coverage matters.")

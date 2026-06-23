@@ -29,10 +29,15 @@ class PerihelionGap2021(Scene):
         gapline = ax.get_vertical_line(ax.c2p(48, dist(48)), color=P.RED, stroke_width=2)
         self.add(gapline, Text("the gap (~42–55 AU)", font_size=15, color=P.RED).next_to(ax.c2p(48, 0.5), UP, buff=0.1))
 
-        eq = layout.equation_card(
-            r"N(q):\ \text{deficit at}\ 42 \lesssim q \lesssim 55\ \mathrm{AU}",
-            scale=0.74).to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"N(q):", r"\text{deficit at}", r"42 \lesssim q \lesssim 55\ \mathrm{AU}"],
+            [
+                (0, "the count of objects at each perihelion distance"),
+                (2, "a scarcity at middling perihelia — the gap"),
+            ],
+            scale=0.78,
+            where=UP * 2.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

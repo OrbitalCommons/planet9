@@ -52,13 +52,18 @@ class IrasAkari2025(Scene):
         self.play(FadeIn(mv))
         timing.hold_to_read(self, mv, settle=0.6)
 
-        eq = layout.equation(r"\mu = \dfrac{\Delta\theta}{\Delta t}\ (23\ \mathrm{yr})", color=P.TEAL, scale=0.7)
+        eq = layout.explain_equation(
+            self,
+            [r"\mu", "=", r"\dfrac{\Delta\theta}{\Delta t}", r"\ (23\ \mathrm{yr})"],
+            [(0, "proper motion across the sky"),
+             (2, "angular shift divided by elapsed time"),
+             (3, "measured over the IRAS-to-AKARI baseline")],
+            color=P.TEAL, scale=0.8, where=UP * 1.7)
+        self.play(FadeOut(eq))
         ro = paper.result_readout("candidates after flux + motion cuts", "1 good candidate", color=P.ORANGE).scale(0.7)
-        row = VGroup(eq, ro).arrange(RIGHT, buff=0.8)
-        row.next_to(mv, DOWN, buff=0.45)
-        self.play(Write(eq))
+        ro.next_to(mv, DOWN, buff=0.45)
         self.play(FadeIn(ro))
-        timing.hold_to_read(self, eq, ro, settle=0.8)
+        timing.hold_to_read(self, ro, settle=0.8)
 
         layout.show_takeaway(
             self, "Thermal surveys give an independent channel -- candidates still need follow-up.")

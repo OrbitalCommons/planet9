@@ -11,6 +11,7 @@ from manim import (
     DOWN,
     Dot,
     FadeIn,
+    FadeOut,
     LEFT,
     ParametricFunction,
     Scene,
@@ -114,10 +115,17 @@ class Dynamics2017(Scene):
         self.play(Write(lbl))
         timing.hold_to_read(self, lbl, settle=0.5)
 
-        eq = layout.equation_card(
-            r"\langle H\rangle(e,\,\Delta\varpi):\ \text{libration about}\ \Delta\varpi = 180^\circ"
-        ).scale(0.62).to_corner(UP + LEFT, buff=0.5).shift(DOWN * 0.7)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\langle H\rangle", r"(e,\,\Delta\varpi)", ":", r"\ \text{libration about}\ ", r"\Delta\varpi = 180^\circ"],
+            [
+                (0, "the orbit-averaged (secular) energy"),
+                (1, "depends on eccentricity and apsidal angle"),
+                (4, "orbits stay trapped anti-aligned with P9"),
+            ],
+            scale=0.78,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Inside the island, orbits stay anti-aligned with P9 -- that is the clustering.")

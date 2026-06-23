@@ -6,7 +6,7 @@ Reproduced in p9-2017-bias (bias_function).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -40,11 +40,16 @@ class Bias2017(Scene):
         timing.hold_to_read(self, elab, settle=0.6)
 
         # debiasing: recover the intrinsic distribution by dividing out S(varpi)
-        eq = layout.equation_card(
-            r"N_{\rm intrinsic}(\varpi) = \frac{N_{\rm obs}(\varpi)}{S(\varpi)}"
-        ).scale(0.7)
-        eq.to_edge(UP, buff=1.05)
-        layout.show_equation(self, eq, settle=1.2)
+        eq = layout.explain_equation(
+            self,
+            [r"N_{\rm intrinsic}(\varpi)", "=", r"\frac{N_{\rm obs}(\varpi)}{S(\varpi)}"],
+            [
+                (0, "the true number of objects at each direction"),
+                (2, "counts observed, divided by survey sensitivity"),
+            ],
+            scale=0.8,
+        )
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "The excess peaks where sensitivity does NOT -- so bias alone cannot explain it.")

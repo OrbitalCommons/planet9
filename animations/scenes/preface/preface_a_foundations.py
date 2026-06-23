@@ -107,10 +107,17 @@ class P01Ellipse(Scene):
             timing.hold_to_read(self, ex, settle=0.6)
             self.play(FadeOut(ex))
 
-        # the orbit equation r(nu) as a brief hero beat
-        r_eq = layout.equation_card(r"r(\nu) = \dfrac{a(1-e^2)}{1 + e\cos\nu}").scale(0.8)
-        r_eq.to_edge(DOWN, buff=0.9)
-        layout.show_equation(self, r_eq)
+        # the orbit equation r(nu), explained term by term
+        r_eq = layout.explain_equation(
+            self,
+            [r"r(\nu)", "=", r"\dfrac{a(1-e^2)}{1 + e\cos\nu}"],
+            [
+                (0, "distance from the Sun at true anomaly ν"),
+                (2, "a sets the size, e the stretch; ν is the angle around the orbit"),
+            ],
+            scale=0.85,
+            where=DOWN * 1.5,
+        )
         self.play(FadeOut(r_eq))
 
         e_lbl = layout.equation(r"e:\ \text{eccentricity (how stretched)}", color=P.FG).scale(0.6)
@@ -211,8 +218,14 @@ class P02KeplerLaws(Scene):
             self.play(FadeOut(table))
 
         # --- Kepler III ---
-        k3 = layout.equation_card(r"P^2 \;=\; a^3 \quad (\text{years, AU})")
-        k3.to_edge(UP, buff=1.0)
-        layout.show_equation(self, k3)
+        layout.explain_equation(
+            self,
+            [r"P^2", "=", r"a^3", r"\quad (\text{years, AU})"],
+            [
+                (0, "orbital period squared"),
+                (2, "semi-major axis cubed"),
+            ],
+            where=UP * 1.7,
+        )
         layout.show_takeaway(
             self, "Farther = slower. Planet Nine's orbit takes ~10,000 yr -- we cannot wait one.")

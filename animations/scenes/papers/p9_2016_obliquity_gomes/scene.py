@@ -29,9 +29,15 @@ class ObliquityGomes2016(Scene):
         self.play(tilt.animate.set_value(6.0), run_time=3.5, rate_func=rate_functions.smooth)
         self.wait(0.5)
 
-        eq = layout.equation_card(r"\varepsilon \to 6^\circ", scale=1.0)
-        eq.to_edge(DOWN, buff=1.6).shift([3.2, 0, 0])
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"\varepsilon", r"\to", r"6^\circ"],
+            [
+                (0, "tilt of the planets' plane relative to the Sun"),
+                (2, "P9's torque drives it to the observed 6°"),
+            ],
+            scale=0.95,
+            where=DOWN * 1.4)
         self.play(FadeOut(eq))
 
         layout.show_takeaway(

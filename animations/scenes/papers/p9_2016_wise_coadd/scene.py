@@ -6,7 +6,7 @@ Reproduced in p9-2016-wise-coadd (coadd depth, band advantage).
 """
 import numpy as np
 from manim import (
-    Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, Write,
+    Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, Write,
 )
 
 import p9_manim as P
@@ -31,10 +31,14 @@ class WiseCoadd2016(Scene):
         depth = ax.plot(lambda n: 16.5 + 1.25 * np.log10(max(n, 1)), x_range=[1, 1000, 5], color=P.ORANGE)
         self.play(Create(depth), run_time=1.6)
 
-        eq = layout.equation_card(
-            r"m_{\rm lim} \to m_0 + 1.25\,\log_{10}\!\sqrt{N}", color=P.ORANGE, scale=0.85)
-        eq.next_to(ax.c2p(550, 16.5 + 1.25 * np.log10(550)), UP, buff=0.15)
-        layout.show_equation(self, eq)
+        eq = layout.explain_equation(
+            self,
+            [r"m_{\rm lim}", r"\to", "m_0", "+", "1.25", r"\log_{10}\!\sqrt{N}"],
+            [(0, "the deepened limiting magnitude"),
+             (2, "single-frame limit"),
+             (5, "gain grows with the square root of frame count")],
+            color=P.ORANGE, scale=0.85, where=UP * 1.7)
+        self.play(FadeOut(eq))
 
         layout.show_takeaway(
             self, "Stacking + the W2 band stretch WISE's cold-body reach -- but only so far.")

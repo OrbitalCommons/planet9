@@ -5,7 +5,7 @@ away, turning the qualitative picture into a measurable, time-dependent statisti
 Reproduced in p9-2025-clustering.
 """
 import numpy as np
-from manim import Axes, Create, DOWN, FadeIn, LEFT, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
+from manim import Axes, Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
 import p9_manim as P
 from p9_manim import layout, paper, timing
 
@@ -27,9 +27,17 @@ class Clustering2025(Scene):
         decay = ax.plot(lambda t: 0.85 * np.exp(-t / 2.2), x_range=[0, 4, 0.03], color=P.GREEN)
         self.play(Create(decay), run_time=1.5)
         # the clustering strength relaxes exponentially with a diffusion timescale
-        eq = layout.equation_card(r"\bar R(t) \sim \bar R_0\, e^{-t/\tau}").scale(0.7)
-        eq.to_corner(UP + LEFT, buff=0.9)
-        layout.show_equation(self, eq, settle=1.2)
+        eq = layout.explain_equation(
+            self,
+            [r"\bar R(t)", r"\sim", r"\bar R_0", r"\,e^{-t/\tau}"],
+            [
+                (0, "clustering strength as a function of time"),
+                (2, "its initial (present-day) value"),
+                (3, "exponential decay over a diffusion timescale tau"),
+            ],
+            scale=0.9,
+        )
+        self.play(FadeOut(eq))
         t = ValueTracker(0.0)
         dot = always_redraw(lambda: Dot(ax.c2p(t.get_value(), 0.85 * np.exp(-t.get_value() / 2.2)), color=P.TEAL, radius=0.07))
         self.add(dot)

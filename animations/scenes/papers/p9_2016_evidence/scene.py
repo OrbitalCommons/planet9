@@ -54,13 +54,18 @@ class Evidence2016(Scene):
 
         rbar = r_bar if r_bar is not None else orbits.mean_resultant_length(varpis)
         # the mean-resultant-length estimator for apsidal clustering
-        eq = layout.equation(
-            r"\bar R_\varpi = \left|\frac{1}{N}\sum_{k=1}^{N} e^{\,i\varpi_k}\right|"
-        ).scale(0.75)
-        eq.to_corner(UR, buff=0.5)
-        layout.show_equation(self, eq, settle=1.2)
+        eq = layout.explain_equation(
+            self,
+            [r"\bar R_\varpi", "=", r"\left|", r"\frac{1}{N}\sum_{k=1}^{N} e^{\,i\varpi_k}", r"\right|"],
+            [
+                (0, "mean resultant length (0=random, 1=aligned)"),
+                (3, "average of the N unit apsidal vectors"),
+            ],
+            scale=0.85,
+        )
+        self.play(FadeOut(eq))
         stat = MathTex(rf"\bar{{R}}_\varpi \approx {rbar:.2f}", color=P.TEAL).scale(0.8)
-        stat.next_to(eq, DOWN, buff=0.4)
+        stat.to_corner(UR, buff=0.5)
         self.play(Write(stat))
         timing.hold_to_read(self, stat, settle=1.2)
 
