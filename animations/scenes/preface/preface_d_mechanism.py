@@ -48,9 +48,7 @@ class P08Sculpting(Scene):
         self.play(FadeIn(cap))
         self.wait(0.3)
 
-        target_swarm = [orbits.ellipse_orbit(2.3, 0.7, color=P.GREEN, varpi=v,
-                                             stroke_width=1.6, opacity=0.8) for v in target]
-        self.play(*[s.animate.become(t) for s, t in zip(swarm, target_swarm)], run_time=3.0)
+        self.play(*orbits.precess(swarm, start, target), run_time=3.0)
         self.play(FadeOut(cap))
         self.play(Indicate(swarm, color=P.TEAL, scale_factor=1.03))
 

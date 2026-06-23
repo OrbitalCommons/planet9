@@ -32,8 +32,7 @@ class SelfgravDisk2019(Scene):
         swarm = VGroup(*[orbits.ellipse_orbit(2.5, 0.65, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.85)
                          for v in start])
         self.play(Create(swarm, lag_ratio=0.1), run_time=1.6)
-        targ = [orbits.ellipse_orbit(2.5, 0.65, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.85) for v in target]
-        self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0, rate_func=rate_functions.smooth)
+        self.play(*orbits.precess(swarm, start, target), run_time=3.0, rate_func=rate_functions.smooth)
 
         eq = layout.equation_card(
             r"\dot\varpi_{\rm disk} \propto \dfrac{M_{\rm disk}}{M_\odot}\,n"

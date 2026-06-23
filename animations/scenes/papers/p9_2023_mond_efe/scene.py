@@ -46,9 +46,7 @@ class MondEfe2023(Scene):
         swarm = VGroup(*[orbits.ellipse_orbit(2.4, 0.7, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8)
                          for v in start])
         self.play(Create(swarm, lag_ratio=0.1), run_time=1.6)
-        targ = [orbits.ellipse_orbit(2.4, 0.7, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8)
-                for v in target]
-        self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0)
+        self.play(*orbits.precess(swarm, start, target), run_time=3.0)
 
         eq = layout.explain_equation(
             self,

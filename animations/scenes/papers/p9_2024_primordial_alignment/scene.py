@@ -45,8 +45,7 @@ class PrimordialAlignment2024(Scene):
             scale=0.9,
         )
         self.play(FadeOut(eq))
-        targ = [orbits.ellipse_orbit(2.6, 0.72, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8) for v in birth]
-        self.play(*[s.animate.become(t) for s, t in zip(swarm, targ)], run_time=3.0,
+        self.play(*orbits.precess(swarm, today, birth), run_time=3.0,
                   rate_func=rate_functions.smooth)
         layout.show_takeaway(
             self, "Maybe they were aligned at birth and froze -- no present-day planet required.")

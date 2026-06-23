@@ -77,11 +77,11 @@ class P05Clustering(Scene):
         self.wait(0.6)
 
         # rotate each arrow to its real (or illustrative) clustered direction
-        target = arrows(clustered_varpi)
         rbar1 = r_bar if r_bar is not None else orbits.mean_resultant_length(clustered_varpi)
         lbl1 = layout.equation(rf"\bar{{R}} = {rbar1:.2f}\ \text{{(real KBOs)}}", color=P.TEAL).scale(0.7)
         lbl1.to_edge(DOWN, buff=0.9)
-        self.play(*[a.animate.become(t) for a, t in zip(arr, target)], run_time=2.2)
+        # precess each arrow about the Sun to its clustered direction (arc, not chord)
+        self.play(*orbits.precess(arr, random_varpi, clustered_varpi), run_time=2.2)
         self.play(FadeOut(lbl0), FadeIn(lbl1))
         timing.hold_to_read(self, lbl1, settle=0.5)
         layout.show_takeaway(

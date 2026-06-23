@@ -71,6 +71,23 @@ def apse_arrows(varpis, length=2.5, color=T.GREEN, stroke_width=3):
     return g
 
 
+def precess(mobjects, start_varpis, target_varpis, about=None):
+    """Animations that carry each orbit/arrow from its start to target longitude
+    of perihelion by PIVOTING ABOUT THE SUN (origin) -- real apsidal precession,
+    not a shape-morph through the centre. Each rotation uses the signed
+    shortest-equivalent delta (wrapped to (-pi, pi]). Use as
+    ``self.play(*orbits.precess(swarm, start, target), run_time=...)``.
+    """
+    from manim import Rotate
+
+    pivot = np.zeros(3) if about is None else about
+    anims = []
+    for m, s, t in zip(mobjects, start_varpis, target_varpis):
+        delta = (float(t) - float(s) + np.pi) % (2 * np.pi) - np.pi
+        anims.append(Rotate(m, delta, about_point=pivot))
+    return anims
+
+
 def real_etno_swarm(which="kbo", display_a=2.7, color=T.GREEN, stroke_width=1.9, opacity=0.85):
     """A VGroup of the REAL observed objects' orbits (true e and ϖ), plus the
     measured clustering R-bar. ``which`` = 'kbo' or 'etno'. Semi-major axes are
