@@ -23,7 +23,7 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, timing
+from p9_manim import dataio, layout, orbits, timing
 
 
 class P03Elements(Scene):
@@ -124,14 +124,39 @@ class P04Geography(Scene):
             (45, "Kuiper Belt", P.MUTED), (250, "Sednoids /\nETNOs", P.GREEN),
             (600, "Planet Nine?", P.TEAL),
         ]
-        anims = []
+        ticks = {}
         for au, name, col in marks:
             x = xf(au)
             tick = Line(UP * 0.12, DOWN * 0.12, color=col, stroke_width=3).move_to([x, -0.5, 0])
             lbl = Text(name, color=col, font_size=16).next_to(tick, UP, buff=0.15)
             val = Text(f"{au:g}", color=P.MUTED, font_size=13).next_to(tick, DOWN, buff=0.12)
             self.play(Create(tick), FadeIn(lbl), FadeIn(val), run_time=0.55)
+            ticks[name] = tick
         self.wait(0.4)
+
+        # real orbital periods for a couple of bodies, from the data
+        ss = dataio.solar_system()
+        if ss:
+            by_prefix = {}
+            for b in ss["bodies"]:
+                by_prefix[b["name"]] = b
+            period_marks = [("Neptune", "Neptune"), ("Sedna", "Sednoids /\nETNOs")]
+            per_lbls = []
+            for body_prefix, tick_key in period_marks:
+                tick = ticks.get(tick_key)
+                if tick is None:
+                    continue
+                body = next((b for b in ss["bodies"] if b["name"].startswith(body_prefix)), None)
+                if not body:
+                    continue
+                yr = body["period_yr"]
+                txt = f"P ~ {yr:,.0f} yr" if yr >= 1000 else f"P = {yr:.0f} yr"
+                pl = Text(txt, color=P.ORANGE, font_size=14).next_to(tick, UP, buff=0.7)
+                per_lbls.append(pl)
+                self.play(FadeIn(pl, shift=UP * 0.1), run_time=0.5)
+            if per_lbls:
+                timing.hold_to_read(self, *per_lbls, settle=0.6)
+                self.play(*[FadeOut(p) for p in per_lbls])
 
         per_eq = layout.equation_card(r"P \approx a^{3/2}\ \text{(yr, AU)}").scale(0.8)
         per_eq.next_to(title, DOWN, buff=0.3)

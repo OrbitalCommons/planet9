@@ -97,6 +97,23 @@ class P09ReflectedLight(Scene):
             tag = Text(f"{name} depth", font_size=14, color=P.MUTED).next_to(line, RIGHT, buff=0.05)
             self.play(Create(line), FadeIn(tag), run_time=0.6)
 
+        # a real magnitude ladder (brighter -> fainter), from the data
+        ss = dataio.solar_system()
+        if ss:
+            mags = {m["name"]: m["app_mag"] for m in ss["magnitudes"]}
+            nep, plu, p9 = mags.get("Neptune"), mags.get("Pluto"), mags.get("Planet Nine")
+            if None not in (nep, plu, p9):
+                ladder = Text(
+                    f"Neptune {nep:.1f}  ->  Pluto {plu:.1f}  ->  Planet Nine ~{p9:.1f}",
+                    color=P.FG, font_size=20)
+                cap = Text("apparent magnitude: brighter -> fainter",
+                           color=P.MUTED, font_size=15)
+                cap.next_to(ladder, DOWN, buff=0.12)
+                group = VGroup(ladder, cap).to_corner(UP + RIGHT, buff=0.4)
+                self.play(FadeIn(group, shift=DOWN * 0.1))
+                timing.hold_to_read(self, ladder, settle=0.6)
+                self.play(FadeOut(group))
+
         layout.show_takeaway(self, "Brightness falls as ~1/r^4: at 600 AU, Planet Nine is ~mag 22.")
 
 
@@ -178,6 +195,19 @@ class P10Thermal(Scene):
             wlbl.next_to(ax.c2p(np.log10(wien), 1.05), UP, buff=0.05)
             self.play(Create(wln), FadeIn(wlbl))
             self.wait(0.3)
+
+        # a real temperature callout near the Wien-peak marker, from the data
+        ss = dataio.solar_system()
+        if ss:
+            temps = {t["name"]: t["t_k"] for t in ss["temperatures"]}
+            nep, p9, cmb = temps.get("Neptune"), temps.get("Planet Nine"), temps.get("CMB")
+            if None not in (nep, p9, cmb):
+                tcall = Text(
+                    f"Neptune {nep:.0f} K   ·   Planet Nine {p9:.0f} K   ·   CMB {cmb:.1f} K",
+                    color=P.FG, font_size=20).to_edge(DOWN, buff=1.7)
+                self.play(FadeIn(tcall, shift=UP * 0.1))
+                timing.hold_to_read(self, tcall, settle=0.6)
+                self.play(FadeOut(tcall))
 
         teq = layout.equation(
             r"T_{\rm eq} = T_\odot\sqrt{\dfrac{R_\odot}{2d}}\,(1-A)^{1/4}", color=P.TEAL).scale(0.65)

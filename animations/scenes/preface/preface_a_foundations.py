@@ -27,7 +27,8 @@ from manim import (
 )
 
 import p9_manim as P
-from p9_manim import layout, orbits, timing
+from p9_manim import dataio, layout, orbits, timing
+from manim import Text
 
 
 class P00Hook(Scene):
@@ -94,6 +95,18 @@ class P01Ellipse(Scene):
         self.play(FadeIn(q_dot, q_lbl), FadeIn(Q_dot, Q_lbl))
         timing.hold_to_read(self, q_lbl, Q_lbl, settle=0.6)
 
+        # a real worked example: Sedna's extreme ellipse, from real data
+        sedna = dataio.body("Sedna")
+        if sedna:
+            ex = Text(
+                f"Sedna: a = {sedna['a_au']:.0f} AU, e = {sedna['e']:.2f}"
+                f"  ->  q = {sedna['q_au']:.0f} AU, Q = {sedna['Q_au']:.0f} AU",
+                color=P.GREEN, font_size=22)
+            ex.to_edge(DOWN, buff=1.4)
+            self.play(FadeIn(ex, shift=UP * 0.1))
+            timing.hold_to_read(self, ex, settle=0.6)
+            self.play(FadeOut(ex))
+
         # the orbit equation r(nu) as a brief hero beat
         r_eq = layout.equation_card(r"r(\nu) = \dfrac{a(1-e^2)}{1 + e\cos\nu}").scale(0.8)
         r_eq.to_edge(DOWN, buff=0.9)
@@ -158,6 +171,38 @@ class P02KeplerLaws(Scene):
         self.play(Write(vv))
         timing.hold_to_read(self, vv, settle=0.5)
         self.play(FadeOut(vv))
+
+        # --- real physically-realistic scales: the headline example table ---
+        ss = dataio.solar_system()
+        if ss:
+            want = ("Earth", "Neptune", "Sedna", "Planet Nine")
+            by_name = {b["name"]: b for b in ss["bodies"]}
+
+            def pick(prefix):
+                for n, b in by_name.items():
+                    if n.startswith(prefix):
+                        return b
+                return None
+
+            tbl_title = Text("Real orbital scales", color=P.TEAL,
+                             font_size=24, weight="BOLD")
+            header = Text("body        a (AU)     period (yr)    speed (km/s)",
+                          color=P.MUTED, font_size=20)
+            rows = [tbl_title, header]
+            for prefix in want:
+                b = pick(prefix)
+                if not b:
+                    continue
+                name = "Planet Nine" if prefix == "Planet Nine" else b["name"]
+                rows.append(Text(
+                    f"{name:<11} {b['a_au']:>6.0f}     {b['period_yr']:>8.0f}      "
+                    f"{b['speed_kms']:>7.1f}",
+                    color=P.FG, font_size=20))
+            table = VGroup(*rows).arrange(DOWN, buff=0.18, aligned_edge=LEFT)
+            table.move_to(np.array([0.0, -0.2, 0.0]))
+            self.play(FadeIn(table, shift=UP * 0.1))
+            timing.hold_to_read(self, table, settle=0.8)
+            self.play(FadeOut(table))
 
         # --- Kepler III ---
         k3 = layout.equation_card(r"P^2 \;=\; a^3 \quad (\text{years, AU})")
