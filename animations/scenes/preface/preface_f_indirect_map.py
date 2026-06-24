@@ -43,7 +43,7 @@ class P12Indirect(Scene):
         sun1 = Dot(LEFT * 4.4 + DOWN * 0.2, radius=0.1, color=P.SUN)
         sat = Dot(LEFT * 4.4 + UP * 1.0, radius=0.07, color=P.ORANGE)
         wig = Line(sun1.get_center(), sat.get_center(), color=P.ORANGE, stroke_width=2)
-        c1lbl = Text("Cassini ranging\n(Earth–Saturn distance)", font_size=15, color=P.ORANGE)
+        c1lbl = layout.label("Cassini ranging\n(Earth–Saturn distance)", font_size=15, color=P.ORANGE)
         c1lbl.next_to(sat, UP, buff=0.2)
         self.play(FadeIn(sun1), FadeIn(sat), Create(wig), FadeIn(c1lbl))
 
@@ -58,7 +58,7 @@ class P12Indirect(Scene):
         axis = Line(RIGHT * 4.4 + DOWN * 1.0, RIGHT * 4.4 + UP * 0.9, color=P.FG, stroke_width=2)
         axis.rotate(np.deg2rad(6), about_point=sun3.get_center())
         vert = Line(RIGHT * 4.4 + DOWN * 1.0, RIGHT * 4.4 + UP * 0.9, color=P.MUTED, stroke_width=1).set_stroke(opacity=0.5)
-        obl_lbl = Text("Sun tilted ~6°", font_size=15, color=P.ORANGE).next_to(sun3, DOWN, buff=0.5)
+        obl_lbl = layout.label("Sun tilted ~6°", font_size=15, color=P.ORANGE).next_to(sun3, DOWN, buff=0.5)
         self.play(FadeIn(sun3), Create(vert), Create(axis), FadeIn(obl_lbl))
         self.wait(0.4)
 

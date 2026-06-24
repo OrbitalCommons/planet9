@@ -46,6 +46,17 @@ def citation_chip(text):
     return t
 
 
+def label(text, font_size=18, color=None, weight="NORMAL", **kw):
+    """A small Text label with even kerning. manim's Text lays glyphs out
+    unevenly below ~20px, so we render at a safe size and scale down to the
+    requested visual size."""
+    internal = max(font_size, 28)
+    t = Text(text, font_size=internal, color=color or T.FG, weight=weight, **kw)
+    if internal != font_size:
+        t.scale(font_size / internal)
+    return t
+
+
 def caption(text, font_size=None):
     """Bottom caption line."""
     t = Text(text, color=T.FG, font_size=font_size or T.SMALL_SIZE)
