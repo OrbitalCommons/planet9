@@ -3,7 +3,7 @@
 Tokyo-Night dark palette so stills drop straight into the repo docs/portal.
 Importing this module sets the global manim background colour.
 """
-from manim import config
+from manim import config, Text
 
 # ---- palette ----
 BG = "#1a1b26"      # background
@@ -19,6 +19,12 @@ YELLOW = "#e0af68"
 SUN = "#f7c873"     # the Sun
 
 config.background_color = BG
+
+# manim's default Text font resolves (via Pango) to a serif whose glyph advances
+# are laid out unevenly -- visible as broken kerning at every size. Noto Sans
+# kerns cleanly, so make it the default for every Text in the film.
+FONT = "Noto Sans"
+Text.set_default(font=FONT)
 
 # Consistent stroke / font sizing.
 ORBIT_STROKE = 3.0
