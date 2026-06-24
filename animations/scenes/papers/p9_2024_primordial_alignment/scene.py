@@ -6,7 +6,7 @@ planet. Reproduced in p9-2024-primordial-alignment (lookback convergence).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write, rate_functions,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, VGroup, Write, rate_functions,
 )
 
 import p9_manim as P
@@ -30,7 +30,7 @@ class PrimordialAlignment2024(Scene):
         swarm = VGroup(*[orbits.ellipse_orbit(2.6, 0.72, color=P.GREEN, varpi=v, stroke_width=1.6, opacity=0.8)
                          for v in today])
         self.play(Create(swarm, lag_ratio=0.1), run_time=1.6)
-        rwlab = Text("rewind to the Sun's birth cluster...", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)
+        rwlab = layout.label("rewind to the Sun's birth cluster...", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)
         self.play(FadeIn(rwlab))
         timing.hold_to_read(self, rwlab, settle=0.5)
         # integrating apsidal precession backward to the primordial direction

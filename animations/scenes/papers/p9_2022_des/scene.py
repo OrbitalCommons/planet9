@@ -6,7 +6,7 @@ footprint -- adding ~5% unique exclusion. Reproduced in p9-2022-des.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, LEFT, Rectangle, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Rectangle, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -38,8 +38,8 @@ class Des2022(Scene):
         foot = widgets.footprint_rect(10 * 0.12, 1.0, fill_opacity=0.2, stroke_width=2)
         foot.move_to(sky.get_center() + LEFT * 3.0 + DOWN * 0.6)
         self.play(Create(sky), Create(foot))
-        self.add(Text("DES footprint ~5000 deg² (deep: r ≈ 23.8)", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1))
-        self.add(Text("~88% of sky unsearched by DES", font_size=15, color=P.MUTED).move_to(sky.get_center() + UP * 0.4))
+        self.add(layout.label("DES footprint ~5000 deg² (deep: r ≈ 23.8)", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1))
+        self.add(layout.label("~88% of sky unsearched by DES", font_size=15, color=P.MUTED).move_to(sky.get_center() + UP * 0.4))
 
         eq = layout.explain_equation(
             self,

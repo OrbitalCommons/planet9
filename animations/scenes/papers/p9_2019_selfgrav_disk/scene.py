@@ -6,7 +6,7 @@ p9-2019-selfgrav-disk.
 """
 import numpy as np
 from manim import (
-    Annulus, Create, DOWN, FadeIn, RIGHT, Scene, Text, UP, VGroup, Write, rate_functions,
+    Annulus, Create, DOWN, FadeIn, RIGHT, Scene, UP, VGroup, Write, rate_functions,
 )
 
 import p9_manim as P
@@ -23,7 +23,7 @@ class SelfgravDisk2019(Scene):
 
         sun = orbits.sun()
         disk = Annulus(inner_radius=1.6, outer_radius=3.4, color=P.PURPLE, fill_opacity=0.12, stroke_width=1)
-        disk_lbl = Text("massive self-gravitating debris disk", font_size=16, color=P.PURPLE).to_edge(UP, buff=1.5)
+        disk_lbl = layout.label("massive self-gravitating debris disk", font_size=16, color=P.PURPLE).to_edge(UP, buff=1.5)
         self.play(FadeIn(sun), FadeIn(disk), FadeIn(disk_lbl))
 
         rng = np.random.default_rng(2019)

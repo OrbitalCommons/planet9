@@ -6,7 +6,7 @@ Reproduced in p9-2017-bias (bias_function).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -22,18 +22,18 @@ class Bias2017(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([0, 360, 90], [0, 1.05, 0.5], x_length=9.3, y_length=3.9, font_size=18, shift_down=0.4)
-        xl = Text("longitude of perihelion ϖ (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+        xl = layout.label("longitude of perihelion ϖ (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
         self.play(Create(ax), FadeIn(xl))
 
         # survey sensitivity vs ϖ (the bias), and the debiased residual excess
         sens = ax.plot(lambda v: 0.5 + 0.35 * np.cos(np.deg2rad(v - 60)), x_range=[0, 360, 2], color=P.PURPLE)
         excess = ax.plot(lambda v: 0.55 + 0.3 * np.cos(np.deg2rad(v - 250)), x_range=[0, 360, 2], color=P.GREEN)
         self.play(Create(sens))
-        slab = Text("survey sensitivity (bias)", font_size=15, color=P.PURPLE).next_to(ax.c2p(60, 0.85), UP, buff=0.05)
+        slab = layout.label("survey sensitivity (bias)", font_size=15, color=P.PURPLE).next_to(ax.c2p(60, 0.85), UP, buff=0.05)
         self.play(FadeIn(slab))
         timing.hold_to_read(self, slab, settle=0.6)
         self.play(Create(excess))
-        elab = Text("debiased object excess", font_size=15, color=P.GREEN).next_to(ax.c2p(250, 0.85), UP, buff=0.05)
+        elab = layout.label("debiased object excess", font_size=15, color=P.GREEN).next_to(ax.c2p(250, 0.85), UP, buff=0.05)
         self.play(FadeIn(elab))
         timing.hold_to_read(self, elab, settle=0.6)
 

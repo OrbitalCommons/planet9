@@ -84,8 +84,8 @@ class P09ReflectedLight(Scene):
                   axis_config={"color": P.MUTED, "include_tip": False,
                                "font_size": 18, "decimal_number_config": {"num_decimal_places": 0}})
         ax.shift(DOWN * 0.6)
-        xlab = ax.get_x_axis_label(Text("distance (AU)", font_size=18, color=P.FG))
-        ylab = ax.get_y_axis_label(Text("apparent mag (fainter →)", font_size=18, color=P.FG))
+        xlab = ax.get_x_axis_label(layout.label("distance (AU)", font_size=18, color=P.FG))
+        ylab = ax.get_y_axis_label(layout.label("apparent mag (fainter →)", font_size=18, color=P.FG))
         self.play(Create(ax), FadeIn(xlab), FadeIn(ylab))
 
         for mass, col in [(5, P.TEAL), (10, P.BLUE)]:
@@ -93,14 +93,14 @@ class P09ReflectedLight(Scene):
             curve = ax.plot_line_graph(
                 [r for r, _ in pts], [m_v for _, m_v in pts],
                 line_color=col, add_vertex_dots=False)["line_graph"]
-            lbl = Text(f"{mass} M⊕", font_size=18, color=col).next_to(curve.get_end(), UP, buff=0.1)
+            lbl = layout.label(f"{mass} M⊕", font_size=18, color=col).next_to(curve.get_end(), UP, buff=0.1)
             self.play(Create(curve), FadeIn(lbl), run_time=1.0)
 
         for depth, name in [(20.5, "ZTF"), (23.8, "DES")]:
             y = ax.c2p(100, depth)[1]
             line = Line([ax.c2p(100, depth)[0], y, 0], [ax.c2p(1500, depth)[0], y, 0],
                         color=P.MUTED, stroke_width=1.5).set_stroke(opacity=0.7)
-            tag = Text(f"{name} depth", font_size=14, color=P.MUTED).next_to(line, RIGHT, buff=0.05)
+            tag = layout.label(f"{name} depth", font_size=14, color=P.MUTED).next_to(line, RIGHT, buff=0.05)
             self.play(Create(line), FadeIn(tag), run_time=0.6)
 
         # a real magnitude ladder (brighter -> fainter), from the data
@@ -112,7 +112,7 @@ class P09ReflectedLight(Scene):
                 ladder = Text(
                     f"Neptune {nep:.1f}  ->  Pluto {plu:.1f}  ->  Planet Nine ~{p9:.1f}",
                     color=P.FG, font_size=20)
-                cap = Text("apparent magnitude: brighter -> fainter",
+                cap = layout.label("apparent magnitude: brighter -> fainter",
                            color=P.MUTED, font_size=15)
                 cap.next_to(ladder, DOWN, buff=0.12)
                 group = VGroup(ladder, cap).to_corner(UP + RIGHT, buff=0.4)
@@ -151,11 +151,11 @@ class P10Thermal(Scene):
         # x axis = log10(wavelength / micron) from -1 (0.1) to 3 (1000)
         ax = widgets.axes([-1, 3, 1], [0, 1.1, 0.5], x_length=9.5, y_length=3.8,
                           font_size=18, shift_down=0.5)
-        xlab = Text("wavelength (µm)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.3)
+        xlab = layout.label("wavelength (µm)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.3)
         self.play(Create(ax), FadeIn(xlab))
         # tick relabels
         for lx, txt in [(-1, "0.1"), (0, "1"), (1, "10"), (2, "100"), (3, "1000")]:
-            t = Text(txt, font_size=14, color=P.MUTED).next_to(ax.c2p(lx, 0), DOWN, buff=0.12)
+            t = layout.label(txt, font_size=14, color=P.MUTED).next_to(ax.c2p(lx, 0), DOWN, buff=0.12)
             self.add(t)
 
         # band markers
@@ -166,7 +166,7 @@ class P10Thermal(Scene):
             if x < -1 or x > 3:
                 continue
             ln = Line(ax.c2p(x, 0), ax.c2p(x, 1.05), color=col, stroke_width=1.5).set_stroke(opacity=0.5)
-            tg = Text(name, font_size=13, color=col).next_to(ax.c2p(x, 1.05), UP, buff=0.05)
+            tg = layout.label(name, font_size=13, color=col).next_to(ax.c2p(x, 1.05), UP, buff=0.05)
             self.add(ln, tg)
 
         def planck_norm(logwl_um, T):
@@ -204,7 +204,7 @@ class P10Thermal(Scene):
             wien = float(data["wien_peak_um"])
             wln = Line(ax.c2p(np.log10(wien), 0), ax.c2p(np.log10(wien), 1.05),
                        color=P.TEAL, stroke_width=2).set_stroke(opacity=0.7)
-            wlbl = Text(f"Wien peak {wien:.0f} µm", font_size=13, color=P.TEAL)
+            wlbl = layout.label(f"Wien peak {wien:.0f} µm", font_size=13, color=P.TEAL)
             wlbl.next_to(ax.c2p(np.log10(wien), 1.05), UP, buff=0.05)
             self.play(Create(wln), FadeIn(wlbl))
             self.wait(0.3)
@@ -247,7 +247,7 @@ class P11Surveys(Scene):
 
         # a survey footprint (covers part of the sky)
         foot = widgets.footprint_rect(6.5, 3.2, fill_opacity=0.06, stroke_width=2).shift(LEFT * 2.3 + DOWN * 0.1)
-        foot_lbl = Text("survey footprint (limited sky + depth)", font_size=16, color=P.PURPLE)
+        foot_lbl = layout.label("survey footprint (limited sky + depth)", font_size=16, color=P.PURPLE)
         foot_lbl.next_to(foot, UP, buff=0.08)
         self.play(Create(foot), FadeIn(foot_lbl))
 
@@ -258,7 +258,7 @@ class P11Surveys(Scene):
             ghost = mover.copy().set_opacity(0.35)
             self.add(ghost)
             self.play(mover.animate.shift(RIGHT * dx), run_time=0.5)
-        shift_txt = Text("a real planet shifts vs the stars -> link the epochs",
+        shift_txt = layout.label("a real planet shifts vs the stars -> link the epochs",
                          font_size=16, color=P.GREEN).next_to(mover, DOWN, buff=0.3)
         self.play(FadeIn(shift_txt))
         timing.hold_to_read(self, shift_txt, settle=0.4)

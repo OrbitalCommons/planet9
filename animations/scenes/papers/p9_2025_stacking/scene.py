@@ -32,8 +32,8 @@ class Stacking2025(Scene):
         self.play(FadeIn(cells, lag_ratio=0.01))
         peak = Text("●", font_size=40, color=P.GREEN).move_to([-3.6 + 4 * 1.2, -0.4 + 2 * 0.9, 0])
         self.play(FadeIn(peak))
-        top = Text("matched-filter peak in (a, e, angles)", font_size=16, color=P.GREEN).to_edge(UP, buff=1.5)
-        bot = Text("...but huge trials → look-elsewhere penalty", font_size=16, color=P.RED).to_edge(DOWN, buff=1.9)
+        top = layout.label("matched-filter peak in (a, e, angles)", font_size=16, color=P.GREEN).to_edge(UP, buff=1.5)
+        bot = layout.label("...but huge trials → look-elsewhere penalty", font_size=16, color=P.RED).to_edge(DOWN, buff=1.9)
         self.play(FadeIn(top), FadeIn(bot))
         timing.hold_to_read(self, top, bot, settle=0.5)
 

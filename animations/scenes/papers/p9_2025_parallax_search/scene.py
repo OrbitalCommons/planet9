@@ -6,7 +6,7 @@ in p9-2025-parallax-search.
 """
 import numpy as np
 from manim import (
-    Arrow, Create, DOWN, Dot, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write,
+    Arrow, Create, DOWN, Dot, FadeIn, FadeOut, Scene, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -25,13 +25,13 @@ class ParallaxSearch2025(Scene):
         e1 = Dot([-2.0, -0.3, 0], radius=0.09, color=P.GREEN)
         e2 = Dot([2.0, -0.3, 0], radius=0.09, color=P.GREEN)
         self.play(FadeIn(sun), FadeIn(e1), FadeIn(e2))
-        self.add(Text("Earth, 6 months apart", font_size=15, color=P.GREEN).next_to(sun, DOWN, buff=0.4))
+        self.add(layout.label("Earth, 6 months apart", font_size=15, color=P.GREEN).next_to(sun, DOWN, buff=0.4))
 
         p9 = Dot([0.6, 2.0, 0], radius=0.11, color=P.BLUE)
         l1 = Arrow(e1.get_center(), p9.get_center(), color=P.MUTED, buff=0.1, stroke_width=2)
         l2 = Arrow(e2.get_center(), p9.get_center(), color=P.MUTED, buff=0.1, stroke_width=2)
         self.play(FadeIn(p9), Create(l1), Create(l2))
-        note = Text("apparent shift = parallax → distance", font_size=16, color=P.TEAL).to_edge(DOWN, buff=1.9)
+        note = layout.label("apparent shift = parallax → distance", font_size=16, color=P.TEAL).to_edge(DOWN, buff=1.9)
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.5)
 

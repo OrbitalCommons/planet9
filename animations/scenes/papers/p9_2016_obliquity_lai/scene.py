@@ -6,7 +6,7 @@ Reproduced in p9-2016-obliquity-lai.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -22,14 +22,14 @@ class ObliquityLai2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([0, 30, 10], [0, 12, 3], x_length=9.0, y_length=3.9, font_size=16, shift_down=0.5)
-        xl = Text("Planet Nine inclination (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("induced solar obliquity (deg)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
+        xl = layout.label("Planet Nine inclination (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("induced solar obliquity (deg)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         curve = ax.plot(lambda i: 6.0 * np.sin(np.deg2rad(2 * i)) / np.sin(np.deg2rad(40)), x_range=[0, 30, 0.5], color=P.ORANGE)
         self.play(Create(curve), run_time=1.4)
         target = ax.get_horizontal_line(ax.c2p(30, 6.0), color=P.TEAL, stroke_width=2)
-        obs = Text("observed 6°", font_size=15, color=P.TEAL).next_to(ax.c2p(2, 6), UP, buff=0.05)
+        obs = layout.label("observed 6°", font_size=15, color=P.TEAL).next_to(ax.c2p(2, 6), UP, buff=0.05)
         self.play(Create(target), FadeIn(obs))
         timing.hold_to_read(self, obs)
 

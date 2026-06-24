@@ -22,14 +22,14 @@ class HolmanPayne2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([200, 1000, 200], [0, 20, 5], x_length=9.3, y_length=4.0, font_size=18, shift_down=0.4)
-        xl = Text("Planet Nine distance (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
-        yl = Text("max allowed mass (M⊕)", font_size=16, color=P.FG).next_to(ax, UP, buff=0.05)
+        xl = layout.label("Planet Nine distance (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+        yl = layout.label("max allowed mass (M⊕)", font_size=16, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         # allowed mass grows steeply with distance (tidal residual ~ M / d^3)
         bound = ax.plot(lambda d: 0.6 * (d / 250.0) ** 3, x_range=[200, 1000, 5], color=P.ORANGE)
         self.play(Create(bound), run_time=1.5)
-        excl = Text("excluded by Cassini ranging", font_size=18, color=P.RED).move_to(ax.c2p(420, 14))
+        excl = layout.label("excluded by Cassini ranging", font_size=18, color=P.RED).move_to(ax.c2p(420, 14))
         ok = Text("allowed", font_size=20, color=P.TEAL, weight="BOLD").move_to(ax.c2p(820, 4))
         self.play(FadeIn(excl), FadeIn(ok))
         timing.hold_to_read(self, excl, ok)

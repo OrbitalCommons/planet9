@@ -15,7 +15,6 @@ from manim import (
     MathTex,
     RIGHT,
     Scene,
-    Text,
     UP,
     Write,
     always_redraw,
@@ -37,8 +36,8 @@ class CassiniRanging2016(Scene):
 
         # residual amplitude vs P9 true anomaly, minimum near 108 deg
         ax = widgets.axes([0, 360, 90], [0, 1.1, 0.5], x_length=9.5, y_length=3.6, font_size=18, shift_down=0.6)
-        xl = Text("Planet Nine true anomaly ν (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("Earth–Saturn range residual", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, RIGHT * -1, buff=0.1)
+        xl = layout.label("Planet Nine true anomaly ν (deg)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("Earth–Saturn range residual", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, RIGHT * -1, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         data = dataio.section("cassini")
@@ -55,7 +54,7 @@ class CassiniRanging2016(Scene):
             fav_y = float(np.interp(fav, nu, yn))
             favored = ax.get_vertical_line(ax.c2p(fav, fav_y), color=P.TEAL, stroke_width=2)
             dot = Dot(ax.c2p(fav, fav_y), color=P.TEAL, radius=0.07)
-            tag = Text(f"favoured ν ≈ {fav:.0f}°", font_size=18, color=P.TEAL).next_to(dot, UP, buff=0.15)
+            tag = layout.label(f"favoured ν ≈ {fav:.0f}°", font_size=18, color=P.TEAL).next_to(dot, UP, buff=0.15)
             self.play(Create(favored), FadeIn(dot), FadeIn(tag))
         else:
             # fallback: hand-coded residual curve with a minimum near nu=108 deg
@@ -67,7 +66,7 @@ class CassiniRanging2016(Scene):
 
             favored = ax.get_vertical_line(ax.c2p(108, resid(108)), color=P.TEAL, stroke_width=2)
             dot = Dot(ax.c2p(108, resid(108)), color=P.TEAL, radius=0.07)
-            tag = Text("favoured ν ≈ 108°", font_size=18, color=P.TEAL).next_to(dot, UP, buff=0.15)
+            tag = layout.label("favoured ν ≈ 108°", font_size=18, color=P.TEAL).next_to(dot, UP, buff=0.15)
             self.play(Create(favored), FadeIn(dot), FadeIn(tag))
         self.wait(0.4)
 

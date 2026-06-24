@@ -5,7 +5,7 @@ Saturn's perihelion precession changes -- tightening the planetary-ephemeris
 bound. Reproduced in p9-2026-iorio-precession.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, UP, Write
 import p9_manim as P
 from p9_manim import layout, paper, timing, widgets
 
@@ -19,13 +19,13 @@ class Iorio2026(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
         ax = widgets.axes([300, 800, 100], [0, 4, 1], x_length=9.0, y_length=3.9, font_size=16, shift_down=0.5)
         self.play(Create(ax),
-                  FadeIn(Text("Planet Nine distance (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
-                  FadeIn(Text("Saturn precession effect", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
+                  FadeIn(layout.label("Planet Nine distance (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
+                  FadeIn(layout.label("Saturn precession effect", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
         point = ax.plot(lambda d: 40.0 / (d / 250.0) ** 3, x_range=[320, 800, 5], color=P.MUTED)
         disten = ax.plot(lambda d: 52.0 / (d / 250.0) ** 3, x_range=[320, 800, 5], color=P.ORANGE)
-        pm_lbl = Text("point mass", font_size=14, color=P.MUTED).next_to(ax.c2p(700, 40 / (700 / 250) ** 3), UP, buff=0.05)
+        pm_lbl = layout.label("point mass", font_size=14, color=P.MUTED).next_to(ax.c2p(700, 40 / (700 / 250) ** 3), UP, buff=0.05)
         self.play(Create(point), FadeIn(pm_lbl))
-        d_lbl = Text("distended P9", font_size=14, color=P.ORANGE).next_to(ax.c2p(450, 52 / (450 / 250) ** 3), UP, buff=0.05)
+        d_lbl = layout.label("distended P9", font_size=14, color=P.ORANGE).next_to(ax.c2p(450, 52 / (450 / 250) ** 3), UP, buff=0.05)
         self.play(Create(disten), FadeIn(d_lbl))
         timing.hold_to_read(self, pm_lbl, d_lbl)
 

@@ -18,14 +18,14 @@ class ObliquityGomes2016(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
         eq = Line([-4.5, 0, 0], [4.5, 0, 0], color=P.SUN, stroke_width=3)
-        self.play(Create(eq), FadeIn(Text("solar equator", font_size=15, color=P.SUN).next_to(eq, DOWN, buff=0.1)))
+        self.play(Create(eq), FadeIn(layout.label("solar equator", font_size=15, color=P.SUN).next_to(eq, DOWN, buff=0.1)))
         tilt = ValueTracker(0.0)
         plane = always_redraw(lambda: Line(
             -4.0 * np.array([np.cos(np.deg2rad(tilt.get_value())), np.sin(np.deg2rad(tilt.get_value())), 0]),
             4.0 * np.array([np.cos(np.deg2rad(tilt.get_value())), np.sin(np.deg2rad(tilt.get_value())), 0]),
             color=P.BLUE, stroke_width=3))
         deg = always_redraw(lambda: Text(f"{tilt.get_value():.1f}°", font_size=22, color=P.BLUE).to_corner(UP, buff=1.4).shift([3.5, 0, 0]))
-        self.add(plane, deg, Text("planets' plane", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.6))
+        self.add(plane, deg, layout.label("planets' plane", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.6))
         self.play(tilt.animate.set_value(6.0), run_time=3.5, rate_func=rate_functions.smooth)
         self.wait(0.5)
 

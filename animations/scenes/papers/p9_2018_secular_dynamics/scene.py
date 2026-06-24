@@ -6,7 +6,7 @@ librate around it. Reproduced in p9-2018-secular-dynamics (free precession rate)
 """
 import numpy as np
 from manim import (
-    Create, DOWN, Dot, FadeIn, FadeOut, LEFT, ParametricFunction, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, Dot, FadeIn, FadeOut, LEFT, ParametricFunction, Scene, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -57,7 +57,7 @@ class SecularDynamics2018(Scene):
             ef = float(e[ii])
             kf = -ef  # anti-aligned (Delta-varpi = 180)
             forced = Dot(ax.c2p(kf, 0), color=P.GREEN, radius=0.08)
-            flbl = Text(f"forced e ≈ {ef:.2f}", font_size=15, color=P.GREEN).next_to(forced, DOWN, buff=0.1)
+            flbl = layout.label(f"forced e ≈ {ef:.2f}", font_size=15, color=P.GREEN).next_to(forced, DOWN, buff=0.1)
             loops = VGroup(*[
                 ParametricFunction(lambda t, r=r: ax.c2p(kf + r * np.cos(t), r * np.sin(t)),
                                    t_range=[0, 2 * np.pi], color=P.TEAL).set_stroke(opacity=0.7)
@@ -66,7 +66,7 @@ class SecularDynamics2018(Scene):
         else:
             kf = -0.32
             forced = Dot(ax.c2p(kf, 0), color=P.BLUE, radius=0.07)
-            flbl = Text("forced eccentricity", font_size=15, color=P.BLUE).next_to(forced, DOWN, buff=0.1)
+            flbl = layout.label("forced eccentricity", font_size=15, color=P.BLUE).next_to(forced, DOWN, buff=0.1)
             self.play(FadeIn(forced), FadeIn(flbl))
             loops = VGroup(*[
                 ParametricFunction(lambda t, r=r: ax.c2p(kf + r * np.cos(t), r * np.sin(t)),

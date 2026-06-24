@@ -6,7 +6,7 @@ in the alignment. Reproduced in p9-2016-secular-resonance (libration center/amp)
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write, always_redraw,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write, always_redraw,
     rate_functions, ValueTracker, Dot,
 )
 
@@ -23,8 +23,8 @@ class SecularResonance2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([0, 10, 2], [-120, 120, 60], x_length=9.5, y_length=4.0, font_size=18, shift_down=0.4)
-        xl = Text("time (arb.)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
-        yl = Text("Δϖ − Δϖ₀  (deg)", font_size=16, color=P.FG).next_to(ax, UP, buff=0.05)
+        xl = layout.label("time (arb.)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+        yl = layout.label("Δϖ − Δϖ₀  (deg)", font_size=16, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         lib = ax.plot(lambda t: 80 * np.sin(1.3 * t), x_range=[0, 10, 0.05], color=P.TEAL)
@@ -34,7 +34,7 @@ class SecularResonance2016(Scene):
                                         color=P.GREEN, radius=0.07))
         self.add(dot)
         self.play(t.animate.set_value(10.0), run_time=3.0, rate_func=rate_functions.linear)
-        msg = Text("Δϖ oscillates -- it never runs away", font_size=18, color=P.TEAL).to_edge(UP, buff=1.5)
+        msg = layout.label("Δϖ oscillates -- it never runs away", font_size=18, color=P.TEAL).to_edge(UP, buff=1.5)
         self.play(FadeIn(msg))
         timing.hold_to_read(self, msg, settle=0.6)
         self.play(FadeOut(msg), FadeOut(yl))

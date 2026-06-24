@@ -6,7 +6,7 @@ world. Reproduced in p9-2025-simons-forecast (max_detectable_distance).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Scene, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -36,8 +36,8 @@ class SimonsForecast2025(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([2, 20, 4], [0, 1200, 300], x_length=9.0, y_length=3.9, font_size=18, shift_down=0.5)
-        xl = Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("reach (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
+        xl = layout.label("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("reach (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         act_pts = [(m, r) for m, r in _reach_points("ACT (mm)") if 2 <= m <= 20]
@@ -57,8 +57,8 @@ class SimonsForecast2025(Scene):
         self.play(Create(act))
         self.play(Create(so))
         labels = VGroup(
-            Text("ACT", font_size=16, color=P.PURPLE).next_to(act.get_end(), DOWN, buff=0.1),
-            Text("Simons Obs.", font_size=16, color=P.TEAL).next_to(so.get_end(), UP, buff=0.1),
+            layout.label("ACT", font_size=16, color=P.PURPLE).next_to(act.get_end(), DOWN, buff=0.1),
+            layout.label("Simons Obs.", font_size=16, color=P.TEAL).next_to(so.get_end(), UP, buff=0.1),
         )
         self.play(FadeIn(labels))
         timing.hold_to_read(self, labels, settle=0.6)

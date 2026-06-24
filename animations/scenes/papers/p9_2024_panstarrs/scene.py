@@ -54,7 +54,7 @@ class PanStarrs2024(Scene):
         for name, frac, col in segs:
             r = Rectangle(width=W * frac, height=1.0, color=col, stroke_width=0).set_fill(col, opacity=0.55)
             r.move_to([x + W * frac / 2, 0, 0])
-            lbl = Text(f"{name}\n+{frac*100:.1f}%", font_size=16, color=P.FG).move_to(r.get_center())
+            lbl = layout.label(f"{name}\n+{frac*100:.1f}%", font_size=16, color=P.FG).move_to(r.get_center())
             self.play(Create(r), FadeIn(lbl), run_time=0.8)
             x += W * frac
             cum += frac
@@ -63,7 +63,7 @@ class PanStarrs2024(Scene):
         remaining = ex.get("remaining", 1 - cum)
         rem = Rectangle(width=W * remaining, height=1.0, color=P.TEAL, stroke_width=0).set_fill(P.TEAL, opacity=0.25)
         rem.move_to([x + W * remaining / 2, 0, 0])
-        rem_lbl = Text(f"viable\n{remaining*100:.1f}%", font_size=16, color=P.TEAL).move_to(rem.get_center())
+        rem_lbl = layout.label(f"viable\n{remaining*100:.1f}%", font_size=16, color=P.TEAL).move_to(rem.get_center())
         self.play(Create(rem), FadeIn(rem_lbl))
 
         combined = ex.get("combined", cum)

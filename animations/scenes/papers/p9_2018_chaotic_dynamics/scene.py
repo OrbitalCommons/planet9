@@ -6,7 +6,7 @@ and objects diffuse. Reproduced in p9-2018-chaotic-dynamics (libration widths).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Line, Rectangle, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, Line, Rectangle, Scene, UP, VGroup, Write,
     rate_functions, ValueTracker, always_redraw,
 )
 
@@ -23,7 +23,7 @@ class ChaoticDynamics2018(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         axis = Line([-6, -1.5, 0], [6, -1.5, 0], color=P.FG, stroke_width=2)
-        axlbl = Text("semi-major axis", font_size=18, color=P.MUTED).next_to(axis, DOWN, buff=0.2)
+        axlbl = layout.label("semi-major axis", font_size=18, color=P.MUTED).next_to(axis, DOWN, buff=0.2)
         self.play(Create(axis), FadeIn(axlbl))
 
         centers = np.linspace(-4.5, 4.5, 7)
@@ -34,9 +34,9 @@ class ChaoticDynamics2018(Scene):
                                                 color=P.PURPLE).set_fill(P.PURPLE, opacity=0.35)
                           .move_to([c, -0.3, 0]))
             for c in centers])
-        ticks = VGroup(*[Text(t, font_size=14, color=P.PURPLE).move_to([c, 1.1, 0]) for c, t in zip(centers, labels)])
+        ticks = VGroup(*[layout.label(t, font_size=14, color=P.PURPLE).move_to([c, 1.1, 0]) for c, t in zip(centers, labels)])
         self.add(bands); self.play(FadeIn(ticks))
-        msg = Text("each resonance has a width", font_size=18, color=P.PURPLE).to_edge(UP, buff=1.6)
+        msg = layout.label("each resonance has a width", font_size=18, color=P.PURPLE).to_edge(UP, buff=1.6)
         self.play(FadeIn(msg))
         timing.hold_to_read(self, msg, settle=0.4)
 

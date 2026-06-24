@@ -6,7 +6,7 @@ footprint's declination reach. Reproduced in p9-2023-lsst-strategy.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, LEFT, Rectangle, Scene, Text, UP, VGroup, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Rectangle, Scene, UP, VGroup, Write,
 )
 
 import p9_manim as P
@@ -31,7 +31,7 @@ class LsstStrategy2023(Scene):
             track = Rectangle(width=7.0, height=0.6, color=P.MUTED, stroke_width=1.5)
             fill = Rectangle(width=7.0 * frac, height=0.6, stroke_width=0, color=col).set_fill(col, opacity=0.5)
             fill.align_to(track, LEFT).align_to(track, UP)
-            lab = Text(name, font_size=17, color=P.FG).next_to(track, UP, buff=0.08)
+            lab = layout.label(name, font_size=17, color=P.FG).next_to(track, UP, buff=0.08)
             rows.add(VGroup(track, fill, lab))
         rows.arrange(DOWN, buff=0.7).shift(DOWN * 0.6)
         for r in rows:

@@ -14,7 +14,6 @@ from manim import (
     FadeOut,
     RIGHT,
     Scene,
-    Text,
     UP,
     VGroup,
     Write,
@@ -36,7 +35,7 @@ class MondEfe2023(Scene):
         self.add(sun)
         # the galactic external field direction (fixed)
         efe = Arrow(np.zeros(3), RIGHT * 3.0 + UP * 0.6, color=P.ORANGE, buff=0, stroke_width=4)
-        efe_lbl = Text("Milky Way external field", font_size=16, color=P.ORANGE).next_to(efe.get_end(), UP, buff=0.1)
+        efe_lbl = layout.label("Milky Way external field", font_size=16, color=P.ORANGE).next_to(efe.get_end(), UP, buff=0.1)
         self.play(Create(efe), FadeIn(efe_lbl))
 
         rng = np.random.default_rng(2023)

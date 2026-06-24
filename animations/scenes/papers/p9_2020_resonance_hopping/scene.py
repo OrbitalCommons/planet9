@@ -5,7 +5,7 @@ and their fractions -- testing whether P9 leaves a resonant fingerprint.
 Reproduced in p9-2020-resonance-hopping (classification).
 """
 import numpy as np
-from manim import AnnularSector, Create, FadeIn, LEFT, Scene, Text, UP, VGroup, Write
+from manim import AnnularSector, Create, FadeIn, LEFT, Scene, UP, VGroup, Write
 import p9_manim as P
 from p9_manim import layout, paper, timing
 
@@ -24,7 +24,7 @@ class ResonanceHopping2020(Scene):
             ang = f * 2 * np.pi
             w = AnnularSector(inner_radius=0.0, outer_radius=2.0, start_angle=start, angle=ang,
                               color=col, fill_opacity=0.5, stroke_width=1)
-            lbl = Text(f"{name}\n{f*100:.0f}%", font_size=16, color=col).move_to(
+            lbl = layout.label(f"{name}\n{f*100:.0f}%", font_size=16, color=col).move_to(
                 2.7 * np.array([np.cos(start + ang / 2), np.sin(start + ang / 2), 0]))
             wedges.add(VGroup(w, lbl))
             start += ang

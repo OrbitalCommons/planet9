@@ -29,8 +29,8 @@ class Stability2021(Scene):
             qmax = float(np.nanmax(q))
             ytop = float(np.ceil(qmax / 20.0) * 20.0)
             ax = widgets.axes([amin, amax, (amax - amin) / 4], [0, ytop, ytop / 3], x_length=9.5, y_length=4.0, font_size=18, shift_down=0.4)
-            xl = Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
-            yl = Text("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
+            xl = layout.label("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+            yl = layout.label("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
             self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
             pts = [ax.c2p(float(av), float(qv)) for av, qv in zip(a, q)]
@@ -44,18 +44,18 @@ class Stability2021(Scene):
             q_lo = float(np.interp(a_lo, a, q))
             a_hi = amin + 0.65 * (amax - amin)
             q_hi = float(np.interp(a_hi, a, q))
-            unstable = Text("cleared (unstable)", font_size=18, color=P.RED).move_to(
+            unstable = layout.label("cleared (unstable)", font_size=18, color=P.RED).move_to(
                 ax.c2p(a_lo, max(q_lo * 0.45, ytop * 0.12)))
             stable = Text("survives", font_size=20, color=P.TEAL, weight="BOLD").move_to(
                 ax.c2p(a_hi, min(q_hi + 0.45 * (ytop - q_hi), ytop * 0.92)))
         else:
             ax = widgets.axes([200, 1000, 200], [30, 120, 30], x_length=9.5, y_length=4.0, font_size=18, shift_down=0.4)
-            xl = Text("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
-            yl = Text("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
+            xl = layout.label("semi-major axis (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)
+            yl = layout.label("perihelion q (AU)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, UP, buff=0.05)
             self.play(Create(ax), FadeIn(xl), FadeIn(yl))
             boundary = ax.plot(lambda a: 40 + 0.045 * (a - 200), x_range=[200, 1000, 5], color=P.RED)
             self.play(Create(boundary), run_time=1.4)
-            unstable = Text("cleared (unstable)", font_size=18, color=P.RED).move_to(ax.c2p(420, 45))
+            unstable = layout.label("cleared (unstable)", font_size=18, color=P.RED).move_to(ax.c2p(420, 45))
             stable = Text("survives", font_size=20, color=P.TEAL, weight="BOLD").move_to(ax.c2p(700, 100))
         self.play(FadeIn(unstable), FadeIn(stable))
         timing.hold_to_read(self, unstable, stable, settle=0.5)

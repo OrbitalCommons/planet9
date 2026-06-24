@@ -32,7 +32,7 @@ class Ps1Holman2025(Scene):
         stacked = Text("●", font_size=44, color=P.GREEN).move_to([2.5, 0.6, 0])
         arrow = Line([-1.5, 0.6, 0], [2.0, 0.6, 0], color=P.MUTED, stroke_width=2)
         self.play(Create(arrow), FadeIn(stacked))
-        note = Text("co-add along trial orbit → +1 mag depth (r ≈ 22.5)", font_size=17, color=P.TEAL).to_edge(DOWN, buff=1.9)
+        note = layout.label("co-add along trial orbit → +1 mag depth (r ≈ 22.5)", font_size=17, color=P.TEAL).to_edge(DOWN, buff=1.9)
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.6)
 

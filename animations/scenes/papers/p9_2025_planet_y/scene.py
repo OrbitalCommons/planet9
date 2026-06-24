@@ -6,7 +6,7 @@ Reproduced in p9-2025-planet-y (Laplace-plane warp).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, ParametricFunction, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, ParametricFunction, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -28,12 +28,12 @@ class PlanetY2025(Scene):
         flat.set_stroke(opacity=0.4)
         warp = ParametricFunction(lambda t: np.array([t, 0.5 * np.sin(t * 0.6), 0]),
                                   t_range=[-6, 6], color=P.GREEN, stroke_width=3)
-        flat_lbl = Text("unperturbed mean plane", font_size=15, color=P.MUTED).to_edge(DOWN, buff=1.6)
+        flat_lbl = layout.label("unperturbed mean plane", font_size=15, color=P.MUTED).to_edge(DOWN, buff=1.6)
         self.play(Create(flat), FadeIn(flat_lbl))
         self.play(Create(warp), run_time=1.6)
 
         py = orbits.body_dot(1.4, 0.2, np.deg2rad(40), color=P.BLUE, radius=0.1)
-        py_lbl = Text("'Planet Y' (smaller, closer, inclined)", font_size=15, color=P.BLUE).next_to(py, UP, buff=0.1)
+        py_lbl = layout.label("'Planet Y' (smaller, closer, inclined)", font_size=15, color=P.BLUE).next_to(py, UP, buff=0.1)
         self.play(FadeIn(py), FadeIn(py_lbl))
 
         eq = layout.explain_equation(

@@ -28,7 +28,7 @@ class TessShiftstack2020(Scene):
             [-4, -0.5, 0], [-4 + 6 * np.cos(ang.get_value()), -0.5 + 6 * np.sin(ang.get_value()), 0],
             color=P.TEAL, stroke_width=3))
         self.add(track)
-        self.add(Text("trial track direction (∝ assumed orbit)", font_size=16, color=P.TEAL).to_edge(UP, buff=1.5))
+        self.add(layout.label("trial track direction (∝ assumed orbit)", font_size=16, color=P.TEAL).to_edge(UP, buff=1.5))
         self.play(ang.animate.set_value(0.25), run_time=3.0, rate_func=rate_functions.smooth)
         found = Text("● recovered source", font_size=22, color=P.GREEN).move_to([1.5, 0.6, 0])
         self.play(FadeIn(found))

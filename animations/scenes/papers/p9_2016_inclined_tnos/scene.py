@@ -6,7 +6,7 @@ in p9-2016-inclined-tnos.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup, Write, rate_functions,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, VGroup, Write, rate_functions,
     ValueTracker, always_redraw,
 )
 
@@ -39,7 +39,7 @@ class InclinedTnos2016(Scene):
 
         live = always_redraw(orbset)
         self.add(live)
-        msg = Text("initially near the ecliptic", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)
+        msg = layout.label("initially near the ecliptic", font_size=18, color=P.MUTED).to_edge(UP, buff=1.5)
         self.play(FadeIn(msg))
         timing.hold_to_read(self, msg, settle=0.4)
         self.play(tilt.animate.set_value(0.12), run_time=3.5, rate_func=rate_functions.smooth)

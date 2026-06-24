@@ -12,7 +12,6 @@ from manim import (
     FadeIn,
     FadeOut,
     Scene,
-    Text,
     UP,
     UR,
     VGroup,
@@ -39,7 +38,7 @@ class OssosBias2017(Scene):
         swarm = orbits.etno_swarm([(2.5, 0.72, v) for v in varpis], color=P.GREEN, opacity=0.45)
         self.play(Create(swarm, lag_ratio=0.06), run_time=2.0)
         r0 = orbits.mean_resultant_length(varpis)
-        lab0 = Text(f"intrinsic sample: isotropic (R̄ ≈ {r0:.2f})", font_size=18, color=P.GREEN).to_corner(UR, buff=0.4)
+        lab0 = layout.label(f"intrinsic sample: isotropic (R̄ ≈ {r0:.2f})", font_size=18, color=P.GREEN).to_corner(UR, buff=0.4)
         self.play(Write(lab0))
         timing.hold_to_read(self, lab0, settle=1.0)
 
@@ -47,7 +46,7 @@ class OssosBias2017(Scene):
         wedge = AnnularSector(inner_radius=0.2, outer_radius=3.4, angle=np.deg2rad(70),
                               start_angle=np.deg2rad(20), color=P.PURPLE)
         wedge.set_fill(P.PURPLE, opacity=0.12).set_stroke(P.PURPLE, width=2)
-        wlab = Text("where/when the survey can actually see them", font_size=15, color=P.PURPLE)
+        wlab = layout.label("where/when the survey can actually see them", font_size=15, color=P.PURPLE)
         wlab.to_edge(DOWN, buff=1.5)
         self.play(FadeIn(wedge), FadeIn(wlab))
         timing.hold_to_read(self, wlab, settle=0.6)
@@ -70,7 +69,7 @@ class OssosBias2017(Scene):
         keep = orbits.etno_swarm([(2.5, 0.72, v) for v in detected], color=P.TEAL, opacity=1.0, stroke_width=2.5)
         self.play(swarm.animate.set_stroke(opacity=0.12), Create(keep))
         rd = orbits.mean_resultant_length(detected) if len(detected) > 1 else 1.0
-        lab1 = Text(f"detected subset looks clustered (R̄ ≈ {rd:.2f})", font_size=18, color=P.TEAL).to_corner(UR, buff=0.4)
+        lab1 = layout.label(f"detected subset looks clustered (R̄ ≈ {rd:.2f})", font_size=18, color=P.TEAL).to_corner(UR, buff=0.4)
         self.play(FadeOut(lab0), Write(lab1))
         timing.hold_to_read(self, lab1, settle=1.2)
         layout.show_takeaway(

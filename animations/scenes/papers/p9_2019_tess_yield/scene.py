@@ -13,7 +13,6 @@ from manim import (
     Line,
     RIGHT,
     Scene,
-    Text,
     UP,
     Write,
 )
@@ -42,8 +41,8 @@ class TessYield2019(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([18, 24, 1], [0, 1.05, 0.5], x_length=9.0, y_length=3.8, font_size=18, shift_down=0.5)
-        xl = Text("apparent magnitude (I_C)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("detection efficiency", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, [-1, 0, 0], buff=0.1)
+        xl = layout.label("apparent magnitude (I_C)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("detection efficiency", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, [-1, 0, 0], buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         depth = _optical_depth("TESS", 22.0)
@@ -52,7 +51,7 @@ class TessYield2019(Scene):
         self.play(Create(eff), run_time=1.6)
 
         dline = ax.get_vertical_line(ax.c2p(depth, 0.5), color=P.TEAL, stroke_width=2)
-        dlbl = Text(f"stacked depth ≈ {depth:.1f}", font_size=18, color=P.TEAL).next_to(ax.c2p(depth, 1.0), UP, buff=0.1)
+        dlbl = layout.label(f"stacked depth ≈ {depth:.1f}", font_size=18, color=P.TEAL).next_to(ax.c2p(depth, 1.0), UP, buff=0.1)
         self.play(Create(dline), FadeIn(dlbl))
         timing.hold_to_read(self, dlbl, settle=0.6)
 

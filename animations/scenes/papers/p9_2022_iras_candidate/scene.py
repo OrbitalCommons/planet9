@@ -4,7 +4,7 @@ An earlier IRAS-based candidate search: flag moving far-IR sources consistent
 with a cold, distant body's flux and motion -- the precursor to the IRAS+AKARI
 pair search. Reproduced in p9-2022-iras-candidate.
 """
-from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, UP, Write, Dot
 import p9_manim as P
 from p9_manim import layout, paper, timing, widgets
 
@@ -20,7 +20,7 @@ class IrasCandidate2022(Scene):
         self.play(FadeIn(bg, lag_ratio=0.004))
         cand = Dot([1.0, 0.3, 0], radius=0.12, color=P.RED)
         self.play(FadeIn(cand))
-        clbl = Text("IRAS 60 µm candidate", font_size=16, color=P.RED).next_to(cand, UP, buff=0.15)
+        clbl = layout.label("IRAS 60 µm candidate", font_size=16, color=P.RED).next_to(cand, UP, buff=0.15)
         self.play(FadeIn(clbl))
         timing.hold_to_read(self, clbl, settle=0.5)
 

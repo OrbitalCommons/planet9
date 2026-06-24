@@ -5,7 +5,7 @@ specific semimajor axes (the n:1, n:2 locations). Reproduced in
 p9-2016-resonance-prediction.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, FadeOut, Line, Scene, Text, UP, VGroup, Write
+from manim import Create, DOWN, FadeIn, FadeOut, Line, Scene, UP, VGroup, Write
 import p9_manim as P
 from p9_manim import layout, paper, dataio, timing
 
@@ -18,7 +18,7 @@ class ResonancePrediction2016(Scene):
         self.play(Write(tb[0]), FadeIn(tb[1]))
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
         axis = Line([-6, -0.5, 0], [6, -0.5, 0], color=P.FG, stroke_width=2)
-        self.play(Create(axis), FadeIn(Text("semi-major axis", font_size=18, color=P.MUTED).next_to(axis, DOWN, buff=0.2)))
+        self.play(Create(axis), FadeIn(layout.label("semi-major axis", font_size=18, color=P.MUTED).next_to(axis, DOWN, buff=0.2)))
         data = dataio.section("resonance")
         if data:
             # real mean-motion-resonance semimajor axes interior to P9
@@ -35,7 +35,7 @@ class ResonancePrediction2016(Scene):
         for name, a in res:
             x = -6 + (a - amin) / (amax - amin) * 11
             tick = Line([x, -0.8, 0], [x, 0.4, 0], color=P.PURPLE, stroke_width=3)
-            self.play(Create(tick), FadeIn(Text(name, font_size=15, color=P.PURPLE).next_to(tick, UP, buff=0.05)), run_time=0.5)
+            self.play(Create(tick), FadeIn(layout.label(name, font_size=15, color=P.PURPLE).next_to(tick, UP, buff=0.05)), run_time=0.5)
 
         eq = layout.explain_equation(
             self,

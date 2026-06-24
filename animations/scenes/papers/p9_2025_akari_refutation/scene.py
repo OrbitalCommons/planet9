@@ -6,7 +6,7 @@ counter-result. Reproduced in p9-2025-akari-refutation.
 """
 import numpy as np
 from manim import (
-    Cross, Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Cross, Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -25,12 +25,12 @@ class AkariRefutation2025(Scene):
         # the candidate's implied orbit, then crossed out as inconsistent
         cand = orbits.ellipse_orbit(3.0, 0.5, color=P.ORANGE, varpi=np.deg2rad(30))
         self.play(FadeIn(sun), Create(cand))
-        self.add(Text("IRAS/AKARI candidate's implied orbit", font_size=16, color=P.ORANGE).to_edge(UP, buff=1.5))
+        self.add(layout.label("IRAS/AKARI candidate's implied orbit", font_size=16, color=P.ORANGE).to_edge(UP, buff=1.5))
         self.play(FadeIn(orbits.body_dot(3.0, 0.5, np.deg2rad(30), color=P.ORANGE, radius=0.1)))
 
         x = Cross(scale_factor=1.6, stroke_color=P.RED, stroke_width=8).move_to(cand.get_center())
         self.play(Create(x))
-        note = Text("inconsistent with the orbit / motion constraints", font_size=16, color=P.RED).to_edge(DOWN, buff=1.9)
+        note = layout.label("inconsistent with the orbit / motion constraints", font_size=16, color=P.RED).to_edge(DOWN, buff=1.9)
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.5)
 

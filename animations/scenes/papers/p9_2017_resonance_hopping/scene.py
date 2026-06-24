@@ -5,7 +5,7 @@ captured by a neighbour, random-walking in semimajor axis. Reproduced in
 p9-2017-resonance-hopping.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
+from manim import Create, DOWN, FadeIn, Scene, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
 import p9_manim as P
 from p9_manim import layout, paper, timing, widgets
 
@@ -19,8 +19,8 @@ class ResonanceHopping2017(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
         ax = widgets.axes([0, 10, 2], [300, 500, 50], x_length=9.0, y_length=3.9, font_size=16, shift_down=0.4)
         self.play(Create(ax),
-                  FadeIn(Text("time", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)),
-                  FadeIn(Text("semi-major axis (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
+                  FadeIn(layout.label("time", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.2)),
+                  FadeIn(layout.label("semi-major axis (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
         for lvl in (340, 390, 440):
             self.add(ax.plot(lambda x, l=lvl: l, x_range=[0, 10, 5], color=P.MUTED).set_stroke(opacity=0.4))
         # stair-step random walk between resonance levels

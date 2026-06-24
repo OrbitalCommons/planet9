@@ -39,9 +39,9 @@ class P03Elements(Scene):
         sun = orbits.sun()
         # the ecliptic plane, seen face-on, as a faint reference disk
         ecl = Circle(radius=3.4, color=P.MUTED, stroke_width=1.5).set_stroke(opacity=0.5)
-        ecl_lbl = Text("ecliptic plane", color=P.MUTED, font_size=18).next_to(ecl, DOWN, buff=0.05)
+        ecl_lbl = layout.label("ecliptic plane", color=P.MUTED, font_size=18).next_to(ecl, DOWN, buff=0.05)
         ref = Arrow(np.zeros(3), RIGHT * 3.4, color=P.FG, buff=0, stroke_width=2)
-        ref_lbl = Text("reference direction", color=P.FG, font_size=16).next_to(ref, RIGHT, buff=0.05)
+        ref_lbl = layout.label("reference direction", color=P.FG, font_size=16).next_to(ref, RIGHT, buff=0.05)
         self.play(Create(ecl), FadeIn(ecl_lbl), GrowArrow(ref), FadeIn(ref_lbl), FadeIn(sun))
 
         Omega = np.deg2rad(55)   # longitude of ascending node
@@ -52,7 +52,7 @@ class P03Elements(Scene):
         # ascending node direction
         node = Line(np.zeros(3), 3.4 * np.array([np.cos(Omega), np.sin(Omega), 0]),
                     color=P.PURPLE, stroke_width=2)
-        node_lbl = Text("ascending node", color=P.PURPLE, font_size=15)
+        node_lbl = layout.label("ascending node", color=P.PURPLE, font_size=15)
         node_lbl.next_to(node.get_end(), UP, buff=0.05)
         Om_arc = Arc(radius=1.0, start_angle=0, angle=Omega, color=P.PURPLE)
         Om_lbl = layout.equation(r"\Omega", color=P.PURPLE).scale(0.7).move_to(
@@ -63,7 +63,7 @@ class P03Elements(Scene):
         # the orbit, perihelion along varpi
         orbit = orbits.ellipse_orbit(a, e, color=P.BLUE, varpi=varpi)
         apse = orbits.apse_arrow(a, e, varpi, color=P.ORANGE)
-        peri_lbl = Text("perihelion", color=P.ORANGE, font_size=15).next_to(apse.get_end(), UP, buff=0.05)
+        peri_lbl = layout.label("perihelion", color=P.ORANGE, font_size=15).next_to(apse.get_end(), UP, buff=0.05)
         self.play(Create(orbit))
         self.play(GrowArrow(apse), FadeIn(peri_lbl))
 
@@ -121,7 +121,7 @@ class P04Geography(Scene):
             return x0 + (np.log10(au) - lo) / (hi - lo) * (x1 - x0)
 
         axis = Line(LEFT * 6, RIGHT * 6, color=P.FG, stroke_width=2).shift(DOWN * 0.5)
-        ax_lbl = Text("distance from the Sun (AU, log scale)", color=P.MUTED, font_size=18)
+        ax_lbl = layout.label("distance from the Sun (AU, log scale)", color=P.MUTED, font_size=18)
         ax_lbl.next_to(axis, DOWN, buff=0.4)
         self.play(Create(axis), FadeIn(ax_lbl))
 
@@ -134,8 +134,8 @@ class P04Geography(Scene):
         for au, name, col in marks:
             x = xf(au)
             tick = Line(UP * 0.12, DOWN * 0.12, color=col, stroke_width=3).move_to([x, -0.5, 0])
-            lbl = Text(name, color=col, font_size=16).next_to(tick, UP, buff=0.15)
-            val = Text(f"{au:g}", color=P.MUTED, font_size=13).next_to(tick, DOWN, buff=0.12)
+            lbl = layout.label(name, color=col, font_size=16).next_to(tick, UP, buff=0.15)
+            val = layout.label(f"{au:g}", color=P.MUTED, font_size=13).next_to(tick, DOWN, buff=0.12)
             self.play(Create(tick), FadeIn(lbl), FadeIn(val), run_time=0.55)
             ticks[name] = tick
         self.wait(0.4)
@@ -157,7 +157,7 @@ class P04Geography(Scene):
                     continue
                 yr = body["period_yr"]
                 txt = f"P ~ {yr:,.0f} yr" if yr >= 1000 else f"P = {yr:.0f} yr"
-                pl = Text(txt, color=P.ORANGE, font_size=14).next_to(tick, UP, buff=0.7)
+                pl = layout.label(txt, color=P.ORANGE, font_size=14).next_to(tick, UP, buff=0.7)
                 per_lbls.append(pl)
                 self.play(FadeIn(pl, shift=UP * 0.1), run_time=0.5)
             if per_lbls:

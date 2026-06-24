@@ -4,7 +4,7 @@ Combines the dynamical and survey constraints into a posterior on P9's orbit
 (mass, a, e, i), narrowing where to point. Reproduced in p9-2024-siraj-orbit.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, UR, Write, Dot, VGroup
+from manim import Create, DOWN, FadeIn, FadeOut, Scene, UP, UR, Write, Dot, VGroup
 import p9_manim as P
 from p9_manim import dataio, layout, paper, widgets
 
@@ -19,8 +19,8 @@ class SirajOrbit2024(Scene):
 
         ax = widgets.axes([2, 14, 4], [200, 800, 200], x_length=9.0, y_length=4.0, font_size=16, shift_down=0.4)
         self.play(Create(ax),
-                  FadeIn(Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
-                  FadeIn(Text("semi-major axis (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
+                  FadeIn(layout.label("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
+                  FadeIn(layout.label("semi-major axis (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
 
         rng = np.random.default_rng(2024)
         # a posterior cloud around ~(6 M_earth, 460 AU)
@@ -42,7 +42,7 @@ class SirajOrbit2024(Scene):
                 a = float(np.clip(o["a"], 200, 800))
                 d = Dot(ax.c2p(m, a), radius=0.08, color=P.GREEN)
                 tag = short.get(o["name"], o["name"])
-                lab = Text(f"{tag}: {o['mass_earth']:.1f} M⊕, {o['a']:.0f} AU",
+                lab = layout.label(f"{tag}: {o['mass_earth']:.1f} M⊕, {o['a']:.0f} AU",
                            font_size=14, color=P.GREEN).next_to(d, UP, buff=0.08)
                 marks.add(d)
                 labels.add(lab)
@@ -50,7 +50,7 @@ class SirajOrbit2024(Scene):
         else:
             best = Dot(ax.c2p(6, 460), radius=0.08, color=P.GREEN)
             self.play(FadeIn(best))
-            self.add(Text("best estimate", font_size=15, color=P.GREEN).next_to(best, UP, buff=0.1))
+            self.add(layout.label("best estimate", font_size=15, color=P.GREEN).next_to(best, UP, buff=0.1))
 
         eq = layout.explain_equation(
             self,

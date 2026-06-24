@@ -104,8 +104,8 @@ class P13Map(Scene):
 
         ax = widgets.axes([1, 20, 5], [100, 2000, 400], x_length=9.5, y_length=4.4,
                           font_size=18, shift_down=0.5)
-        xlab = Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        ylab = Text("distance (AU)", font_size=18, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.15)
+        xlab = layout.label("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        ylab = layout.label("distance (AU)", font_size=18, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.15)
         self.play(Create(ax), FadeIn(xlab), FadeIn(ylab))
 
         def poly_between(low, high, color, opacity):
@@ -126,13 +126,13 @@ class P13Map(Scene):
                                         add_vertex_dots=False, stroke_width=3)
         self.play(Create(floor_line))
 
-        t_ruled = Text("ruled out (any sky)", font_size=16, color=P.RED).move_to(ax.c2p(6, 280))
-        t_viable = Text("still viable", font_size=18, color=P.TEAL, weight="BOLD").move_to(ax.c2p(7, 1600))
+        t_ruled = layout.label("ruled out (any sky)", font_size=16, color=P.RED).move_to(ax.c2p(6, 280))
+        t_viable = layout.label("still viable", font_size=18, color=P.TEAL, weight="BOLD").move_to(ax.c2p(7, 1600))
         self.play(FadeIn(t_ruled), FadeIn(t_viable))
 
         for m, d, name in noms:
             dot = Dot(ax.c2p(m, d), radius=0.07, color=P.GREEN)
-            lbl = Text(name, font_size=13, color=P.GREEN).next_to(dot, UP, buff=0.08)
+            lbl = layout.label(name, font_size=13, color=P.GREEN).next_to(dot, UP, buff=0.08)
             self.play(FadeIn(dot), FadeIn(lbl), run_time=0.5)
 
         layout.show_takeaway(

@@ -5,7 +5,7 @@ probability -- the statistical backbone of the resonance picture. Reproduced in
 p9-2018-resonance (resonance catalog, capture probability).
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, LEFT, Rectangle, RIGHT, Scene, Text, UP, VGroup, Write
+from manim import Create, DOWN, FadeIn, LEFT, Rectangle, RIGHT, Scene, UP, VGroup, Write
 import p9_manim as P
 from p9_manim import layout, paper, timing
 
@@ -23,7 +23,7 @@ class Resonance2018(Scene):
             track = Rectangle(width=6.5, height=0.5, color=P.MUTED, stroke_width=1.5)
             fill = Rectangle(width=6.5 * p, height=0.5, stroke_width=0, color=P.PURPLE).set_fill(P.PURPLE, opacity=0.5)
             fill.align_to(track, LEFT).align_to(track, UP)
-            lab = Text(f"{name}   {p*100:.0f}%", font_size=16, color=P.FG).next_to(track, LEFT, buff=0.2)
+            lab = layout.label(f"{name}   {p*100:.0f}%", font_size=16, color=P.FG).next_to(track, LEFT, buff=0.2)
             rows.add(VGroup(lab, track, fill))
         rows.arrange(DOWN, buff=0.35).shift(DOWN * 0.3)
         for r in rows:

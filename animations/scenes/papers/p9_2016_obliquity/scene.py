@@ -39,7 +39,7 @@ class Obliquity2016(Scene):
         sun = Dot(np.zeros(3), radius=0.55, color=P.SUN)
         plane = Line(np.array([-4.5, -1.6, 0]), np.array([4.5, -1.6, 0]),
                      color=P.MUTED, stroke_width=2)
-        plane_lbl = Text("planets' mean plane", font_size=16, color=P.MUTED).next_to(plane, DOWN, buff=0.1)
+        plane_lbl = layout.label("planets' mean plane", font_size=16, color=P.MUTED).next_to(plane, DOWN, buff=0.1)
         self.play(FadeIn(sun), Create(plane), FadeIn(plane_lbl))
 
         # spin axis starts vertical, precesses to ~6 deg over the Sun's age
@@ -57,7 +57,7 @@ class Obliquity2016(Scene):
         # a far inclined P9 orbit doing the torquing
         p9 = orbits.ellipse_orbit(3.2, 0.4, color=P.BLUE, varpi=np.deg2rad(30))
         p9 = p9.copy().apply_matrix(np.array([[1, 0, 0], [0, 0.4, 0], [0, 0, 1]])).shift(UP * 1.2)
-        p9_lbl = Text("inclined Planet Nine", font_size=15, color=P.BLUE).next_to(p9, UP, buff=0.05)
+        p9_lbl = layout.label("inclined Planet Nine", font_size=15, color=P.BLUE).next_to(p9, UP, buff=0.05)
         self.play(Create(p9), FadeIn(p9_lbl))
 
         prec = layout.equation(

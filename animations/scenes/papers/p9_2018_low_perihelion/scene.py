@@ -6,7 +6,7 @@ Reproduced in p9-2018-low-perihelion.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -26,9 +26,9 @@ class LowPerihelion2018(Scene):
         high = orbits.ellipse_orbit(3.4, 0.3, color=P.MUTED, varpi=np.deg2rad(20)).set_stroke(opacity=0.5)
         low = orbits.ellipse_orbit(3.4, 0.7, color=P.BLUE, varpi=np.deg2rad(20))
         self.play(FadeIn(sun), Create(high))
-        self.add(Text("high-perihelion P9", font_size=14, color=P.MUTED).next_to(high, UP, buff=0.05))
+        self.add(layout.label("high-perihelion P9", font_size=14, color=P.MUTED).next_to(high, UP, buff=0.05))
         self.play(Create(low))
-        llbl = Text("low-perihelion P9 (more eccentric)", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.5)
+        llbl = layout.label("low-perihelion P9 (more eccentric)", font_size=15, color=P.BLUE).to_edge(DOWN, buff=1.5)
         self.play(FadeIn(llbl))
         timing.hold_to_read(self, llbl, settle=0.4)
 

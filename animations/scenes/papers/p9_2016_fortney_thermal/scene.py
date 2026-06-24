@@ -6,7 +6,7 @@ detectable it is. Reproduced in p9-2016-fortney-thermal.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, UR, Write,
+    Create, DOWN, FadeIn, FadeOut, LEFT, Scene, UP, UR, Write,
 )
 
 import p9_manim as P
@@ -22,16 +22,16 @@ class FortneyThermal2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([2, 20, 4], [0, 60, 20], x_length=9.0, y_length=3.9, font_size=18, shift_down=0.5)
-        xl = Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("effective temperature (K)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
+        xl = layout.label("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("effective temperature (K)", font_size=16, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.1)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         eq = ax.plot(lambda m: 10.0, x_range=[2, 20, 0.5], color=P.MUTED)
         warm = ax.plot(lambda m: 10.0 + 2.0 * m, x_range=[2, 20, 0.5], color=P.ORANGE)
         self.play(Create(eq))
-        self.add(Text("solar equilibrium only", font_size=14, color=P.MUTED).next_to(ax.c2p(14, 10), UP, buff=0.05))
+        self.add(layout.label("solar equilibrium only", font_size=14, color=P.MUTED).next_to(ax.c2p(14, 10), UP, buff=0.05))
         self.play(Create(warm))
-        self.add(Text("with internal heat", font_size=14, color=P.ORANGE).next_to(ax.c2p(14, 38), UP, buff=0.05))
+        self.add(layout.label("with internal heat", font_size=14, color=P.ORANGE).next_to(ax.c2p(14, 38), UP, buff=0.05))
 
         eq = layout.explain_equation(
             self,

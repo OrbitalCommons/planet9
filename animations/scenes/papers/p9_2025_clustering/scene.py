@@ -5,7 +5,7 @@ away, turning the qualitative picture into a measurable, time-dependent statisti
 Reproduced in p9-2025-clustering.
 """
 import numpy as np
-from manim import Create, DOWN, FadeIn, FadeOut, LEFT, Scene, Text, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
+from manim import Create, DOWN, FadeIn, FadeOut, LEFT, Scene, UP, Write, rate_functions, ValueTracker, always_redraw, Dot
 import p9_manim as P
 from p9_manim import layout, paper, timing, widgets
 
@@ -20,8 +20,8 @@ class Clustering2025(Scene):
 
         ax = widgets.axes([0, 4, 1], [0, 1.0, 0.5], x_length=9.0, y_length=3.8, font_size=16, shift_down=0.5)
         self.play(Create(ax),
-                  FadeIn(Text("time (Gyr)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
-                  FadeIn(Text("clustering strength  R̄", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
+                  FadeIn(layout.label("time (Gyr)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)),
+                  FadeIn(layout.label("clustering strength  R̄", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)))
         decay = ax.plot(lambda t: 0.85 * np.exp(-t / 2.2), x_range=[0, 4, 0.03], color=P.GREEN)
         self.play(Create(decay), run_time=1.5)
         # the clustering strength relaxes exponentially with a diffusion timescale

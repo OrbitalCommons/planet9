@@ -6,7 +6,7 @@ can produce, and hard to make otherwise. Reproduced in p9-2018-bp519
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -27,9 +27,9 @@ class Bp519Discovery2018(Scene):
         bp = orbits.ellipse_orbit(2.8, 0.6, color=P.GREEN, varpi=np.deg2rad(20))
         bp.apply_matrix(np.array([[1, 0, 0], [0, 0.35, 0], [0, 0, 1]]))
         self.play(FadeIn(sun), Create(ecl))
-        self.add(Text("ecliptic", font_size=14, color=P.MUTED).next_to(ecl, DOWN, buff=0.05))
+        self.add(layout.label("ecliptic", font_size=14, color=P.MUTED).next_to(ecl, DOWN, buff=0.05))
         self.play(Create(bp))
-        clab = Text("2015 BP519: i ≈ 54°", font_size=18, color=P.GREEN).to_edge(UP, buff=1.5)
+        clab = layout.label("2015 BP519: i ≈ 54°", font_size=18, color=P.GREEN).to_edge(UP, buff=1.5)
         self.play(FadeIn(clab))
         timing.hold_to_read(self, clab, settle=0.6)
         # the extreme inclination that marks it as a P9 product

@@ -6,7 +6,7 @@ p9-2021-act-mm (mm detectability).
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -36,8 +36,8 @@ class ActMm2021(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([2, 20, 4], [0, 800, 200], x_length=9.0, y_length=3.9, font_size=16, shift_down=0.5)
-        xl = Text("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("ACT reach (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
+        xl = layout.label("mass (Earth masses)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("ACT reach (AU)", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         pts = [(m, r) for m, r in _reach_points("ACT (mm)") if 2 <= m <= 20]
@@ -48,7 +48,7 @@ class ActMm2021(Scene):
         else:
             reach = ax.plot(lambda m: 430 + 24 * m, x_range=[2, 20, 0.5], color=P.PURPLE)
         self.play(Create(reach), run_time=1.3)
-        note = Text("229 GHz, ~8 mJy point-source limit", font_size=16, color=P.PURPLE).next_to(ax, UP, buff=0.4)
+        note = layout.label("229 GHz, ~8 mJy point-source limit", font_size=16, color=P.PURPLE).next_to(ax, UP, buff=0.4)
         self.play(FadeIn(note))
         timing.hold_to_read(self, note, settle=0.6)
 

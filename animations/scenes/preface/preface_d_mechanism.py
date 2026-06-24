@@ -32,7 +32,7 @@ class P08Sculpting(Scene):
         varpi_p9 = np.deg2rad(20)
         p9 = orbits.ellipse_orbit(3.7, 0.45, color=P.BLUE, varpi=varpi_p9)
         p9_apse = orbits.apse_arrow(3.7, 0.45, varpi_p9, color=P.BLUE)
-        p9_lbl = Text("Planet Nine", color=P.BLUE, font_size=18).next_to(p9_apse.get_end(), UP, buff=0.1)
+        p9_lbl = layout.label("Planet Nine", color=P.BLUE, font_size=18).next_to(p9_apse.get_end(), UP, buff=0.1)
         self.play(FadeIn(sun), Create(p9), FadeIn(p9_apse), FadeIn(p9_lbl))
 
         rng = np.random.default_rng(3)

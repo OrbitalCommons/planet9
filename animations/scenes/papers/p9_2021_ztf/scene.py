@@ -48,7 +48,7 @@ class Ztf2021(Scene):
         sky.set_fill(P.MUTED, opacity=0.05)
         foot = Rectangle(width=10 * (1 - (-30 + 90) / 180.0), height=2.0, color=P.PURPLE, stroke_width=2)
         foot.set_fill(P.PURPLE, opacity=0.12).align_to(sky, RIGHT).align_to(sky, UP)
-        foot_lbl = Text("ZTF footprint (dec > −30°), r ≈ 20.5", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1)
+        foot_lbl = layout.label("ZTF footprint (dec > −30°), r ≈ 20.5", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1)
         self.play(Create(sky), Create(foot), FadeIn(foot_lbl))
         timing.hold_to_read(self, foot_lbl, settle=0.6)
 

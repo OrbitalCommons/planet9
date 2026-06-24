@@ -6,7 +6,7 @@ distance. Reproduced in p9-2016-iorio-precession.
 """
 import numpy as np
 from manim import (
-    Create, DOWN, FadeIn, FadeOut, Scene, Text, UP, Write,
+    Create, DOWN, FadeIn, FadeOut, Scene, UP, Write,
 )
 
 import p9_manim as P
@@ -22,15 +22,15 @@ class Iorio2016(Scene):
         self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
 
         ax = widgets.axes([200, 1000, 200], [0, 5, 1], x_length=9.0, y_length=3.9, font_size=16, shift_down=0.5)
-        xl = Text("Planet Nine distance (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
-        yl = Text("predicted excess precession", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
+        xl = layout.label("Planet Nine distance (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.25)
+        yl = layout.label("predicted excess precession", font_size=15, color=P.FG).next_to(ax, UP, buff=0.05)
         self.play(Create(ax), FadeIn(xl), FadeIn(yl))
 
         pred = ax.plot(lambda d: 60.0 / (d / 250.0) ** 3, x_range=[230, 1000, 5], color=P.ORANGE)
         bound = ax.plot(lambda d: 1.0, x_range=[200, 1000, 5], color=P.RED)
         self.play(Create(pred))
         self.play(Create(bound))
-        bnd = Text("observed upper bound", font_size=15, color=P.RED).next_to(ax.c2p(800, 1), UP, buff=0.05)
+        bnd = layout.label("observed upper bound", font_size=15, color=P.RED).next_to(ax.c2p(800, 1), UP, buff=0.05)
         self.play(FadeIn(bnd))
         timing.hold_to_read(self, bnd)
 
