@@ -1,0 +1,13 @@
+[package]
+name = "p9-2025-russell-albedo"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Russell & White (2025) 'The Radius, Composition, Albedo, and Absolute Magnitude of Planet Nine' (arXiv:2507.22297)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

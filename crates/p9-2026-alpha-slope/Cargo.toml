@@ -1,0 +1,13 @@
+[package]
+name = "p9-2026-alpha-slope"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Eldadi & Loeb (2026) 'Applying the Loeb-Turner alpha-Slope Test to Archival Photometry of TNOs' (arXiv:2605.17098)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

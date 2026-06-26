@@ -1,0 +1,13 @@
+[package]
+name = "p9-2026-stellar-companions"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Benakli (2026) 'A Solar-System Window for Hidden Stellar Companions' (arXiv:2606.25190)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

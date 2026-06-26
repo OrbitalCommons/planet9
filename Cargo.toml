@@ -71,6 +71,10 @@ members = [
     "crates/p9-2016-iorio-precession",
     "crates/p9-review-article",
     "crates/p9-2016-linder-evolution", "crates/p9-viability", "crates/p9-anim-data",
+    "crates/p9-2025-russell-albedo",
+    "crates/p9-2025-stellar-flybys",
+    "crates/p9-2026-stellar-companions",
+    "crates/p9-2026-alpha-slope",
 ]
 
 [workspace.dependencies]
