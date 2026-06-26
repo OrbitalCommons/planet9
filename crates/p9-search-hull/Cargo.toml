@@ -1,0 +1,17 @@
+[package]
+name = "p9-search-hull"
+version = "0.1.0"
+edition = "2021"
+description = "Where to point next: combined survey-coverage hull vs the Planet Nine posterior"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-survey = { path = "../p9-survey" }
+nalgebra = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
