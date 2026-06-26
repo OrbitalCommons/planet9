@@ -2012,6 +2012,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2025-russell-albedo"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2025-simons-forecast"
 version = "0.1.0"
 dependencies = [
@@ -2036,6 +2046,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-2025-stellar-flybys"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "p9-2026-alpha-slope"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-2026-apsidal-clustering"
 version = "0.1.0"
 dependencies = [
@@ -2057,6 +2087,16 @@ dependencies = [
  "serde",
  "serde_json",
  "uom 0.38.0",
+]
+
+[[package]]
+name = "p9-2026-stellar-companions"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "p9-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

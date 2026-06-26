@@ -1,0 +1,13 @@
+[package]
+name = "p9-2025-stellar-flybys"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Hu, Huang, Gladman & Zhu (2025) 'Early Stellar Flybys are Unlikely' (arXiv:2505.16317)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
