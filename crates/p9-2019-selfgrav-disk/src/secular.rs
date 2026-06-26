@@ -43,7 +43,7 @@
 use crate::disk::DiskProfile;
 use crate::laplace::softened_laplace;
 use p9_core::analysis::circular::wrap_to_pi;
-use p9_core::constants::GM_SUN;
+use p9_core::analysis::elements::mean_motion;
 use p9_core::units::{days, radians, Angle, AngularVelocity, Time};
 use std::f64::consts::PI;
 
@@ -100,11 +100,6 @@ impl SecularSolution {
     pub fn forced_delta_varpi_angle(&self) -> Angle {
         radians(self.forced_delta_varpi())
     }
-}
-
-/// Test-particle mean motion (radians/day).
-fn mean_motion(a: f64) -> f64 {
-    (GM_SUN / a.powi(3)).sqrt()
 }
 
 /// Solve the coplanar Laplace-Lagrange problem for a test particle at

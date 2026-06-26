@@ -26,6 +26,8 @@ pub const C_LIGHT: f64 = 2.997_924_58e8;
 pub const R_SUN_M: f64 = 6.957e8;
 /// Solar effective temperature (K).
 pub const T_SUN: f64 = 5778.0;
+/// Solar bolometric luminosity (W).
+pub const L_SUN_W: f64 = 3.828e26;
 /// 1 AU in meters.
 pub const AU_M: f64 = 1.495_978_707e11;
 /// 1 Jansky in W/m²/Hz.

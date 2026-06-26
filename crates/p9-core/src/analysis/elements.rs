@@ -4,6 +4,14 @@ use super::Snapshot;
 use crate::constants::GM_SUN;
 use crate::types::{cartesian_to_elements, StateVector};
 
+/// Mean motion `n = sqrt(GM_sun / a^3)` (rad/day) for a heliocentric orbit of
+/// semi-major axis `a_au` (AU), in the workspace's native units (GM in
+/// AU^3/day^2). For an arbitrary central mass use
+/// [`crate::types::OrbitalElements::mean_motion`].
+pub fn mean_motion(a_au: f64) -> f64 {
+    (GM_SUN / a_au.powi(3)).sqrt()
+}
+
 /// Compute orbital elements for all active particles and record a snapshot.
 pub fn record_snapshot(
     particles: &[StateVector],

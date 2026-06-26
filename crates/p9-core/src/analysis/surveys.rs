@@ -5,6 +5,10 @@
 //! 0.56 and 0.612-combined in three crates, and two crates disagreed about
 //! the DES depth (23.8 vs 24.1).
 
+/// Southern declination cutoff (deg) of the wide northern surveys: both ZTF
+/// (Palomar) and the Pan-STARRS1 3π survey adopt a footprint of δ > −30°.
+pub const NORTHERN_SURVEY_DEC_LIMIT_DEG: f64 = -30.0;
+
 /// A survey's published contribution to the Planet Nine parameter-space
 /// exclusion.
 #[derive(Debug, Clone, Copy, PartialEq)]

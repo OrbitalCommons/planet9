@@ -33,7 +33,7 @@
 //! the floor dominates) — the same temperature model as the WISE crate, so the
 //! two reproductions share a physical body.
 
-use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
 use p9_core::analysis::thermal::{
     effective_temp, planck_bnu, rayleigh_jeans_bnu, solar_equilibrium_temp, thermal_flux_jy,
 };
@@ -41,10 +41,6 @@ use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Earth radius (m).
 const R_EARTH_M: f64 = 6.371e6;
-
-/// Neptune-like geometric/Bond albedo, used only for the solar-equilibrium
-/// temperature term.
-pub const DEFAULT_ALBEDO: f64 = 0.41;
 
 /// Internal-luminosity effective-temperature floor (K). A several-Earth-mass
 /// ice giant retains formation/radiogenic heat; Fortney et al. (2016) and the
@@ -74,7 +70,7 @@ impl P9Thermal {
         Self {
             mass_earth,
             distance_au,
-            albedo: DEFAULT_ALBEDO,
+            albedo: ALBEDO_NEPTUNE,
             internal_temp_k: INTERNAL_TEMP_FLOOR_K,
         }
     }

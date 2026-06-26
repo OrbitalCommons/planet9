@@ -30,7 +30,7 @@
 //! body "could be as faint as 1 mJy at 1 mm". We keep these as labelled
 //! reference constants and document the residual against our computed value.
 
-use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
 use p9_core::analysis::thermal::{planck_bnu, reflected_flux_jy, thermal_flux_jy, C_LIGHT, JY};
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
@@ -46,10 +46,6 @@ pub const COWAN_DISTANCE_AU: f64 = 700.0;
 /// Cowan et al. (2016) nominal mass scale (Earth masses): the paper's fiducial
 /// is a ~10 M⊕ ice giant, consistent with Batygin & Brown (2016).
 pub const COWAN_MASS_EARTH: f64 = 10.0;
-
-/// Neptune-like geometric albedo for the reflected-light channel (shared
-/// workspace value).
-pub const DEFAULT_ALBEDO: f64 = 0.41;
 
 /// Reference headline flux: Cowan et al. (2016) quote "~30 mJy at 1 mm" for the
 /// nominal 40 K, 700 AU body. Labelled reference only — not used in the
@@ -96,7 +92,7 @@ impl P9Sed {
             mass_earth: COWAN_MASS_EARTH,
             distance_au: COWAN_DISTANCE_AU,
             temp_k: COWAN_TEMP_K,
-            albedo: DEFAULT_ALBEDO,
+            albedo: ALBEDO_NEPTUNE,
         }
     }
 
@@ -107,7 +103,7 @@ impl P9Sed {
             mass_earth,
             distance_au,
             temp_k,
-            albedo: DEFAULT_ALBEDO,
+            albedo: ALBEDO_NEPTUNE,
         }
     }
 
