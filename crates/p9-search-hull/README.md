@@ -49,5 +49,12 @@ PYTHONNOUSERSITE=1 python3 scripts/plot_search_hull.py   # writes the two SVGs
 - Top pointings cluster near **RA ≈ 55–75°, Dec ≈ +8–14°** (V ≈ 21.6,
   d ≈ 670 AU) — the predicted-aphelion arc, just past PS1's depth.
 
-Outputs: `figures/search_hull.json`, `figures/p9_search_sky.svg`,
-`figures/p9_reach_hull.svg`.
+The JSON also carries the **per-study** prediction clouds (each orbit solution's
+thinned position + distance + V draws) and a **Rubin/LSST** reach layer
+(footprint + depth + per-cell reachability), so the figures can show each study
+on its own and compare the ground baseline.
+
+Outputs: `figures/search_hull.json`, `figures/p9_search_sky.svg` (coverage hull +
+where-to-look, with the LSST footprint), `figures/p9_reach_hull.svg`
+(distance × V, per-study clouds), `figures/p9_study_clouds.svg` (per-study
+clouds on the sky and in distance).

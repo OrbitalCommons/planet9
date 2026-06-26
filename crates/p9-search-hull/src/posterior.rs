@@ -6,10 +6,8 @@
 //! time → a dwell-weighted "where is it now" prior), propagate with p9-core,
 //! and read off the equatorial direction, heliocentric distance, galactic
 //! latitude, and reflected-light V. We give every study equal weight, so the
-//! result is a study-agnostic ensemble. Beyond the probability grid we keep, per
-//! cell, the probability-weighted mean distance and mean V — the inputs the
-//! coverage hull needs to decide whether that direction has been searched
-//! deeply enough.
+//! ensemble is study-agnostic; we also expose the per-study clouds so each
+//! solution's prediction can be projected on its own.
 
 use nalgebra::Vector3;
 use p9_core::analysis::photometry::planet_apparent_magnitude;
@@ -22,6 +20,7 @@ use p9_survey::schema::{OrbitSolution, SkyGrid};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal, Uniform};
+use serde::Serialize;
 
 /// Galactic latitude (deg) of a heliocentric *ecliptic* position vector.
 pub fn galactic_latitude_deg(ecl_pos: &Vector3<f64>) -> f64 {
@@ -31,10 +30,69 @@ pub fn galactic_latitude_deg(ecl_pos: &Vector3<f64>) -> f64 {
 }
 
 /// One Monte Carlo draw's observable position and brightness.
-#[derive(Clone, Copy)]
-pub struct Sample {
+#[derive(Clone, Copy, Serialize)]
+pub struct PosSample {
+    pub ra_deg: f64,
+    pub dec_deg: f64,
     pub dist_au: f64,
     pub v_mag: f64,
+}
+
+/// The element/mean-anomaly draw machinery for one orbit solution: set up once,
+/// drawn many times, so the ensemble and the per-study clouds share identical
+/// sampling.
+struct Draws {
+    na: Normal<f64>,
+    ne: Normal<f64>,
+    ni: Normal<f64>,
+    nom: Normal<f64>,
+    nbom: Normal<f64>,
+    um: Uniform<f64>,
+    mass_earth: f64,
+    albedo: f64,
+}
+
+impl Draws {
+    fn new(sol: &OrbitSolution) -> Self {
+        Draws {
+            na: Normal::new(sol.a_au, sol.a_sigma_au).unwrap(),
+            ne: Normal::new(sol.e, sol.e_sigma).unwrap(),
+            ni: Normal::new(sol.i_deg, sol.i_sigma_deg).unwrap(),
+            nom: Normal::new(sol.omega_deg, sol.omega_sigma_deg).unwrap(),
+            nbom: Normal::new(sol.omega_big_deg, sol.omega_big_sigma_deg).unwrap(),
+            um: Uniform::new(0.0, std::f64::consts::TAU),
+            mass_earth: sol.mass_earth,
+            albedo: sol.albedo,
+        }
+    }
+
+    fn draw<R: rand::Rng>(&self, rng: &mut R) -> PosSample {
+        let a = self.na.sample(rng).clamp(150.0, 1500.0);
+        let e = self.ne.sample(rng).clamp(0.01, 0.9);
+        let i = self.ni.sample(rng).clamp(0.0, 60.0) * DEG2RAD;
+        let omega = self.nom.sample(rng) * DEG2RAD;
+        let omega_big = self.nbom.sample(rng) * DEG2RAD;
+        let m = self.um.sample(rng);
+
+        let elem = OrbitalElements {
+            a,
+            e,
+            i,
+            omega,
+            omega_big,
+            mean_anomaly: m,
+        };
+        let pos = elements_to_cartesian(&elem, GM_SUN).pos;
+        let r = pos.norm();
+        let (ra, dec) = ecliptic_vec_to_equatorial_deg(&pos);
+        let v = planet_apparent_magnitude(self.mass_earth, self.albedo, r);
+        PosSample {
+            ra_deg: ra,
+            dec_deg: dec,
+            dist_au: r,
+            v_mag: v,
+        }
+    }
 }
 
 /// The ensemble sky posterior over the grid.
@@ -46,12 +104,12 @@ pub struct SkyPosterior {
     pub dist_mean: Vec<f64>,
     /// Per-cell probability-weighted mean apparent V; NaN where empty.
     pub v_mean: Vec<f64>,
-    /// A thinned cloud of (distance, V) draws for the parameter-space hull.
-    pub cloud: Vec<Sample>,
+    /// A thinned cloud of draws for the parameter-space hull.
+    pub cloud: Vec<PosSample>,
 }
 
 /// Build the equal-weight ensemble posterior. `per_study` MC draws are taken
-/// from each solution; `cloud_keep` thins the returned (distance, V) cloud.
+/// from each solution; `cloud_keep` thins the returned cloud.
 pub fn ensemble(
     studies: &[OrbitSolution],
     grid: &SkyGrid,
@@ -73,44 +131,15 @@ pub fn ensemble(
         // Per-study seed so the ensemble is reproducible and each study is
         // independent.
         let mut rng = StdRng::seed_from_u64(seed.wrapping_add(s_idx as u64));
-        let na = Normal::new(sol.a_au, sol.a_sigma_au).unwrap();
-        let ne = Normal::new(sol.e, sol.e_sigma).unwrap();
-        let ni = Normal::new(sol.i_deg, sol.i_sigma_deg).unwrap();
-        let nom = Normal::new(sol.omega_deg, sol.omega_sigma_deg).unwrap();
-        let nbom = Normal::new(sol.omega_big_deg, sol.omega_big_sigma_deg).unwrap();
-        let um = Uniform::new(0.0, std::f64::consts::TAU);
-
+        let d = Draws::new(sol);
         for _ in 0..per_study {
-            let a = na.sample(&mut rng).clamp(150.0, 1500.0);
-            let e = ne.sample(&mut rng).clamp(0.01, 0.9);
-            let i = ni.sample(&mut rng).clamp(0.0, 60.0) * DEG2RAD;
-            let omega = nom.sample(&mut rng) * DEG2RAD;
-            let omega_big = nbom.sample(&mut rng) * DEG2RAD;
-            let m = um.sample(&mut rng);
-
-            let elem = OrbitalElements {
-                a,
-                e,
-                i,
-                omega,
-                omega_big,
-                mean_anomaly: m,
-            };
-            let pos = elements_to_cartesian(&elem, GM_SUN).pos;
-            let r = pos.norm();
-            let (ra, dec) = ecliptic_vec_to_equatorial_deg(&pos);
-            let v = planet_apparent_magnitude(sol.mass_earth, sol.albedo, r);
-
-            let idx = grid.index(ra, dec);
+            let s = d.draw(&mut rng);
+            let idx = grid.index(s.ra_deg, s.dec_deg);
             count[idx] += 1.0;
-            sum_dist[idx] += r;
-            sum_v[idx] += v;
-
+            sum_dist[idx] += s.dist_au;
+            sum_v[idx] += s.v_mag;
             if drawn % cloud_stride == 0 {
-                cloud.push(Sample {
-                    dist_au: r,
-                    v_mag: v,
-                });
+                cloud.push(s);
             }
             drawn += 1;
         }
@@ -136,6 +165,41 @@ pub fn ensemble(
     }
 }
 
+/// One orbit solution's thinned prediction cloud (positions + brightness).
+#[derive(Serialize)]
+pub struct StudyCloud {
+    pub name: String,
+    pub samples: Vec<PosSample>,
+}
+
+/// Per-study prediction clouds, each thinned to ~`keep_per_study` draws, using
+/// the same per-study seeds as [`ensemble`] so the projections are consistent.
+pub fn study_clouds(
+    studies: &[OrbitSolution],
+    per_study: usize,
+    seed: u64,
+    keep_per_study: usize,
+) -> Vec<StudyCloud> {
+    let stride = (per_study / keep_per_study.max(1)).max(1);
+    studies
+        .iter()
+        .enumerate()
+        .map(|(s_idx, sol)| {
+            let mut rng = StdRng::seed_from_u64(seed.wrapping_add(s_idx as u64));
+            let d = Draws::new(sol);
+            let samples = (0..per_study)
+                .map(|k| (k, d.draw(&mut rng)))
+                .filter(|(k, _)| k % stride == 0)
+                .map(|(_, s)| s)
+                .collect();
+            StudyCloud {
+                name: sol.name.clone(),
+                samples,
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,10 +222,8 @@ mod tests {
         let post = ensemble(&studies, &grid, 2000, 7, 500);
         let total: f64 = post.prob.iter().sum();
         assert!((total - 1.0).abs() < 1e-9, "prob sums to {total}");
-        // At least some cells are populated with finite predicted distance / V.
         let filled = post.dist_mean.iter().filter(|d| d.is_finite()).count();
         assert!(filled > 0);
-        // Predicted distances are in the outer-solar-system range.
         for (k, d) in post.dist_mean.iter().enumerate() {
             if d.is_finite() {
                 assert!(*d > 60.0 && *d < 2000.0, "cell {k}: dist {d}");
@@ -169,5 +231,20 @@ mod tests {
             }
         }
         assert!(!post.cloud.is_empty());
+    }
+
+    #[test]
+    fn per_study_clouds_cover_every_study() {
+        let studies = p9_survey::studies::catalog();
+        let clouds = study_clouds(&studies, 4000, 7, 800);
+        assert_eq!(clouds.len(), studies.len());
+        for c in &clouds {
+            assert!(!c.samples.is_empty(), "{} has no samples", c.name);
+            for s in &c.samples {
+                assert!(s.dist_au > 60.0 && s.dist_au < 2000.0);
+                assert!(s.dec_deg.abs() <= 90.0);
+                assert!(s.ra_deg >= 0.0 && s.ra_deg <= 360.0);
+            }
+        }
     }
 }

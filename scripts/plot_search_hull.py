@@ -54,6 +54,30 @@ def cell(key):
     return arr(DATA["cells"][key]).reshape(N_DEC, N_RA)
 
 
+# Per-study colours, in catalog order.
+STUDY_PALETTE = [BLUE, GREEN, ORANGE, PURPLE, TEAL, RED]
+
+
+def short_study(name):
+    """Trim '2021 Brown & Batygin (MCMC)' -> '2021 (MCMC)' for compact legends."""
+    year = name[:4]
+    tail = name[name.find("(") :] if "(" in name else ""
+    return "{} {}".format(year, tail).strip()
+
+
+def rubin_footprint_mask():
+    """Boolean (n_dec, n_ra) grid of the Rubin/LSST footprint: its declination
+    band minus the galactic-plane cut (pure geometry, drawn for context)."""
+    L = DATA["lsst"]
+    gal = cell("gal_b_deg")
+    dec2d = np.repeat(DEC_C[:, None], N_RA, axis=1)
+    return (
+        (dec2d >= L["dec_min_deg"])
+        & (dec2d <= L["dec_max_deg"])
+        & (np.abs(gal) >= L["galactic_lat_min_deg"])
+    )
+
+
 def fig_sky():
     summ = DATA["summary"]
     excluded = 100.0 * summ["excluded_prob"]
@@ -120,6 +144,15 @@ def fig_sky():
         axb.contour(RA_C, DEC_C, prob, levels=levels, colors=[TEAL],
                     linewidths=1.0, alpha=0.85, zorder=3)
 
+    # Rubin/LSST footprint reach (declination band minus the galactic cut).
+    fp = rubin_footprint_mask().astype(float)
+    axb.contour(RA_C, DEC_C, fp, levels=[0.5], colors=[PURPLE],
+                linewidths=1.6, zorder=5)
+    axb.contourf(RA_C, DEC_C, fp, levels=[0.5, 1.5], colors=[PURPLE],
+                 alpha=0.07, zorder=0)
+    axb.plot([], [], color=PURPLE, lw=1.6,
+             label="Rubin/LSST reach (r≤{:.1f})".format(DATA["lsst"]["limiting_mag"]))
+
     # galactic plane
     axb.contour(RA_C, DEC_C, gal_b, levels=[0], colors=[MUTED],
                 linestyles="--", linewidths=1.2, zorder=4)
@@ -175,9 +208,6 @@ def fig_hull():
     h = DATA["hull"]
     dist = np.array(h["distance_au"])
     vcurve = arr(h["v_curve"])
-    cloud = h["cloud"]
-    cd = np.array([c["dist_au"] for c in cloud])
-    cv = np.array([c["v_mag"] for c in cloud])
 
     allsky = h["allsky_depths"]
     deepest_allsky = max(s["depth"] for s in allsky)
@@ -187,9 +217,13 @@ def fig_hull():
 
     fig, ax = plt.subplots(figsize=(11, 7.2))
 
-    # posterior cloud
-    ax.scatter(cd, cv, s=6, color=BLUE, alpha=0.25, edgecolors="none",
-               zorder=2, label="posterior samples")
+    # per-study posterior clouds, coloured by study
+    for i, sc in enumerate(DATA["study_clouds"]):
+        col = STUDY_PALETTE[i % len(STUDY_PALETTE)]
+        sd = np.array([s["dist_au"] for s in sc["samples"]])
+        sv = np.array([s["v_mag"] for s in sc["samples"]])
+        ax.scatter(sd, sv, s=5, color=col, alpha=0.30, edgecolors="none",
+                   zorder=2, label=short_study(sc["name"]))
 
     # fiducial V(d) curve
     ax.plot(dist, vcurve, color=FG, lw=2.4, zorder=4,
@@ -243,6 +277,68 @@ def fig_hull():
     return out
 
 
+def fig_study_clouds():
+    """Per-study prediction clouds projected two more ways: on the sky (RA/Dec)
+    and in heliocentric distance — so each orbit solution's prediction is
+    visible on its own, alongside the Rubin/LSST reach."""
+    clouds = DATA["study_clouds"]
+    gal_b = cell("gal_b_deg")
+
+    fig, (axl, axr) = plt.subplots(1, 2, figsize=(14, 6.2),
+                                   constrained_layout=True)
+
+    # --- LEFT: RA x Dec clouds, coloured by study ---
+    for i, sc in enumerate(clouds):
+        col = STUDY_PALETTE[i % len(STUDY_PALETTE)]
+        ra = np.array([s["ra_deg"] for s in sc["samples"]])
+        dec = np.array([s["dec_deg"] for s in sc["samples"]])
+        axl.scatter(ra, dec, s=5, color=col, alpha=0.30, edgecolors="none",
+                    zorder=2, label=short_study(sc["name"]))
+
+    fp = rubin_footprint_mask().astype(float)
+    axl.contour(RA_C, DEC_C, fp, levels=[0.5], colors=[PURPLE], linewidths=1.6,
+                zorder=4)
+    axl.contourf(RA_C, DEC_C, fp, levels=[0.5, 1.5], colors=[PURPLE],
+                 alpha=0.07, zorder=0)
+    axl.plot([], [], color=PURPLE, lw=1.6,
+             label="Rubin/LSST reach (r≤{:.1f})".format(DATA["lsst"]["limiting_mag"]))
+    axl.contour(RA_C, DEC_C, gal_b, levels=[0], colors=[MUTED],
+                linestyles="--", linewidths=1.2, zorder=3)
+    axl.set_xlim(0, 360)
+    axl.set_ylim(-60, 60)
+    axl.set_xticks(np.arange(0, 361, 60))
+    axl.set_xlabel("RA  (deg)")
+    axl.set_ylabel("Dec  (deg)")
+    axl.set_title("Per-study position clouds + Rubin/LSST reach", fontsize=12)
+    axl.grid(True, color=MUTED, alpha=0.12, lw=0.5)
+    axl.legend(loc="lower left", fontsize=8, labelcolor=FG, ncol=2)
+
+    # --- RIGHT: per-study heliocentric distance distributions ---
+    bins = np.linspace(80, 1500, 60)
+    for i, sc in enumerate(clouds):
+        col = STUDY_PALETTE[i % len(STUDY_PALETTE)]
+        sd = np.array([s["dist_au"] for s in sc["samples"]])
+        axr.hist(sd, bins=bins, histtype="step", density=True, color=col,
+                 lw=1.8, label=short_study(sc["name"]))
+    axr.axvline(DATA["hull"]["lsst_reach_au"], color=PURPLE, ls=":", lw=1.3,
+                label="Rubin/LSST reach")
+    axr.axvline(DATA["hull"]["space_reach_au"], color=TEAL, ls=":", lw=1.3,
+                label="space-telescope reach")
+    axr.set_xlabel("heliocentric distance  (AU)")
+    axr.set_ylabel("probability density")
+    axr.set_title("Per-study current-distance distributions", fontsize=12)
+    axr.grid(True, color=MUTED, alpha=0.18, lw=0.6)
+    axr.legend(loc="upper right", fontsize=8, labelcolor=FG)
+
+    fig.suptitle("Planet Nine: per-study prediction clouds", fontsize=14,
+                 color=FG)
+    out = os.path.join(HERE, "figures", "p9_study_clouds.svg")
+    fig.savefig(out, transparent=True)
+    print("wrote", out)
+    return out
+
+
 if __name__ == "__main__":
     fig_sky()
     fig_hull()
+    fig_study_clouds()

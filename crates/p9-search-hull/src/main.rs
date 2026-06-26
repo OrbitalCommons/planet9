@@ -34,6 +34,8 @@ const SEED: u64 = 20_260_626;
 const CLOUD_KEEP: usize = 4_000;
 /// How many ranked pointings to emit.
 const N_TARGETS: usize = 40;
+/// Per-study cloud draws kept for the projection plots.
+const CLOUD_PER_STUDY: usize = 1_500;
 
 #[derive(Serialize)]
 struct GridSpec {
@@ -81,6 +83,9 @@ struct Cells {
     residual_prob: Vec<f64>,
     reach_dist_au: Vec<Option<f64>>,
     space_reachable: Vec<bool>,
+    /// Whether the Rubin/LSST footprint reaches this direction AND is deep
+    /// enough to detect the predicted P9 there.
+    lsst_reachable: Vec<bool>,
 }
 
 #[derive(Serialize)]
@@ -120,6 +125,8 @@ struct Hull {
     allsky_depths: Vec<AllSkyDepth>,
     space_depth: f64,
     space_reach_au: Option<f64>,
+    lsst_depth: f64,
+    lsst_reach_au: Option<f64>,
     cloud: Vec<CloudPoint>,
 }
 
@@ -143,10 +150,12 @@ struct Dataset {
     rng_seed: u64,
     grid: GridSpec,
     space_telescope: TelescopeOut,
+    lsst: TelescopeOut,
     surveys: Vec<SurveyOut>,
     cells: Cells,
     targets: Vec<Target>,
     hull: Hull,
+    study_clouds: Vec<posterior::StudyCloud>,
     summary: Summary,
 }
 
@@ -167,6 +176,14 @@ fn main() {
     let scope_depth = scope.limiting_mag;
     let scope_fp = scope.footprint.clone();
 
+    // Rubin / LSST: the ground baseline (partial-sky footprint) we compare against.
+    let rubin = telescope::catalog()
+        .into_iter()
+        .find(|t| !t.space_based)
+        .expect("a ground telescope (Rubin) in the catalog");
+    let rubin_depth = rubin.limiting_mag;
+    let rubin_fp = rubin.footprint.clone();
+
     // Ensemble current-position posterior with per-cell predicted distance / V.
     let post = posterior::ensemble(&studies, &grid, PER_STUDY, SEED, CLOUD_KEEP);
 
@@ -180,6 +197,7 @@ fn main() {
     let mut residual = vec![0.0_f64; n];
     let mut reach_dist = vec![None; n];
     let mut space_reachable = vec![false; n];
+    let mut lsst_reachable = vec![false; n];
 
     let cell_base = grid.dra() * grid.ddec(); // deg² before cos(Dec) weighting
     let mut sky_area = 0.0_f64;
@@ -240,6 +258,7 @@ fn main() {
             if reachable {
                 residual_reach += residual[idx];
             }
+            lsst_reachable[idx] = rubin_fp.accepts(dec, gal_b[idx]) && v <= rubin_depth;
         }
     }
 
@@ -285,6 +304,8 @@ fn main() {
         allsky_depths,
         space_depth: scope_depth,
         space_reach_au: hull::reach_distance(hull::FIDUCIAL_MASS_EARTH, scope_depth),
+        lsst_depth: rubin_depth,
+        lsst_reach_au: hull::reach_distance(hull::FIDUCIAL_MASS_EARTH, rubin_depth),
         cloud: post
             .cloud
             .iter()
@@ -317,6 +338,14 @@ fn main() {
             galactic_lat_min_deg: scope_fp.galactic_lat_min_deg,
             coverage_fraction: scope_fp.coverage_fraction,
         },
+        lsst: TelescopeOut {
+            name: rubin.name.clone(),
+            limiting_mag: rubin_depth,
+            dec_min_deg: rubin_fp.dec_min_deg,
+            dec_max_deg: rubin_fp.dec_max_deg,
+            galactic_lat_min_deg: rubin_fp.galactic_lat_min_deg,
+            coverage_fraction: rubin_fp.coverage_fraction,
+        },
         surveys: surveys
             .iter()
             .map(|s| SurveyOut {
@@ -340,9 +369,11 @@ fn main() {
             residual_prob: residual,
             reach_dist_au: reach_dist,
             space_reachable,
+            lsst_reachable,
         },
         targets,
         hull,
+        study_clouds: posterior::study_clouds(&studies, PER_STUDY, SEED, CLOUD_PER_STUDY),
         summary: Summary {
             excluded_prob,
             residual_prob,
