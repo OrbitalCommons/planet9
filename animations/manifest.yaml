@@ -1,0 +1,99 @@
+# Ordered scene list for the Planet Nine film. The assembler renders/concatenates
+# in this order. Each entry: {file, scene}. Paper scenes are appended as they land.
+preface:
+  - {file: scenes/preface/preface_a_foundations.py, scene: P00Hook}
+  - {file: scenes/preface/preface_a_foundations.py, scene: P01Ellipse}
+  - {file: scenes/preface/preface_a_foundations.py, scene: P02KeplerLaws}
+  - {file: scenes/preface/preface_b_elements.py,    scene: P03Elements}
+  - {file: scenes/preface/preface_b_elements.py,    scene: P04Geography}
+  - {file: scenes/preface/preface_c_dynamics.py,    scene: P05Clustering}
+  - {file: scenes/preface/preface_c_dynamics.py,    scene: P06Precession}
+  - {file: scenes/preface/preface_c_dynamics.py,    scene: P07Resonance}
+  - {file: scenes/preface/preface_d_mechanism.py,   scene: P08Sculpting}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P09ReflectedLight}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P10Thermal}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P11Surveys}
+  - {file: scenes/preface/preface_f_indirect_map.py, scene: P12Indirect}
+  - {file: scenes/preface/preface_f_indirect_map.py, scene: P13Map}
+
+# Per-paper scenes (Act I-V of the film). Appended one crate at a time.
+papers:
+  # Act I -- the evidence and its critics
+  - {file: scenes/papers/p9_2016_evidence/scene.py,        scene: Evidence2016}
+  - {file: scenes/papers/p9_2016_constraints/scene.py,     scene: Constraints2016}
+  - {file: scenes/papers/p9_2017_bias/scene.py,            scene: Bias2017}
+  - {file: scenes/papers/p9_2017_ossos_bias/scene.py,      scene: OssosBias2017}
+  - {file: scenes/papers/p9_2021_napier_critique/scene.py, scene: NapierCritique2021}
+  - {file: scenes/papers/p9_2026_apsidal_clustering/scene.py, scene: ApsidalClustering2026}
+  # Act II -- the dynamics
+  - {file: scenes/papers/p9_2016_secular_resonance/scene.py, scene: SecularResonance2016}
+  - {file: scenes/papers/p9_2017_dynamics/scene.py,        scene: Dynamics2017}
+  - {file: scenes/papers/p9_2018_secular_dynamics/scene.py, scene: SecularDynamics2018}
+  - {file: scenes/papers/p9_2018_chaotic_dynamics/scene.py, scene: ChaoticDynamics2018}
+  - {file: scenes/papers/p9_2016_inclined_tnos/scene.py,   scene: InclinedTnos2016}
+  - {file: scenes/papers/p9_2021_detached_inclinations/scene.py, scene: DetachedInclinations2021}
+  - {file: scenes/papers/p9_2016_inclination_instability/scene.py, scene: InclinationInstability2016}
+  - {file: scenes/papers/p9_2021_stability/scene.py,       scene: Stability2021}
+  # Act III -- indirect signatures
+  - {file: scenes/papers/p9_2016_cassini_ranging/scene.py, scene: CassiniRanging2016}
+  - {file: scenes/papers/p9_2016_holman_payne/scene.py,    scene: HolmanPayne2016}
+  - {file: scenes/papers/p9_2016_obliquity/scene.py,       scene: Obliquity2016}
+  - {file: scenes/papers/p9_2022_uranus_tilt/scene.py,     scene: UranusTilt2022}
+  # Act IV -- the hunt (surveys)
+  - {file: scenes/papers/p9_2018_wise_search/scene.py,     scene: WiseSearch2018}
+  - {file: scenes/papers/p9_2022_des/scene.py,             scene: Des2022}
+  - {file: scenes/papers/p9_2021_ztf/scene.py,             scene: Ztf2021}
+  - {file: scenes/papers/p9_2024_panstarrs/scene.py,       scene: PanStarrs2024}
+  - {file: scenes/papers/p9_2019_tess_yield/scene.py,      scene: TessYield2019}
+  - {file: scenes/papers/p9_2016_wise_coadd/scene.py,      scene: WiseCoadd2016}
+  - {file: scenes/papers/p9_2025_ps1_holman/scene.py,      scene: Ps1Holman2025}
+  - {file: scenes/papers/p9_2025_iras_akari/scene.py,      scene: IrasAkari2025}
+  - {file: scenes/papers/p9_2025_akari_refutation/scene.py, scene: AkariRefutation2025}
+  - {file: scenes/papers/p9_2016_fortney_thermal/scene.py, scene: FortneyThermal2016}
+  - {file: scenes/papers/p9_2025_simons_forecast/scene.py, scene: SimonsForecast2025}
+  - {file: scenes/papers/p9_2025_parallax_search/scene.py, scene: ParallaxSearch2025}
+  - {file: scenes/papers/p9_2023_lsst_strategy/scene.py,   scene: LsstStrategy2023}
+  # Act I additions
+  - {file: scenes/papers/p9_2018_bp519/scene.py,           scene: Bp519Discovery2018}
+  - {file: scenes/papers/p9_2025_new_discoveries/scene.py, scene: NewDiscoveries2025}
+  # Act II additions
+  - {file: scenes/papers/p9_2020_secular_octupole/scene.py, scene: SecularOctupole2020}
+  # Act III additions
+  - {file: scenes/papers/p9_2016_iorio_precession/scene.py, scene: Iorio2016}
+  # Act V -- alternatives
+  - {file: scenes/papers/p9_2023_mond_efe/scene.py,        scene: MondEfe2023}
+  - {file: scenes/papers/p9_2024_primordial_alignment/scene.py, scene: PrimordialAlignment2024}
+  - {file: scenes/papers/p9_2019_selfgrav_disk/scene.py,   scene: SelfgravDisk2019}
+  - {file: scenes/papers/p9_2025_planet_y/scene.py,        scene: PlanetY2025}
+  # further coverage
+  - {file: scenes/papers/p9_2016_obliquity_lai/scene.py,   scene: ObliquityLai2016}
+  - {file: scenes/papers/p9_2018_low_perihelion/scene.py,  scene: LowPerihelion2018}
+  - {file: scenes/papers/p9_2020_tess_shiftstack/scene.py, scene: TessShiftstack2020}
+  - {file: scenes/papers/p9_2021_act_mm/scene.py,          scene: ActMm2021}
+  - {file: scenes/papers/p9_2025_stacking/scene.py,        scene: Stacking2025}
+  - {file: scenes/papers/p9_2016_cowan_thermal/scene.py,   scene: CowanThermal2016}
+  - {file: scenes/papers/p9_2016_linder_evolution/scene.py, scene: LinderEvolution2016}
+  - {file: scenes/papers/p9_2021_oort_cloud/scene.py,      scene: OortCloud2021}
+  - {file: scenes/papers/p9_2024_oort_selfgrav/scene.py,   scene: OortSelfgrav2024}
+  - {file: scenes/papers/p9_2025_clustering/scene.py,      scene: Clustering2025}
+  - {file: scenes/papers/p9_2024_siraj_orbit/scene.py,     scene: SirajOrbit2024}
+  - {file: scenes/papers/p9_2016_sheppard_etnos/scene.py,  scene: SheppardEtnos2016}
+  - {file: scenes/papers/p9_2016_resonance_prediction/scene.py, scene: ResonancePrediction2016}
+  - {file: scenes/papers/p9_2017_resonance_hopping/scene.py, scene: ResonanceHopping2017}
+  - {file: scenes/papers/p9_2018_resonance/scene.py,       scene: Resonance2018}
+  - {file: scenes/papers/p9_2020_resonance_hopping/scene.py, scene: ResonanceHopping2020}
+  - {file: scenes/papers/p9_2019_review/scene.py,          scene: Review2019}
+  - {file: scenes/papers/p9_2016_obliquity_gomes/scene.py, scene: ObliquityGomes2016}
+  - {file: scenes/papers/p9_2018_kuiper_belt/scene.py,     scene: KuiperBelt2018}
+  - {file: scenes/papers/p9_2019_clustering/scene.py,      scene: Clustering2019}
+  - {file: scenes/papers/p9_2019_ossos_scattering/scene.py, scene: OssosScattering2019}
+  - {file: scenes/papers/p9_2016_commensurabilities/scene.py, scene: Commensurabilities2016}
+  - {file: scenes/papers/p9_2021_perihelion_gap/scene.py,  scene: PerihelionGap2021}
+  - {file: scenes/papers/p9_2024_neptune_crossing/scene.py, scene: NeptuneCrossing2024}
+  - {file: scenes/papers/p9_2025_perturbation/scene.py,    scene: Perturbation2025}
+  - {file: scenes/papers/p9_2020_clement_precession/scene.py, scene: ClementPrecession2020}
+  - {file: scenes/papers/p9_2021_orbit/scene.py,           scene: Orbit2021}
+  - {file: scenes/papers/p9_2020_des_isotropy/scene.py,    scene: DesIsotropy2020}
+  - {file: scenes/papers/p9_2021_des_catalog/scene.py,     scene: DesCatalog2021}
+  - {file: scenes/papers/p9_2022_iras_candidate/scene.py,  scene: IrasCandidate2022}
+  - {file: scenes/papers/p9_2026_iorio_precession/scene.py, scene: Iorio2026}
