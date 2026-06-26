@@ -97,3 +97,7 @@ papers:
   - {file: scenes/papers/p9_2021_des_catalog/scene.py,     scene: DesCatalog2021}
   - {file: scenes/papers/p9_2022_iras_candidate/scene.py,  scene: IrasCandidate2022}
   - {file: scenes/papers/p9_2026_iorio_precession/scene.py, scene: Iorio2026}
+  - {file: scenes/papers/p9_2025_russell_albedo/scene.py,  scene: RussellAlbedo2025}
+  - {file: scenes/papers/p9_2025_stellar_flybys/scene.py,  scene: StellarFlybys2025}
+  - {file: scenes/papers/p9_2026_stellar_companions/scene.py, scene: StellarCompanions2026}
+  - {file: scenes/papers/p9_2026_alpha_slope/scene.py,     scene: AlphaSlope2026}
