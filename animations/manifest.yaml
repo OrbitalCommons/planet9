@@ -101,3 +101,7 @@ papers:
   - {file: scenes/papers/p9_2025_stellar_flybys/scene.py,  scene: StellarFlybys2025}
   - {file: scenes/papers/p9_2026_stellar_companions/scene.py, scene: StellarCompanions2026}
   - {file: scenes/papers/p9_2026_alpha_slope/scene.py,     scene: AlphaSlope2026}
+
+finale:
+  - {file: scenes/finale/search_hull.py, scene: SearchReachHull}
+  - {file: scenes/finale/search_hull.py, scene: WhereToPoint}
