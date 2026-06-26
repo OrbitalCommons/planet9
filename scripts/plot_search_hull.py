@@ -66,19 +66,39 @@ def fig_sky():
 
     gal_b = cell("gal_b_deg")
 
-    # --- TOP: searched depth map ---
-    depth = cell("best_depth")
-    depth = np.ma.masked_invalid(depth)
-    pcm = axt.pcolormesh(RA_C, DEC_C, depth, shading="auto", cmap="magma",
-                         zorder=1)
-    cb = fig.colorbar(pcm, ax=axt, pad=0.012, fraction=0.045)
-    cb.set_label("deepest limiting magnitude", color=FG)
+    # --- TOP: searched depth map, coloured discretely by which survey is
+    # deepest at each direction (so the narrow 19.5-23.8 depth range reads
+    # cleanly instead of washing out). Uncovered cells stay transparent =
+    # never searched. ---
+    from matplotlib.colors import BoundaryNorm, ListedColormap
+
+    surv = sorted(DATA["surveys"], key=lambda s: s["depth"])
+    depths = [s["depth"] for s in surv]
+    names = [s["name"] for s in surv]
+    palette = [PURPLE, BLUE, TEAL, GREEN, ORANGE][: len(depths)]
+    cmap = ListedColormap(palette)
+    cmap.set_bad(alpha=0.0)
+    edges = (
+        [depths[0] - 0.5]
+        + [(depths[i] + depths[i + 1]) / 2 for i in range(len(depths) - 1)]
+        + [depths[-1] + 0.7]
+    )
+    norm = BoundaryNorm(edges, cmap.N)
+
+    depth = np.ma.masked_invalid(cell("best_depth"))
+    pcm = axt.pcolormesh(RA_C, DEC_C, depth, shading="auto", cmap=cmap,
+                         norm=norm, zorder=1)
+    cb = fig.colorbar(pcm, ax=axt, pad=0.012, fraction=0.045, ticks=depths)
+    cb.ax.set_yticklabels(
+        ["{}  ({:.1f})".format(n, d) for n, d in zip(names, depths)])
+    cb.set_label("deepest survey here", color=FG)
     cb.ax.yaxis.set_tick_params(color=FG)
     plt.setp(cb.ax.get_yticklabels(), color=FG)
     axt.contour(RA_C, DEC_C, gal_b, levels=[0], colors=[MUTED],
                 linestyles="--", linewidths=1.2, zorder=4)
     axt.set_title("What we've searched (coverage hull): deepest optical "
-                  "survey depth per cell", fontsize=12, pad=8)
+                  "survey per cell  —  dark = never searched", fontsize=12,
+                  pad=8)
     axt.set_ylabel("Dec  (deg)")
 
     # --- BOTTOM: un-searched probability map ---
