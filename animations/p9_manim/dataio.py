@@ -29,6 +29,12 @@ def viability():
     return load_json("figures/viability.json")
 
 
+def search_hull():
+    """Where-to-point dataset (sky coverage hull vs P9 posterior, per-study
+    clouds, LSST reach), or None. Regenerate with ``cargo run -p p9-search-hull``."""
+    return load_json("figures/search_hull.json")
+
+
 _ANIM_CACHE = {}
 
 

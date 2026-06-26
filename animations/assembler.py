@@ -33,7 +33,7 @@ def manifest_entries():
     with open(os.path.join(HERE, "manifest.yaml")) as fh:
         m = yaml.safe_load(fh)
     seen, ordered = set(), []
-    for group in ("preface", "papers"):
+    for group in ("preface", "papers", "finale"):
         for e in m.get(group) or []:
             key = (e["file"], e["scene"])
             if key not in seen:
