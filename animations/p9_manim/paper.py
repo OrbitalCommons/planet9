@@ -22,12 +22,16 @@ def crate_description(crate):
     return crate
 
 
-def title_block(crate, headline):
-    """A scene-opening title: the paper headline + an auto citation chip."""
+def title_block(crate, headline, cite=None):
+    """A scene-opening title: the paper headline + a citation chip.
+
+    The chip text is taken from ``cite`` when given, otherwise derived from the
+    crate's Cargo.toml description (the usual case)."""
     title = Text(headline, color=T.FG, font_size=34, weight="BOLD").to_edge(UP, buff=0.6)
-    cite = Text(_short_cite(crate_description(crate)), color=T.MUTED, font_size=18)
-    cite.next_to(title, DOWN, buff=0.18)
-    return VGroup(title, cite)
+    chip = cite if cite is not None else _short_cite(crate_description(crate))
+    cite_t = Text(chip, color=T.MUTED, font_size=18)
+    cite_t.next_to(title, DOWN, buff=0.18)
+    return VGroup(title, cite_t)
 
 
 def _short_cite(desc):

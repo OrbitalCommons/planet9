@@ -95,3 +95,7 @@ A "—" means the scene is visual; no new equation required (keep any it has).
 - **FortneyThermal2016** — `T_{\rm eff} = \max(T_{\rm eq},\,T_{\rm int})`
 - **LinderEvolution2016** — `T_{\rm eff}(t) \downarrow,\quad L \propto R^2 T^4`
 - **KuiperBelt2018** — `e = 1 - q/a`
+- **RussellAlbedo2025** — `m = H + 5\log_{10}(r\,\Delta)` ; mini-Neptune `R = 2.0\text{–}2.6\,R_\oplus`, `p_V = 0.33\text{–}0.47`
+- **StellarFlybys2025** — `\Gamma = n_\star\,\sigma\,v,\ \sigma = \pi q_\star^2\big(1+\tfrac{2GM}{q_\star v^2}\big)` ; `P \approx P_{\rm enc}\,f_{\rm geom}\,f_{\rm succ} \lesssim 5\%`
+- **StellarCompanions2026** — `M_{\max}(d) = M_\star\,(d/d_\star)^3` ; halo `M(<1000\,\mathrm{AU}) < M_{\rm Pluto}`
+- **AlphaSlope2026** — `F \propto d^{\alpha}`, `\alpha = -4` (reflected) vs `-2` (self-luminous)

@@ -789,6 +789,50 @@ PAPER_TEXT = {
             "Precession remains a sensitive, model-dependent probe.",
         ],
     },
+    "p9-2025-russell-albedo": {
+        "hypothesis": "If Planet Nine is a ~6.6 Earth-mass mini-Neptune, its size, colour, and brightness follow from exoplanet mass-radius models.",
+        "arguments": [
+            "Confirmed cold exoplanets (Teq < 600 K) fix the most likely radius at 2.0-2.6 Earth radii with a thin H-He envelope.",
+            "Giant-planet albedos extrapolate to a V-band geometric albedo of 0.33-0.47 for such a world.",
+        ],
+        "conclusions": [
+            "Planet Nine should sit near absolute magnitude -6.1 to -5.2 and apparent +21.9 to +22.7.",
+            "That is within reach of upcoming surveys -- and would even show a resolvable disk to the largest telescopes.",
+        ],
+    },
+    "p9-2025-stellar-flybys": {
+        "hypothesis": "A close stellar flyby early in the Solar System's life could have detached the sednoids -- no present-day planet needed.",
+        "arguments": [
+            "The detached extreme TNOs share a low-inclination (i < 30 degrees) profile and a primordial apsidal alignment.",
+            "Only special flyby geometries (coplanar or ecliptic-symmetric) reproduce that, and close encounters (q* < 1000 AU) are rare.",
+        ],
+        "conclusions": [
+            "Folding in how often such an encounter actually happens leaves a probability of only about 5%.",
+            "An early flyby is an unlikely sole sculptor of the detached belt.",
+        ],
+    },
+    "p9-2026-stellar-companions": {
+        "hypothesis": "The Sun's nearest companion might be a hidden, gravity-only object at hundreds-to-thousands of AU rather than a star at a parsec.",
+        "arguments": [
+            "A tidal mass-distance envelope calibrated to Planet-Nine-like constraints grows as distance cubed.",
+            "It allows Earth-to-sub-Saturn masses at 300-1000 AU, rising to a Jupiter mass near 2000 AU.",
+        ],
+        "conclusions": [
+            "A smooth dark-matter halo cannot supply it -- only a sub-Pluto mass lies within 1000 AU.",
+            "Any such companion must be a structured, bound object, visible only through its gravity.",
+        ],
+    },
+    "p9-2026-alpha-slope": {
+        "hypothesis": "How a body's brightness fades with distance (flux ~ d^alpha) reveals whether it shines by reflection or its own light.",
+        "arguments": [
+            "Reflected sunlight falls as d^-4; self-luminous emission falls as d^-2.",
+            "Of 8,557 archival TNO photometry bins, only 186 survive the eligibility cuts -- 53 reflected, 24 self-luminous, 109 anomalous.",
+        ],
+        "conclusions": [
+            "All 24 'self-luminous' detections trace to a single instrument -- calibration systematics, not new physics.",
+            "Archival photometry is too messy to run the test cleanly even on Pluto.",
+        ],
+    },
 }
 
 
