@@ -21,6 +21,7 @@ use std::f64::consts::PI;
 
 use p9_core::constants::*;
 use p9_core::forces::ExtraForce;
+use p9_core::initial_conditions::planets;
 use p9_core::initial_conditions::scattered_disk::{generate_scattered_disk, ScatteredDiskConfig};
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::*;
@@ -164,7 +165,12 @@ pub fn run_planar_simulation(config: &ResonanceSimConfig, seed: u64) -> Resonanc
     let mut active: Vec<bool> = vec![true; n_actual];
 
     let p9 = config.p9_params();
-    let mut bodies = vec![p9.to_body()];
+    // Neptune is integrated directly: it is the largest single ring term
+    // (m·a² ≈ 15,500 M⊕AU² vs Saturn's 8,700) and the seeded q ∈ [30, 50] AU
+    // scattered disk is Neptune-coupled — j2_secular's own docs say not to
+    // average Neptune for Neptune-crossing perihelia. J+S+U stay in the
+    // averaged J2 field below. dt = 2500 d resolves P_N/20 ≈ 3000 d.
+    let mut bodies = vec![planets::neptune_j2000(), p9.to_body()];
 
     let sim_config = SimConfig {
         dt: config.dt,
