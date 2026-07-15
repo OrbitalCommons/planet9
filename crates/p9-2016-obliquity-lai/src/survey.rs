@@ -88,23 +88,24 @@ pub fn solve_a_tilde_for_obliquity(
 }
 
 /// Lai Eq. (18): the node/inclination condition that, together with Eq. (17),
-/// fixes ΔΩ = 45°. Returns the right-hand side
+/// fixes ΔΩ = 45°. Verbatim from the paper (arXiv:1608.01421):
 ///
-///   sin θp · L / Lp = 15 g + 4.84 λ★ (P★/10 d)⁻¹ − cos θp · (θ̂sl f)
+///   L/Lp ≃ [15 g + 4.84 λ★ (P★/10 d)⁻¹] · sin θp / (θ̂sl f) − cos θp
 ///
-/// rearranged to the predicted `(L/Lp) sin θp / (θ̂sl f)` so it can be compared
-/// against the directly computed `L/Lp`. This is the analytic ΔΩ constraint;
-/// it is exercised as an internal consistency check rather than pinned to a
-/// published scalar (Lai presents it only graphically, Figs. 1–3).
+/// The geometry factor multiplies as sin θp / (θ̂sl f) and cos θp is
+/// subtracted OUTSIDE the bracket. (A previous version inverted the geometry
+/// factor and put −cos θp inside the bracket, returning values ~12× too
+/// large at the nominal configuration.) This is the analytic ΔΩ constraint;
+/// Lai presents it only graphically (Figs. 1–3), so it is pinned by a
+/// hand-evaluated regression value below rather than a published scalar.
 pub fn eq18_rhs_l_over_lp(
     theta_p_rad: f64,
     spin_period_days: f64,
     geom: &NodeGeometry,
     lambda_star: f64,
 ) -> f64 {
-    let bracket =
-        15.0 * geom.g + 4.84 * lambda_star * (spin_period_days / 10.0).recip() - theta_p_rad.cos();
-    bracket * (geom.theta_sl_hat * geom.f) / theta_p_rad.sin()
+    let bracket = 15.0 * geom.g + 4.84 * lambda_star * (10.0 / spin_period_days);
+    bracket * theta_p_rad.sin() / (geom.theta_sl_hat * geom.f) - theta_p_rad.cos()
 }
 
 #[cfg(test)]
@@ -155,6 +156,18 @@ mod tests {
             "ãₚ(20)/ãₚ(10) = {ratio:.4} (expected 2^(1/3))"
         );
         assert!(ratio < 1.3, "mass change of ãₚ should be modest");
+    }
+
+    #[test]
+    fn eq18_rhs_pinned_at_nominal_configuration() {
+        // Hand-evaluated regression of the verbatim Eq. (18) at θp = 20°,
+        // ΔΩ = 45°, P★ = 20 d: [15 g + 4.84 λ★/2]·sin20°/(θ̂sl f) − cos20°.
+        // The pre-fix (inverted-geometry) form returned ~53.5 here.
+        let lam = crate::precession::solar::lambda_star();
+        let geom = NodeGeometry::new(6.0, 45.0 * DEG2RAD);
+        let v = eq18_rhs_l_over_lp(20.0 * DEG2RAD, 20.0, &geom, lam);
+        eprintln!("eq18 nominal = {v:.4}");
+        assert!((v - 4.42).abs() < 0.15, "Eq.18 L/Lp = {v:.3}");
     }
 
     #[test]
