@@ -68,31 +68,26 @@ pub fn giant_planet_frequency_typed(a: f64, e: f64, i: f64) -> AngularVelocity {
 /// Planet Nine secular inclination-coupling frequency `B_p9` for a test
 /// particle at (a, e), in rad/yr.
 ///
-/// The orbit-averaged quadrupole Hamiltonian (p9-core) is
-/// H = −(C/4)[(2+3e²)(3cos²I − 1) + ...], with the inclination-restoring
-/// coupling constant C = GM₉ α²/(4 a₉ (1−e₉²)^{3/2}). The nodal precession
-/// frequency a particle's plane acquires about Planet Nine's plane is the
-/// second derivative of H with respect to the inclination action; to leading
-/// order in I it reduces to
+/// For an **exterior** perturber the Laplace–Lagrange nodal coupling is
+/// B = (1/4) n (m₉/M_⊙) α² b_{3/2}^{(1)}(α) → (3/4) n (m₉/M_⊙) α³ at leading
+/// order (Murray & Dermott: for an internal perturber ᾱ = 1 and the rate is
+/// ∝ (a_j/a)², as in the giants' expression above; for an external one the
+/// extra ᾱ = α appears), with the eccentric-ring factor 1/(1−e₉²)^{3/2}:
 ///
-///   B_p9 = (3/4) · GM₉/(a₉³) · (a/a₉)^{1/2} ... — but the cleanest, and the
+///   B_p9 = (3/4) n (m₉/M_⊙) (a/a₉)³ · 1/(1−e₉²)^{3/2}
 ///
-/// way that stays consistent with the giant-planet expression above, is to use
-/// the *same* disturbing-function coefficient form: treating Planet Nine as one
-/// more (outer, eccentric, massive) perturber,
-///
-///   B_p9 = (3/4) n (m₉/M_⊙) (a/a₉)² · 1/(1−e₉²)^{3/2}
-///
-/// with n = √(GM_⊙/a³) the particle mean motion. The α² = (a/a₉)² scaling makes
-/// the coupling *strengthen with semi-major axis*, the central prediction. We
-/// cross-check this closed form against the p9-core quadrupole Hamiltonian's
-/// curvature in the unit tests.
+/// with n = √(GM_⊙/a³) the particle mean motion, so B_p9 ∝ a^{3/2}. This is
+/// the same frequency as the p9-core quadrupole Hamiltonian's inclination
+/// curvature divided by the orbital angular momentum L ∝ √a — the unit tests
+/// cross-check exactly that (the old test compared the raw curvature, an
+/// energy, against B, a frequency, which hid a missing factor of α: the
+/// coupling *strengthens with semi-major axis* as a^{3/2}, not √a).
 pub fn planet_nine_frequency_typed(a: f64, p9: &P9Params) -> AngularVelocity {
     let n = (GM_SUN / (a * a * a)).sqrt(); // rad/day
     let m9 = p9.mass_solar();
     let alpha = a / p9.a;
     let ecc_factor = (1.0 - p9.e * p9.e).powf(-1.5);
-    let rate_day = 0.75 * n * m9 * alpha * alpha * ecc_factor;
+    let rate_day = 0.75 * n * m9 * alpha * alpha * alpha * ecc_factor;
     let rate_yr = rate_day * 365.25; // rad/yr
     (radians(rate_yr) / julian_year()).into()
 }
@@ -197,10 +192,16 @@ mod tests {
             max_relative = 1e-12
         );
 
-        // Inline B_p9 closed form: (3/4) n (m₉/M_⊙) (a/a₉)² /(1−e₉²)^{3/2}.
+        // Inline B_p9 closed form: (3/4) n (m₉/M_⊙) (a/a₉)³ /(1−e₉²)^{3/2}.
         let alpha = a / p9.a;
-        let b_p9_inline =
-            0.75 * n * p9.mass_solar() * alpha * alpha * (1.0 - p9.e * p9.e).powf(-1.5) * 365.25;
+        let b_p9_inline = 0.75
+            * n
+            * p9.mass_solar()
+            * alpha
+            * alpha
+            * alpha
+            * (1.0 - p9.e * p9.e).powf(-1.5)
+            * 365.25;
         assert_relative_eq!(
             planet_nine_frequency_typed(a, &p9).get::<radian_per_second>(),
             b_p9_inline / yr_s,
@@ -209,17 +210,17 @@ mod tests {
     }
 
     #[test]
-    fn test_p9_frequency_scales_as_alpha_squared() {
-        // Coupling ∝ (a/a₉)²: doubling a quadruples B_p9 (× the n ∝ a^{-3/2}).
+    fn test_p9_frequency_scales_as_alpha_cubed() {
+        // Coupling frequency ∝ n α³ ∝ a^{-3/2} · a³ = a^{3/2}:
+        // doubling a raises B_p9 by 2^{3/2} ≈ 2.828.
         let p9 = nominal();
         let b1 = p9_freq_yr(250.0, &p9);
         let b2 = p9_freq_yr(500.0, &p9);
-        // B_p9 ∝ a^{-3/2} · a² = a^{1/2}; ratio = sqrt(2) ≈ 1.414.
         let ratio = b2 / b1;
+        let expected = 2f64.powf(1.5);
         assert!(
-            (ratio - 2f64.sqrt()).abs() < 0.05,
-            "B_p9(500)/B_p9(250) = {ratio:.3}, expected ≈ {:.3}",
-            2f64.sqrt()
+            (ratio - expected).abs() < 0.05,
+            "B_p9(500)/B_p9(250) = {ratio:.3}, expected ≈ {expected:.3}"
         );
     }
 
@@ -246,13 +247,21 @@ mod tests {
         let base = nominal();
         let ecc = P9Params { e: 0.3, ..base };
 
-        // α² scaling: curvature ∝ C ∝ α² = (a/a₉)².
+        // Curvature (an energy) ∝ C ∝ α² = (a/a₉)²; the *frequency* is
+        // curvature / L with L ∝ √a, so its ratio is 4/√2 = 2^{3/2} — exactly
+        // the closed-form B_p9 ∝ a^{3/2} scaling.
         let c1 = quadrupole_inclination_curvature(250.0, 0.4, &base);
         let c2 = quadrupole_inclination_curvature(500.0, 0.4, &base);
         let curv_ratio = c2 / c1;
         assert!(
             (curv_ratio - 4.0).abs() < 0.01,
-            "quadrupole α² scaling = {curv_ratio:.4}, expected 4.0"
+            "quadrupole α² energy scaling = {curv_ratio:.4}, expected 4.0"
+        );
+        let freq_ratio = curv_ratio / 2f64.sqrt(); // divide by L(500)/L(250)
+        let b_ratio = p9_freq_yr(500.0, &base) / p9_freq_yr(250.0, &base);
+        assert!(
+            (freq_ratio - b_ratio).abs() < 0.05,
+            "curvature/L ratio {freq_ratio:.4} vs closed-form B ratio {b_ratio:.4}"
         );
 
         // 1/(1−e₉²)^{3/2} perturber-eccentricity scaling, shared with B_p9.
