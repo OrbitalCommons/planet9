@@ -35,7 +35,13 @@
 //! `SelectionFunction`), and the ϖ sample is the 10-object vetted
 //! `BROWN_2017_SAMPLE` rather than Napier's exact OSSOS-debiased set. The
 //! qualitative reproduction — the conclusion flips from "clustered" to
-//! "consistent with isotropy" under debiasing — is robust; the precise
-//! consistency p depends on the assumed amplitudes/phases.
+//! "consistent with isotropy" under debiasing — is CONTINGENT on the
+//! assumed selection function, not robust: it requires the lobe to point
+//! near the observed cluster direction (ϕ₁ ≈ 52°) with an order-ten
+//! contrast (A₁ ≈ 0.9). The sensitivity tests in `critique` show the flip
+//! failing outright with the lobe rotated 90° off the cluster and weakening
+//! with amplitude. Napier et al. derive their selection from survey
+//! simulators; deriving ours from the p9-2017-bias footprints is tracked
+//! as the survey-geometry consolidation work.
 
 pub mod critique;

@@ -181,6 +181,72 @@ pub fn consistency_p_value<R: Rng>(
     (count + 1) as f64 / (n_mc + 1) as f64
 }
 
+/// Direction-aware consistency p-value on the full resultant VECTOR.
+///
+/// The R̄-only consistency test above is phase-blind: the null distribution
+/// of R̄ under isotropic-times-selection depends only on the selection
+/// amplitudes, so ANY order-ten-contrast lobe "dissolves" the observed
+/// clustering regardless of whether it points where the surveys actually
+/// looked. Napier et al.'s likelihood is direction-aware. This statistic
+/// compares the observed mean resultant vector (C̄, S̄) against the null
+/// cloud of synthetic resultant vectors via Mahalanobis ordering: p is the
+/// fraction of null samples at least as far (in the null covariance metric)
+/// from the null mean as the observation.
+///
+/// With the selection lobe aligned to the observed cluster the observation
+/// sits inside the null cloud (large p, consistent); with the same lobe
+/// rotated 90° off the cluster the observation is far from the cloud and
+/// the "debiased" verdict correctly reverts to inconsistency (small p).
+pub fn directional_consistency_p_value<R: Rng>(
+    angles: &[f64],
+    sel: &SelectionFunction,
+    n_mc: usize,
+    rng: &mut R,
+) -> f64 {
+    assert!(!angles.is_empty(), "need a non-empty sample");
+    let n = angles.len();
+    let resultant = |xs: &[f64]| {
+        let c = xs.iter().map(|a| a.cos()).sum::<f64>() / xs.len() as f64;
+        let s = xs.iter().map(|a| a.sin()).sum::<f64>() / xs.len() as f64;
+        (c, s)
+    };
+    let (c_obs, s_obs) = resultant(angles);
+    let w_max = sel.weight_max();
+
+    let mut pts = Vec::with_capacity(n_mc);
+    let mut sample = vec![0.0_f64; n];
+    for _ in 0..n_mc {
+        for x in sample.iter_mut() {
+            *x = sel.draw(rng, w_max);
+        }
+        pts.push(resultant(&sample));
+    }
+
+    // Null-cloud mean and covariance.
+    let m = n_mc as f64;
+    let (mc, ms) = (
+        pts.iter().map(|p| p.0).sum::<f64>() / m,
+        pts.iter().map(|p| p.1).sum::<f64>() / m,
+    );
+    let (mut vcc, mut vss, mut vcs) = (0.0, 0.0, 0.0);
+    for &(c, sv) in &pts {
+        vcc += (c - mc) * (c - mc);
+        vss += (sv - ms) * (sv - ms);
+        vcs += (c - mc) * (sv - ms);
+    }
+    vcc /= m;
+    vss /= m;
+    vcs /= m;
+    let det = (vcc * vss - vcs * vcs).max(1e-30);
+    let maha = |c: f64, sv: f64| {
+        let (dc, ds) = (c - mc, sv - ms);
+        (vss * dc * dc - 2.0 * vcs * dc * ds + vcc * ds * ds) / det
+    };
+    let d_obs = maha(c_obs, s_obs);
+    let count = pts.iter().filter(|&&(c, sv)| maha(c, sv) >= d_obs).count();
+    (count + 1) as f64 / (n_mc + 1) as f64
+}
+
 /// Run the full comparison: naive Rayleigh p against uniformity, and the
 /// bias-aware consistency p against isotropic-times-selection.
 pub fn run_critique<R: Rng>(
@@ -202,6 +268,69 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::data::etno::longitudes_of_perihelion;
+
+    /// The R̄-only consistency statistic is PHASE-BLIND: its null depends
+    /// only on the selection amplitudes, so rotating the lobe 90° off the
+    /// cluster leaves the R̄-consistency verdict unchanged — the flip is
+    /// decided entirely by the assumed contrast. The direction-aware
+    /// statistic sees the mis-phased lobe: the observed resultant vector is
+    /// then far from the null cloud and the flip correctly fails.
+    #[test]
+    fn flip_fails_with_lobe_rotated_off_the_cluster() {
+        let varpis = longitudes_of_perihelion();
+        let rotated = SelectionFunction {
+            phi1: (52.0 + 90.0) * DEG2RAD,
+            phi2: (52.0 + 90.0) * DEG2RAD,
+            ..SelectionFunction::default()
+        };
+
+        // Phase-blindness of the R̄-only statistic (a property, not a virtue).
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2021);
+        let p_rbar = consistency_p_value(&varpis, &rotated, 4000, &mut rng);
+        assert!(
+            p_rbar > 0.05,
+            "R-bar-only consistency is phase-blind; got p = {p_rbar:.3}"
+        );
+
+        // The direction-aware statistic exposes the contingency.
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2021);
+        let p_dir = directional_consistency_p_value(&varpis, &rotated, 4000, &mut rng);
+        assert!(
+            p_dir < 0.05,
+            "rotated-lobe directional consistency p = {p_dir:.3}: the \
+             debiasing flip should FAIL with a mis-phased lobe"
+        );
+
+        // And with the documented (aligned) lobe the observation is inside
+        // the null cloud: the flip stands under the direction-aware test.
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2021);
+        let p_aligned =
+            directional_consistency_p_value(&varpis, &SelectionFunction::default(), 4000, &mut rng);
+        assert!(
+            p_aligned > 0.05,
+            "aligned-lobe directional consistency p = {p_aligned:.3}"
+        );
+    }
+
+    /// The flip also weakens with the lobe amplitude: at A₁ = 0.3 (a
+    /// peak-to-trough contrast ~1.9 instead of ~10) the same phase no
+    /// longer produces the published consistency band.
+    #[test]
+    fn flip_weakens_with_lobe_amplitude() {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2021);
+        let varpis = longitudes_of_perihelion();
+        let strong = consistency_p_value(&varpis, &SelectionFunction::default(), 4000, &mut rng);
+        let weak_sel = SelectionFunction {
+            a1: 0.3,
+            ..SelectionFunction::default()
+        };
+        let weak = consistency_p_value(&varpis, &weak_sel, 4000, &mut rng);
+        assert!(
+            weak < strong,
+            "consistency p should fall with amplitude: A1=0.9 -> {strong:.3}, A1=0.3 -> {weak:.3}"
+        );
+    }
+
     use rand::rngs::StdRng;
     use rand::SeedableRng;
     use uom::si::angle::radian;
