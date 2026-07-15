@@ -17,17 +17,23 @@ pub struct KnownTno {
 }
 
 /// Return the three key high-inclination TNOs discussed in the paper.
+///
+/// Elements re-transcribed from JPL SBDB 2026-07. The previous table carried
+/// wrong angular elements for four of five objects (e.g. Drac's ω duplicated
+/// its node; Niku's ω off by 240°) and a "2013 LA2" row matching no real
+/// object — the real 2013 LA2 is a ~5.7 AU retrograde centaur, so that row
+/// was dropped.
 pub fn paper_tnos() -> Vec<KnownTno> {
     vec![
         KnownTno {
             name: "Drac",
             designation: "2008 KV42",
             elements: OrbitalElements {
-                a: 41.4,
-                e: 0.49,
-                i: 103.4 * DEG2RAD,
-                omega: 262.8 * DEG2RAD,
-                omega_big: 260.9 * DEG2RAD,
+                a: 41.5,
+                e: 0.491,
+                i: 103.0 * DEG2RAD,
+                omega: 133.0 * DEG2RAD,
+                omega_big: 261.0 * DEG2RAD,
                 mean_anomaly: 0.0,
             },
         },
@@ -36,10 +42,10 @@ pub fn paper_tnos() -> Vec<KnownTno> {
             designation: "2011 KT19",
             elements: OrbitalElements {
                 a: 35.6,
-                e: 0.33,
-                i: 110.1 * DEG2RAD,
-                omega: 83.4 * DEG2RAD,
-                omega_big: 243.8 * DEG2RAD,
+                e: 0.333,
+                i: 110.0 * DEG2RAD,
+                omega: 322.0 * DEG2RAD,
+                omega_big: 244.0 * DEG2RAD,
                 mean_anomaly: 0.0,
             },
         },
@@ -47,41 +53,30 @@ pub fn paper_tnos() -> Vec<KnownTno> {
             name: "2016 NM56",
             designation: "2016 NM56",
             elements: OrbitalElements {
-                a: 74.0,
-                e: 0.88,
+                a: 73.3,
+                e: 0.856,
                 i: 144.0 * DEG2RAD,
-                omega: 130.0 * DEG2RAD,
-                omega_big: 250.0 * DEG2RAD,
+                omega: 346.0 * DEG2RAD,
+                omega_big: 350.0 * DEG2RAD,
                 mean_anomaly: 0.0,
             },
         },
     ]
 }
 
-/// Additional high-inclination centaurs and TNOs for extended comparison.
+/// Additional high-inclination centaurs and TNOs for extended comparison
+/// (JPL SBDB 2026-07 elements).
 pub fn extended_high_i_objects() -> Vec<KnownTno> {
     let mut objects = paper_tnos();
     objects.push(KnownTno {
         name: "2010 WG9",
         designation: "2010 WG9",
         elements: OrbitalElements {
-            a: 53.7,
-            e: 0.65,
-            i: 70.3 * DEG2RAD,
-            omega: 17.9 * DEG2RAD,
-            omega_big: 92.1 * DEG2RAD,
-            mean_anomaly: 0.0,
-        },
-    });
-    objects.push(KnownTno {
-        name: "2013 LA2",
-        designation: "2013 LA2",
-        elements: OrbitalElements {
-            a: 43.4,
-            e: 0.77,
-            i: 152.0 * DEG2RAD,
-            omega: 23.0 * DEG2RAD,
-            omega_big: 66.0 * DEG2RAD,
+            a: 53.5,
+            e: 0.648,
+            i: 70.2 * DEG2RAD,
+            omega: 293.0 * DEG2RAD,
+            omega_big: 92.0 * DEG2RAD,
             mean_anomaly: 0.0,
         },
     });
