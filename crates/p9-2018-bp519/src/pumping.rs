@@ -167,15 +167,17 @@ fn derivative(
     //   ∂H/∂Hz = ∂H/∂i · di/dHz
     // de/dG  = −√(1−e²)/(L e)
     // For Hz = G cos i at fixed G: di/dHz = −1/(G sin i).
-    // For G at fixed Hz: i = acos(Hz/G), di/dG = −cos i/(G sin i) (used via
-    //   the Hz-conjugacy below), giving di/dG|_{Hz} contribution to dω/dt.
+    // For G at fixed Hz: i = acos(Hz/G), so d(cos i)/dG = +Hz/G² and
+    //   di/dG|_{Hz} = +cos i/(G sin i). (A previous version carried a minus
+    //   sign here, which broke H conservation along the flow — verified by
+    //   the conservation test below.)
     let de_dg = if s.e > 1e-9 {
         -(1.0 - s.e * s.e).sqrt() / (big_l * s.e)
     } else {
         0.0
     };
     let di_dg_at_hz = if sin_i > 1e-9 {
-        -cos_i / (g * sin_i)
+        cos_i / (g * sin_i)
     } else {
         0.0
     };
@@ -461,27 +463,44 @@ mod tests {
     }
 
     #[test]
-    fn pumping_grows_with_p9_inclination() {
-        // sin(i₉): a more inclined P9 sets a larger mutual inclination for an
-        // ecliptic scattered particle (i_mutual ≈ i₉) and so pumps the
-        // inclination higher. Compare i₉ = 25° vs 40°.
+    fn moderate_mutual_inclinations_all_pump_into_bp519_band() {
+        // Both moderately excited starts (i_mutual = 25° and 40°) are carried
+        // well into the BP519-like high-inclination band by the secular
+        // cycle, with substantial lift above their starting inclination.
+        // (The corrected Hamiltonian flow does NOT make max-i monotone in the
+        // starting mutual inclination — different (e, i₀) launch onto
+        // different-amplitude cycles: 25° reaches ~71°, 40° reaches ~64°.
+        // The previous monotone assertion was an artifact of a sign error in
+        // the dω/dt chain rule that broke H conservation.)
         let p9 = inclined_p9();
-        let lo = integrate(
-            scattered_particle(250.0, 0.85, 25.0),
-            &p9,
-            PumpConfig::fast(),
-        );
-        let hi = integrate(
-            scattered_particle(250.0, 0.85, 40.0),
-            &p9,
-            PumpConfig::fast(),
-        );
-        assert!(
-            hi.max_inclination().get::<degree>() > lo.max_inclination().get::<degree>() + 3.0,
-            "higher i₉ (mutual inclination) should pump more: {:.1}° vs {:.1}°",
-            hi.max_inclination().get::<degree>(),
-            lo.max_inclination().get::<degree>()
-        );
+        for (i0, floor) in [(25.0, 55.0), (40.0, 55.0)] {
+            let hist = integrate(scattered_particle(250.0, 0.85, i0), &p9, PumpConfig::fast());
+            let max_i = hist.max_inclination().get::<degree>();
+            assert!(
+                max_i > floor && max_i > i0 + 15.0,
+                "i₀ = {i0}° pumps to only {max_i:.1}°"
+            );
+        }
+    }
+
+    #[test]
+    fn hamiltonian_conserved_along_flow() {
+        // The decisive regression for the dω/dt chain-rule sign: the secular
+        // flow must conserve its own Hamiltonian. With the sign error,
+        // |ΔH/H| reached 4.2e-4 over 2000 RK4 steps (growing linearly);
+        // corrected it sits at rounding level.
+        let p9 = inclined_p9();
+        let a = 250.0;
+        let softening = PumpConfig::fast().softening_frac * p9.a;
+        let mut s = scattered_particle(a, 0.85, 40.0).state;
+        let h0 = hamiltonian(a, s, &p9, softening, true);
+        let dt = PumpConfig::fast().dt;
+        for _ in 0..2000 {
+            s = rk4_step(a, s, &p9, dt, softening, true);
+        }
+        let h1 = hamiltonian(a, s, &p9, softening, true);
+        let rel = ((h1 - h0) / h0).abs();
+        assert!(rel < 1e-7, "|ΔH/H| = {rel:.3e} over 2000 steps");
     }
 
     #[test]
