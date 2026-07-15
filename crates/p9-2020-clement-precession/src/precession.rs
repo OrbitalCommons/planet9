@@ -111,12 +111,17 @@ pub fn giant_planet_precession_rate(a_au: f64, e: f64) -> f64 {
 /// an *interior* test particle (the ETNO) by an exterior perturber (Planet
 /// Nine). Using the averaged ring scale a_9_eff = a_9 √(1 − e_9²):
 ///
-///   dϖ_9/dt = (3/4) n (m_9/M_⊙) (a/a_9_eff)³ (1 − e²)^{-1/2}
+///   dϖ_9/dt = (3/4) n (m_9/M_⊙) (a/a_9_eff)³ √(1 − e²)
+///
+/// Lagrange's equation on the exterior-ring quadrupole
+/// R = GM₉ a² (2 + 3e²)/(8 a₉³ η₉³) gives a √(1 − e²) factor that
+/// MULTIPLIES (a previous version divided by it — off by 1/(1−e²), 3.4× at
+/// e = 0.84 — which the exterior numerical cross-check below now catches).
 pub fn p9_precession_rate(a_au: f64, e: f64, p9: &P9Params) -> f64 {
     let n = mean_motion(a_au);
     let a9_eff = p9.a * (1.0 - p9.e * p9.e).sqrt();
     let alpha = a_au / a9_eff;
-    0.75 * n * p9.mass_solar() * alpha.powi(3) / (1.0 - e * e).sqrt()
+    0.75 * n * p9.mass_solar() * alpha.powi(3) * (1.0 - e * e).sqrt()
 }
 
 /// Combined giant-planet + Planet Nine apsidal precession rate (rad/day).
@@ -158,6 +163,27 @@ pub fn precession_rate_numerical_interior(a_au: f64, e: f64, p: Perturber) -> f6
     let a_p = p.a_au;
     // Circular perturber: axisymmetric ring, the correct comparison for the
     // analytic interior formula (which assumes e_p = 0).
+    let e_p = 0.0;
+    let n_quad = 256;
+    let h = 1.0e-4;
+
+    let ham = |ecc: f64| {
+        numerical_secular_hamiltonian(a_au, ecc, 0.0, 0.0, 0.0, a_p, e_p, gm_p, n_quad, 0.0)
+    };
+    let dh_de = (ham(e + h) - ham(e - h)) / (2.0 * h);
+
+    let big_l = (GM_SUN * a_au).sqrt();
+    let de_dg = -(1.0 - e * e).sqrt() / (big_l * e);
+    dh_de * de_dg
+}
+
+/// Exterior-perturber counterpart of [`precession_rate_numerical_interior`]:
+/// the particle is interior, the (circular) ring exterior at `a_p`. Used to
+/// validate `p9_precession_rate`'s analytic form — this is exactly the
+/// missing cross-check that would have caught the inverted eccentricity
+/// factor.
+pub fn precession_rate_numerical_exterior(a_au: f64, e: f64, mass_solar: f64, a_p: f64) -> f64 {
+    let gm_p = mass_solar * GM_SUN;
     let e_p = 0.0;
     let n_quad = 256;
     let h = 1.0e-4;
@@ -321,5 +347,24 @@ mod tests {
         let p2 = precession_period_years(4.0e-12);
         assert_relative_eq!(p / p2, 2.0, epsilon = 1e-12);
         assert!(precession_period_years(0.0).is_infinite());
+    }
+
+    #[test]
+    fn analytic_p9_rate_matches_exterior_gauss_ring() {
+        // Small alpha, circular exterior ring: the analytic exterior rate
+        // must track the exact Gauss-ring finite difference across the
+        // sample's eccentricity range — including e = 0.84, where the
+        // pre-fix inverted factor was 3.35x off.
+        let (a, a_p, m) = (50.0, 700.0, 10.0 * 3.0e-6);
+        for &e in &[0.3, 0.6, 0.84] {
+            let exact = precession_rate_numerical_exterior(a, e, m, a_p).abs();
+            let n = mean_motion(a);
+            let analytic = 0.75 * n * m * (a / a_p).powi(3) * (1.0 - e * e).sqrt();
+            let rel = (analytic - exact).abs() / exact;
+            assert!(
+                rel < 0.03,
+                "e = {e}: analytic {analytic:.3e} vs ring {exact:.3e} (rel {rel:.3})"
+            );
+        }
     }
 }
