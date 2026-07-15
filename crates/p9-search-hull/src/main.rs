@@ -200,6 +200,7 @@ fn main() {
         move |s| {
             1.0 - surveys::exclusion_probability(
                 &surveys_for_scoring,
+                s.ra_deg,
                 s.dec_deg,
                 s.gal_b_deg,
                 s.v_mag,
@@ -243,7 +244,7 @@ fn main() {
             gal_b[idx] = galactic_lat_at(ra, dec);
 
             // Coverage hull at this direction.
-            let cov = surveys::cell_coverage(&surveys, dec, gal_b[idx]);
+            let cov = surveys::cell_coverage(&surveys, ra, dec, gal_b[idx]);
             best_depth[idx] = cov.best_depth;
             best_survey[idx] = cov.best_survey;
             if let Some(d) = cov.best_depth {
