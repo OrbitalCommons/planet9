@@ -253,7 +253,7 @@ mod tests {
         // The paper's premise: at the favorable corner of the grid
         // (10 M⊕, 500 AU, warm end T = 50 K) the predicted fluxes cross
         // both survey limits. Pinned values: F_60 ≈ 0.39 Jy ≥ 0.2 Jy
-        // (IRAS), F_90 ≈ 0.59 Jy ≥ 0.55 Jy (AKARI).
+        // (IRAS), F_90 ≈ 0.59 Jy ≥ 0.21 Jy (AKARI-MUSL).
         let params = P9ThermalParams {
             mass_earth: 10.0,
             distance_au: 500.0,
@@ -268,6 +268,28 @@ mod tests {
             is_detectable(&params, &IrasSurvey::default(), &AkariFisSurvey::default());
         assert!(iras_ok, "IRAS should detect the favorable corner");
         assert!(akari_ok, "AKARI should detect the favorable corner");
+    }
+
+    #[test]
+    fn seven_earth_mass_crosses_both_limits_near_510_au() {
+        // Phan et al. Fig. 3's actual premise, only reachable with the MUSL
+        // depth: even 7 M⊕ (T = 50 K) crosses BOTH survey limits at
+        // ~500-520 AU. With the old BSC 0.55 Jy reading, AKARI missed this
+        // by ~2.6x.
+        let params = P9ThermalParams {
+            mass_earth: 7.0,
+            distance_au: 510.0,
+            t_eff: 50.0,
+        };
+        let (iras_ok, akari_ok) =
+            is_detectable(&params, &IrasSurvey::default(), &AkariFisSurvey::default());
+        assert!(iras_ok, "IRAS at 7 M⊕/510 AU");
+        assert!(akari_ok, "AKARI-MUSL at 7 M⊕/510 AU");
+        let f90 = params.flux_density_jy(90.0e-6);
+        assert!(
+            f90 < crate::survey_model::AKARI_BSC_V1_LIMIT_JY,
+            "f90 = {f90:.3} Jy — below the 0.55 Jy BSC reading the old model used"
+        );
     }
 
     #[test]
