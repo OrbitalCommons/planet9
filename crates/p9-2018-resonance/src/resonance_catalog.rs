@@ -46,14 +46,20 @@ impl Resonance {
         au(a_p9 * self.period_ratio().powf(2.0 / 3.0))
     }
 
-    /// Whether this is an N/1 period ratio (integer period ratio, p=1).
+    /// Whether this is an N/1 resonance: the (interior) particle completes N
+    /// orbits per Planet Nine orbit, i.e. T_particle/T_p9 = q/p = 1/N — so
+    /// **q = 1** (with p = N). The 1:1 co-orbital counts. A previous version
+    /// tested p == 1, which selects exterior integer-period-ratio orbits and
+    /// inverted the whole N/1-vs-high-order classification (10:1, 11:1, 20:1
+    /// were "high-order" while 1:2, 1:3 were "N/1").
     pub fn is_n_over_1(&self) -> bool {
-        self.p == 1
+        self.q == 1
     }
 
-    /// Whether this is an N/2 period ratio (half-integer period ratio, p=2).
+    /// Whether this is an N/2 resonance (particle completes N orbits per two
+    /// P9 orbits, N odd in reduced form): **q = 2**.
     pub fn is_n_over_2(&self) -> bool {
-        self.p == 2
+        self.q == 2
     }
 
     /// Whether this is N/1 or N/2 (the "simple" resonances).
@@ -257,13 +263,32 @@ mod tests {
 
     #[test]
     fn test_resonance_classification() {
-        // p=1 → N/1 (integer period ratio)
-        assert!(Resonance::new(1, 3).is_n_over_1());
-        // p=2 → N/2 (half-integer period ratio)
-        assert!(Resonance::new(2, 5).is_n_over_2());
-        // p=5 → high-order
+        // q=1 → N/1: an interior particle doing N orbits per P9 orbit.
+        assert!(Resonance::new(3, 1).is_n_over_1());
+        assert!(Resonance::new(20, 1).is_n_over_1());
+        // q=2 → N/2 (half-integer commensurability).
+        assert!(Resonance::new(5, 2).is_n_over_2());
+        // Exterior integer ratios are NOT the paper's N/1 class.
+        assert!(!Resonance::new(1, 3).is_n_over_1());
+        assert!(!Resonance::new(2, 5).is_n_over_2());
+        // q=3 → high-order.
         assert!(!Resonance::new(5, 3).is_simple());
         assert_eq!(Resonance::new(5, 3).order(), 2);
+    }
+
+    #[test]
+    fn most_populated_resonances_are_simple() {
+        // The paper's occupied resonances (10:1, 11:1, 20:1, 5:2, ...) must
+        // classify as N/1 or N/2 — the inverted classifier called them all
+        // "high-order".
+        let n_simple = most_populated_resonances()
+            .iter()
+            .filter(|r| r.is_simple())
+            .count();
+        assert!(
+            n_simple >= 4,
+            "only {n_simple} of the populated resonances classify simple"
+        );
     }
 
     #[test]
