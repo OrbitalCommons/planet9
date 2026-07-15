@@ -640,6 +640,19 @@ derived quantities:
 - No shared simulation snapshot driver in p9-core; the 2016-crate run loops were harmonized in
   place but remain three copies.
 
+### 23b. p9-2024-siraj-orbit — MAP 7.0 M⊕ from the vetted 10-object sample vs the published 4.4 M⊕ (stable-21)
+
+The ridge normalization is a one-point calibration frozen to the paper's own headline
+(κ_REF ≈ 1.09 from 2.7σ at n = 21 → the published 4.4 M⊕/290 AU³); the input sample's von Mises
+κ̂ then sets S_obs relative to that anchor. The vetted `p9_core::data::etno` 10-object ϖ sample
+is more concentrated than Siraj, Chyba & Tremaine's stable-21 (κ̂ ≈ 1.7), so the inferred MAP is
+κ̂/κ_REF ≈ 1.6× heavier at the same a_p — a sample difference, not a modeling residual. A
+previous version calibrated from the live sample's κ̂, which cancelled the data identically and
+returned the published orbit for any input; falsifiability tests (uniform input ⇒ collapsed
+mass, tighter input ⇒ heavier MAP) now pin the corrected behavior.
+- Pinned: `crates/p9-2024-siraj-orbit/src/lib.rs` (`test_map_tracks_sample_concentration`),
+  `src/posterior.rs` (`test_inference_is_falsifiable`).
+
 ### 24. p9-2025-stacking — analytic matched-filter / metric reproduction, not a pixel pipeline
 
 Geringer-Sameth et al. (2025) build a full image-stacking search with an orbit-
