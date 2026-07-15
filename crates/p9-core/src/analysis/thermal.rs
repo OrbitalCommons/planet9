@@ -85,21 +85,24 @@ pub fn thermal_flux_jy(t: f64, radius_m: f64, distance_au: f64, nu_hz: f64) -> f
 }
 
 /// Reflected-sunlight flux density (Jy) of a body of radius `radius_m` and
-/// reflectance `albedo` at heliocentric distance `distance_au`, observed near
-/// opposition (Δ = d − 1 AU, floored at 1 AU), evaluated at frequency `nu_hz`.
+/// **geometric** albedo `albedo` at heliocentric distance `distance_au`,
+/// observed near opposition (Δ = d − 1 AU, floored at 1 AU), evaluated at
+/// frequency `nu_hz`.
 ///
 /// The Sun is a blackbody at [`T_SUN`]; the solar flux at the planet is
-/// π B_ν(T_sun) (R_sun / r)². The planet intercepts a disc πR_p², reflects a
-/// fraction `albedo` into ~2π sr (Lambert factor absorbed into the geometric
-/// albedo), and that reradiated flux falls as 1/Δ² to the observer:
+/// π B_ν(T_sun) (R_sun / r)². By definition of the geometric albedo p, the
+/// opposition flux received by the observer is
 ///
-///   F_refl = albedo · [π B_ν(T_sun) (R_sun/r)²] · (R_p² / (4 Δ²)).
+///   F_refl = p · [π B_ν(T_sun) (R_sun/r)²] · (R_p / Δ)².
+///
+/// (No isotropic /4 — that factor belongs to the Bond-albedo phase-averaged
+/// form. This convention is consistent with `analysis::photometry`'s
+/// H + 5·log₁₀(rΔ) magnitude law; see the cross-check test below.)
 pub fn reflected_flux_jy(albedo: f64, radius_m: f64, distance_au: f64, nu_hz: f64) -> f64 {
     let bnu_sun = planck_bnu(T_SUN, nu_hz);
     let solar_flux_at_planet = PI * bnu_sun * (R_SUN_M / (distance_au * AU_M)).powi(2);
     let delta_m = (distance_au - 1.0).max(1.0) * AU_M;
-    let reflected =
-        albedo * solar_flux_at_planet * (radius_m * radius_m) / (4.0 * delta_m * delta_m);
+    let reflected = albedo * solar_flux_at_planet * (radius_m * radius_m) / (delta_m * delta_m);
     reflected / JY
 }
 
@@ -197,6 +200,35 @@ mod tests {
         let a = thermal_flux_jy(40.0, 1.0e7, 500.0, 150e9);
         let b = thermal_flux_jy(40.0, 2.0e7, 500.0, 150e9);
         assert!((b / a - 4.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn reflected_flux_matches_photometry_magnitude_law() {
+        // The same body through the two core reflected-light paths must agree:
+        // Neptune (R = 3.865 R⊕, p_V = 0.41, r = 30.07 AU) at opposition.
+        // The blackbody-Sun approximation is good to ~0.1 mag in V; before the
+        // /4 fix these paths disagreed by exactly 2.5·log10(4) = 1.505 mag.
+        use crate::analysis::photometry::{
+            absolute_magnitude, apparent_magnitude, ALBEDO_NEPTUNE, NEPTUNE_RADIUS_EARTH,
+        };
+        const R_EARTH_M: f64 = 6.371e6;
+        const V_BAND_HZ: f64 = C_LIGHT / 0.55e-6;
+        const V_VEGA_ZP_JY: f64 = 3636.0;
+
+        let r_au = 30.07;
+        let radius_m = NEPTUNE_RADIUS_EARTH * R_EARTH_M;
+        let flux = reflected_flux_jy(ALBEDO_NEPTUNE, radius_m, r_au, V_BAND_HZ);
+        let v_thermal = flux_to_magnitude(flux, V_VEGA_ZP_JY);
+
+        let h = absolute_magnitude(radius_m / 1.0e3, ALBEDO_NEPTUNE);
+        let v_phot = apparent_magnitude(h, r_au, r_au - 1.0);
+
+        assert!(
+            (v_thermal - v_phot).abs() < 0.2,
+            "thermal-path V = {v_thermal:.2} vs photometry-path V = {v_phot:.2}"
+        );
+        // And both land near Neptune's actual V ≈ 7.8.
+        assert!((v_phot - 7.8).abs() < 0.3, "V_phot = {v_phot:.2}");
     }
 
     #[test]

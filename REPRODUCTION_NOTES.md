@@ -214,11 +214,14 @@ overtakes reflected sunlight above ≈175 K (at 15 M⊕, 400 AU), far hotter tha
 So the W1 detectability this crate computes is, for a cold body, set by **reflected sunlight**;
 the thermal term is retained and would dominate for an implausibly warm planet. (The real search's
 W2 4.6 µm band is more thermally favorable; the shared survey table pins the deeper, bluer W1.)
-- Consequence for the exclusion: the reflected-light W1 reach is ≈186 AU (5 M⊕) to ≈222 AU
+- Consequence for the exclusion: the reflected-light W1 reach is ≈263 AU (5 M⊕) to ≈313 AU
   (18 M⊕), only clipping the near edge of the Brown & Batygin posterior (q ≈ 300 AU), so the
-  computed exclusion fraction over that posterior is a few percent (≈2% at 6.2 M⊕, ≈7% at 18 M⊕)
+  computed exclusion fraction over that posterior is ≈7% at 6.2 M⊕ and ≈16% at 18 M⊕
   — far below the optical ZTF 56%. This is an honest finding, not a tuned number; it increases
-  monotonically with assumed mass as required.
+  monotonically with assumed mass as required. (Reach/exclusion re-pinned after fixing the
+  geometric-albedo /4 error in `p9_core::analysis::thermal::reflected_flux_jy`, which had made
+  all reflected-light magnitudes 1.5 mag too faint; the two core reflected-light paths are now
+  cross-pinned against each other on Neptune.)
 - Pinned: `crates/p9-2018-wise-search/src/thermal_model.rs` (Planck/reflected model, W1 zero
   point 309.54 Jy), `detectability.rs` (finite max-distance bisection), `exclusion.rs`.
 
