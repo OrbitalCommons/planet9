@@ -15,13 +15,14 @@
 //!     the flanks. Objects already present in the Brown sample are NOT
 //!     duplicated here.
 //!
-//! Provenance of the extended table: distant high-e TNOs from the Sheppard &
-//! Trujillo / Minor Planet Center distant-object lists (osculating elements,
-//! a and e to map perihelion; angles are not used here so are omitted). Live
-//! JPL SBDB cross-check 2026-06: q values match within rounding. As with the
-//! core table these pin paper-epoch solutions and may drift from live SBDB as
-//! arcs lengthen — do not "fix" toward current SBDB without re-pinning the
-//! gap regression.
+//! Provenance of the extended table: osculating elements re-transcribed from
+//! JPL SBDB 2026-07 (a and e to map perihelion; angles are not used here so
+//! are omitted). The previous table carried several rows whose elements
+//! matched no JPL solution — most damagingly 2015 KH163 coded into the gap at
+//! q ≈ 58 (real q ≈ 40) and the genuine gap object 2021 RR205 coded onto the
+//! high flank at q ≈ 89 (real q ≈ 55.6) — which manufactured a deeper deficit
+//! than the data support. 2014 SS349 (a ≈ 146) and 2010 ER65 (a ≈ 98) fail
+//! the a ≳ 150 AU membership criterion outright and were removed.
 
 use p9_core::data::etno::BROWN_2017_SAMPLE;
 use p9_core::units::{au, Length};
@@ -59,70 +60,60 @@ impl DistantTno {
 /// q ≳ 40 AU, plus the canonical Sednoids. The deliberate sparseness in
 /// q ≈ 50–65 AU is the observed gap, not a curation choice — these are the
 /// known distant high-e objects in this q range.
-pub const EXTENDED_DISTANT_TNOS: [DistantTno; 12] = [
-    // --- Low-q scattering-coupled ETNOs (q ~ 40-50 AU) ---
+pub const EXTENDED_DISTANT_TNOS: [DistantTno; 10] = [
+    // --- Low-q scattering-coupled ETNOs (q ~ 35-50 AU) ---
     DistantTno {
         name: "2014 FE72",
-        a: 1560.0,
-        e: 0.973,
-    }, // q ~ 42
+        a: 2690.0,
+        e: 0.987,
+    }, // q ~ 36 (scattering)
     DistantTno {
         name: "2015 KG163",
-        a: 680.0,
-        e: 0.940,
-    }, // q ~ 41
+        a: 640.0,
+        e: 0.937,
+    }, // q ~ 40.5
     DistantTno {
         name: "2013 SY99",
-        a: 730.0,
-        e: 0.932,
-    }, // q ~ 50
-    DistantTno {
-        name: "2010 ER65",
-        a: 295.0,
-        e: 0.835,
-    }, // q ~ 49
+        a: 813.0,
+        e: 0.939,
+    }, // q ~ 49.9 (top of the low flank)
     DistantTno {
         name: "2014 WB556",
-        a: 290.0,
-        e: 0.847,
-    }, // q ~ 44
+        a: 285.0,
+        e: 0.850,
+    }, // q ~ 42.8
     DistantTno {
         name: "2016 SD106",
-        a: 350.0,
-        e: 0.870,
-    }, // q ~ 46
+        a: 357.0,
+        e: 0.881,
+    }, // q ~ 42.7
     DistantTno {
         name: "2015 GT50",
-        a: 312.0,
-        e: 0.876,
-    }, // q ~ 39 (just below floor, scattering edge)
+        a: 314.0,
+        e: 0.878,
+    }, // q ~ 38.3 (just below floor, scattering edge)
     DistantTno {
         name: "2002 GB32",
-        a: 207.0,
-        e: 0.823,
-    }, // q ~ 37 (scattering)
-    // --- Gap region (q ~ 50-65 AU): deliberately sparse, the observed deficit.
+        a: 205.0,
+        e: 0.828,
+    }, // q ~ 35.3 (scattering)
     DistantTno {
         name: "2015 KH163",
-        a: 153.0,
-        e: 0.620,
-    }, // q ~ 58 (a rare gap-region object)
+        a: 151.0,
+        e: 0.735,
+    }, // q ~ 39.9 (low flank — NOT a gap object; the old table miscoded it at q ~ 58)
+    // --- Gap region (q ~ 50-65 AU): sparse, the observed deficit.
+    DistantTno {
+        name: "2021 RR205",
+        a: 949.0,
+        e: 0.941,
+    }, // q ~ 55.6 (a genuine gap-region object)
     // --- High-q detached / inner-Oort-cloud Sednoids (q ~ 65+ AU) ---
     DistantTno {
         name: "2015 TG387",
-        a: 1170.0,
-        e: 0.940,
-    }, // q ~ 70 (Leleakuhonua, "the Goblin")
-    DistantTno {
-        name: "2014 SS349",
-        a: 295.0,
-        e: 0.776,
-    }, // q ~ 66, detached IOC edge
-    DistantTno {
-        name: "2021 RR205",
-        a: 990.0,
-        e: 0.910,
-    }, // q ~ 89 (deep IOC)
+        a: 1350.0,
+        e: 0.952,
+    }, // q ~ 64.7 (Leleakuhonua — at the gap's upper edge)
 ];
 
 /// The full perihelion sample (AU): perihelia of the vetted Brown sample plus
@@ -136,6 +127,24 @@ pub fn observed_perihelia() -> Vec<f64> {
             EXTENDED_DISTANT_TNOS
                 .iter()
                 .map(|t| (t.perihelion_typed() / au(1.0)).value),
+        )
+        .collect()
+}
+
+/// The perihelion sample as it stood at the paper's 2021 epoch: excludes
+/// 2021 RR205 (announced 2022, after Oldroyd & Trujillo's submission), whose
+/// q ≈ 55.6 AU sits squarely inside the published gap window. Use this for
+/// reproducing the paper's statistic; use [`observed_perihelia`] for the
+/// current state of knowledge (where the gap has partially filled in).
+pub fn paper_epoch_perihelia() -> Vec<f64> {
+    BROWN_2017_SAMPLE
+        .iter()
+        .map(|k| k.perihelion())
+        .chain(
+            EXTENDED_DISTANT_TNOS
+                .iter()
+                .filter(|t| t.name != "2021 RR205")
+                .map(|t| t.a * (1.0 - t.e)),
         )
         .collect()
 }
@@ -216,11 +225,23 @@ mod tests {
     fn sample_spans_both_flanks_of_the_gap() {
         let qs = observed_perihelia();
         // The combined sample has both a low-q scattering flank (q < 50)
-        // and a high-q detached flank (q > 65).
+        // and a high-q detached flank (q > 65). With SBDB-verified elements
+        // the strict high flank is thin — Sedna and 2012 VP113 (2015 TG387's
+        // current solution sits at q = 64.8, the gap window's upper edge).
         let low = qs.iter().filter(|&&q| q < 50.0).count();
         let high = qs.iter().filter(|&&q| q >= IOC_Q_FLOOR_AU).count();
         assert!(low >= 5, "scattering flank only {low} objects");
-        assert!(high >= 3, "detached flank only {high} objects");
+        assert!(high >= 2, "detached flank only {high} objects");
+    }
+
+    #[test]
+    fn paper_epoch_sample_excludes_only_rr205() {
+        let all = observed_perihelia();
+        let paper = paper_epoch_perihelia();
+        assert_eq!(all.len(), paper.len() + 1);
+        // The excluded object is the in-gap 2021 RR205 (q ~ 55.6).
+        assert!(all.iter().any(|&q| (q - 55.6).abs() < 0.5));
+        assert!(!paper.iter().any(|&q| (q - 55.6).abs() < 0.5));
     }
 
     #[test]
