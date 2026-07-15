@@ -334,11 +334,20 @@ to ~1e-8.
 Oldroyd & Trujillo (2021) report a deficit in the perihelion distribution of distant TNOs at
 q ≈ 50–65 AU separating the Neptune-coupled scattering ETNOs (low q) from the detached
 inner-Oort-cloud Sednoids (high q). The crate bins the perihelia of the vetted
-`p9_core::data::etno::BROWN_2017_SAMPLE` plus a documented `EXTENDED_DISTANT_TNOS` table and
-computes a dip statistic (gap-window count density ÷ mean flank density). The observed sample
-shows a deep deficit: dip ratio ≈ 0.10 (gap density 0.067 obj/AU vs flank densities 1.08 low /
-0.20 high), and the minimum-density interior bin lands at q = 52.5 AU, inside the published
-50–65 AU window (centre 57.5 AU, within tolerance). A seeded two-population synthetic draw
+`p9_core::data::etno::BROWN_2017_SAMPLE` plus a documented `EXTENDED_DISTANT_TNOS` table
+(re-transcribed from JPL SBDB 2026-07 after several rows were found to match no real orbit
+solution — the old table had miscoded 2015 KH163 *into* the gap at q ≈ 58 vs its real 39.9,
+and the genuine gap object 2021 RR205 *out* of it at q ≈ 89 vs its real 55.6) and computes a
+dip statistic (gap-window count density ÷ mean flank density). Two honest epochs:
+
+- **Paper epoch** (`paper_epoch_perihelia()`, excludes the post-submission discovery
+  2021 RR205): the published two-sided deficit reproduces — dip ratio ≈ 0.12, gap density
+  below both flanks, minimum-density bin at q = 52.5 AU inside the published 50–65 AU window.
+- **Current knowledge** (`observed_perihelia()`): 2021 RR205 (q = 55.6) sits squarely in the
+  window and 2015 TG387's current solution (q = 64.8) falls at its upper edge, so the window
+  holds 2 objects — still a deficit relative to the dense low flank (dip ≈ 0.25) but no longer
+  emptier than the (thin: Sedna, 2012 VP113) high flank. The gap has partially filled in since
+  publication, which matters directly for the sednoid/IOC boundary in the search-space work. A seeded two-population synthetic draw
 reproduces the same gap (dip ratio < 0.6) while a single continuous uniform control does not
 (dip ratio ≈ 1) — concretizing the paper's "two populations, not one continuous distribution"
 argument. The high-q scattering edge is tied to `p9_core::analysis::resonance::critical_perihelion`
@@ -351,7 +360,8 @@ the *gap statistic* (a real deficit at the published q and a two-vs-one-populati
 the full debiased completeness argument, and we do not assert the paper's ∼20% relative-abundance
 prediction as a computed number (kept as `published::GAP_RELATIVE_ABUNDANCE` for reference).
 - Pinned: `crates/p9-2021-perihelion-gap/src/distribution.rs`
-  (`observed_sample_has_a_perihelion_deficit_at_50_to_65`,
+  (`paper_epoch_sample_has_a_perihelion_deficit_at_50_to_65`,
+  `current_sample_gap_partially_filled_by_post_paper_discoveries`,
   `observed_gap_center_matches_published_window`), `src/synthetic.rs`
   (`two_population_shows_a_gap`, `single_continuous_population_has_no_gap`), `src/boundaries.rs`
   (`scattering_boundary_sits_below_the_gap`).

@@ -176,21 +176,47 @@ mod tests {
     // ---- Headline reproduction: the gap in the OBSERVED distant-TNO sample ----
 
     #[test]
-    fn observed_sample_has_a_perihelion_deficit_at_50_to_65() {
+    fn paper_epoch_sample_has_a_perihelion_deficit_at_50_to_65() {
         use crate::published::{GAP_Q_HIGH_AU, GAP_Q_LOW_AU};
-        use crate::sample::observed_perihelia;
+        use crate::sample::paper_epoch_perihelia;
 
-        let qs = observed_perihelia();
+        // At the paper's 2021 epoch (before 2021 RR205) the vetted sample
+        // shows the published two-sided deficit at q = 50-65 AU: dip 0.123,
+        // below both flank densities.
+        let qs = paper_epoch_perihelia();
         let d = dip_statistic(&qs, GAP_Q_LOW_AU, GAP_Q_HIGH_AU, 12.0);
-        // The real, vetted sample shows a strong deficit at q = 50-65 AU:
-        // the count density there is far below both flanks.
         assert!(
-            d.dip_ratio < 0.3,
-            "observed sample dip_ratio = {} (expected a deep deficit)",
+            d.dip_ratio < 0.2,
+            "paper-epoch dip_ratio = {} (expected a deep deficit)",
             d.dip_ratio
         );
         assert!(d.gap_density < d.low_flank_density);
         assert!(d.gap_density < d.high_flank_density);
+    }
+
+    #[test]
+    fn current_sample_gap_partially_filled_by_post_paper_discoveries() {
+        use crate::published::{GAP_Q_HIGH_AU, GAP_Q_LOW_AU};
+        use crate::sample::observed_perihelia;
+
+        // With SBDB-verified elements and the post-paper discovery 2021 RR205
+        // (q = 55.6) the window holds two objects (RR205, plus 2015 TG387 at
+        // the q = 64.8 upper edge). The deficit relative to the dense low
+        // flank persists (dip 0.246), but the window is no longer emptier
+        // than the (very thin) high flank — the gap has partially filled in.
+        let qs = observed_perihelia();
+        let d = dip_statistic(&qs, GAP_Q_LOW_AU, GAP_Q_HIGH_AU, 12.0);
+        assert!(
+            (0.15..0.35).contains(&d.dip_ratio),
+            "current-sample dip_ratio = {}",
+            d.dip_ratio
+        );
+        assert!(d.gap_density < d.low_flank_density);
+        let in_gap = qs
+            .iter()
+            .filter(|&&q| (GAP_Q_LOW_AU..GAP_Q_HIGH_AU).contains(&q))
+            .count();
+        assert_eq!(in_gap, 2, "objects in the 50-65 AU window");
     }
 
     #[test]
