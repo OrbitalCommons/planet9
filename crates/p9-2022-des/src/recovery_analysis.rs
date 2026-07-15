@@ -123,7 +123,15 @@ fn run_recovery(
             omega_big: obj.omega_big,
             mean_anomaly: obj.mean_anomaly,
         });
-        let mags = model.band_magnitudes(obj.mass, r_au);
+        // Table 1's fiducial albedo is "BB21": the per-object catalog albedo
+        // carried on the reference population. Fixed-albedo models use their
+        // own value.
+        let albedo = if model.per_object_albedo {
+            obj.albedo
+        } else {
+            model.albedo
+        };
+        let mags = model.band_magnitudes_with_albedo(obj.mass, r_au, albedo);
 
         let p_detect = match nights {
             Some(nights) => {

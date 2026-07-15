@@ -555,7 +555,7 @@ These are free parameters chosen to match an observable, or assumptions standing
 do not ingest. Each is commented at the definition site; listed here so nobody mistakes them for
 derived quantities:
 
-- `p9-2022-des` `night_usability = 0.29` (`survey_model.rs:162`) — the single calibration knob
+- `p9-2022-des` `night_usability = 0.285` (`survey_model.rs`) — the single calibration knob
   scaling per-night completeness so end-to-end recovery matches the paper; stands in for
   weather/chip-gap/masking losses we don't model per-exposure.
 - `p9-2017-bias` galactic-plane suppression (center crossing σ=40°/floor 0.02, anticenter
