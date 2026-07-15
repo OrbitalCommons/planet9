@@ -12,7 +12,11 @@
 //! - The Monthly Unconfirmed Source List includes sources detected on
 //!   hourly timescales but not confirmed after months — exactly the
 //!   signature expected from a slow-moving solar system object
-//! - Point source sensitivity ~0.55 Jy at 90 µm
+//! - AKARI-MUSL detection limit ~0.21 Jy at 90 µm (Phan et al. 2025
+//!   Table 1 — the MUSL's "twice-deeper flux detection limit" is the
+//!   paper's stated reason for using it; the Bright Source Catalogue
+//!   limits are 0.55/0.44 Jy for v1/v2 and are kept as labelled
+//!   constants below)
 //! - All-sky coverage ~94%
 //! - Positional accuracy ~30" at 90 µm
 
@@ -82,11 +86,22 @@ pub struct AkariFisSurvey {
     pub position_error_arcsec: f64,
 }
 
+/// AKARI-FIS Bright Source Catalogue v1 90 µm detection limit (Jy). NOT the
+/// MUSL limit the paper's search uses — see `AkariFisSurvey::default`.
+pub const AKARI_BSC_V1_LIMIT_JY: f64 = 0.55;
+/// AKARI-FIS Bright Source Catalogue v2 90 µm detection limit (Jy).
+pub const AKARI_BSC_V2_LIMIT_JY: f64 = 0.44;
+
 impl Default for AkariFisSurvey {
     fn default() -> Self {
         Self {
             wavelength_um: 90.0,
-            sensitivity_jy: 0.55,
+            // AKARI-MUSL: ~0.21 Jy (Phan et al. 2025 Table 1). A previous
+            // version used the BSC limit 0.55 Jy, making the 90 µm
+            // detectability model ~2.6x too shallow and misrepresenting the
+            // paper's premise (their Fig. 3 has even 7 M⊕ crossing both
+            // limits near 500-520 AU).
+            sensitivity_jy: 0.21,
             sky_coverage: 0.94,
             position_error_arcsec: 30.0,
         }
@@ -209,7 +224,8 @@ mod tests {
     fn akari_default_matches_paper() {
         let akari = AkariFisSurvey::default();
         assert!((akari.wavelength_um - 90.0).abs() < 1e-10);
-        assert!((akari.sensitivity_jy - 0.55).abs() < 1e-10);
+        assert!((akari.sensitivity_jy - 0.21).abs() < 1e-10);
+        assert!(akari.sensitivity_jy < AKARI_BSC_V2_LIMIT_JY);
     }
 
     #[test]
@@ -279,7 +295,7 @@ mod tests {
     fn akari_detection_threshold() {
         let akari = AkariFisSurvey::default();
         assert!(akari.is_detectable(0.6));
-        assert!(akari.is_detectable(0.55));
-        assert!(!akari.is_detectable(0.54));
+        assert!(akari.is_detectable(0.21));
+        assert!(!akari.is_detectable(0.20));
     }
 }
