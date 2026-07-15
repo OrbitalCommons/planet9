@@ -26,25 +26,30 @@ normalization for the disk potential, or its <2% quote refers to a different dec
 - Pinned: `crates/p9-2024-oort-selfgrav/src/hamiltonian.rs:152` (NOTE comment), test at `:209-222`
   asserts the computed ~7% and the monotone 75→50→30 AU trend.
 
-### 2. p9-2024-panstarrs — combined exclusion: computed 0.807 vs published 0.785
+### 2. p9-2024-panstarrs — combined exclusion: computed 0.713 vs published 0.785
 
 The per-orbit OR over one shared seeded reference population, run through all three survey
-models, gives ZTF 0.608 / DES-unique 0.024 / PS1-unique 0.175 / combined 0.807 vs the published
-0.564 / 0.050 / 0.171 / 0.785. The ZTF over-exclusion (see #3) propagates: a hotter ZTF model
-absorbs orbits DES would otherwise uniquely exclude, which is why DES-unique under-shoots while
-the combined total over-shoots. The published-table arithmetic (0.564 + 0.050 + 0.171 = 0.785)
-is preserved exactly via the shared `p9_core::analysis::surveys` table as a cross-check.
+models, gives ZTF 0.466 / DES-unique 0.036 / PS1-unique 0.211 / combined 0.713 (ephemeris path
+0.466 / 0.036 / 0.206 / 0.708) vs the published 0.564 / 0.050 / 0.171 / 0.785. The population
+now follows BB21's stated catalog assumptions (r₉ = (m₉/3)R⊕, per-object albedo U(0.2, 0.75));
+the remaining ZTF undershoot (see #3) propagates into the combined total. The published-table
+arithmetic (0.564 + 0.050 + 0.171 = 0.785) is preserved exactly via the shared
+`p9_core::analysis::surveys` table as a cross-check.
 - Pinned: `crates/p9-2024-panstarrs/src/combined_exclusion.rs:227-252` (table identity to 1e-10;
   population-based values within stated tolerances).
 
-### 3. p9-2021-ztf — exclusion fraction: computed 0.609 vs published 0.564
+### 3. p9-2021-ztf — exclusion fraction: computed 0.477 vs published 0.564
 
 Our per-orbit model (sky position from elements, δ > −30° footprint, logistic
-magnitude efficiency, linking factor) over-excludes by ~4.5 points. The paper injected synthetic
-P9s into the actual ZTF epoch/pointing/depth stream; our static footprint + global efficiency is
-optimistic about cadence losses. Untuned — no free parameter was adjusted to close the gap.
-- Pinned: `crates/p9-2021-ztf/src/exclusion.rs:74-98` (asserted within 0.08 of 0.564, fed by a
-  seeded p9-2021-orbit reference population).
+magnitude efficiency, linking factor), fed by the BB21-faithful reference population
+(r₉ = (m₉/3)R⊕, per-object albedo U(0.2, 0.75)), under-excludes by ~9 points. The dominant
+remaining model difference is the depth semantics: we treat V = 20.5 as a 50% logistic
+midpoint, while BB21 define it as the 95%-completeness depth for ≥7 detections — an
+effectively deeper survey (issue #255). (Before the population fix the model computed 0.609:
+a reference population ~0.6 mag brighter than BB21's stated assumptions more than compensated
+for the shallow efficiency reading.) Untuned — no free parameter was adjusted to close the gap.
+- Pinned: `crates/p9-2021-ztf/src/exclusion.rs` (asserted within 0.12 of 0.564, fed by the
+  seeded BB21-faithful reference population).
 
 ### 4. p9-2021-orbit — clustering confidence: computed ≈0.989 vs published 0.996
 
@@ -669,8 +674,9 @@ All four published directions reproduce as *monotone* effects: the discoverable
 fraction is in (0, 1); requiring more visits-for-linking never raises it;
 shrinking the declination extent never raises it; the ten-year co-add never
 lowers it. The honest finding behind the magnitudes: the nominal-orbit P9
-population is **bright** — V p50 ≈ 19.9, p99 ≈ 23.0 (dwell-weighted current
-positions), all brighter than the 24.5 single-visit depth — so per-visit
+population is **bright** — V p50 ≈ 20.4, p99 ≈ 24.1 (dwell-weighted current
+positions, BB21-faithful photometry), essentially all brighter than the 24.5
+single-visit depth — so per-visit
 ε ≈ 1 and a single LSST visit already reaches essentially every nominal
 solution. The **footprint is therefore the binding constraint** (the dec/|b|
 gate moves the fraction by tens of percent), while the depth and linking levers

@@ -49,6 +49,32 @@ pub fn mass_radius_neptunian(mass_earth: f64) -> f64 {
     NEPTUNE_RADIUS_EARTH * (mass_earth / NEPTUNE_MASS_EARTH).powf(0.27)
 }
 
+/// Brown & Batygin (2021) reference-catalog mass-radius relation:
+/// r₉ = (m₉ / 3 M⊕) · R⊕ (their stated "simple mass-diameter relationship"),
+/// giving 2.07 R⊕ at the 6.2 M⊕ posterior median — ~30% smaller than the
+/// Fortney-anchored [`mass_radius_neptunian`]. Use this (with the
+/// [`BB21_ALBEDO_MIN`]..[`BB21_ALBEDO_MAX`] albedo range) when reproducing
+/// the BB21 reference population that the ZTF/DES/PS1 exclusion papers
+/// inject; use the Neptune-anchored relation for thermal-model work where
+/// Fortney et al. radii are the sourced choice.
+pub fn mass_radius_bb21(mass_earth: f64) -> f64 {
+    mass_earth / 3.0
+}
+
+/// Lower edge of the BB21 reference-catalog albedo range (Neptune-like dark).
+pub const BB21_ALBEDO_MIN: f64 = 0.2;
+/// Upper edge of the BB21 reference-catalog albedo range (Eris-like bright).
+pub const BB21_ALBEDO_MAX: f64 = 0.75;
+
+/// Apparent V magnitude of a BB21 reference-catalog planet of `mass_earth`
+/// and geometric albedo `albedo` at heliocentric distance `r_au`, observed at
+/// opposition, using the BB21 mass-diameter relation.
+pub fn bb21_apparent_magnitude(mass_earth: f64, albedo: f64, r_au: f64) -> f64 {
+    let radius_km = mass_radius_bb21(mass_earth) * crate::constants::EARTH_RADIUS_KM;
+    let h = absolute_magnitude(radius_km, albedo);
+    apparent_magnitude(h, r_au, opposition_delta(r_au))
+}
+
 /// Absolute magnitude H from radius (km) and geometric albedo:
 ///
 ///   H = 5 log10( 1329 km / (√p · D_km) ),  D = 2R.
