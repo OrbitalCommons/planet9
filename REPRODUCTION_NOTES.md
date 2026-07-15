@@ -559,6 +559,14 @@ derived quantities:
 - `p9-2019-clustering` / `p9-2021-orbit` survey-bias null: longitude suppression near
   λ ≈ 95°/275° + δ > −30° coverage — same caveat.
 - `p9-2025-clustering` selection weighting w(ϖ) = 1 + 0.3cos(ϖ − 60°) in the bias-resampling MC.
+- `p9-2021-napier-critique` composite selection function (A₁ = 0.90, ϕ₁ = 52°, A₂ = 0.09,
+  ϕ₂ = 52°) — an assumed stand-in for the OSSOS/DES/S&T pointing histories, with the lobe
+  placed on the observed cluster direction and an order-ten contrast chosen so the debiasing
+  flip lands in the published band. The crate's sensitivity tests document the contingency:
+  the R̄-only consistency statistic is phase-blind (amplitude alone decides the flip), and the
+  direction-aware statistic shows the flip failing outright with the lobe rotated 90° off the
+  cluster. Deriving the selection from the real footprints is the survey-geometry
+  consolidation work.
 - `p9-2021-oort-cloud` `IOC_TRAPPING_FRACTION_ASSUMED` (Brasser et al. 2006 provenance) —
   replaces the previously invented √ρ scaling.
 - `p9-2021-orbit` posterior emulator: (a, e) sampled jointly with an assumed ρ = 0.85
