@@ -197,12 +197,15 @@ impl P9Params {
         }
     }
 
-    /// Brown & Batygin (2021) MCMC posterior median
+    /// Brown & Batygin (2021) MCMC posterior median: 6.2 M⊕, a = 380 AU,
+    /// e = 0.21 (from the published medians a = 380, q = 300: e = 1 − q/a —
+    /// the same derivation as `data::posterior::mcmc_2021_posterior`; a
+    /// previous 0.3 here put perihelion at 266 AU instead of 300).
     pub fn mcmc_2021() -> Self {
         Self {
             mass_earth: 6.2,
             a: 380.0,
-            e: 0.3,
+            e: 0.21,
             i: 16.0 * DEG2RAD,
             omega: 150.0 * DEG2RAD,
             omega_big: 100.0 * DEG2RAD,
