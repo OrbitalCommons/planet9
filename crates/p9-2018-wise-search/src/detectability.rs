@@ -78,6 +78,18 @@ mod tests {
         );
     }
 
+    /// Pin the documented reflected-light W1 reach (REPRODUCTION_NOTES §13):
+    /// ≈263 AU at 5 M⊕ and ≈313 AU at 18 M⊕ with the geometric-albedo
+    /// opposition flux law (no isotropic /4).
+    #[test]
+    fn reach_values_match_documented_reproduction_notes() {
+        let survey = WiseSurvey::default();
+        let d5 = max_detectable_distance(&survey, 5.0).expect("5 Me detectable");
+        let d18 = max_detectable_distance(&survey, 18.0).expect("18 Me detectable");
+        assert!((d5 - 263.4).abs() < 3.0, "reach(5 M⊕) = {d5:.1} AU");
+        assert!((d18 - 313.0).abs() < 3.0, "reach(18 M⊕) = {d18:.1} AU");
+    }
+
     #[test]
     fn crossover_magnitude_equals_depth() {
         let survey = WiseSurvey::default();
