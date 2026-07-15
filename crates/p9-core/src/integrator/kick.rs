@@ -236,16 +236,15 @@ pub fn j2_acceleration(
     // J4 acceleration if provided
     if let Some(j4_val) = j4 {
         let r4 = rr * rr;
-        let r9 = r7 * r2;
         let z4_r4 = z2_r2 * z2_r2;
 
         let factor_j4 = 0.625 * gm * j4_val * r4;
         let bracket = 3.0 - 42.0 * z2_r2 + 63.0 * z4_r4;
         let bracket_z = 15.0 - 70.0 * z2_r2 + 63.0 * z4_r4;
 
-        accel.x += factor_j4 * r.x / r9 * bracket;
-        accel.y += factor_j4 * r.y / r9 * bracket;
-        accel.z += factor_j4 * r.z / r9 * bracket_z;
+        accel.x += factor_j4 * r.x / r7 * bracket;
+        accel.y += factor_j4 * r.y / r7 * bracket;
+        accel.z += factor_j4 * r.z / r7 * bracket_z;
     }
 
     accel
@@ -277,6 +276,50 @@ mod tests {
                                 // Positive x means away from perturber... that's the indirect term dominating.
                                 // This is correct — the indirect term accounts for the Sun being accelerated toward the perturber.
         assert_relative_eq!(accel.x, gm * 0.03, epsilon = 1e-10);
+    }
+
+    /// Perturbing potential U_n = (gm/r) J_n (R/r)^n P_n(sin φ) whose negative
+    /// gradient `j2_acceleration` implements (verified for J2 against the
+    /// closed form used in the function body).
+    fn oblateness_potential(r: &Vector3<f64>, gm: f64, radius: f64, j2: f64, j4: f64) -> f64 {
+        let r_mag = r.norm();
+        let u = (r.z * r.z) / (r_mag * r_mag);
+        let rr = radius * radius;
+        let u2_term = gm * j2 * rr / (r_mag * r_mag * r_mag) * (3.0 * u - 1.0) / 2.0;
+        let u4_term = gm * j4 * rr * rr / r_mag.powi(5) * (35.0 * u * u - 30.0 * u + 3.0) / 8.0;
+        u2_term + u4_term
+    }
+
+    /// The acceleration must equal -∇U for the J2+J4 perturbing potential;
+    /// checked by central differences over a grid of radii and latitudes.
+    /// A wrong radial power in either term fails this immediately.
+    #[test]
+    fn test_j2_j4_acceleration_matches_potential_gradient() {
+        let gm = GM_SUN;
+        let radius = 0.0342; // effective JSU ring radius scale, AU
+        let j2 = 1.0e-3;
+        let j4 = -4.0e-5;
+        let h = 1e-6;
+
+        for &r_mag in &[2.0, 11.0, 36.0, 120.0] {
+            for &lat_deg in &[0.0, 25.0, 60.0, 88.0_f64] {
+                let lat = lat_deg.to_radians();
+                let pos = Vector3::new(r_mag * lat.cos(), 0.0, r_mag * lat.sin());
+
+                let accel = j2_acceleration(&pos, gm, radius, j2, Some(j4));
+
+                for axis in 0..3 {
+                    let mut hi = pos;
+                    let mut lo = pos;
+                    hi[axis] += h;
+                    lo[axis] -= h;
+                    let grad = (oblateness_potential(&hi, gm, radius, j2, j4)
+                        - oblateness_potential(&lo, gm, radius, j2, j4))
+                        / (2.0 * h);
+                    assert_relative_eq!(accel[axis], -grad, max_relative = 1e-6, epsilon = 1e-24);
+                }
+            }
+        }
     }
 
     #[test]
