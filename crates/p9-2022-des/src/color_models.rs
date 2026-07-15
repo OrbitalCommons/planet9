@@ -43,8 +43,14 @@ impl BandMagnitudes {
 pub struct ColorModel {
     /// Descriptive name of the model
     pub name: String,
-    /// Geometric albedo (dimensionless)
+    /// Geometric albedo (dimensionless). For the fiducial model this is a
+    /// representative value only — Table 1's fiducial albedo entry is
+    /// "BB21", the per-object catalog albedos (see `per_object_albedo`).
     pub albedo: f64,
+    /// Table 1 fiducial: draw the albedo per object from the BB21 catalog
+    /// (U(0.2, 0.75), carried on `ReferenceP9.albedo`) instead of using the
+    /// fixed `albedo` above.
+    pub per_object_albedo: bool,
     /// g - r color index (magnitudes)
     pub g_minus_r: f64,
     /// g - i color index (magnitudes)
@@ -67,7 +73,18 @@ impl ColorModel {
     /// evaluated with the model's own g-r color, and the remaining bands
     /// follow from the model's g-relative colors.
     pub fn band_magnitudes(&self, mass_earth: f64, r_au: f64) -> BandMagnitudes {
-        let v = planet_apparent_magnitude(mass_earth, self.albedo, r_au);
+        self.band_magnitudes_with_albedo(mass_earth, r_au, self.albedo)
+    }
+
+    /// Band magnitudes with an explicit per-object albedo (Table 1 fiducial:
+    /// the BB21 catalog albedo carried on the reference population).
+    pub fn band_magnitudes_with_albedo(
+        &self,
+        mass_earth: f64,
+        r_au: f64,
+        albedo: f64,
+    ) -> BandMagnitudes {
+        let v = planet_apparent_magnitude(mass_earth, albedo, r_au);
         let g = v + 0.59 * self.g_minus_r + 0.01;
         BandMagnitudes {
             g,
@@ -78,13 +95,21 @@ impl ColorModel {
     }
 }
 
-/// Fiducial model of Brown & Batygin (2021): albedo 0.44, near-solar colors.
+/// Fiducial model of Belyakov et al. Table 1: albedo = "BB21" (the
+/// per-object catalog albedos, U(0.2, 0.75)) with SOLAR colors
+/// g−r = 0.44, g−i = 0.53, g−z = 0.55.
+///
+/// A previous version had shifted the row one column left (albedo 0.44,
+/// g−r 0.53, g−i 0.55, g−z 0.55 — the solar g−r misread as the albedo and
+/// the last color duplicated); the calibrated `night_usability` knob had
+/// silently absorbed the error.
 pub fn fiducial() -> ColorModel {
     ColorModel {
         name: "Fiducial (BB21)".to_string(),
-        albedo: 0.44,
-        g_minus_r: 0.53,
-        g_minus_i: 0.55,
+        albedo: 0.475, // representative (BB21 range midpoint); per-object in the pipeline
+        per_object_albedo: true,
+        g_minus_r: 0.44,
+        g_minus_i: 0.53,
         g_minus_z: 0.55,
         paper_recovery: 0.870,
     }
@@ -96,6 +121,7 @@ pub fn neptune_like() -> ColorModel {
     ColorModel {
         name: "Neptune-like".to_string(),
         albedo: 0.5,
+        per_object_albedo: false,
         g_minus_r: -0.3,
         g_minus_i: -1.35,
         g_minus_z: -2.15,
@@ -109,6 +135,7 @@ pub fn methane_40k() -> ColorModel {
     ColorModel {
         name: "40K, 10% CH4".to_string(),
         albedo: 0.75,
+        per_object_albedo: false,
         g_minus_r: 0.6,
         g_minus_i: -0.3,
         g_minus_z: -0.2,
@@ -121,6 +148,7 @@ pub fn super_ganymede() -> ColorModel {
     ColorModel {
         name: "Super-Ganymede".to_string(),
         albedo: 0.43,
+        per_object_albedo: false,
         g_minus_r: 0.72,
         g_minus_i: 0.88,
         g_minus_z: 0.87,
@@ -133,6 +161,7 @@ pub fn super_kbo() -> ColorModel {
     ColorModel {
         name: "Super-KBO".to_string(),
         albedo: 0.1,
+        per_object_albedo: false,
         g_minus_r: 1.0,
         g_minus_i: 1.25,
         g_minus_z: 1.5,
@@ -162,9 +191,14 @@ mod tests {
 
     #[test]
     fn fiducial_matches_paper_table1() {
+        // Table 1 fiducial row: Albedo = BB21 (per-object), SOLAR colors
+        // g−r = 0.44, g−i = 0.53, g−z = 0.55, recovery 87.0%. (The previous
+        // pin had the row shifted one column left.)
         let m = fiducial();
-        assert!((m.albedo - 0.44).abs() < 1e-10);
-        assert!((m.g_minus_r - 0.53).abs() < 1e-10);
+        assert!(m.per_object_albedo);
+        assert!((m.g_minus_r - 0.44).abs() < 1e-10);
+        assert!((m.g_minus_i - 0.53).abs() < 1e-10);
+        assert!((m.g_minus_z - 0.55).abs() < 1e-10);
         assert!((m.paper_recovery - 0.870).abs() < 1e-10);
     }
 

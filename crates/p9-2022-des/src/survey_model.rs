@@ -140,7 +140,7 @@ impl Default for DesSurvey {
             depth_r: limiting_magnitude("DES").expect("DES depth in p9-core survey table"),
             depth_i: 23.3,
             depth_z: 22.6,
-            night_usability: 0.29,
+            night_usability: 0.285,
             bands: vec![DesBand::G, DesBand::R, DesBand::I, DesBand::Z],
         }
     }
