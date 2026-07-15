@@ -4,16 +4,19 @@
 //! drawn from the posterior emulator, computing observable properties
 //! (apparent magnitude, heliocentric distance) for each.
 //!
-//! Photometry comes from `p9_core::analysis::photometry` (Neptune-anchored
-//! mass-radius relation, reflected-sunlight distance law, Neptune's geometric
-//! albedo 0.41) — the previous inline model invented an albedo ~ U(0.3, 0.7)
-//! and a super-Earth mass-radius exponent inconsistent with the rest of the
-//! workspace.
+//! Photometry follows Brown & Batygin (2021)'s stated catalog assumptions:
+//! the r₉ = (m₉/3 M⊕)·R⊕ mass-diameter relation and per-object geometric
+//! albedos drawn from U(0.2, 0.75) (`p9_core::analysis::photometry::bb21_*`).
+//! The previous model used the Fortney-anchored Neptune relation with a fixed
+//! 0.41 albedo, which made the population ~0.6 mag brighter than BB21's
+//! actual catalog and erased the albedo scatter that sets the faint tail.
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
+use crate::analysis::photometry::{
+    bb21_apparent_magnitude, planet_apparent_magnitude, BB21_ALBEDO_MAX, BB21_ALBEDO_MIN,
+};
 use crate::data::posterior::{mcmc_2021_posterior, sample_from_posterior, P9Posterior};
 use crate::types::{solve_kepler, P9Params};
 
@@ -34,7 +37,7 @@ pub struct ReferenceP9 {
     pub omega_big: f64,
     /// Mean anomaly in radians
     pub mean_anomaly: f64,
-    /// Geometric albedo (Neptune's V-band value, 0.41)
+    /// Geometric albedo, drawn per object from the BB21 U(0.2, 0.75) range
     pub albedo: f64,
     /// Apparent V-band magnitude at current position
     pub v_magnitude: f64,
@@ -64,10 +67,11 @@ pub fn generate_reference_population_with_posterior<R: Rng>(
 
     for _ in 0..n {
         let params = sample_from_posterior(posterior, rng);
-        let albedo = ALBEDO_NEPTUNE;
+        // BB21: "a full range of albedos from 0.2 ... to 0.75", per object.
+        let albedo = rng.gen_range(BB21_ALBEDO_MIN..BB21_ALBEDO_MAX);
 
         let helio_dist = heliocentric_distance(&params);
-        let v_mag = brightness_at_position(params.mass_earth, helio_dist, albedo);
+        let v_mag = bb21_apparent_magnitude(params.mass_earth, albedo, helio_dist);
 
         population.push(ReferenceP9 {
             mass: params.mass_earth,
@@ -97,6 +101,7 @@ pub fn heliocentric_distance(params: &P9Params) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::analysis::photometry::ALBEDO_NEPTUNE;
     use crate::constants::DEG2RAD;
     use rand::SeedableRng;
 
@@ -137,9 +142,33 @@ mod tests {
             assert!(obj.mass > 0.0);
             assert!(obj.a > 0.0);
             assert!(obj.e > 0.0 && obj.e < 1.0);
-            assert!((obj.albedo - ALBEDO_NEPTUNE).abs() < 1e-12);
+            assert!((BB21_ALBEDO_MIN..BB21_ALBEDO_MAX).contains(&obj.albedo));
             assert!(obj.v_magnitude.is_finite());
         }
+        // Per-object albedos actually scatter across the BB21 range.
+        let a_min = pop.iter().map(|o| o.albedo).fold(f64::INFINITY, f64::min);
+        let a_max = pop.iter().map(|o| o.albedo).fold(0.0, f64::max);
+        assert!(a_max - a_min > 0.3, "albedo scatter {a_min:.2}..{a_max:.2}");
+    }
+
+    #[test]
+    fn test_population_matches_bb21_brightness_scale() {
+        // With the BB21 (m/3)Re radius and U(0.2, 0.75) per-object albedo the
+        // population median is V = 20.4 — 0.55 mag fainter than the old
+        // fixed-0.41/Fortney model (19.9), matching the documented ~0.6 mag
+        // radius+albedo offset vs BB21's stated catalog assumptions.
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2021);
+        let pop = generate_reference_population(4000, &mut rng);
+        let mut v: Vec<f64> = pop.iter().map(|o| o.v_magnitude).collect();
+        v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let med = v[v.len() / 2];
+        assert!(
+            (20.0..21.0).contains(&med),
+            "median V = {med:.2} (BB21-scale population)"
+        );
+        let p1 = v[v.len() / 100];
+        let p99 = v[99 * v.len() / 100];
+        assert!(p1 > 16.5 && p99 < 27.5, "V range {p1:.1}..{p99:.1}");
     }
 
     #[test]
