@@ -1,33 +1,48 @@
 //! Colombo-top / Cassini-state geometry (Lu & Laughlin 2022, Eq. 8–9).
 //!
 //! In a frame co-precessing with the planet's orbit (whose pole precesses at
-//! rate g about the invariable-plane normal, the two planes inclined by I) the
-//! spin axis has up to four equilibria — the Cassini states. Writing the ratio
-//! r ≡ α/|g| (positive; the sign of the nodal regression is absorbed into the
-//! sin θ cos θ term as the Ward–Hamilton convention), their obliquities θ_c
-//! measured from the orbit normal solve
+//! rate g < 0 about the invariable-plane normal, the two planes inclined by
+//! I) the spin axis has up to four equilibria — the Cassini states. With
+//! r ≡ α/|g| ≥ 0 they split across the two azimuths of the co-precessing
+//! frame:
 //!
-//!   r cos θ_c sin θ_c + sin(θ_c − I) = 0.                            (Eq. 9)
+//!   ψ = π (resonant family, state 2):  r cos θ sin θ − sin(θ − I) = 0,
+//!   ψ = 0 (states 3, and 1/4 above the bifurcation):
+//!                                      r cos θ sin θ + sin(θ − I) = 0.
 //!
-//! There are four Cassini states when
+//! (This matches `resonance_capture`'s equation of motion
+//! α cos θ sin θ + g sin(θ − I) with g < 0. A previous version used the
+//! "+" form for state 2 — the θ → π − θ mirror of the wrong family — whose
+//! middle root is the state-4 saddle: it DECREASED with r below the
+//! bifurcation and jumped past 90°, contradicting the crate's own ≤ 90°
+//! single-resonance asymptote.)
+//!
+//! States 1 and 4 appear when
 //!
 //!   r ≥ r_crit = (sin^{2/3} I + cos^{2/3} I)^{3/2}                    (Eq. 8)
 //!
-//! and only state 2 (and its mirror, state 3) otherwise. State 2 is the
-//! resonant branch relevant to adiabatic capture: it migrates from θ_c ≈ I at
-//! r ≪ 1 up through 90° and beyond as r grows. An outward-migrating Planet
-//! Nine slowly drives r upward (a primordially fast spin precession, large α,
-//! is what the paper requires), dragging Uranus' spin to high obliquity.
+//! State 2 is the resonant branch relevant to adiabatic capture: it rises
+//! from θ ≈ I at r ≪ 1 monotonically toward (but never past) 90° as r grows.
+//! An outward-migrating Planet Nine slowly drives r upward (a primordially
+//! fast spin precession, large α, is what the paper requires), dragging
+//! Uranus' spin to high obliquity along this branch.
 
 use std::f64::consts::PI;
 
-/// Right-hand side of the Cassini equilibrium relation (Eq. 9), as a function
-/// of obliquity θ for ratio `r = α/|g| ≥ 0` and orbital inclination `i`.
+/// Residual of the RESONANT (ψ = π) Cassini condition, hosting state 2:
+///
+///   f(θ) = r · cos θ · sin θ − sin(θ − i)
+///
+/// The single root on θ ∈ (0, π) is the state-2 obliquity.
+pub fn cassini_residual(theta: f64, r: f64, i: f64) -> f64 {
+    r * theta.cos() * theta.sin() - (theta - i).sin()
+}
+
+/// Residual of the ψ = 0 Cassini condition, hosting state 3 (always) and
+/// states 1 and 4 (above the bifurcation r ≥ r_crit):
 ///
 ///   f(θ) = r · cos θ · sin θ + sin(θ − i)
-///
-/// Cassini states are the roots f(θ) = 0 on θ ∈ [0, π].
-pub fn cassini_residual(theta: f64, r: f64, i: f64) -> f64 {
+pub fn cassini_residual_psi0(theta: f64, r: f64, i: f64) -> f64 {
     r * theta.cos() * theta.sin() + (theta - i).sin()
 }
 
@@ -37,26 +52,23 @@ pub fn critical_ratio(i: f64) -> f64 {
     (i.sin().abs().powf(2.0 / 3.0) + i.cos().abs().powf(2.0 / 3.0)).powf(1.5)
 }
 
-/// Solve for all Cassini-state obliquities at ratio `r = α/|g| ≥ 0` and
-/// inclination `i`. Roots are found by sign-change bracketing on a fine grid
-/// followed by bisection. Returns obliquities (rad) in ascending order.
-pub fn cassini_states(r: f64, i: f64) -> Vec<f64> {
+/// Roots of a residual on θ ∈ [0, π] by sign-change bracketing + bisection.
+fn roots_on_0_pi(f: impl Fn(f64) -> f64) -> Vec<f64> {
     let n = 4000;
     let mut roots = Vec::new();
     let mut prev_theta = 0.0;
-    let mut prev_f = cassini_residual(prev_theta, r, i);
+    let mut prev_f = f(prev_theta);
     for k in 1..=n {
         let theta = PI * (k as f64) / (n as f64);
-        let f = cassini_residual(theta, r, i);
+        let fv = f(theta);
         if prev_f == 0.0 {
             roots.push(prev_theta);
-        } else if prev_f * f < 0.0 {
-            // Bisect on [prev_theta, theta].
+        } else if prev_f * fv < 0.0 {
             let (mut lo, mut hi) = (prev_theta, theta);
-            let (mut flo, _fhi) = (prev_f, f);
+            let mut flo = prev_f;
             for _ in 0..80 {
                 let mid = 0.5 * (lo + hi);
-                let fm = cassini_residual(mid, r, i);
+                let fm = f(mid);
                 if flo * fm <= 0.0 {
                     hi = mid;
                 } else {
@@ -67,27 +79,31 @@ pub fn cassini_states(r: f64, i: f64) -> Vec<f64> {
             roots.push(0.5 * (lo + hi));
         }
         prev_theta = theta;
-        prev_f = f;
+        prev_f = fv;
     }
     roots
 }
 
-/// Obliquity (rad) of Cassini state 2 — the resonant branch followed during
-/// adiabatic capture. `r = α/|g| ≥ 0`. Below r_crit there is a single root
-/// (state 2), which sits near θ ≈ I for small r and climbs toward 90° as r
-/// approaches r_crit. Above r_crit three roots exist (states 1, 2, 4 by
-/// ascending θ); state 2 is the middle root, which continues past 90° toward
-/// the high-obliquity values the paper attributes to Uranus.
+/// Solve for all Cassini-state obliquities at ratio `r = α/|g| ≥ 0` and
+/// inclination `i`: the union of the ψ = π root (state 2) and the ψ = 0
+/// roots (state 3, plus states 1 and 4 above the bifurcation). Returns
+/// obliquities (rad) in ascending order — 2 states below r_crit, 4 above.
+pub fn cassini_states(r: f64, i: f64) -> Vec<f64> {
+    let mut roots = roots_on_0_pi(|t| cassini_residual(t, r, i));
+    roots.extend(roots_on_0_pi(|t| cassini_residual_psi0(t, r, i)));
+    roots.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    roots
+}
+
+/// Obliquity (rad) of Cassini state 2 — the resonant (ψ = π) branch followed
+/// during adiabatic capture. Rises monotonically from θ ≈ I at r ≪ 1 toward
+/// (never past) 90° as r → ∞; e.g. at I = 20°: 46.7° at r = 0.9, ~71° at
+/// r = 3, → 90⁻.
 pub fn cassini_state_2(r: f64, i: f64) -> f64 {
-    let roots = cassini_states(r, i);
-    match roots.len() {
-        0 => panic!("at least one Cassini state must exist"),
-        1 => roots[0],
-        _ => {
-            // The middle of the (typically three) roots is state 2.
-            roots[roots.len() / 2]
-        }
-    }
+    let roots = roots_on_0_pi(|t| cassini_residual(t, r, i));
+    *roots
+        .first()
+        .expect("the resonant psi=pi branch always has its state-2 root")
 }
 
 #[cfg(test)]
@@ -117,13 +133,13 @@ mod tests {
     }
 
     #[test]
-    fn one_state_below_critical_three_above() {
-        // The bifurcation at r_crit: a single Cassini state below it, two new
-        // ones (states 1 and 4) appearing above (Eq. 8).
+    fn two_states_below_critical_four_above() {
+        // The bifurcation at r_crit: states 2 and 3 below it, states 1 and 4
+        // appearing above (Eq. 8).
         let i = 20.0 * DEG2RAD;
         let crit = critical_ratio(i);
-        assert_eq!(cassini_states(0.5 * crit, i).len(), 1);
-        assert_eq!(cassini_states(2.0 * crit, i).len(), 3);
+        assert_eq!(cassini_states(0.5 * crit, i).len(), 2);
+        assert_eq!(cassini_states(2.0 * crit, i).len(), 4);
     }
 
     #[test]
@@ -140,49 +156,55 @@ mod tests {
     }
 
     #[test]
-    fn near_bifurcation_drives_high_obliquity() {
-        // Just above r_crit the resonant Cassini state 2 sits past 90° — the
-        // paper's high-obliquity branch that captures Uranus' spin.
+    fn state_2_rises_monotonically_toward_90_with_r() {
+        // The resonant state-2 obliquity rises monotonically with r from
+        // θ ≈ I toward — but never past — 90°: the single-resonance asymptote
+        // (REPRODUCTION_NOTES §19). The old mirrored-family solver DECREASED
+        // below the bifurcation and jumped past 90°.
         let i = 20.0 * DEG2RAD;
-        let crit = critical_ratio(i);
-        let theta2 = cassini_state_2(1.05 * crit, i);
-        assert!(
-            theta2 > 90.0 * DEG2RAD,
-            "θ₂ = {:.1}° should exceed 90° just past the bifurcation",
-            theta2 / DEG2RAD
-        );
-    }
-
-    #[test]
-    fn state_2_grows_monotonically_as_r_falls_to_crit() {
-        // Above the bifurcation, the resonant state-2 obliquity rises
-        // monotonically as r decreases toward r_crit (from ~90° at large r
-        // toward ~125° near the bifurcation): a clean monotone dependence on
-        // the controlling ratio.
-        let i = 20.0 * DEG2RAD;
-        let crit = critical_ratio(i);
-        let ratios = [50.0, 10.0, 4.0, 2.0, 1.1 * crit];
         let mut prev = 0.0;
-        for &r in &ratios {
+        for &r in &[0.3, 0.9, 1.5, 3.0, 10.0, 100.0] {
             let t = cassini_state_2(r, i);
             assert!(
-                t >= prev - 1e-6,
-                "θ₂ not monotone: r={r}, θ₂={:.2}° prev={:.2}°",
+                t > prev && t < 90.0 * DEG2RAD,
+                "θ₂(r={r}) = {:.2}°, prev {:.2}°",
                 t / DEG2RAD,
                 prev / DEG2RAD
             );
             prev = t;
         }
+        // Pinned reference value: θ₂(r = 0.9, I = 20°) ≈ 46.7°.
+        let t09 = cassini_state_2(0.9, i);
+        assert!(
+            (t09 - 46.7 * DEG2RAD).abs() < 1.0 * DEG2RAD,
+            "θ₂(0.9) = {:.2}°",
+            t09 / DEG2RAD
+        );
+    }
+
+    #[test]
+    fn state_2_matches_resonance_capture_equilibrium() {
+        // Cross-check against the EOM module's ψ = π condition
+        // α·cosθ·sinθ + g·sin(θ−I) with g < 0: the state-2 root must satisfy
+        // it to solver precision.
+        let i = 20.0 * DEG2RAD;
+        let (alpha, g): (f64, f64) = (2.0, -1.0);
+        let t = cassini_state_2(alpha / g.abs(), i);
+        let residual = alpha * t.cos() * t.sin() + g * (t - i).sin();
+        assert!(residual.abs() < 1e-9, "EOM residual = {residual:.2e}");
     }
 
     #[test]
     fn residual_is_zero_at_returned_states() {
+        // Every returned state is a root of one of the two azimuth branches.
         let i = 20.0 * DEG2RAD;
         for &r in &[50.0, 2.0, 1.0, 0.3] {
             for theta in cassini_states(r, i) {
+                let f_pi = cassini_residual(theta, r, i).abs();
+                let f_0 = cassini_residual_psi0(theta, r, i).abs();
                 assert!(
-                    cassini_residual(theta, r, i).abs() < 1e-6,
-                    "f({theta:.4}) not a root for r={r}"
+                    f_pi.min(f_0) < 1e-6,
+                    "θ = {theta:.4} not a root of either branch for r={r}"
                 );
             }
         }
