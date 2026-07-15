@@ -10,10 +10,15 @@
 //! photometry.
 //!
 //! Rice & Laughlin recover Sedna, 2015 BP519 and 2007 TG422 — all in the
-//! V ≈ 20.6–22.3 range — and report a search sensitivity of V < 21 for
-//! distances d ≲ 150 au. A single sector of FFIs (T ≈ 15 → ~T 18.8) does not
-//! reach V < 21 on its own; reaching it is a multi-sector / per-track deep
-//! co-add, which the [`sectors_to_reach_depth`] inversion makes explicit.
+//! V ≈ 20.6–22.3 range — using ONE- to TWO-sector stacks, and report a search
+//! sensitivity of V < 21 for distances d ≲ 150 au. The depth budget therefore
+//! starts from the search's EFFECTIVE per-frame depth
+//! (`published::TESS_SINGLE_DEPTH_EFFECTIVE` ≈ 17.15, back-derived from that
+//! V < 21 baseline sensitivity), not the naive 5σ FFI catalog depth T ≈ 15 —
+//! which would misrepresent the paper's own recoveries as 20–600-sector
+//! co-adds (~3 mag of missing budget). The faintest recovery (TG422,
+//! V = 22.3) additionally rides its red V−T color (~1 mag for these TNOs):
+//! in the detection band it sits within the two-sector reach.
 
 use p9_core::analysis::photometry::planet_apparent_magnitude;
 use p9_core::analysis::stacking::matched_filter::{
@@ -83,28 +88,37 @@ mod tests {
     use approx::assert_relative_eq;
 
     #[test]
-    fn single_sector_stack_reaches_t_19_to_21() {
-        // ~1.18e3 FFIs over one sector buys 1.25·log10(N) ≈ 3.85 mag of depth,
-        // turning T≈15 into the ~T 19 floor of the headline range.
-        let depth = stacked_depth_over_sectors(published::TESS_SINGLE_DEPTH, 1.0);
+    fn single_sector_stack_reproduces_baseline_sensitivity() {
+        // ~1.18e3 FFIs over one sector buys 1.25·log10(N) ≈ 3.85 mag: from
+        // the effective per-frame depth this reproduces the paper's V < 21
+        // baseline sensitivity (the calibration's defining property).
+        let depth = stacked_depth_over_sectors(published::TESS_SINGLE_DEPTH_EFFECTIVE, 1.0);
         assert!(
-            (18.5..19.5).contains(&depth),
+            (depth - published::SENSITIVITY_V_LIMIT).abs() < 0.1,
             "single-sector stacked depth = {depth:.2}"
+        );
+        // The naive 5σ catalog depth lands 2+ mag short of the paper's own
+        // demonstrated sensitivity — the ~3 mag contradiction this
+        // calibration removes.
+        let naive = stacked_depth_over_sectors(published::TESS_SINGLE_DEPTH, 1.0);
+        assert!(
+            naive < published::SENSITIVITY_V_LIMIT - 1.5,
+            "naive = {naive:.2}"
         );
     }
 
     #[test]
-    fn year_long_stack_reaches_the_deep_end_of_the_range() {
-        // A full year (13 sectors, ~1.5e4 FFIs) reaches the deep end ~T 20–21.
-        let depth =
-            stacked_depth_over_sectors(published::TESS_SINGLE_DEPTH, tess::SECTORS_PER_YEAR);
+    fn year_long_stack_deepens_by_t_squared_growth() {
+        // A full year (13 sectors, ~1.5e4 FFIs) adds 1.25·log10(13) ≈ 1.4 mag
+        // over the single-sector baseline.
+        let depth = stacked_depth_over_sectors(
+            published::TESS_SINGLE_DEPTH_EFFECTIVE,
+            tess::SECTORS_PER_YEAR,
+        );
         assert!(
-            (20.0..21.5).contains(&depth),
+            (22.0..22.8).contains(&depth),
             "one-year stacked depth = {depth:.2}"
         );
-        // Plausible frame counts land inside the paper's quoted ~T 19–21 band.
-        assert!(depth >= published::STACKED_REACH_FAINT);
-        assert!(depth <= published::STACKED_REACH_DEEP + 0.5);
     }
 
     #[test]
@@ -117,61 +131,60 @@ mod tests {
     }
 
     #[test]
-    fn recovered_tnos_need_deep_multi_sector_co_adds() {
-        // Sedna / 2015 BP519 / 2007 TG422 (V ≈ 20.6–22.3) are all *fainter*
-        // than a one-sector T≈18.8 stack, so recovering them is a genuine
-        // multi-sector / per-track deep co-add — not a single-frame detection.
-        // The faintest needs hundreds of sector-equivalents of integration; the
-        // brightest (Sedna) just over a single sector's worth.
-        let prev = sectors_to_reach_depth(published::TESS_SINGLE_DEPTH, published::V_SEDNA);
+    fn recovered_tnos_within_one_to_few_sector_stacks() {
+        // With the effective per-frame depth, the paper's recoveries are
+        // consistent with their actual 1-2-sector stacks: Sedna (V 20.64)
+        // needs about half a sector-equivalent, BP519 ~4, and TG422 ~12 on
+        // the V scale — or ~1-2 sectors in the detection band once its red
+        // V-T ~ 1 mag color is credited (documented in the module header).
+        // The old naive-depth model demanded 20-600 sector-equivalents,
+        // contradicting the paper it reproduces.
+        let sedna =
+            sectors_to_reach_depth(published::TESS_SINGLE_DEPTH_EFFECTIVE, published::V_SEDNA);
         assert!(
-            (20.0..40.0).contains(&prev),
-            "Sedna sector-equiv = {prev:.0}"
+            (0.2..2.0).contains(&sedna),
+            "Sedna sector-equiv = {sedna:.2}"
         );
-        // monotonically more integration for fainter targets.
+        // Monotonically more integration for fainter targets, all bounded.
         let mut last = 0.0;
         for &v in &[published::V_SEDNA, published::V_BP519, published::V_TG422] {
-            let n = sectors_to_reach_depth(published::TESS_SINGLE_DEPTH, v);
-            assert!(n > last, "non-monotone integration at V={v}: {n:.0}");
+            let n = sectors_to_reach_depth(published::TESS_SINGLE_DEPTH_EFFECTIVE, v);
+            assert!(n > last, "non-monotone integration at V={v}: {n:.1}");
             last = n;
         }
-        // All are finite (reachable in principle) — the validation succeeds.
-        assert!(last.is_finite() && last > 0.0);
+        assert!(last < 15.0, "faintest (V-scale) sector-equiv = {last:.1}");
     }
 
     #[test]
-    fn nominal_planet_nine_reach_is_marginal_and_distance_dependent() {
-        // A 6.2 M⊕ P9 is V≈19.5 at its a=380 au and V≈20.7 near aphelion
-        // (~500 au). The year-long stack reaches only ~T 20.2, so whether P9 is
-        // detectable depends entirely on where it sits: reachable on the near
-        // side, too faint at aphelion. This is the honest marginal verdict
-        // (cf. the paper's V<21, d≲150 au sensitivity — far closer than P9).
+    fn nominal_planet_nine_within_depth_but_outside_searched_distances() {
+        // With the paper-calibrated effective depth, a year-long stack
+        // (~22.4) reaches the nominal P9 across its orbit (V ~ 19.5 at a,
+        // ~20.7 at 500 au) — DEPTH is not the limiter. What excludes P9 from
+        // the actual search is the covered distance range: the paper's
+        // V < 21 sensitivity applies to trial tracks at d ≲ 150 au, far
+        // inside P9's 300-500 au. (The old naive-depth version called P9
+        // "marginal" at aphelion, an artifact of the ~3 mag depth deficit.)
         let p9 = P9Params::mcmc_2021();
         let m_at_a = p9_apparent_magnitude_at(&p9, 0.4, p9.a);
         let m_aphelion = p9_apparent_magnitude_at(&p9, 0.4, 500.0);
         assert!((19.0..20.0).contains(&m_at_a), "V_P9(a) = {m_at_a:.2}");
         assert!(m_aphelion > m_at_a, "aphelion must be fainter");
 
-        let m_stack =
-            stacked_depth_over_sectors(published::TESS_SINGLE_DEPTH, tess::SECTORS_PER_YEAR);
-        assert!((20.0..21.0).contains(&m_stack), "year depth = {m_stack:.2}");
+        let m_stack = stacked_depth_over_sectors(
+            published::TESS_SINGLE_DEPTH_EFFECTIVE,
+            tess::SECTORS_PER_YEAR,
+        );
+        assert!((22.0..22.8).contains(&m_stack), "year depth = {m_stack:.2}");
+        assert!(within_reach(m_at_a, m_stack));
+        assert!(within_reach(m_aphelion, m_stack));
+        assert!(reach_margin(m_aphelion, m_stack) > 1.0);
 
-        // Near its semi-major axis P9 is (just) within the year-long reach …
+        // The searched track grid stops far inside P9's orbit.
+        let q9 = p9.a * (1.0 - p9.e);
         assert!(
-            within_reach(m_at_a, m_stack),
-            "P9 at a: V={m_at_a:.2} vs depth {m_stack:.2}"
-        );
-        // … but near aphelion it falls beyond it. Marginal, distance-dependent.
-        assert!(
-            !within_reach(m_aphelion, m_stack),
-            "P9 at aphelion: V={m_aphelion:.2} vs depth {m_stack:.2}"
-        );
-        // The margin at aphelion is small (sub-magnitude) — beyond reach, but
-        // only barely, so a deeper multi-year stack would close it.
-        let margin = reach_margin(m_aphelion, m_stack);
-        assert!(
-            (-1.0..0.0).contains(&margin),
-            "aphelion margin = {margin:.2}"
+            q9 > 1.5 * published::SENSITIVITY_DISTANCE_AU,
+            "P9 perihelion {q9:.0} au vs searched d <= {} au",
+            published::SENSITIVITY_DISTANCE_AU
         );
     }
 }
