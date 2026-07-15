@@ -185,12 +185,36 @@ pub mod orbit_metric {
         n1d * n1d
     }
 
-    /// Planet Nine's heliocentric orbital angular rate projected on the sky
-    /// (arcsec/day), from its mean motion n = √(GM☉/a³): a slow mover that any
-    /// solar-system rate grid easily contains and a multi-year baseline resolves.
+    /// Planet Nine's **heliocentric** orbital angular rate projected on the sky
+    /// (arcsec/day), from its mean motion n = √(GM☉/a³).
+    ///
+    /// WARNING: this is NOT the on-sky search rate. The apparent motion of a
+    /// distant body seen from Earth is dominated by Earth's parallactic reflex
+    /// (~9″/day at 380 AU near opposition, ~20× this heliocentric term).
+    /// Sizing a shift-stack rate grid from this value will miss the target;
+    /// use [`apparent_sky_rate_at_opposition`] instead.
     pub fn p9_orbital_sky_rate(p9: &P9Params) -> f64 {
         let n_rad_per_day = (GM_SUN / p9.a.powi(3)).sqrt();
         n_rad_per_day * PC_AU // rad/day × (arcsec/rad)
+    }
+
+    /// Peak apparent on-sky rate (arcsec/day) of a distant solar-system body
+    /// at heliocentric distance `distance_au`, observed near opposition.
+    ///
+    /// Near opposition the dominant term is Earth's parallactic reflex v_E/Δ,
+    /// reduced by the body's own prograde circular-orbit motion
+    /// v(d) = v_E/√d (coplanar approximation):
+    ///
+    ///   μ ≈ 206265 · v_E (1 − 1/√d) / (d − 1)   [arcsec/day]
+    ///
+    /// with v_E = √(GM☉/1 AU) ≈ 0.0172 AU/day. Examples: ≈45″/day at 70 AU,
+    /// ≈8.9″/day at 380 AU, ≈7.5″/day at 450 AU — the scale a shift-stack
+    /// trial-rate box must cover.
+    pub fn apparent_sky_rate_at_opposition(distance_au: f64) -> f64 {
+        let v_earth = GM_SUN.sqrt(); // AU/day on a 1 AU circular orbit
+        let v_body = v_earth / distance_au.sqrt();
+        let delta = (distance_au - 1.0).max(1.0);
+        PC_AU * (v_earth - v_body) / delta
     }
 
     #[cfg(test)]
@@ -202,6 +226,22 @@ pub mod orbit_metric {
         const PSF: f64 = 1.0; // arcsec, 1σ
         const T6YR: f64 = 6.0 * 365.25; // days
         const RATE_RANGE: f64 = 40.0; // arcsec/day, covering distant→fast movers
+
+        #[test]
+        fn apparent_rate_dominated_by_parallactic_reflex() {
+            // At 380 AU (BB21 median) the apparent opposition rate is ~8.9"/day,
+            // ~20x the heliocentric mean-motion rate the old API returned.
+            let apparent = apparent_sky_rate_at_opposition(380.0);
+            assert!((apparent - 8.9).abs() < 0.3, "apparent = {apparent:.2}");
+            let helio = p9_orbital_sky_rate(&P9Params::mcmc_2021());
+            assert!(
+                apparent > 15.0 * helio,
+                "apparent {apparent:.2} vs heliocentric {helio:.2} arcsec/day"
+            );
+            // Nearby TNO distances need a ~±50"/day rate box (TESS regime).
+            let near = apparent_sky_rate_at_opposition(70.0);
+            assert!((near - 45.3).abs() < 1.0, "70 AU rate = {near:.1}");
+        }
 
         #[test]
         fn metric_quadratic_matches_exact_for_small_error() {
