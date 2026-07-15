@@ -25,9 +25,10 @@
 //!   semi-major axis, but beyond it near aphelion (consistent with the paper's
 //!   V<21, d≲150 au sensitivity being far closer than P9 typically sits).
 //! - [`tracks`] — feeds the TESS PSF/baseline into p9-2025-stacking's orbit
-//!   metric for the *number of trial tracks* (only ~10 over one sector, ~1500
-//!   over a year, growing as the baseline squared) — tiny because TESS's pixels
-//!   are coarse, unlike the billions a fine-PSF survey needs.
+//!   metric for the *number of trial tracks* over the real ±50″/day parallax
+//!   rate box (~10³ over one sector — the order of Rice & Laughlin's 748
+//!   shift vectors — growing as the baseline squared) — modest because TESS's
+//!   pixels are coarse, unlike the billions a fine-PSF survey needs.
 //!
 //! Every quantity used in tests is computed; the TESS single-frame depth, the
 //! published ~T 19–21 stacked reach, and the recovered-TNO magnitudes are kept

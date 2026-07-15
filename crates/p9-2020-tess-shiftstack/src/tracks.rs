@@ -8,24 +8,30 @@
 //! metric itself is not re-derived.
 //!
 //! TESS's coarse 21-arcsec pixels and short single-sector (27.4-day) baseline
-//! make the rate cells *huge*, so the trial-track count is tiny — of order ten
-//! over a single sector, ~1500 over a year — nothing like the billions a
-//! multi-year arcsec-PSF survey (ZTF) demands. Stacking across more sectors
-//! lengthens the baseline and grows the count as T².
+//! make the rate cells *huge*, so the trial-track count stays modest — of
+//! order 10³ over a single sector with the real ±50″/day parallax rate box
+//! (Rice & Laughlin's grid used 748 shift vectors per sector), growing as T²
+//! with more sectors — nothing like the billions a multi-year arcsec-PSF
+//! survey (ZTF) demands.
 
 use p9_core::analysis::stacking::orbit_metric::{
-    n_trial_orbits, p9_orbital_sky_rate, rate_resolution, snr_retained_exact,
+    apparent_sky_rate_at_opposition, n_trial_orbits, rate_resolution, snr_retained_exact,
 };
 use p9_core::types::P9Params;
 use p9_core::units::{arcseconds, days, Angle, AngularVelocity};
 
 use crate::tess;
 
-/// On-sky rate range (arcsec/day) the search must span. Distant TNOs / Planet
-/// Nine move at well under an arcsec/day; the dominant apparent motion is
-/// Earth's parallax, giving up to a few arcsec/day for the closest (70 au)
-/// targets Rice & Laughlin consider. A 5 arcsec/day box per axis covers it.
-pub const RATE_RANGE_ARCSEC_PER_DAY: f64 = 5.0;
+/// On-sky rate range (arcsec/day) the search must span. The dominant apparent
+/// motion is Earth's parallactic reflex, ~51·(70 AU/d) arcsec/day near
+/// opposition: ≈45 arcsec/day for the closest (70 AU) targets Rice & Laughlin
+/// consider, ≈8 arcsec/day at Planet Nine distances. Their actual grid spans
+/// 4–58 px per ~27-day sector (≈44–52 arcsec/day peak rate, 748 shift
+/// vectors). A ±50 arcsec/day box per axis covers it. (A previous version
+/// used 5 arcsec/day — sized from the heliocentric mean-motion rate, 10×
+/// under the real parallax scale — a box the true apparent motion of every
+/// target, P9 included, falls OUTSIDE of.)
+pub const RATE_RANGE_ARCSEC_PER_DAY: f64 = 50.0;
 
 /// SNR tolerance per grid cell (retain ≥90% of the matched-filter SNR).
 pub const SNR_TOLERANCE: f64 = 0.9;
@@ -68,13 +74,17 @@ pub fn rate_cell(n_sectors: f64) -> AngularVelocity {
     (arcseconds(rate_cell_arcsec_per_day(n_sectors)) / days(1.0)).into()
 }
 
-/// Planet Nine's heliocentric on-sky angular rate (arcsec/day) for a model —
-/// reused from the shared metric to confirm P9 sits inside the search box.
+/// Planet Nine's peak APPARENT on-sky rate (arcsec/day) for a model — the
+/// parallax-dominated opposition rate from the shared metric, evaluated at
+/// the orbit's perihelion (the fastest, closest configuration the box must
+/// contain). This is the quantity to compare against the rate box; the
+/// heliocentric mean-motion rate is ~20× smaller and sizing the box from it
+/// is exactly the trap the shared metric now warns about.
 pub fn p9_sky_rate(p9: &P9Params) -> f64 {
-    p9_orbital_sky_rate(p9)
+    apparent_sky_rate_at_opposition(p9.a * (1.0 - p9.e))
 }
 
-/// Planet Nine's heliocentric on-sky angular rate as a typed
+/// Planet Nine's peak apparent on-sky rate as a typed
 /// [`AngularVelocity`] (dimension-checked view of [`p9_sky_rate`], arcsec/day).
 pub fn p9_sky_rate_typed(p9: &P9Params) -> AngularVelocity {
     (arcseconds(p9_sky_rate(p9)) / days(1.0)).into()
@@ -98,14 +108,19 @@ mod tests {
 
     #[test]
     fn single_sector_track_count_is_finite_and_tiny() {
-        // Coarse TESS pixels + 27-day baseline → only of order ten trial
-        // tracks, far from the billions a fine-PSF multi-year survey needs.
+        // Coarse TESS pixels + 27-day baseline keep the count modest even
+        // with the real parallax rate box, far from the billions a fine-PSF
+        // multi-year survey needs.
         let n = n_trial_tracks(1.0);
         assert!(n.is_finite() && n > 0.0);
-        assert!((1.0..1.0e2).contains(&n), "single-sector tracks = {n:.1}");
-        // A year of stacking still stays in the modest thousands.
+        // With the real ±50 arcsec/day parallax box a single sector needs
+        // hundreds-to-thousands of tracks — the same order as Rice &
+        // Laughlin's 748 shift vectors per sector.
+        assert!((1.0e2..1.0e4).contains(&n), "single-sector tracks = {n:.0}");
+        // A year of stacking grows as T² but stays far below the billions a
+        // fine-PSF multi-year survey needs.
         let year = n_trial_tracks(tess::SECTORS_PER_YEAR);
-        assert!((1.0e3..1.0e4).contains(&year), "year tracks = {year:.0}");
+        assert!((1.0e5..1.0e6).contains(&year), "year tracks = {year:.0}");
     }
 
     #[test]
@@ -160,10 +175,24 @@ mod tests {
 
     #[test]
     fn planet_nine_sits_inside_the_tess_rate_box() {
+        // The APPARENT (parallax-dominated) rate at the BB21 median orbit's
+        // perihelion is ~12 arcsec/day — inside the ±50 arcsec/day box but
+        // far outside the old 5 arcsec/day one.
         let rate = p9_sky_rate(&P9Params::mcmc_2021());
         assert!(
-            rate > 0.0 && rate < RATE_RANGE_ARCSEC_PER_DAY,
-            "P9 rate = {rate}"
+            rate > 5.0 && rate < RATE_RANGE_ARCSEC_PER_DAY,
+            "P9 apparent rate = {rate:.1} arcsec/day"
+        );
+    }
+
+    #[test]
+    fn closest_targets_also_inside_the_box() {
+        // Rice & Laughlin's nearest recovered targets sit at ~70 AU:
+        // apparent rate ≈45 arcsec/day must be inside the box.
+        let near = apparent_sky_rate_at_opposition(70.0);
+        assert!(
+            near > 40.0 && near < RATE_RANGE_ARCSEC_PER_DAY,
+            "70 AU rate = {near:.1}"
         );
     }
 
