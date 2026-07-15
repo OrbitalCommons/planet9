@@ -66,15 +66,24 @@ fn compute_j2_effective() -> f64 {
     j2_jsu + effective_j2(MASS_NEPTUNE_SOLAR, A_NEPTUNE_AU, 1.0)
 }
 
-/// Giant-planet J2 contribution to the Hamiltonian:
+/// Giant-planet J2 contribution to the Hamiltonian — the orbit-averaged
+/// interior-ring quadrupole potential:
 ///
-///   H_J2 = GM_sun * J2_eff * (3 cos^2 i - 1) / (4 a^3 eta^3),
+///   H_J2 = <delta Phi> = -GM_sun * J2_eff * (3 cos^2 i - 1) / (4 a^3 eta^3).
 ///
-/// equivalent to the paper's G*C*(3cos^2 i - 1)/(8 a^3 eta^3) with C = 2*J2_eff.
+/// The sign is fixed by requiring the standard PROGRADE J2 apsidal
+/// precession under vzlk.rs's domega/dt = +dH/dG convention, and it must
+/// match the (negative) Miyamoto-Nagai potential average this term is summed
+/// with in `secular_hamiltonian_full`. Note: Batygin & Nesvorny 2024 eq. (3)
+/// prints the opposite (positive) sign for this term — dynamically
+/// inconsistent with its own disk term; a previous version inherited that.
+/// With the positive sign the planetary quadrupole part of omega-dot was
+/// retrograde for i < 54.7 deg and the paper's low-q quenching of vZLK
+/// cycles by planetary precession was anti-modeled.
 pub fn h_j2(a: f64, e: f64, i: f64, j2_eff: f64) -> f64 {
     let eta = (1.0 - e * e).sqrt();
     let cos_i = i.cos();
-    GM_SUN * j2_eff * (3.0 * cos_i * cos_i - 1.0) / (4.0 * a * a * a * eta * eta * eta)
+    -GM_SUN * j2_eff * (3.0 * cos_i * cos_i - 1.0) / (4.0 * a * a * a * eta * eta * eta)
 }
 
 /// Orbit-averaged secular galactic-tide quadrupole.
@@ -180,18 +189,42 @@ mod tests {
     }
 
     #[test]
-    fn test_h_j2_factor_matches_paper_form() {
-        // H_J2 must equal G * C * (3cos^2 i - 1)/(8 a^3 eta^3) with
-        // C = sum m_p a_p^2 = 2 * j2_eff (Batygin & Nesvorny 2024).
+    fn test_h_j2_factor_matches_paper_magnitude_with_corrected_sign() {
+        // |H_J2| matches the paper's G*C*(3cos^2 i - 1)/(8 a^3 eta^3) with
+        // C = sum m_p a_p^2 = 2*j2_eff, but with the NEGATIVE sign of the
+        // averaged interior-ring potential (B&N 2024 eq. (3) prints "+",
+        // inconsistent with its own disk term — see h_j2 docs).
         let j2_eff = compute_j2_effective();
         let c = 2.0 * j2_eff;
         let (a, e, i): (f64, f64, f64) = (1000.0, 0.5, 30.0 * DEG2RAD);
         let eta = (1.0_f64 - e * e).sqrt();
-        let expected = GM_SUN * c * (3.0 * i.cos().powi(2) - 1.0) / (8.0 * a.powi(3) * eta.powi(3));
+        let expected =
+            -GM_SUN * c * (3.0 * i.cos().powi(2) - 1.0) / (8.0 * a.powi(3) * eta.powi(3));
         let got = h_j2(a, e, i, j2_eff);
         assert!(
             ((got - expected) / expected).abs() < 1e-14,
             "got {got}, expected {expected}"
+        );
+        assert!(got < 0.0, "prograde-precession sign: H_J2 = {got:.3e}");
+    }
+
+    #[test]
+    fn test_h_j2_drives_prograde_apsidal_precession() {
+        // domega/dt = +dH/dG must be positive (prograde) for i < 54.7 deg:
+        // finite-difference dH_J2/dG at fixed Hz via eta at i = 0.
+        let j2_eff = compute_j2_effective();
+        let (a, e) = (1000.0, 0.5);
+        let l = (GM_SUN * a).sqrt();
+        let eta0 = (1.0f64 - e * e).sqrt();
+        let h_of_eta = |eta: f64| {
+            let e2 = (1.0 - eta * eta).max(0.0);
+            h_j2(a, e2.sqrt(), 0.0, j2_eff)
+        };
+        let d = 1e-6;
+        let dh_dg = (h_of_eta(eta0 + d) - h_of_eta(eta0 - d)) / (2.0 * d) / l;
+        assert!(
+            dh_dg > 0.0,
+            "domega/dt from J2 must be prograde, got {dh_dg:.3e}"
         );
     }
 
