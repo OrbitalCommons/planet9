@@ -517,9 +517,14 @@ Hamiltonian uses P9's plane as the reference, the particle's `i` argument *is* t
 inclination, so varying P9's own `i` field has no effect — the sin(i₉) dependence is encoded as
 the initial mutual inclination i₀ ≈ i₉, and the test varies that.
 - Pinned: `crates/p9-2018-bp519/src/pumping.rs` (`p9_pumps_inclination_to_bp519_like` ≥ 50°,
-  `no_p9_control_leaves_inclination_flat` range < 2°, `pumping_grows_with_p9_inclination`,
-  `pumping_rate_grows_with_p9_mass`, `pumping_is_kozai_e_i_exchange`); BP519 elements pinned in
-  `src/bp519.rs`; ϖ-cluster context in `src/clustering.rs`.
+  `no_p9_control_leaves_inclination_flat` range < 2°,
+  `moderate_mutual_inclinations_all_pump_into_bp519_band`,
+  `pumping_rate_grows_with_p9_mass`, `pumping_is_kozai_e_i_exchange`,
+  `hamiltonian_conserved_along_flow` |ΔH/H| < 1e-7); BP519 elements pinned in
+  `src/bp519.rs`; ϖ-cluster context in `src/clustering.rs`. Note: after fixing a sign error in
+  the dω/dt Delaunay chain rule (the flow now conserves H to rounding), max inclination is NOT
+  monotone in the starting mutual inclination — both 25° and 40° starts pump into the ≥55° band
+  (to ~71°/~64°); the previously pinned monotone growth was an artifact of the broken flow.
 
 ---
 
