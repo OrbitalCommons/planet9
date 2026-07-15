@@ -129,21 +129,33 @@ impl ForcingPosterior {
     }
 }
 
-/// Build the Siraj et al. (2024) posterior from the clustered-ETNO ϖ sample,
-/// with the calibration solved so that the apsidal-confinement ridge passes
-/// through the published reference orbit (4.4 M⊕, 290 AU). This is a single
-/// scale-setting step, not a hard-coded answer: the MAP is still recovered by
-/// the numerical grid search, and the m ∝ a_p³ ridge geometry is determined by
-/// the physics, not the calibration.
+/// Fixed calibration anchor: the von Mises concentration of the clustered
+/// ETNO ϖ sample AT THE PAPER'S EPOCH, frozen as a labelled constant
+/// (derived from the paper's own headline: 2.7σ Rayleigh significance at
+/// n = 21 means p = exp(−nR̄²) ≈ 0.0069, so R̄ ≈ 0.487 and the Mardia-Jupp
+/// inverse gives κ ≈ 1.09 — a number taken from the publication, not from
+/// this repo's sample).
+///
+/// This one-point calibration ties (κ_REF → the published reference orbit's
+/// forcing m_ref/a_ref³) once. Crucially it is NOT recomputed from the input
+/// angles: a previous version solved k_cal from the live sample's κ̂, which
+/// made κ̂ cancel identically out of S_obs — the "inference" returned the
+/// published orbit for ANY input angles. With the frozen anchor, S_obs = κ̂ ·
+/// (m_ref/a_ref³)/κ_REF moves with the data (see the falsifiability tests).
+pub const KAPPA_REFERENCE: f64 = 1.09;
+
+/// Build the Siraj et al. (2024) posterior from the clustered-ETNO ϖ sample.
+/// The ridge scale is anchored by the frozen one-point calibration
+/// [`KAPPA_REFERENCE`] → (4.4 M⊕/290 AU³); the input sample's κ̂ then sets
+/// S_obs relative to that anchor, so a weaker-clustered sample infers a
+/// proportionally weaker perturber.
 pub fn calibrated_posterior(angles: &[f64]) -> ForcingPosterior {
-    // Solve k_cal so that S_obs maps exactly to the reference ridge:
-    //   S_obs = S(m_ref, a_ref) = m_ref / a_ref³,  and  S_obs = κ̂ / k_cal
-    //   ⇒ k_cal = κ̂ · a_ref³ / m_ref.
-    let kappa = crate::confinement::kappa_from_angles(angles);
-    let k_cal = kappa * SIRAJ_2024_A_AU.powi(3) / SIRAJ_2024_MASS_EARTH;
-    // Independent a_p prior: centered on the inclination-derived a, with a 20%
-    // width — broad enough that the forcing likelihood meaningfully shapes the
-    // MAP, tight enough to break the m ∝ a_p³ degeneracy.
+    let k_cal = KAPPA_REFERENCE * SIRAJ_2024_A_AU.powi(3) / SIRAJ_2024_MASS_EARTH;
+    // Independent a_p prior: centered on the paper's inclination/node-derived
+    // semi-major-axis scale (a labelled paper input, distinct from the ridge
+    // normalization), with a 20% width — broad enough that the forcing
+    // likelihood meaningfully shapes the MAP, tight enough to break the
+    // m ∝ a_p³ degeneracy.
     let sigma_a = 0.20 * SIRAJ_2024_A_AU;
     ForcingPosterior::from_sample(angles, k_cal, SIRAJ_2024_A_AU, sigma_a)
 }
@@ -179,16 +191,44 @@ mod tests {
     #[test]
     fn test_neg2_log_post_minimized_on_ridge_at_aref() {
         let post = calibrated_posterior(&longitudes_of_perihelion());
-        // At a_ref, the best mass is the one on the ridge; perturbing mass
-        // away from it raises the objective.
+        // At a_ref, the best mass is the one on the DATA's ridge
+        // (m = S_obs·a_ref³); perturbing mass away raises the objective.
+        let m_ridge = crate::forcing::mass_for_strength(post.s_obs, SIRAJ_2024_A_AU);
         let on = OrbitPoint {
-            mass_earth: SIRAJ_2024_MASS_EARTH,
+            mass_earth: m_ridge,
             a_p: SIRAJ_2024_A_AU,
         };
         let off = OrbitPoint {
-            mass_earth: SIRAJ_2024_MASS_EARTH * 2.0,
+            mass_earth: m_ridge * 2.0,
             a_p: SIRAJ_2024_A_AU,
         };
         assert!(post.neg2_log_post(on) < post.neg2_log_post(off));
+    }
+
+    #[test]
+    fn test_inference_is_falsifiable() {
+        use p9_core::constants::TWO_PI;
+        // A uniform (unclustered) ϖ sample must NOT return the published
+        // orbit: with κ̂ ≈ 0 the inferred mass collapses far below 4.4 M⊕.
+        // (The pre-fix calibration returned the published orbit for ANY
+        // input — the data cancelled identically.)
+        let uniform: Vec<f64> = (0..21).map(|k| k as f64 * TWO_PI / 21.0).collect();
+        let map_u = calibrated_posterior(&uniform).map_estimate();
+        assert!(
+            map_u.mass_earth < 0.5 * SIRAJ_2024_MASS_EARTH,
+            "uniform sample inferred {:.2} M⊕",
+            map_u.mass_earth
+        );
+
+        // A more concentrated sample infers a stronger perturber.
+        let tight: Vec<f64> = (0..21).map(|k| 0.9 + 0.02 * k as f64).collect();
+        let map_t = calibrated_posterior(&tight).map_estimate();
+        let map_obs = calibrated_posterior(&longitudes_of_perihelion()).map_estimate();
+        assert!(
+            map_t.mass_earth > map_obs.mass_earth,
+            "tight {:.2} vs observed {:.2} M⊕",
+            map_t.mass_earth,
+            map_obs.mass_earth
+        );
     }
 }

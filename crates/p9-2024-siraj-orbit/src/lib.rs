@@ -27,12 +27,17 @@
 //! ## Residuals (documented honestly)
 //!
 //! The forcing scaling S = m/a_p³ is the *reduced* mass-distance dependence of
-//! the secular coupling at fixed test-particle a; the full octupole coupling
-//! also carries a slowly varying a²/a_p² geometric prefactor that we absorb
-//! into the single calibration constant `k_cal`. The MAP is recovered to
-//! within ~1% of the published (4.4 M⊕, 290 AU) — the residual is the grid
-//! resolution and the choice of a_p prior width (20% of a_ref), both
-//! documented in [`posterior`]. The published inclination 6.8° is carried as a
+//! the secular coupling at fixed test-particle a. The ridge normalization is a
+//! ONE-POINT calibration frozen to the paper's own headline (κ_REF ≈ 1.09 from
+//! their 2.7σ at n = 21, mapped to the published 4.4 M⊕/290 AU³ — see
+//! [`posterior::KAPPA_REFERENCE`]); the input sample's κ̂ then sets S_obs
+//! relative to that anchor. A previous version solved the calibration from the
+//! live sample's κ̂, which cancelled the data identically and returned the
+//! published orbit for any input. With the frozen anchor the vetted 10-object
+//! sample — more concentrated (κ̂ ≈ 1.7) than the paper's stable-21 — infers
+//! ≈ 7.0 M⊕ at a_p ≈ 290 AU (κ̂/κ_REF ≈ 1.6× the published mass on the same
+//! ridge), a genuine sample difference pinned in the tests alongside
+//! falsifiability checks (uniform input ⇒ collapsed mass). The published inclination 6.8° is carried as a
 //! reference constant only; this crate models the mass-distance plane.
 
 pub mod confinement;
@@ -81,17 +86,22 @@ mod tests {
     }
 
     #[test]
-    fn test_map_within_15pct_of_published() {
+    fn test_map_tracks_sample_concentration() {
+        // With the calibration frozen to the paper's own 2.7σ/n=21 anchor
+        // (κ_REF ≈ 1.09), the vetted 10-object ϖ sample — which is MORE
+        // concentrated (κ̂ ≈ 1.7) than Siraj et al.'s stable-21 — infers a
+        // proportionally stronger perturber: MAP ≈ 7.0 M⊕ at a_p ≈ 290 AU,
+        // i.e. κ̂/κ_REF ≈ 1.6× the published 4.4 M⊕ on the same ridge. This
+        // is a genuine sample difference, not a reproduction failure; the
+        // published orbit is recovered exactly when the input concentration
+        // matches the paper's (see the falsifiability tests in `posterior`).
         let map = infer_from_etnos(&longitudes_of_perihelion());
-        let dm = (map.mass_earth - SIRAJ_2024_MASS_EARTH).abs() / SIRAJ_2024_MASS_EARTH;
-        let da = (map.a_p - SIRAJ_2024_A_AU).abs() / SIRAJ_2024_A_AU;
         assert!(
-            dm < 0.15,
-            "MAP mass {:.3} M⊕ vs published {:.1} (rel {:.3})",
-            map.mass_earth,
-            SIRAJ_2024_MASS_EARTH,
-            dm
+            (6.3..7.7).contains(&map.mass_earth),
+            "MAP mass {:.3} M⊕",
+            map.mass_earth
         );
+        let da = (map.a_p - SIRAJ_2024_A_AU).abs() / SIRAJ_2024_A_AU;
         assert!(
             da < 0.15,
             "MAP a {:.1} AU vs published {:.1} (rel {:.3})",
@@ -99,6 +109,9 @@ mod tests {
             SIRAJ_2024_A_AU,
             da
         );
+        // And the published orbit is inside a factor-2 band of the MAP.
+        let dm = (map.mass_earth - SIRAJ_2024_MASS_EARTH).abs() / SIRAJ_2024_MASS_EARTH;
+        assert!(dm < 1.0, "MAP within factor 2 of published: rel {dm:.3}");
     }
 
     #[test]
