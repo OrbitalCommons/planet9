@@ -306,9 +306,9 @@ mod tests {
     #[test]
     fn test_p_simple_resonance() {
         let census = vec![
-            (Resonance::new(1, 3), 10), // N/1 (p=1, period ratio 3)
-            (Resonance::new(5, 3), 5),  // High-order (p=5)
-            (Resonance::new(2, 5), 5),  // N/2 (p=2, period ratio 5/2)
+            (Resonance::new(3, 1), 10), // N/1 (interior particle, 3 orbits per P9 orbit)
+            (Resonance::new(5, 3), 5),  // High-order (q=3)
+            (Resonance::new(5, 2), 5),  // N/2 (5 orbits per 2 P9 orbits)
         ];
 
         let p = p_simple_resonance(&census);
