@@ -275,16 +275,20 @@ impl SimGridConfig {
                 let i9_values = [5.0, 15.0, 25.0];
                 let mut pts = Vec::new();
                 for &m9 in P9_MASSES_PAPER.iter() {
-                    let mut combo = 0usize;
-                    for &a9 in &a9_values {
-                        for &e9 in &e9_values {
+                    for (j, &a9) in a9_values.iter().enumerate() {
+                        for (k, &e9) in e9_values.iter().enumerate() {
+                            // Latin-square assignment (j + k) mod 3: every
+                            // (e9, i9) pair occurs (5x per mass), so i9 is NOT
+                            // aliased with e9. The previous combo % 3 indexing
+                            // locked i9 to e9 in all 121 points, leaving the
+                            // GP/MCMC with zero data to separate the two
+                            // dimensions.
                             pts.push(GridPoint {
                                 m9,
                                 a9,
                                 e9,
-                                i9_deg: i9_values[combo % i9_values.len()],
+                                i9_deg: i9_values[(j + k) % i9_values.len()],
                             });
-                            combo += 1;
                         }
                     }
                 }
@@ -653,5 +657,23 @@ mod tests {
             );
             assert!(!r.samples.is_empty());
         }
+    }
+
+    #[test]
+    fn paper_grid_i9_not_aliased_with_e9() {
+        use std::collections::HashSet;
+        let pts = SimGridConfig::paper().grid_points();
+        // The 121-point surrogate must exercise every (e9, i9) combination;
+        // the old indexing produced only the 3 diagonal pairs.
+        let pairs: HashSet<(u64, u64)> = pts
+            .iter()
+            .map(|p| ((p.e9 * 100.0) as u64, p.i9_deg as u64))
+            .collect();
+        assert!(
+            pairs.len() >= 9,
+            "only {} distinct (e9, i9) pairs in the Paper grid",
+            pairs.len()
+        );
+        assert_eq!(pts.len(), 121);
     }
 }
