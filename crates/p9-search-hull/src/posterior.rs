@@ -36,6 +36,8 @@ pub struct PosSample {
     pub dec_deg: f64,
     pub dist_au: f64,
     pub v_mag: f64,
+    /// Galactic latitude (deg) of this draw's direction.
+    pub gal_b_deg: f64,
 }
 
 /// The element/mean-anomaly draw machinery for one orbit solution: set up once,
@@ -91,6 +93,7 @@ impl Draws {
             dec_deg: dec,
             dist_au: r,
             v_mag: v,
+            gal_b_deg: galactic_latitude_deg(&pos),
         }
     }
 }
@@ -104,23 +107,45 @@ pub struct SkyPosterior {
     pub dist_mean: Vec<f64>,
     /// Per-cell probability-weighted mean apparent V; NaN where empty.
     pub v_mean: Vec<f64>,
+    /// Per-cell mean PER-SAMPLE survey-survival probability
+    /// E[∏_s(1 − cov_s·1[detected_s])] — evaluated draw by draw, because the
+    /// ensemble deliberately mixes bright and faint solutions and
+    /// 1[E[V] ≤ depth] ≠ E[1[V ≤ depth]] when survey depths sit inside the
+    /// mixture's V span. NaN where empty.
+    pub survival_mean: Vec<f64>,
+    /// Per-cell mean of (scope-reachable AND survives): the residual mass a
+    /// space telescope can actually chase, per draw.
+    pub reach_survival_mean: Vec<f64>,
+    /// Per-cell fraction of draws reachable by the space telescope.
+    pub reach_frac: Vec<f64>,
+    /// Per-cell fraction of draws reachable by Rubin/LSST.
+    pub lsst_frac: Vec<f64>,
     /// A thinned cloud of draws for the parameter-space hull.
     pub cloud: Vec<PosSample>,
 }
 
 /// Build the equal-weight ensemble posterior. `per_study` MC draws are taken
-/// from each solution; `cloud_keep` thins the returned cloud.
-pub fn ensemble(
+/// from each solution; `cloud_keep` thins the returned cloud. The three
+/// scorers are evaluated on every draw so exclusion/reachability are
+/// per-sample (see `SkyPosterior::survival_mean`).
+pub fn ensemble_scored(
     studies: &[OrbitSolution],
     grid: &SkyGrid,
     per_study: usize,
     seed: u64,
     cloud_keep: usize,
+    survival: impl Fn(&PosSample) -> f64,
+    scope_reach: impl Fn(&PosSample) -> bool,
+    lsst_reach: impl Fn(&PosSample) -> bool,
 ) -> SkyPosterior {
     let n = grid.len();
     let mut count = vec![0.0_f64; n];
     let mut sum_dist = vec![0.0_f64; n];
     let mut sum_v = vec![0.0_f64; n];
+    let mut sum_surv = vec![0.0_f64; n];
+    let mut sum_reach_surv = vec![0.0_f64; n];
+    let mut sum_reach = vec![0.0_f64; n];
+    let mut sum_lsst = vec![0.0_f64; n];
     let mut cloud = Vec::new();
 
     let total_samples = studies.len().max(1) * per_study;
@@ -138,6 +163,16 @@ pub fn ensemble(
             count[idx] += 1.0;
             sum_dist[idx] += s.dist_au;
             sum_v[idx] += s.v_mag;
+            let surv = survival(&s);
+            sum_surv[idx] += surv;
+            let reach = scope_reach(&s);
+            if reach {
+                sum_reach[idx] += 1.0;
+                sum_reach_surv[idx] += surv;
+            }
+            if lsst_reach(&s) {
+                sum_lsst[idx] += 1.0;
+            }
             if drawn % cloud_stride == 0 {
                 cloud.push(s);
             }
@@ -149,11 +184,19 @@ pub fn ensemble(
     let mut prob = vec![0.0_f64; n];
     let mut dist_mean = vec![f64::NAN; n];
     let mut v_mean = vec![f64::NAN; n];
+    let mut survival_mean = vec![f64::NAN; n];
+    let mut reach_survival_mean = vec![f64::NAN; n];
+    let mut reach_frac = vec![0.0_f64; n];
+    let mut lsst_frac = vec![0.0_f64; n];
     for k in 0..n {
         if count[k] > 0.0 {
             prob[k] = count[k] / total;
             dist_mean[k] = sum_dist[k] / count[k];
             v_mean[k] = sum_v[k] / count[k];
+            survival_mean[k] = sum_surv[k] / count[k];
+            reach_survival_mean[k] = sum_reach_surv[k] / count[k];
+            reach_frac[k] = sum_reach[k] / count[k];
+            lsst_frac[k] = sum_lsst[k] / count[k];
         }
     }
 
@@ -161,8 +204,34 @@ pub fn ensemble(
         prob,
         dist_mean,
         v_mean,
+        survival_mean,
+        reach_survival_mean,
+        reach_frac,
+        lsst_frac,
         cloud,
     }
+}
+
+/// Trivially-scored ensemble (no survey model): survival 1, nothing
+/// reachable. For tests and cloud-only consumers.
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn ensemble(
+    studies: &[OrbitSolution],
+    grid: &SkyGrid,
+    per_study: usize,
+    seed: u64,
+    cloud_keep: usize,
+) -> SkyPosterior {
+    ensemble_scored(
+        studies,
+        grid,
+        per_study,
+        seed,
+        cloud_keep,
+        |_| 1.0,
+        |_| false,
+        |_| false,
+    )
 }
 
 /// One orbit solution's thinned prediction cloud (positions + brightness).

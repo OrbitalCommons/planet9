@@ -184,8 +184,30 @@ fn main() {
     let rubin_depth = rubin.limiting_mag;
     let rubin_fp = rubin.footprint.clone();
 
-    // Ensemble current-position posterior with per-cell predicted distance / V.
-    let post = posterior::ensemble(&studies, &grid, PER_STUDY, SEED, CLOUD_KEEP);
+    // Ensemble current-position posterior with per-cell predicted distance /
+    // V and PER-SAMPLE survey survival: the ensemble mixes solutions whose V
+    // medians straddle the survey depths, so exclusion must be evaluated
+    // draw-by-draw (1[E[V] <= depth] != E[1[V <= depth]]).
+    let surveys_for_scoring = surveys.clone();
+    let scope_fp_scoring = scope_fp.clone();
+    let rubin_fp_scoring = rubin_fp.clone();
+    let post = posterior::ensemble_scored(
+        &studies,
+        &grid,
+        PER_STUDY,
+        SEED,
+        CLOUD_KEEP,
+        move |s| {
+            1.0 - surveys::exclusion_probability(
+                &surveys_for_scoring,
+                s.dec_deg,
+                s.gal_b_deg,
+                s.v_mag,
+            )
+        },
+        move |s| scope_fp_scoring.accepts(s.dec_deg, s.gal_b_deg) && s.v_mag <= scope_depth,
+        move |s| rubin_fp_scoring.accepts(s.dec_deg, s.gal_b_deg) && s.v_mag <= rubin_depth,
+    );
 
     let n = grid.len();
     let mut gal_b = vec![0.0_f64; n];
@@ -246,19 +268,21 @@ fn main() {
             v_mean[idx] = Some(v);
             dist_mean[idx] = Some(r);
 
-            let pe = surveys::exclusion_probability(&surveys, dec, gal_b[idx], v);
+            // Per-sample exclusion, averaged inside the MC (not the cell-mean
+            // V through the survey step functions).
+            let surv = post.survival_mean[idx];
+            let pe = 1.0 - surv;
             excl[idx] = pe;
-            residual[idx] = p * (1.0 - pe);
+            residual[idx] = p * surv;
 
             excluded_prob += p * pe;
             residual_prob += residual[idx];
 
-            let reachable = scope_fp.accepts(dec, gal_b[idx]) && v <= scope_depth;
-            space_reachable[idx] = reachable;
-            if reachable {
-                residual_reach += residual[idx];
-            }
-            lsst_reachable[idx] = rubin_fp.accepts(dec, gal_b[idx]) && v <= rubin_depth;
+            // Reachability is likewise a per-draw statement; a cell is shown
+            // reachable when most of its posterior draws are.
+            space_reachable[idx] = post.reach_frac[idx] > 0.5;
+            residual_reach += p * post.reach_survival_mean[idx];
+            lsst_reachable[idx] = post.lsst_frac[idx] > 0.5;
         }
     }
 
