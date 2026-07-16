@@ -49,15 +49,15 @@ KIND_COLOR = {"optical": BLUE, "thermal": ORANGE, "mm": PURPLE}
 
 def fig_viable():
     fig, ax = plt.subplots(figsize=(11, 7.2))
-    allsky = arr(DATA["allsky_envelope_au"])
+    wide = arr(DATA["wide_envelope_au"])
     deepest = arr(DATA["detection_envelope_au"])
     ytop = 3000.0
 
     # --- shaded regions ---
     # Excluded regardless of sky position (below the all-sky floor).
-    ax.fill_between(M, 60, allsky, color=RED, alpha=0.22, zorder=0)
+    ax.fill_between(M, 60, wide, color=RED, alpha=0.22, zorder=0)
     # Excluded only where the deep, small-footprint surveys looked.
-    ax.fill_between(M, allsky, deepest, color=ORANGE, alpha=0.16, zorder=0,
+    ax.fill_between(M, wide, deepest, color=ORANGE, alpha=0.16, zorder=0,
                     hatch="////", edgecolor=ORANGE, linewidth=0.0)
     # Still viable everywhere (above the deepest reach of any real survey).
     ax.fill_between(M, deepest, ytop, color=TEAL, alpha=0.13, zorder=0)
@@ -74,7 +74,7 @@ def fig_viable():
         c = KIND_COLOR[s["kind"]]
         if s["status"] == "forecast":
             style = dict(ls=(0, (5, 3)), lw=1.6, alpha=0.75)
-        elif s["coverage"] == "allsky":
+        elif s["coverage"] == "wide":
             style = dict(ls="-", lw=2.2, alpha=0.95)
         else:  # partial-footprint data
             style = dict(ls=(0, (3, 1, 1, 1)), lw=1.6, alpha=0.7)
@@ -85,7 +85,7 @@ def fig_viable():
                     va="center", ha="left", alpha=0.95)
 
     # --- bold the two envelopes ---
-    ax.plot(M, allsky, color=RED, lw=2.8, zorder=5)
+    ax.plot(M, wide, color=RED, lw=2.8, zorder=5)
     ax.plot(M, deepest, color=ORANGE, lw=1.8, ls=":", zorder=5, alpha=0.9)
 
     # --- nominal orbit markers ---
@@ -100,7 +100,7 @@ def fig_viable():
                     fontsize=8.0, zorder=7)
 
     # --- region labels ---
-    ax.text(3.0, 150, "RULED OUT\n(any sky position)", color=RED, fontsize=10,
+    ax.text(3.0, 150, "EXCLUDED over ~3/4 of sky\n(wide surveys; see search hull)", color=RED, fontsize=10,
             fontweight="bold", ha="left", va="center", alpha=0.95)
     ax.text(15.5, 820, "ruled out only inside\ndeep survey footprints",
             color=ORANGE, fontsize=8.5, ha="center", va="center", alpha=0.95)
