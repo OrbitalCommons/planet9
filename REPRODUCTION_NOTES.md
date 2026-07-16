@@ -355,7 +355,13 @@ dip statistic (gap-window count density ÷ mean flank density). Two honest epoch
   window and 2015 TG387's current solution (q = 64.8) falls at its upper edge, so the window
   holds 2 objects — still a deficit relative to the dense low flank (dip ≈ 0.25) but no longer
   emptier than the (thin: Sedna, 2012 VP113) high flank. The gap has partially filled in since
-  publication, which matters directly for the sednoid/IOC boundary in the search-space work. A seeded two-population synthetic draw
+  publication, which matters directly for the sednoid/IOC boundary in the search-space work.
+
+The significance is now computed against a fitted single-continuous null (shifted exponential,
+MLE; `synthetic::continuous_null_dip_p_value`): the paper-epoch deficit has exceedance
+p ≈ 0.040 (~2σ, matching the paper's moderate-significance framing), weakening to p ≈ 0.11 for
+the current sample — the previously missing load-bearing number (the old tests only contrasted
+a constructed bimodal draw with a uniform control). A seeded two-population synthetic draw
 reproduces the same gap (dip ratio < 0.6) while a single continuous uniform control does not
 (dip ratio ≈ 1) — concretizing the paper's "two populations, not one continuous distribution"
 argument. The high-q scattering edge is tied to `p9_core::analysis::resonance::critical_perihelion`
