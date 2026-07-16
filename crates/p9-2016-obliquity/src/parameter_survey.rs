@@ -66,11 +66,11 @@ pub fn find_required_inclination(
 
     let target = target_obliquity_deg;
     if (obl_low - target) * (obl_high - target) > 0.0 {
-        if (obl_low - target).abs() < (obl_high - target).abs() {
-            return Some((i_low, obl_low));
-        } else {
-            return Some((i_high, obl_high));
-        }
+        // Target not bracketed in [5°, 50°]: there is NO required
+        // inclination in the search range. (A previous version returned the
+        // nearest endpoint as if it were a solution, and the survey plot
+        // colored those cells as valid — misrepresenting the boundary.)
+        return None;
     }
 
     for _ in 0..20 {
@@ -238,5 +238,19 @@ mod tests {
             obl_30,
             obl_10
         );
+    }
+
+    #[test]
+    fn unbracketed_target_returns_none() {
+        // A 0.1 M⊕ perturber cannot force 6° of solar obliquity at any
+        // i9 in [5°, 50°]: the solver must say so, not return the nearest
+        // endpoint dressed as a solution.
+        let r = find_required_inclination(0.1, 500.0, 0.5, 6.0, 0.5);
+        assert!(r.is_none(), "expected no bracketed solution, got {r:?}");
+        // A bracketable case still solves.
+        let ok = find_required_inclination(10.0, 500.0, 0.5, 6.0, 0.5);
+        assert!(ok.is_some());
+        let (_, obl) = ok.unwrap();
+        assert!((obl - 6.0).abs() < 0.5, "obliquity {obl:.2}");
     }
 }
