@@ -110,28 +110,29 @@ impl PlanetBound {
     }
 }
 
-/// The planets and 2016-era anomalous-precession bounds adopted from the
-/// EPM2011/INPOP-class ephemeris solutions tabulated by Pitjeva & Pitjev
-/// (2013, MNRAS 432, 3431; their "supplementary precessions" Δϖ̇) and the
-/// companion INPOP10a estimates Iorio (2016) draws on.
+/// The planets and 2016-era anomalous-precession bounds from the EPM2011
+/// supplementary precessions Δϖ̇ of Pitjeva & Pitjev (2013, MNRAS 432,
+/// 3431, Table 4) that Iorio (2016) draws on: each bound is that table's
+/// 1σ formal uncertainty (mas/century = 1e-3 arcsec/century), kept as
+/// labelled reference constants:
 ///
-/// The bounds are representative *formal* uncertainties (mas/century =
-/// 1e-3 arcsec/century), kept as labelled reference constants:
+/// | planet  | a (AU) | e      | bound (mas/cy) | P&P 2013 Δϖ̇        |
+/// |---------|--------|--------|----------------|---------------------|
+/// | Mercury | 0.3871 | 0.2056 | 2.0            | −2.0 ± 3.0          |
+/// | Venus   | 0.7233 | 0.0068 | 1.5            |  2.6 ± 1.6          |
+/// | Earth   | 1.0000 | 0.0167 | 0.2            |  0.19 ± 0.19        |
+/// | Mars    | 1.5237 | 0.0934 | 0.04           | −0.020 ± 0.037      |
+/// | Jupiter | 5.2029 | 0.0484 | 28.3           |  58.7 ± 28.3        |
+/// | Saturn  | 9.5371 | 0.0539 | 0.47           | −0.32 ± 0.47        |
 ///
-/// | planet  | a (AU) | e      | bound (mas/cy) |
-/// |---------|--------|--------|----------------|
-/// | Mercury | 0.3871 | 0.2056 | 2.0            |
-/// | Venus   | 0.7233 | 0.0068 | 1.5            |
-/// | Earth   | 1.0000 | 0.0167 | 0.2            |
-/// | Mars    | 1.5237 | 0.0934 | 0.04           |
-/// | Jupiter | 5.2029 | 0.0484 | 280.0          |
-/// | Saturn  | 9.5371 | 0.0539 | 1.0            |
-///
-/// Mars carries the tightest absolute bound (~0.04 mas/cy from MRO/Mars
-/// Express ranging); Saturn the tightest *outer*-planet bound (~1 mas/cy from
-/// Cassini), which is why the 2016 analysis leans on Saturn for the most
-/// distant perturbers. Jupiter's bound is comparatively loose. These are
-/// reference constants, not computed values.
+/// (A previous table adopted Jupiter 280 and Saturn 1.0 mas/cy while citing
+/// the same source — neither matches it; Saturn's critical distances were
+/// ~28% smaller than the cited bound gives.) Mars carries the tightest
+/// absolute bound (~0.04 mas/cy from MRO/Mars Express ranging); Saturn the
+/// tightest *outer*-planet bound (Cassini ranging), which is why the 2016
+/// analysis leans on Saturn for the most distant perturbers. Jupiter's
+/// bound is comparatively loose. These are reference constants, not
+/// computed values.
 pub fn planet_bounds() -> [PlanetBound; 6] {
     [
         PlanetBound {
@@ -162,13 +163,13 @@ pub fn planet_bounds() -> [PlanetBound; 6] {
             name: "Jupiter",
             a_au: 5.202_887,
             e: 0.048_386,
-            bound_arcsec_per_cy: 280.0e-3,
+            bound_arcsec_per_cy: 28.3e-3,
         },
         PlanetBound {
             name: "Saturn",
             a_au: 9.537_070,
             e: 0.053_862,
-            bound_arcsec_per_cy: 1.0e-3,
+            bound_arcsec_per_cy: 0.47e-3,
         },
     ]
 }
@@ -453,18 +454,20 @@ mod tests {
     }
 
     #[test]
-    fn test_most_constraining_planet_is_mars_for_p9() {
-        // With the adopted bounds, Mars (tightest bound, 0.04 mas/cy) gives the
-        // largest rate/bound ratio for nominal Planet Nine, so it is the most
-        // constraining planet despite Saturn's larger raw precession. Document
-        // the result honestly.
+    fn test_most_constraining_planet_is_saturn_for_p9() {
+        // With the CITED Pitjeva & Pitjev (2013) bounds, Saturn (Cassini
+        // ranging, 0.47 mas/cy) edges out Mars for the nominal Planet Nine —
+        // the raw a^{3/2}(a/a9)^3 rate advantage of the outermost planet
+        // beats Mars's tighter absolute bound. This matches why the
+        // literature leans on Saturn for distant perturbers. (Under the
+        // previous mistranscribed Saturn bound of 1.0 mas/cy, Mars won.)
         let p9 = Perturber::planet_nine();
         let bounds = planet_bounds();
         let (best, ratio) = most_constraining(&p9, &bounds);
         assert!(ratio.is_finite() && ratio > 0.0);
         assert_eq!(
-            best.name, "Mars",
-            "expected Mars most constraining, got {} (ratio {:.3e})",
+            best.name, "Saturn",
+            "expected Saturn most constraining, got {} (ratio {:.3e})",
             best.name, ratio
         );
     }
