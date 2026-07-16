@@ -35,7 +35,7 @@ class CowanThermal2016(Scene):
             wien = float(data["wien_peak_um"])
             self.add(Line(ax.c2p(np.log10(wien), 0), ax.c2p(np.log10(wien), 1.05),
                           color=P.TEAL, stroke_width=2).set_stroke(opacity=0.7))
-            self.add(layout.label(f"Wien peak {wien:.0f} µm", font_size=13, color=P.TEAL)
+            self.add(layout.label(f"Wien peak (Bν) {wien:.0f} µm", font_size=13, color=P.TEAL)
                      .next_to(ax.c2p(np.log10(wien), 1.05), UP, buff=0.05))
         else:
             def sed(lx):
