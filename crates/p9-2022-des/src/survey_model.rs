@@ -32,15 +32,6 @@ pub enum DesBand {
     Y,
 }
 
-fn ra_in_range(ra: f64, start: f64, end: f64) -> bool {
-    let ra = ra.rem_euclid(360.0);
-    if start <= end {
-        (start..end).contains(&ra)
-    } else {
-        ra >= start || ra < end
-    }
-}
-
 /// DES survey model parameters for Planet Nine detection.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DesSurvey {

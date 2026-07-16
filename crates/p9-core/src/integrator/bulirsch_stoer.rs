@@ -321,8 +321,6 @@ mod tests {
             mass: gm_jup / GM_SUN,
             state: StateVector::new(Vector3::new(a_jup, 0.0, 0.0), Vector3::new(0.0, v_jup, 0.0)),
             radius_au: 4.78e-4,
-            j2: None,
-            j4: None,
         };
 
         let a_p = 8.0;

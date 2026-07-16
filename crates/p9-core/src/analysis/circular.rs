@@ -157,8 +157,26 @@ pub fn bessel_i0(x: f64) -> f64 {
     }
 }
 
+/// ln I₀(x): overflow-safe log of the modified Bessel function. `bessel_i0`
+/// itself overflows to +inf for x ≳ 709 (exp(x) leaves f64), while von Mises
+/// log-likelihood consumers only ever need the log — for large |x| this uses
+/// the asymptotic ln I₀(x) = |x| − ln√(2π|x|) + ln(1 + 1/(8|x|) + …).
+pub fn ln_bessel_i0(x: f64) -> f64 {
+    let ax = x.abs();
+    if ax < 700.0 {
+        bessel_i0(x).ln()
+    } else {
+        // Asymptotic series: I0(x) ~ e^x/sqrt(2 pi x) (1 + 1/(8x) + 9/(128x^2)).
+        let corr = 1.0 + 1.0 / (8.0 * ax) + 9.0 / (128.0 * ax * ax);
+        ax - 0.5 * (2.0 * std::f64::consts::PI * ax).ln() + corr.ln()
+    }
+}
+
 /// Maximum-likelihood κ from the mean resultant length R̄
-/// (Mardia & Jupp 2000 piecewise approximation of A⁻¹).
+/// (Mardia & Jupp 2000 piecewise approximation of A⁻¹). Clamped at 500 —
+/// far beyond any physical concentration in this workspace and safely below
+/// the x ≈ 709 overflow of `bessel_i0`, so downstream `bessel_i0(κ).ln()`
+/// stays finite (use `ln_bessel_i0` for arbitrary κ).
 pub fn kappa_from_r_bar(r_bar: f64) -> f64 {
     let kappa = if r_bar < 0.53 {
         2.0 * r_bar + r_bar.powi(3) + 5.0 * r_bar.powi(5) / 6.0
@@ -167,12 +185,12 @@ pub fn kappa_from_r_bar(r_bar: f64) -> f64 {
     } else {
         let denom = r_bar.powi(3) - 4.0 * r_bar.powi(2) + 3.0 * r_bar;
         if denom.abs() < 1e-10 {
-            1000.0 // Very concentrated distribution
+            500.0 // Very concentrated distribution
         } else {
             1.0 / denom
         }
     };
-    kappa.clamp(0.0, 1000.0)
+    kappa.clamp(0.0, 500.0)
 }
 
 #[cfg(test)]
@@ -279,5 +297,32 @@ mod tests {
         assert!(kappa_from_r_bar(0.2) < kappa_from_r_bar(0.6));
         assert!(kappa_from_r_bar(0.6) < kappa_from_r_bar(0.9));
         assert!(kappa_from_r_bar(0.0) < 1e-9);
+    }
+
+    #[test]
+    fn ln_bessel_stays_finite_where_bessel_overflows() {
+        // Continuity across the asymptotic switch and finiteness far beyond
+        // the exp overflow.
+        let a = ln_bessel_i0(699.0);
+        let b = ln_bessel_i0(701.0);
+        assert!(
+            (b - a - 2.0).abs() < 0.01,
+            "slope ~1 near switch: {}",
+            b - a
+        );
+        assert!(bessel_i0(800.0).is_infinite());
+        let big = ln_bessel_i0(800.0);
+        assert!(big.is_finite() && (big - 796.0).abs() < 1.0, "{big}");
+        // Small-x agreement with the direct log.
+        for &x in &[0.1, 1.0, 10.0, 100.0] {
+            assert!((ln_bessel_i0(x) - bessel_i0(x).ln()).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn kappa_clamp_is_below_bessel_overflow() {
+        let k = kappa_from_r_bar(0.999_999);
+        assert!(k <= 500.0);
+        assert!(bessel_i0(k).is_finite());
     }
 }

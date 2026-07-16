@@ -243,8 +243,9 @@ mod tests {
 
     #[test]
     fn test_phase_integral_standard_values() {
-        // q(G) = 0.290 + 0.684 G: q(0.15) = 0.3926.
-        assert!((phase_integral(0.15) - 0.3926).abs() < 1e-12);
+        // q(G) = 0.290 + 0.684 G evaluated at G = 0.15 (coincidentally near
+        // π/8; computed from the linear law, not a circle constant).
+        assert!((phase_integral(0.15) - (0.290 + 0.684 * 0.15)).abs() < 1e-12);
         assert!((phase_integral(0.0) - 0.290).abs() < 1e-12);
     }
 

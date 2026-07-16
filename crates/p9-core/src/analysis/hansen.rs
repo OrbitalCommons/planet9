@@ -29,7 +29,10 @@ const MAX_POINTS: usize = 1 << 18;
 pub fn hansen_coefficient(j: i64, n: i32, m: i32, e: f64, tol: f64) -> f64 {
     assert!((0.0..1.0).contains(&e), "eccentricity out of range: {e}");
 
-    let mut n_points = 64usize;
+    // Start above the aliasing floor: the integrand oscillates ~j times per
+    // period, so fewer than ~8j nodes can alias and make one 64→128
+    // doubling false-converge for large j.
+    let mut n_points = 64usize.max(8 * j.unsigned_abs() as usize);
     let mut prev = hansen_fixed(j, n, m, e, n_points);
     while n_points < MAX_POINTS {
         n_points *= 2;
