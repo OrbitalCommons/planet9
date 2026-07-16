@@ -79,15 +79,42 @@ mod tests {
     }
 
     /// Pin the documented reflected-light W1 reach (REPRODUCTION_NOTES §13):
-    /// ≈263 AU at 5 M⊕ and ≈313 AU at 18 M⊕ with the geometric-albedo
-    /// opposition flux law (no isotropic /4).
+    /// ≈185 AU at 5 M⊕ and ≈220 AU at 18 M⊕ with the geometric-albedo
+    /// opposition flux law and the labelled W1-BAND albedo (0.10; the CH₄
+    /// ν₃ band suppresses ice-giant reflectance far below the V-band 0.41).
     #[test]
     fn reach_values_match_documented_reproduction_notes() {
         let survey = WiseSurvey::default();
         let d5 = max_detectable_distance(&survey, 5.0).expect("5 Me detectable");
         let d18 = max_detectable_distance(&survey, 18.0).expect("18 Me detectable");
-        assert!((d5 - 263.4).abs() < 3.0, "reach(5 M⊕) = {d5:.1} AU");
-        assert!((d18 - 313.0).abs() < 3.0, "reach(18 M⊕) = {d18:.1} AU");
+        assert!((d5 - 185.2).abs() < 3.0, "reach(5 M⊕) = {d5:.1} AU");
+        assert!((d18 - 220.1).abs() < 3.0, "reach(18 M⊕) = {d18:.1} AU");
+    }
+
+    /// The reach's albedo-band sensitivity, propagated explicitly: reach
+    /// ∝ p^{1/4}, spanning ~0.74x (CH₄-dark 0.03) to ~1.42x (bright 0.41)
+    /// of the default — the dominant systematic on the WISE exclusion.
+    #[test]
+    fn reach_albedo_sensitivity_spans_documented_range() {
+        use crate::thermal_model::{P9Thermal, W1_ALBEDO_BRIGHT, W1_ALBEDO_DARK};
+        let survey = WiseSurvey::default();
+        let reach_with = |albedo: f64| {
+            crate::detectability::core_max_detectable_distance(
+                50.0,
+                50_000.0,
+                survey.w1_depth,
+                |d| P9Thermal::new(10.0, d).with_albedo(albedo).w1_magnitude(),
+            )
+            .expect("detectable somewhere in range")
+        };
+        let dark = reach_with(W1_ALBEDO_DARK);
+        let default = reach_with(crate::thermal_model::W1_ALBEDO_DEFAULT);
+        let bright = reach_with(W1_ALBEDO_BRIGHT);
+        assert!(dark < default && default < bright);
+        assert!(
+            (dark / default - 0.74).abs() < 0.03 && (bright / default - 1.42).abs() < 0.05,
+            "p^(1/4) scaling: {dark:.0} / {default:.0} / {bright:.0} AU"
+        );
     }
 
     #[test]

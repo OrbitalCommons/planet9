@@ -71,16 +71,36 @@ pub struct P9Thermal {
     pub internal_temp_k: f64,
 }
 
+/// W1-band (3.35 µm) geometric albedo range for an ice-giant atmosphere.
+/// The 3.3 µm region sits in the strong CH₄ ν₃ absorption band, where
+/// Uranus/Neptune reflectance is a few percent — NOT the V-band 0.41 a
+/// previous version applied (which overstated the W1 reflected reach by
+/// ~2.5 mag for a Neptune-like atmosphere). The bright end covers CH₄-poor
+/// or high cloud decks.
+pub const W1_ALBEDO_DARK: f64 = 0.03;
+/// Adopted default W1-band albedo (labelled model choice, geometric mean of
+/// the dark CH₄-absorbed and bright cloud-deck ends).
+pub const W1_ALBEDO_DEFAULT: f64 = 0.10;
+/// Bright end of the W1 albedo range (the V-band value, as the optimistic
+/// bound for a CH₄-poor atmosphere).
+pub const W1_ALBEDO_BRIGHT: f64 = ALBEDO_NEPTUNE;
+
 impl P9Thermal {
     /// A Planet Nine at the given mass and heliocentric distance with the
-    /// default albedo and internal-temperature floor.
+    /// default W1-band albedo and internal-temperature floor.
     pub fn new(mass_earth: f64, distance_au: f64) -> Self {
         Self {
             mass_earth,
             distance_au,
-            albedo: ALBEDO_NEPTUNE,
+            albedo: W1_ALBEDO_DEFAULT,
             internal_temp_k: INTERNAL_TEMP_FLOOR_K,
         }
+    }
+
+    /// Same body with an explicit W1 albedo (sensitivity scans).
+    pub fn with_albedo(mut self, albedo: f64) -> Self {
+        self.albedo = albedo;
+        self
     }
 
     /// Physical radius in meters (Neptune-anchored mass-radius relation).
