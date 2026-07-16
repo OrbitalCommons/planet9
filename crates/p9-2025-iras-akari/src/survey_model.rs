@@ -33,7 +33,15 @@ pub struct FirSource {
     /// Declination in degrees
     pub dec_deg: f64,
     /// Flux density in Janskys at the primary detection band
+    /// (IRAS: 60 µm; AKARI: 90 µm)
     pub flux_jy: f64,
+    /// Flux density in Janskys at the survey's secondary band, when
+    /// catalogued (IRAS: 100 µm; AKARI: 65 µm). Drives the paper's
+    /// within-survey colour cuts; `None` skips those cuts for this source.
+    pub flux_secondary_jy: Option<f64>,
+    /// Catalogue flux-quality acceptable (the paper rejects sources whose
+    /// flux quality equals 1 in any of the 60/65/90/100 µm bands).
+    pub flux_quality_ok: bool,
     /// Positional uncertainty in arcseconds
     pub pos_err_arcsec: f64,
     /// Survey epoch (fractional year, e.g., 1983.5 for IRAS)

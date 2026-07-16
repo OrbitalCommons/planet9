@@ -5,18 +5,24 @@
 //! 1. Start with IRAS FSC 60 µm sources and AKARI Monthly Unconfirmed 90 µm sources
 //! 2. Apply flux cuts to retain only sources consistent with P9 thermal emission
 //! 3. For each IRAS-AKARI pair, compute angular separation
-//! 4. Retain pairs with separation in [42', 69.6'] (corresponding to 500–700 AU),
-//!    inflated by the combined positional uncertainty of the pair
-//! 5. Apply a flux-ratio consistency check derived from the thermal model
+//! 4. Retain pairs with separation in [42', 69.6'] (corresponding to 500–700 AU)
+//! 5. Apply the paper's colour-consistency check between the two surveys
 //! 6. Image inspection (not reproducible computationally — we flag candidates)
 //!
-//! The paper finds 13 pairs after step 4, and 1 good candidate after step 6.
+//! The paper finds 22 raw pairs in the separation window and 13 after the
+//! colour-consistency cut (its Fig. 4), with 1 good candidate after image
+//! inspection. Two pipelines are provided: [`search_candidates_paper`] — the
+//! paper's published cuts verbatim (within-survey colour rejection,
+//! cross-survey inconsistency, colour consistency, upper flux limit,
+//! galactic plane/bulge exclusion, un-inflated window) — and the labelled
+//! thermal-window variant [`search_candidates`] retained as an alternative
+//! (blackbody-derived flux-ratio window, 3σ-inflated separation).
 
 use p9_core::coords::candidate_pair::implied_distance;
 use p9_core::units::{arcseconds, au, Angle, Length};
 use serde::{Deserialize, Serialize};
 
-use crate::survey_model::{angular_separation_arcmin, FirSource};
+use crate::survey_model::{angular_separation_arcmin, FirSource, Survey};
 use crate::thermal_model::flux_ratio_60_90;
 
 /// Selection criteria for the IRAS-AKARI cross-match.
@@ -189,6 +195,177 @@ pub fn search_candidates(
     }
 }
 
+/// The paper's published per-source and per-pair cuts (Phan et al. 2025
+/// §3.3 / Fig. 4), verbatim:
+///
+/// per source —
+///  - flux-quality rejection (quality 1 in any of 60/65/90/100 µm)
+///  - galactic plane/bulge exclusion: reject |b| < 10° or within 27.5° of
+///    the galactic centre
+///  - within-survey colour rejection (T ≳ 100 K): reject if
+///    S₁₀₀/S₆₀ > 3 or S₆₀/S₁₀₀ > 3 (IRAS), S₉₀/S₆₅ > 3 or S₆₅/S₉₀ > 3
+///    (AKARI)
+///  - upper flux limit: reject fluxes above the 500 AU expectation
+///
+/// per pair —
+///  - separation ∈ [42′, 69.6′], un-inflated
+///  - cross-survey inconsistency: reject if S₆₀/S₆₅ or S₆₅/S₆₀ > 4, or
+///    S₉₀/S₁₀₀ or S₁₀₀/S₉₀ > 4
+///  - colour consistency: reject when the IRAS colour (S₁₀₀/S₆₀) and AKARI
+///    colour (S₉₀/S₆₅) differ by more than a factor 3.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaperCuts {
+    /// Within-survey colour rejection threshold (3).
+    pub within_survey_ratio_max: f64,
+    /// Cross-survey flux inconsistency threshold (4).
+    pub cross_survey_ratio_max: f64,
+    /// Colour-consistency threshold between the surveys (3).
+    pub colour_ratio_max: f64,
+    /// Upper flux limits (Jy) at the 500 AU expectation: (IRAS 60 µm,
+    /// AKARI 90 µm).
+    pub upper_flux_limit_jy: (f64, f64),
+    /// Galactic plane half-width (deg).
+    pub plane_b_min_deg: f64,
+    /// Bulge exclusion radius about the galactic centre (deg).
+    pub bulge_radius_deg: f64,
+    /// Separation window (arcmin), un-inflated.
+    pub sep_window_arcmin: (f64, f64),
+}
+
+impl Default for PaperCuts {
+    fn default() -> Self {
+        // Upper limits: the warm/heavy corner of the paper's grid at 500 AU
+        // (10 M⊕, 50 K) — fluxes above this cannot be the sought planet.
+        let warm = crate::thermal_model::P9ThermalParams {
+            mass_earth: 10.0,
+            distance_au: 500.0,
+            t_eff: 50.0,
+        };
+        Self {
+            within_survey_ratio_max: 3.0,
+            cross_survey_ratio_max: 4.0,
+            colour_ratio_max: 3.0,
+            upper_flux_limit_jy: (warm.flux_density_jy(60.0e-6), warm.flux_density_jy(90.0e-6)),
+            plane_b_min_deg: 10.0,
+            bulge_radius_deg: 27.5,
+            sep_window_arcmin: (42.0, 69.6),
+        }
+    }
+}
+
+/// Galactic latitude (deg) and angular distance to the galactic centre (deg)
+/// for an equatorial direction, via the shared p9-core frame matrices.
+fn galactic_b_and_gc_distance(ra_deg: f64, dec_deg: f64) -> (f64, f64) {
+    use p9_core::coords::sky::equatorial_to_galactic_matrix;
+    let (ra, dec) = (ra_deg.to_radians(), dec_deg.to_radians());
+    let eq = nalgebra::Vector3::new(dec.cos() * ra.cos(), dec.cos() * ra.sin(), dec.sin());
+    let gal = equatorial_to_galactic_matrix() * eq;
+    let b = (gal.z / gal.norm()).asin().to_degrees();
+    let gc_cos = gal.x / gal.norm(); // galactic centre is +x (l = 0, b = 0)
+    (b, gc_cos.clamp(-1.0, 1.0).acos().to_degrees())
+}
+
+/// Does a source survive the paper's per-source cuts?
+pub fn passes_source_cuts(src: &FirSource, cuts: &PaperCuts) -> bool {
+    if !src.flux_quality_ok {
+        return false;
+    }
+    let (b, gc_dist) = galactic_b_and_gc_distance(src.ra_deg, src.dec_deg);
+    if b.abs() < cuts.plane_b_min_deg || gc_dist < cuts.bulge_radius_deg {
+        return false;
+    }
+    // Within-survey colour rejection (skipped when no secondary flux is
+    // catalogued, as in the sparse MUSL rows).
+    if let Some(sec) = src.flux_secondary_jy {
+        let r = src.flux_jy / sec;
+        if r > cuts.within_survey_ratio_max || 1.0 / r > cuts.within_survey_ratio_max {
+            return false;
+        }
+    }
+    let limit = match src.survey {
+        Survey::Iras => cuts.upper_flux_limit_jy.0,
+        Survey::Akari => cuts.upper_flux_limit_jy.1,
+    };
+    src.flux_jy <= limit
+}
+
+/// Does a (source-cut-surviving) pair pass the paper's per-pair cuts?
+/// Returns the separation (arcmin) when it does.
+pub fn passes_pair_cuts(iras: &FirSource, akari: &FirSource, cuts: &PaperCuts) -> Option<f64> {
+    let sep = angular_separation_arcmin(iras.ra_deg, iras.dec_deg, akari.ra_deg, akari.dec_deg);
+    let (lo, hi) = cuts.sep_window_arcmin;
+    if sep < lo || sep > hi {
+        return None;
+    }
+    // Cross-survey flux inconsistency (needs the secondary bands).
+    if let (Some(s100), Some(s65)) = (iras.flux_secondary_jy, akari.flux_secondary_jy) {
+        let (s60, s90) = (iras.flux_jy, akari.flux_jy);
+        for r in [s60 / s65, s65 / s60, s90 / s100, s100 / s90] {
+            if r > cuts.cross_survey_ratio_max {
+                return None;
+            }
+        }
+        // Colour consistency between the surveys.
+        let colour_iras = s100 / s60;
+        let colour_akari = s90 / s65;
+        let c = colour_iras / colour_akari;
+        if c > cuts.colour_ratio_max || 1.0 / c > cuts.colour_ratio_max {
+            return None;
+        }
+    }
+    Some(sep)
+}
+
+/// The paper's published pipeline end to end: per-source cuts, un-inflated
+/// separation window, cross-survey and colour-consistency cuts.
+pub fn search_candidates_paper(
+    iras_sources: &[FirSource],
+    akari_sources: &[FirSource],
+    cuts: &PaperCuts,
+    baseline_years: f64,
+) -> SearchResult {
+    let iras_kept: Vec<&FirSource> = iras_sources
+        .iter()
+        .filter(|s| passes_source_cuts(s, cuts))
+        .collect();
+    let akari_kept: Vec<&FirSource> = akari_sources
+        .iter()
+        .filter(|s| passes_source_cuts(s, cuts))
+        .collect();
+
+    let mut candidates = Vec::new();
+    let mut n_pairs_in_window = 0usize;
+    let (lo, hi) = cuts.sep_window_arcmin;
+    for iras in &iras_kept {
+        for akari in &akari_kept {
+            let sep =
+                angular_separation_arcmin(iras.ra_deg, iras.dec_deg, akari.ra_deg, akari.dec_deg);
+            if sep >= lo && sep <= hi {
+                n_pairs_in_window += 1;
+            }
+            if let Some(sep) = passes_pair_cuts(iras, akari, cuts) {
+                candidates.push(CandidatePair {
+                    iras_source: (*iras).clone(),
+                    akari_source: (*akari).clone(),
+                    separation_arcmin: sep,
+                    combined_pos_err_arcmin: combined_pos_err_arcmin(iras, akari),
+                    implied_distance_au: implied_distance(sep, baseline_years),
+                    flux_ratio: iras.flux_jy / akari.flux_jy,
+                });
+            }
+        }
+    }
+
+    let n_pairs_flux_cut = candidates.len();
+    SearchResult {
+        n_iras: iras_kept.len(),
+        n_akari: akari_kept.len(),
+        n_pairs_in_window,
+        n_pairs_flux_cut,
+        candidates,
+    }
+}
+
 /// Galactic-latitude-dependent source-density model for far-infrared
 /// catalogues.
 ///
@@ -319,7 +496,10 @@ mod tests {
     }
 
     fn make_iras_source(ra: f64, dec: f64, flux: f64) -> FirSource {
+        // Cold-consistent secondary flux (S100 ≈ 2.5·S60 for ~40 K).
         FirSource {
+            flux_secondary_jy: Some(flux * 2.5),
+            flux_quality_ok: true,
             ra_deg: ra,
             dec_deg: dec,
             flux_jy: flux,
@@ -330,7 +510,10 @@ mod tests {
     }
 
     fn make_akari_source(ra: f64, dec: f64, flux: f64) -> FirSource {
+        // Cold-consistent secondary flux (S65 ≈ 0.4·S90 for ~40 K).
         FirSource {
+            flux_secondary_jy: Some(flux * 0.4),
+            flux_quality_ok: true,
             ra_deg: ra,
             dec_deg: dec,
             flux_jy: flux,
@@ -542,5 +725,51 @@ mod tests {
             n_chance > 0.2 * lambda_patch && n_chance < 5.0 * lambda_patch,
             "chance pairs {n_chance} vs expectation {lambda_patch:.1}"
         );
+    }
+
+    #[test]
+    fn paper_cuts_exercise_each_criterion() {
+        let cuts = PaperCuts::default();
+        // A cold, off-plane, quality source passes. RA/Dec ≈ (30°, -40°) is
+        // far from the plane and bulge.
+        let good = make_iras_source(30.0, -40.0, 0.3);
+        assert!(passes_source_cuts(&good, &cuts));
+
+        // Hot within-survey colour (S100/S60 < 1/3) rejected.
+        let mut hot = good.clone();
+        hot.flux_secondary_jy = Some(good.flux_jy / 4.0);
+        assert!(!passes_source_cuts(&hot, &cuts));
+
+        // Bad flux quality rejected.
+        let mut badq = good.clone();
+        badq.flux_quality_ok = false;
+        assert!(!passes_source_cuts(&badq, &cuts));
+
+        // Galactic-plane source rejected (galactic centre direction:
+        // RA ≈ 266.4°, Dec ≈ -29°).
+        let plane = make_iras_source(266.4, -29.0, 0.3);
+        assert!(!passes_source_cuts(&plane, &cuts));
+
+        // Over-bright source (above the 500 AU expectation) rejected.
+        let mut bright = good.clone();
+        bright.flux_jy = cuts.upper_flux_limit_jy.0 * 2.0;
+        bright.flux_secondary_jy = Some(bright.flux_jy * 2.5);
+        assert!(!passes_source_cuts(&bright, &cuts));
+
+        // Pair: consistent cold pair at 50' passes; colour-inconsistent
+        // partner fails the factor-3 colour cut.
+        let akari = make_akari_source(30.0, -40.0 + 50.0 / 60.0, 0.25);
+        assert!(passes_pair_cuts(&good, &akari, &cuts).is_some());
+        let mut off_colour = akari.clone();
+        // AKARI colour S90/S65 = 1/0.4 = 2.5 nominally; push it past 3x the
+        // IRAS colour (2.5) by shrinking S65.
+        off_colour.flux_secondary_jy = Some(akari.flux_jy / 20.0);
+        assert!(passes_pair_cuts(&good, &off_colour, &cuts).is_none());
+
+        // End to end: the good pair is found by the paper pipeline.
+        let res =
+            search_candidates_paper(&[good.clone(), hot, plane], &[akari.clone()], &cuts, 23.5);
+        assert_eq!(res.n_iras, 1, "only the good IRAS source survives");
+        assert_eq!(res.candidates.len(), 1);
     }
 }
