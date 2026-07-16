@@ -176,13 +176,34 @@ mod tests {
     }
 
     #[test]
-    fn mm_reach_is_hundreds_of_au_and_finite() {
-        let survey = ActSurvey::default();
-        let d = max_detectable_distance(&survey, 10.0);
-        assert!(d.is_finite());
-        // A 10 M⊕ cold P9 is detectable out to several hundred AU at 8 mJy,
-        // consistent with Naess et al.'s 425–775 AU (4–12 mJy) range for 10 M⊕.
-        assert!((300.0..900.0).contains(&d), "d_max(10 M⊕) = {d:.0} AU");
+    fn mm_reach_band_offset_from_paper_is_pinned() {
+        // Documented residual (REPRODUCTION_NOTES): this model reaches
+        // d_max(10 M⊕) ≈ 364 AU at 12 mJy and ≈ 631 AU at 4 mJy, a uniform
+        // ~15% under-prediction of Naess et al.'s 425–775 AU band — the
+        // Neptune-anchored mass-radius (and 40 K floor) versus the paper's
+        // Fortney evolutionary radius/temperature. NOT "consistent with the
+        // paper" at the band edges; the offset is the finding, so pin the
+        // computed values tightly and the offset direction explicitly.
+        let d_shallow = max_detectable_distance(&ActSurvey::shallowest(), 10.0);
+        let d_deep = max_detectable_distance(&ActSurvey::deepest(), 10.0);
+        assert!(
+            (355.0..375.0).contains(&d_shallow),
+            "d_max @ 12 mJy = {d_shallow:.0} AU"
+        );
+        assert!(
+            (620.0..645.0).contains(&d_deep),
+            "d_max @ 4 mJy = {d_deep:.0} AU"
+        );
+        // Uniform under-prediction of the published band, ~10-25% at both
+        // edges.
+        let (paper_lo, paper_hi) = (425.0, 775.0);
+        for (ours, paper) in [(d_shallow, paper_lo), (d_deep, paper_hi)] {
+            let frac = ours / paper;
+            assert!(
+                (0.75..0.95).contains(&frac),
+                "reach/paper = {frac:.3} (ours {ours:.0} vs paper {paper:.0})"
+            );
+        }
     }
 
     #[test]
