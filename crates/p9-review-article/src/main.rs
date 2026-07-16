@@ -9,6 +9,33 @@ fn main() {
     println!("Generated review_article.html ({} bytes)", html.len());
 }
 
+/// Count the paper-reproduction crates (`crates/p9-YYYY-*`) and their year
+/// span, so the article's scope claims track the workspace instead of going
+/// stale as literals.
+fn paper_crate_stats() -> (usize, u32, u32) {
+    let crates_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("crates dir");
+    let (mut count, mut lo, mut hi) = (0usize, u32::MAX, 0u32);
+    for entry in std::fs::read_dir(crates_dir).expect("read crates dir") {
+        let name = entry.expect("dir entry").file_name();
+        let name = name.to_string_lossy();
+        if let Some(year) = name
+            .strip_prefix("p9-")
+            .and_then(|rest| rest.get(..4))
+            .and_then(|y| y.parse::<u32>().ok())
+        {
+            if (2000..2100).contains(&year) {
+                count += 1;
+                lo = lo.min(year);
+                hi = hi.max(year);
+            }
+        }
+    }
+    assert!(count > 0, "no p9-YYYY-* crates found");
+    (count, lo, hi)
+}
+
 fn generate_review_article() -> String {
     let mut html = String::with_capacity(128_000);
 
@@ -27,7 +54,10 @@ fn generate_review_article() -> String {
     write_references(&mut html);
     write_footer(&mut html);
 
-    html
+    let (n_papers, year_lo, year_hi) = paper_crate_stats();
+    html.replace("__N_PAPERS__", &n_papers.to_string())
+        .replace("__YEAR_LO__", &year_lo.to_string())
+        .replace("__YEAR_HI__", &year_hi.to_string())
 }
 
 fn write_header(html: &mut String) {
@@ -37,7 +67,7 @@ fn write_header(html: &mut String) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planet Nine: A Computational Review of the Hypothesis (2016–2024)</title>
+<title>Planet Nine: A Computational Review of the Hypothesis (__YEAR_LO__–__YEAR_HI__)</title>
 <style>
   :root {
     --bg: #fafafa;
@@ -151,19 +181,21 @@ fn write_abstract(html: &mut String) {
     html.push_str(
         r#"
 <h1>Planet Nine: A Computational Review of the Hypothesis</h1>
-<p class="subtitle">Synthesis of Numerical Models from Batygin, Brown et al. (2016–2024)</p>
+<p class="subtitle">Synthesis of Numerical Models from Batygin, Brown et al. (__YEAR_LO__–__YEAR_HI__)</p>
 
 <div class="abstract">
 <strong>Abstract.</strong> We present a computational re-implementation and synthesis of all major
-numerical models from the Planet Nine literature spanning 2016–2024. Through faithful
-reproduction of 15 peer-reviewed studies in a unified Rust codebase, we trace the evolution
+numerical models from the Planet Nine literature spanning __YEAR_LO__–__YEAR_HI__. Through
+faithful reproduction of __N_PAPERS__ peer-reviewed studies and analyses in a unified Rust
+codebase, we trace the evolution
 of the Planet Nine hypothesis from its initial proposal (m&#8776;10 M<sub>&#8853;</sub>,
 a&#8776;700 AU) through successive refinements to current best estimates
 (m&#8776;6.2<sup>+2.2</sup><sub>&#8722;1.3</sub> M<sub>&#8853;</sub>,
 a&#8776;380<sup>+140</sup><sub>&#8722;80</sub> AU). We document how observational surveys
 (ZTF, DES, Pan-STARRS1) have progressively excluded 78% of the viable parameter space,
-while dynamical evidence has strengthened — most recently with the ~5&#963; rejection of
-a Planet Nine-free model from Neptune-crossing TNO analysis. The remaining 22% of parameter
+while dynamical evidence has strengthened — most recently with the rejection of a
+Planet Nine-free model by Neptune-crossing TNO analysis (Kolmogorov-Smirnov
+p = 0.0034, &#8776;2.7&#963;; the &#950; statistic sits ~5&#963; below its Monte-Carlo null mean). The remaining 22% of parameter
 space, concentrated at V&#8819;22 mag, awaits exploration by the Vera C. Rubin Observatory.
 </div>
 "#,
@@ -188,7 +220,7 @@ exceeding 250 AU. Their proposal triggered an intensive multi-year campaign of
 theoretical modeling, statistical analysis, and observational searches that
 continues to the present day.</p>
 
-<p>This review synthesizes findings from 15 papers spanning 2016–2024, each of
+<p>This review synthesizes findings from __N_PAPERS__ papers and analyses spanning __YEAR_LO__–__YEAR_HI__, each of
 which has been computationally re-implemented as part of a unified numerical
 framework. We trace the evolution of the hypothesis through four phases:
 initial evidence and parameter estimation (§2–3), exploration of dynamical
@@ -508,12 +540,17 @@ perturbations. The authors compared two models:</p>
 <table>
 <tr><th>Model</th><th>&#950; Statistic</th><th>p-value</th><th>Significance</th></tr>
 <tr><td>P9-inclusive (m=5, a=500, e=0.25, i=20°)</td><td>&#8722;7.9</td><td>0.41</td><td>Consistent</td></tr>
-<tr><td>P9-free null hypothesis</td><td>&#8722;16.5</td><td>0.0034</td><td>~5&#963; rejection</td></tr>
+<tr><td>P9-free null hypothesis</td><td>&#8722;16.5</td><td>0.0034</td><td>Rejected (KS &#8776;2.7&#963;; &#950; ~5&#963; below null mean)</td></tr>
 </table>
 
-<p>The P9-free model is rejected at approximately 5&#963; significance via the
-Kolmogorov-Smirnov test on perihelion distributions, while the P9-inclusive model
-is fully consistent with observations (p = 0.41). This result is particularly
+<p>The P9-free model's perihelion distribution is rejected by the
+Kolmogorov-Smirnov test at p = 0.0034 (&#8776;2.7&#963; as a one-sided Gaussian
+equivalent). The often-quoted "~5&#963;" figure is a different statement: the
+logarithmic &#950; statistic of the P9-free model (&#8722;16.5) lies about five
+standard deviations below the mean of its Monte-Carlo null distribution — a
+deviation of &#950; from the null mean, not a conversion of the KS p-value.
+The P9-inclusive model is fully consistent with observations (p = 0.41,
+&#950; within 0.4&#963; of the null mean). This result is particularly
 powerful because it uses an independent population (Neptune-crossers rather than
 distant KBOs), an independent observable (perihelion distribution rather than
 angular clustering), and cannot be attributed to observational bias (Neptune-crossers
@@ -552,7 +589,7 @@ each addressing a distinct dynamical phenomenon:</p>
 <li>Highly inclined and retrograde TNOs (Drac, Niku, 2016 NM<sub>56</sub>)</li>
 <li>Bimodal distant Kuiper Belt (aligned + anti-aligned populations)</li>
 <li>Inner Oort Cloud injection into the distant Kuiper Belt</li>
-<li>Neptune-crossing TNO perihelion distribution (~5&#963; rejection of P9-free)</li>
+<li>Neptune-crossing TNO perihelion distribution (P9-free rejected: KS p = 0.0034 &#8776; 2.7&#963;; &#950; ~5&#963; below its null mean)</li>
 </ol>
 </div>
 
@@ -591,8 +628,8 @@ magnitude over 18,000 deg<sup>2</sup>, LSST will probe essentially the entire
 remaining parameter space. At the current best-estimate distance of ~500 AU and
 magnitude V &#8776; 22, P9 would be well within LSST's detection capability.</p>
 
-<p>First light is expected in 2025, with the full survey commencing shortly
-thereafter. Within the first 1–2 years of operation, LSST should have sufficient
+<p>Rubin achieved first light in June 2025 and the ten-year survey is now
+underway. Within the first 1–2 years of operation, LSST should have sufficient
 temporal baseline for motion-based identification of a slow-moving outer solar
 system object at P9's expected angular velocity (~1–3 arcsec/hour).</p>
 
@@ -626,7 +663,8 @@ from the giant planet region, or capture from a passing star) would carry
 profound implications for solar system formation models.</p>
 
 <p>The convergence of multiple independent dynamical signatures, strengthening
-statistical evidence (now at ~5&#963; from Neptune-crossing TNOs alone), and
+statistical evidence (the P9-free null rejected at KS p = 0.0034 by
+Neptune-crossing TNOs alone, with &#950; ~5&#963; below its null mean), and
 the systematic exclusion of 78% of parameter space paints a picture of a
 hypothesis approaching its moment of truth. The remaining 22% of parameter
 space is squarely within reach of next-generation surveys. Within the decade,
@@ -666,4 +704,37 @@ fn write_footer(html: &mut String) {
 </html>
 "#,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scope_claims_track_the_workspace() {
+        let (n, lo, hi) = paper_crate_stats();
+        assert!(n >= 74, "paper crates = {n}");
+        assert_eq!(lo, 2016);
+        assert!(hi >= 2026);
+        let html = generate_review_article();
+        // Placeholders resolved, stale literals gone.
+        assert!(!html.contains("__N_PAPERS__") && !html.contains("__YEAR_LO__"));
+        assert!(!html.contains("15 peer-reviewed studies"));
+        assert!(!html.contains("2016–2024"));
+        assert!(!html.contains("First light is expected in 2025"));
+        assert!(html.contains(&format!("{n} peer-reviewed studies")));
+        assert!(html.contains(&format!("({lo}–{hi})")));
+    }
+
+    #[test]
+    fn five_sigma_is_attributed_to_zeta_not_ks() {
+        let html = generate_review_article();
+        // The misattribution the reproduction crate warns about must not
+        // reappear: ~5 sigma is the zeta null-mean deviation; the KS
+        // p = 0.0034 is ~2.7 sigma.
+        assert!(!html.contains("5&#963; significance via the\nKolmogorov-Smirnov"));
+        assert!(!html.contains("~5&#963; rejection"));
+        assert!(html.contains("p = 0.0034 (&#8776;2.7&#963;"));
+        assert!(html.contains("below the mean of its Monte-Carlo null distribution"));
+    }
 }
