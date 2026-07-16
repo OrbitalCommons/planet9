@@ -28,7 +28,7 @@ An object can carry multiple tags. Cuts follow the crates that consume them.
 |---|---|---|
 | `etno_vetted_class` | a ≥ 250 AU ∧ q ≥ 40 AU | apsidal clustering (p9-2026), 2021-orbit R̄, hull sample vetting |
 | `etno_napier_class` | a ≥ 230 AU ∧ 30 < q < 40 AU | napier-critique debiasing sample |
-| `gap_band` | 50 ≤ q ≤ 75 AU | perihelion-gap statistic (p9-2021-perihelion-gap) |
+| `gap_band` | 50 ≤ q ≤ 65 AU (the crate's published GAP_Q_LOW/HIGH) | perihelion-gap statistic (p9-2021-perihelion-gap) |
 | `gap_context` | q ≥ 40 AU ∧ 100 ≤ a < 250 AU | gap-population context table |
 | `high_inclination` | i ≥ 60° | inclined-TNO analyses (p9-2016-inclined-tnos) |
 | `retrograde` | i > 90° | Drac-class comparisons |
@@ -46,8 +46,13 @@ An object can carry multiple tags. Cuts follow the crates that consume them.
 
 Rationale: Rubin's first-year orbits ride the a–e fit degeneracy hard
 (the same drift our sbdb-refresh guard documents on multi-decade objects —
-worse at 1 opposition). Example to encode as a fixture: 2025 LS2 is
-`provisional` today (arc 350 d, soln 2) despite its spectacular a = 523 AU.
+worse at 1 opposition). Example encoded as a fixture: 2025 LS2 is
+`provisional` today despite its spectacular a ≈ 523 AU — by 2026-07-16 it
+had reached 2 oppositions (MPC arc to 2026-05-21) but still carries U = 9,
+and MPC/SBDB disagree on a by 1.5% (531.2 vs 523.1), so both the
+condition-code rule and the `discrepant` flag catch it. Implementation
+note: SBDB's census query returns null `n_opp` — opposition counts come
+from the MPC file in the merge.
 
 ## Poller algorithm
 
