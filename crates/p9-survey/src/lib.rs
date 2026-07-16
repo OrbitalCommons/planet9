@@ -27,7 +27,10 @@ use p9_core::data::ephemeris_constraint::brown_batygin_orbit;
 use schema::{Constraints, SkyGrid, SurveyDataset, TelescopeResult, SCHEMA_VERSION};
 
 /// The fixed RA/Dec grid used for every probability map: full RA, ±60° Dec, 3°
-/// cells (P9's declination never leaves this band for any surveyed solution).
+/// cells. The sampled solutions put a small fraction of draws beyond ±60°
+/// Dec (clamped-Gaussian inclinations plus the 23.4° obliquity); those
+/// draws fall outside the grid and are dropped by `SkyGrid::index`, not
+/// piled onto the edge rows.
 pub fn default_grid() -> SkyGrid {
     SkyGrid {
         ra_min_deg: 0.0,

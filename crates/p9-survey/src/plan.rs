@@ -79,6 +79,31 @@ pub struct Coverage {
 /// Greedily select the highest-probability grid cells until `area_budget_deg2`
 /// of (cos Dec-weighted) solid angle is used, returning the enclosed
 /// probability and the region geometry.
+/// Smallest arc [lo, hi] (degrees; hi may exceed 360 when the arc wraps
+/// through 0) containing all the given RAs: sort, find the largest gap
+/// between consecutive values on the circle, and take its complement.
+fn smallest_ra_arc(ras: &mut [f64]) -> (f64, f64) {
+    if ras.is_empty() {
+        return (f64::MAX, f64::MIN);
+    }
+    ras.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let n = ras.len();
+    let (mut gap_max, mut gap_at) = (360.0 - (ras[n - 1] - ras[0]), n - 1);
+    for k in 0..n - 1 {
+        let gap = ras[k + 1] - ras[k];
+        if gap > gap_max {
+            gap_max = gap;
+            gap_at = k;
+        }
+    }
+    if gap_at == n - 1 {
+        (ras[0], ras[n - 1])
+    } else {
+        // Arc wraps through 0: starts after the gap, ends at gap start +360.
+        (ras[gap_at + 1], ras[gap_at] + 360.0)
+    }
+}
+
 pub fn capture(prob: &[f64], grid: &SkyGrid, area_budget_deg2: f64) -> Coverage {
     let cell_base = grid.dra() * grid.ddec();
     let mut cells: Vec<(usize, f64, f64)> = (0..prob.len())
@@ -91,8 +116,12 @@ pub fn capture(prob: &[f64], grid: &SkyGrid, area_budget_deg2: f64) -> Coverage 
     cells.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
     let (mut captured, mut area) = (0.0, 0.0);
-    let (mut n, mut sx, mut sy, mut sw) = (0usize, 0.0, 0.0, 0.0);
-    let (mut ra_lo, mut ra_hi) = (f64::MAX, f64::MIN);
+    // RA is circular: centroid via the probability-weighted vector mean,
+    // bounds via the smallest arc containing all covered cells (a lobe
+    // straddling RA = 0 must not report lo = 0 / hi = 360 with an antipodal
+    // centroid).
+    let (mut n, mut sc, mut ss, mut sy, mut sw) = (0usize, 0.0, 0.0, 0.0, 0.0);
+    let mut ras: Vec<f64> = Vec::new();
     let (mut dec_lo, mut dec_hi) = (f64::MAX, f64::MIN);
     for (idx, p, solid) in cells {
         if area + solid > area_budget_deg2 && n > 0 {
@@ -103,14 +132,16 @@ pub fn capture(prob: &[f64], grid: &SkyGrid, area_budget_deg2: f64) -> Coverage 
         captured += p;
         area += solid;
         n += 1;
-        sx += p * ra;
+        let ra_rad = ra.to_radians();
+        sc += p * ra_rad.cos();
+        ss += p * ra_rad.sin();
         sy += p * dec;
         sw += p;
-        ra_lo = ra_lo.min(ra);
-        ra_hi = ra_hi.max(ra);
+        ras.push(ra);
         dec_lo = dec_lo.min(dec);
         dec_hi = dec_hi.max(dec);
     }
+    let (ra_lo, ra_hi) = smallest_ra_arc(&mut ras);
     Coverage {
         captured_prob: captured,
         area_used_deg2: area,
@@ -119,7 +150,11 @@ pub fn capture(prob: &[f64], grid: &SkyGrid, area_budget_deg2: f64) -> Coverage 
         ra_hi_deg: ra_hi,
         dec_lo_deg: dec_lo,
         dec_hi_deg: dec_hi,
-        ra_centroid_deg: if sw > 0.0 { sx / sw } else { 0.0 },
+        ra_centroid_deg: if sw > 0.0 {
+            ss.atan2(sc).to_degrees().rem_euclid(360.0)
+        } else {
+            0.0
+        },
         dec_centroid_deg: if sw > 0.0 { sy / sw } else { 0.0 },
     }
 }
@@ -213,5 +248,39 @@ mod tests {
         let cs = capture(&siraj.prob, &grid, 100.0).captured_prob;
         let cb = capture(&b2016.prob, &grid, 100.0).captured_prob;
         assert!(cs > cb, "Siraj {cs} should beat 2016 {cb}");
+    }
+
+    #[test]
+    fn wrapped_lobe_reports_circular_ra_stats() {
+        // A lobe straddling RA = 0 (cells near 355° and 5°) must report a
+        // tight wrapped arc and a centroid near 0° — not lo≈0/hi≈360 with an
+        // antipodal centroid.
+        let grid = SkyGrid {
+            ra_min_deg: 0.0,
+            ra_max_deg: 360.0,
+            n_ra: 72,
+            dec_min_deg: -60.0,
+            dec_max_deg: 60.0,
+            n_dec: 24,
+        };
+        let mut prob = vec![0.0; grid.len()];
+        for ra in [352.5, 357.5, 2.5, 7.5] {
+            let idx = grid.index(ra, 0.0).unwrap();
+            prob[idx] = 0.25;
+        }
+        // Budget sized to the four hot cells (5 deg cells, ~25 deg^2 each).
+        let cov = capture(&prob, &grid, 110.0);
+        let centroid = cov.ra_centroid_deg;
+        let d0 = (centroid - 0.0)
+            .rem_euclid(360.0)
+            .min((0.0 - centroid).rem_euclid(360.0));
+        assert!(d0 < 5.0, "centroid {centroid:.1} should sit near RA 0");
+        let span = cov.ra_hi_deg - cov.ra_lo_deg;
+        assert!(
+            (10.0..30.0).contains(&span),
+            "wrapped arc span {span:.1} (lo {:.1}, hi {:.1})",
+            cov.ra_lo_deg,
+            cov.ra_hi_deg
+        );
     }
 }

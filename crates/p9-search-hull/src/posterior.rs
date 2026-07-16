@@ -178,7 +178,16 @@ pub fn ensemble_scored(
         let d = Draws::new(sol);
         for _ in 0..per_study {
             let s = d.draw(&mut rng);
-            let idx = grid.index(s.ra_deg, s.dec_deg);
+            // Out-of-grid draws (|Dec| > 60°) are excluded from the map, not
+            // clamped onto the edge rows; the cloud keeps them so the
+            // (distance, V) panel remains unbiased.
+            let Some(idx) = grid.index(s.ra_deg, s.dec_deg) else {
+                if drawn % cloud_stride == 0 {
+                    cloud.push(s);
+                }
+                drawn += 1;
+                continue;
+            };
             let w = weight(&s);
             count[idx] += w;
             sum_dist[idx] += w * s.dist_au;
