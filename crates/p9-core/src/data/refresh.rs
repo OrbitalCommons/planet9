@@ -311,6 +311,26 @@ pub fn etno_snapshots() -> Vec<ElementSnapshot> {
         .collect()
 }
 
+/// The Batygin & Brown (2016) stable-KBO table as snapshot rows for the
+/// differ. The elements are epoch-~2016 SBDB osculating values (refreshed
+/// July 2026 after #223 found a mixed solution and systematic e offsets), so
+/// the coarse [`Tolerances::brown2017`] drift allowances apply.
+pub fn stable_kbo_snapshots() -> Vec<ElementSnapshot> {
+    crate::data::stable_kbos::stable_kbos()
+        .iter()
+        .map(|k| ElementSnapshot {
+            name: k.name,
+            designation: k.designation,
+            a: Some(k.elements.a),
+            e: Some(k.elements.e),
+            i_deg: Some(k.elements.i / DEG2RAD),
+            omega_deg: Some(k.elements.omega / DEG2RAD),
+            omega_big_deg: Some(k.elements.omega_big / DEG2RAD),
+            h_mag: None,
+        })
+        .collect()
+}
+
 /// Julian Date (UT) of a calendar date with fractional day (proleptic
 /// Gregorian; standard Meeus algorithm). `calendar_to_jd(2000, 1, 1.5)` is
 /// J2000.0 = 2451545.0.
@@ -421,10 +441,20 @@ mod live {
     pub fn refresh_etno_from_sbdb(client: &SbdbClient) -> Result<Vec<EtnoDiff>, String> {
         refresh_table_from_sbdb(client, &etno_snapshots(), &Tolerances::brown2017())
     }
+
+    /// Diff the frozen stable-KBO table against live SBDB with the
+    /// [`Tolerances::brown2017`] drift allowances. An empty result means the
+    /// frozen table still matches JPL.
+    pub fn refresh_stable_kbos_from_sbdb(client: &SbdbClient) -> Result<Vec<EtnoDiff>, String> {
+        refresh_table_from_sbdb(client, &stable_kbo_snapshots(), &Tolerances::brown2017())
+    }
 }
 
 #[cfg(feature = "sbdb-refresh")]
-pub use live::{fetch_live_elements, refresh_etno_from_sbdb, refresh_table_from_sbdb};
+pub use live::{
+    fetch_live_elements, refresh_etno_from_sbdb, refresh_stable_kbos_from_sbdb,
+    refresh_table_from_sbdb,
+};
 
 /// Re-export so downstream crates enabling `p9-core/sbdb-refresh` can build a
 /// client without depending on starfield directly.

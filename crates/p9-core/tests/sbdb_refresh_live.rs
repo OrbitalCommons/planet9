@@ -76,3 +76,43 @@ fn sbdb_lookup_returns_full_element_set_for_sedna() {
     assert!(live.mean_motion_deg_per_day.is_some());
     assert!(live.first_obs.is_some());
 }
+
+/// Solution drift documented at the 2026-07-15 live check: `stable_kbos`
+/// deliberately pins the paper-epoch (~2016) solutions (see the module
+/// docs), and JPL has since republished a/e along the fit degeneracy for
+/// the long-period members (live SBDB also serves only ~3 significant
+/// figures for these), plus a sub-degree ω update for the short-arc
+/// 2010 GB174. Anything outside this list is a transcription error or a
+/// new solution worth a human look.
+const STABLE_KBO_KNOWN_DRIFT: &[(&str, Element)] = &[
+    ("Sedna", Element::SemiMajorAxis),
+    ("Sedna", Element::Eccentricity),
+    ("2012 VP113", Element::SemiMajorAxis),
+    ("2012 VP113", Element::Eccentricity),
+    ("2004 VN112", Element::SemiMajorAxis),
+    ("2010 GB174", Element::SemiMajorAxis),
+    ("2010 GB174", Element::ArgPerihelion),
+    ("2010 VZ98", Element::SemiMajorAxis),
+];
+
+#[test]
+#[ignore = "hits the live JPL SBDB API"]
+fn stable_kbo_table_matches_live_sbdb_modulo_documented_drift() {
+    use p9_core::data::refresh::refresh_stable_kbos_from_sbdb;
+    let client = SbdbClient::new().expect("HTTP client");
+    let diffs = refresh_stable_kbos_from_sbdb(&client).expect("live SBDB refresh");
+    let mut unexpected = 0;
+    for d in &diffs {
+        let known = STABLE_KBO_KNOWN_DRIFT
+            .iter()
+            .any(|(obj, el)| *obj == d.object && *el == d.element);
+        eprintln!("{}: {d}", if known { "known drift" } else { "UNEXPECTED" });
+        if !known {
+            unexpected += 1;
+        }
+    }
+    assert_eq!(
+        unexpected, 0,
+        "{unexpected} element(s) of stable_kbos drifted out of tolerance vs live SBDB          beyond the drift documented 2026-07-15 (transcription error or new          orbit-solution update; see stderr)"
+    );
+}

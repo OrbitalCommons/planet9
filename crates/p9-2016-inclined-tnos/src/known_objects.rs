@@ -83,6 +83,39 @@ pub fn extended_high_i_objects() -> Vec<KnownTno> {
     objects
 }
 
+/// The paper table as snapshot rows for `p9_core::data::refresh` (all five
+/// elements are carried).
+pub fn element_snapshots() -> Vec<p9_core::data::refresh::ElementSnapshot> {
+    paper_tnos()
+        .iter()
+        .map(|t| p9_core::data::refresh::ElementSnapshot {
+            name: t.name,
+            designation: t.designation,
+            a: Some(t.elements.a),
+            e: Some(t.elements.e),
+            i_deg: Some(t.elements.i / DEG2RAD),
+            omega_deg: Some(t.elements.omega / DEG2RAD),
+            omega_big_deg: Some(t.elements.omega_big / DEG2RAD),
+            h_mag: None,
+        })
+        .collect()
+}
+
+/// Diff the frozen table against the live JPL SBDB (network; see the
+/// `#[ignore]`d test in `tests/sbdb_refresh_live.rs`). The table was
+/// re-transcribed at full SBDB precision in July 2026, so the tight
+/// `full_precision` tolerances apply.
+#[cfg(feature = "sbdb-refresh")]
+pub fn refresh_from_sbdb(
+    client: &p9_core::data::refresh::SbdbClient,
+) -> Result<Vec<p9_core::data::refresh::EtnoDiff>, String> {
+    p9_core::data::refresh::refresh_table_from_sbdb(
+        client,
+        &element_snapshots(),
+        &p9_core::data::refresh::Tolerances::full_precision(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

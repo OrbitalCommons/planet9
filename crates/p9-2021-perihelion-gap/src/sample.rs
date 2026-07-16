@@ -173,6 +173,39 @@ pub fn high_e_perihelia(e_floor: f64) -> Vec<f64> {
         .collect()
 }
 
+/// The extended table as snapshot rows for `p9_core::data::refresh` (only a
+/// and e are carried by this table; q is derived).
+pub fn element_snapshots() -> Vec<p9_core::data::refresh::ElementSnapshot> {
+    EXTENDED_DISTANT_TNOS
+        .iter()
+        .map(|t| p9_core::data::refresh::ElementSnapshot {
+            name: t.name,
+            designation: t.name,
+            a: Some(t.a),
+            e: Some(t.e),
+            i_deg: None,
+            omega_deg: None,
+            omega_big_deg: None,
+            h_mag: None,
+        })
+        .collect()
+}
+
+/// Diff the frozen extended table against the live JPL SBDB (network; see
+/// the `#[ignore]`d test in `tests/sbdb_refresh_live.rs`). SBDB serves ~3
+/// significant figures for the weakly-constrained members, and a/e drift
+/// with the fit degeneracy, so the coarse `brown2017` allowances apply.
+#[cfg(feature = "sbdb-refresh")]
+pub fn refresh_from_sbdb(
+    client: &p9_core::data::refresh::SbdbClient,
+) -> Result<Vec<p9_core::data::refresh::EtnoDiff>, String> {
+    p9_core::data::refresh::refresh_table_from_sbdb(
+        client,
+        &element_snapshots(),
+        &p9_core::data::refresh::Tolerances::brown2017(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
