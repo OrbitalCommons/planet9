@@ -127,27 +127,15 @@ mod tests {
         use uom::si::mass::kilogram;
 
         // The bisection root recomputed inline must equal the typed reach.
+        // The reach is defined by F(reach) == flux limit; check the
+        // shared-core bisection lands on that root.
         let reach = max_detectable_distance(5.0, &SO_SENSITIVITY);
-        let expected_au = {
-            let flux_at = |d: f64| P9Thermal::new(5.0, d).flux_mjy(SO_SENSITIVITY.nu_hz);
-            let (mut lo, mut hi) = (50.0_f64, 5000.0_f64);
-            for _ in 0..200 {
-                let mid = 0.5 * (lo + hi);
-                if flux_at(mid) >= SO_SENSITIVITY.flux_limit_mjy {
-                    lo = mid;
-                } else {
-                    hi = mid;
-                }
-                if hi - lo < 1e-6 {
-                    break;
-                }
-            }
-            0.5 * (lo + hi)
-        };
+        let d = reach.get::<astronomical_unit>();
+        assert!((50.0..5000.0).contains(&d), "reach = {d}");
         assert_relative_eq!(
-            reach.get::<astronomical_unit>(),
-            expected_au,
-            epsilon = 1e-9
+            P9Thermal::new(5.0, d).flux_mjy(SO_SENSITIVITY.nu_hz),
+            SO_SENSITIVITY.flux_limit_mjy,
+            max_relative = 1e-6
         );
         let bx = ReferenceBox::nominal();
         assert_relative_eq!(
