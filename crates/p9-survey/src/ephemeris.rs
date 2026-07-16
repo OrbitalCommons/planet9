@@ -15,7 +15,7 @@
 use nalgebra::Vector3;
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::sky::ecliptic_vec_to_equatorial_deg;
-use p9_core::data::ephemeris_constraint::{FAVORED_INTERVAL_DEG, TRUE_ANOMALY_TOLERANCE_DEG};
+use p9_core::data::ephemeris_constraint::{FAVORED_INTERVAL_DEG, PREFERRED_TRUE_ANOMALY_SIGMA_DEG};
 use p9_core::types::{position_at_true_anomaly, P9Params};
 
 /// Favored true-anomaly interval (deg), from Fienga et al. 2016 via
@@ -24,9 +24,12 @@ pub fn favored_interval_deg() -> (f64, f64) {
     FAVORED_INTERVAL_DEG
 }
 
-/// 1σ tolerance (deg) on the favored interval edges.
-pub fn tolerance_deg() -> f64 {
-    TRUE_ANOMALY_TOLERANCE_DEG / 2.0
+/// 1σ width (deg) of the ν prior's wings: the published measurement
+/// uncertainty on the preferred true anomaly (Fienga et al. 2016,
+/// `v = 117.8°₋₁₀⁺¹¹` symmetrized), NOT the reproduction-test tolerance the
+/// old code repurposed here.
+pub fn nu_sigma_deg() -> f64 {
+    PREFERRED_TRUE_ANOMALY_SIGMA_DEG
 }
 
 /// Smallest absolute angular separation (deg) of `nu_deg` from the interval
@@ -42,14 +45,14 @@ fn distance_to_interval(nu_deg: f64, lo: f64, hi: f64) -> f64 {
 }
 
 /// Ephemeris weight in [0, 1] for a sample at true anomaly `nu_deg`: flat at 1
-/// inside the favored interval, Gaussian wings outside with σ = [`tolerance_deg`].
+/// inside the favored interval, Gaussian wings outside with σ = [`nu_sigma_deg`].
 pub fn nu_weight(nu_deg: f64) -> f64 {
     let (lo, hi) = favored_interval_deg();
     let d = distance_to_interval(nu_deg, lo, hi);
     if d == 0.0 {
         1.0
     } else {
-        let sigma = tolerance_deg().max(1.0);
+        let sigma = nu_sigma_deg().max(1.0);
         (-0.5 * (d / sigma).powi(2)).exp()
     }
 }
@@ -58,7 +61,7 @@ pub fn nu_weight(nu_deg: f64) -> f64 {
 /// on a given orbit — for plotting the "ephemeris says here" band.
 pub fn favored_arc(orbit: &P9Params, n: usize) -> Vec<[f64; 2]> {
     let (lo, hi) = favored_interval_deg();
-    let tol = tolerance_deg();
+    let tol = nu_sigma_deg();
     let (a, b) = (lo - tol, hi + tol);
     (0..n)
         .map(|k| {
