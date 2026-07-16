@@ -72,7 +72,13 @@ pub fn projected_baseline(epoch_separation_days: f64) -> Length {
 
 /// Parallactic displacement (arcsec) of a body at `distance_au` observed at two
 /// epochs separated by `epoch_separation_days`, using the chord baseline above.
-/// This is the quantity the search actually measures between two visits.
+///
+/// Two labeled approximations relative to what a search pipeline measures:
+/// the full Earth chord is an UPPER bound on the sky-plane-projected
+/// baseline (equality when the chord is perpendicular to the line of
+/// sight), and the body's own heliocentric motion is dropped (~1 arcmin per
+/// 6 months at 460 AU — ~6% of the parallactic swing; the sibling
+/// p9-2025-iras-akari crates model exactly that term).
 pub fn epoch_parallax_arcsec(distance_au: f64, epoch_separation_days: f64) -> f64 {
     let baseline_km = projected_baseline_au(epoch_separation_days) * AU_KM;
     parallax_arcsec(baseline_km, distance_au)

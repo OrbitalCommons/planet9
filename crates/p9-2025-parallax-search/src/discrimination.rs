@@ -26,24 +26,6 @@ pub fn contrast_ratio(distance_au: f64, star_parallax_arcsec: f64) -> f64 {
     half_parallax_arcsec(distance_au) / star_parallax_arcsec
 }
 
-/// Contrast over a *finite* epoch separation: both P9 and the star are projected
-/// onto the same chord baseline, so the geometric baseline factor cancels and the
-/// ratio is identical to [`contrast_ratio`]. Provided for clarity at the call
-/// site when reasoning about a specific two-epoch observation.
-pub fn contrast_ratio_over_epoch(
-    distance_au: f64,
-    star_parallax_arcsec: f64,
-    epoch_separation_days: f64,
-) -> f64 {
-    // The star's apparent shift over the same baseline scales by the same chord
-    // factor as P9's, so dividing them recovers the annual-parallax ratio.
-    let p9 = epoch_parallax_arcsec(distance_au, epoch_separation_days);
-    let star_full = star_parallax_arcsec; // star half-parallax (annual)
-    let p9_full = half_parallax_arcsec(distance_au);
-    let chord = if p9_full == 0.0 { 0.0 } else { p9 / p9_full };
-    (p9_full * chord) / (star_full * chord)
-}
-
 /// Maximum tolerable per-epoch astrometric error (arcsec) to detect the reflex
 /// parallax of a body at `distance_au` at the requested `snr`, over a baseline of
 /// `epoch_separation_days`. A measured shift `A` detected at `snr` needs
@@ -135,18 +117,6 @@ mod tests {
         let nearby_star = 0.1; // 10 pc, parallax 0.1 arcsec
         let r = contrast_ratio(published::P9_DISTANCE_MAX_AU, nearby_star);
         assert!(r > 1.0e3, "even vs a 10 pc star, contrast = {r:.0}");
-    }
-
-    #[test]
-    fn epoch_contrast_equals_annual_contrast() {
-        // The chord baseline cancels: finite-epoch contrast == annual contrast.
-        let d = 600.0;
-        let s = published::TYPICAL_FIELD_STAR_PARALLAX_ARCSEC;
-        assert_relative_eq!(
-            contrast_ratio_over_epoch(d, s, 30.0),
-            contrast_ratio(d, s),
-            epsilon = 1e-9
-        );
     }
 
     #[test]
