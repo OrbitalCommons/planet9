@@ -99,9 +99,9 @@ mod tests {
 
     #[test]
     fn eccentric_distant_tnos_penetrate_overlap_zone() {
-        // Becker+'s migrating objects are high-e and distant; their aphelia
+        // Becker+'s MIGRATING objects are high-e and distant; their aphelia
         // reach into the overlap zone, so they are classified as hoppers.
-        for name in ["2007 TG422", "2013 RF98", "Sedna"] {
+        for name in ["2007 TG422", "2013 RF98"] {
             let o = obj(name);
             assert_eq!(
                 classify(o.a, o.e),
@@ -112,6 +112,27 @@ mod tests {
                 o.a * (1.0 + o.e)
             );
         }
+    }
+
+    #[test]
+    fn sedna_is_a_known_false_positive_of_the_aphelion_proxy() {
+        // Becker et al. report Sedna (with 2012 VP113) as an object that
+        // does NOT migrate — it "tends to stay in the same resonance" — yet
+        // its aphelion (Q ≈ 936 AU ≥ a_hop ≈ 590) reaches the overlap zone,
+        // so the Q-based proxy classifies it Hopping. The proxy is a
+        // NECESSARY-not-sufficient criterion: reaching the chaotic web at
+        // aphelion does not force migration when the secular phase keeps
+        // perihelion passages resonantly protected (the paper's N-body
+        // captures this; a static aphelion cut cannot). Documented as a
+        // known false positive rather than asserted as reproducing the
+        // paper's class.
+        let o = obj("Sedna");
+        assert_eq!(
+            classify(o.a, o.e),
+            HoppingState::Hopping,
+            "the proxy's false positive is itself pinned (Q = {:.0})",
+            o.a * (1.0 + o.e)
+        );
     }
 
     #[test]

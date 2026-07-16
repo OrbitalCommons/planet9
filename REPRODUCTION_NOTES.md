@@ -294,8 +294,11 @@ at smaller a is not adjacent n:1 resonances literally touching; it is the highly
 (e ≈ 0.9) TNOs whose orbits **penetrate** the near-P9 overlap zone at aphelion during their
 secular cycles, sampling the chaotic web — which their full N-body integration captures and a
 static pendulum-width chain does not. The crate classifies an ETNO as a hopper when its aphelion
-Q = a(1+e) reaches a_hop; 2007 TG422, 2013 RF98 and Sedna all qualify, matching the paper's
-migrating class. No constant is tuned to a target a_hop — the strength `S = α·α/(1−α)·e` is the
+Q = a(1+e) reaches a_hop; 2007 TG422 and 2013 RF98 qualify, matching the paper's migrating
+class. Sedna also crosses the Q threshold but Becker et al. report it (with 2012 VP113) as
+NON-migrating — the aphelion proxy is necessary-not-sufficient and Sedna is its documented
+false positive (resonant phase protection, which only the paper's N-body captures, keeps it
+locked). No constant is tuned to a target a_hop — the strength `S = α·α/(1−α)·e` is the
 bare leading Laplace/eccentric scaling, and K ∝ √μ exactly.
 - Pinned: `crates/p9-2017-resonance-hopping/src/chain.rs`
   (`resonance_locations_match_kepler_relation` to 1e-9,
