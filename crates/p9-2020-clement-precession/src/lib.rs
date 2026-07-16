@@ -1,4 +1,4 @@
-//! Reproduction of Clement & Sheppard (2020), "Orbital Precession in the
+//! Reproduction of Clement & Kaib (2020), "Orbital Precession in the
 //! Distant Solar System" (arXiv:2005.05326), and the companion 2021 study of
 //! Neptune's distant mean-motion resonances under a Planet Nine
 //! (arXiv:2105.01065).

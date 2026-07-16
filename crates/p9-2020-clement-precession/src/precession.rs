@@ -13,7 +13,7 @@
 //! limit b_{3/2}^{(1)}(α) → 3α; the (1 − e²)^{-2} factor is the standard
 //! finite-eccentricity correction). The total precession is slow and prograde,
 //! with a period of order >~ 1 Gyr for the clustered ETNOs — the regime in
-//! which the apsidal lines can stay coherently confined (Clement & Sheppard
+//! which the apsidal lines can stay coherently confined (Clement & Kaib
 //! 2020, arXiv:2005.05326).
 //!
 //! A Planet Nine is *exterior* to the ETNO and adds an opposite-sign secular
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_giant_planet_precession_period_is_documented_order() {
-        // Clement & Sheppard 2020: the giant planets drive a slow prograde
+        // Clement & Kaib 2020: the giant planets drive a slow prograde
         // apsidal precession of the distant ETNOs, with a period of order
         // ~1 Gyr (>~ a Gyr for a ≳ 250 AU). The rate must be positive
         // (prograde) and the period in the 10^8–10^10 yr band.

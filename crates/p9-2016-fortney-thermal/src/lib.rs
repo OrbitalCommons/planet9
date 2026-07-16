@@ -107,6 +107,10 @@ impl P9Thermal {
         Self {
             mass_earth,
             distance_au,
+            // Conflation kept deliberately: core's ALBEDO_NEPTUNE (0.41) is a
+            // GEOMETRIC albedo; Neptune's Bond albedo is ~0.29. At 100s of AU
+            // the equilibrium-temperature difference is well under a kelvin,
+            // so the shared constant is used rather than a second knob.
             bond_albedo: ALBEDO_NEPTUNE,
             l_int_ref_w: L_INT_REF_W,
         }

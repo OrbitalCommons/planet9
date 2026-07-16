@@ -65,8 +65,11 @@ pub fn photon_energy_ratio(t: f64, nu_hz: f64) -> f64 {
 }
 
 /// Solar equilibrium temperature (K) for a fast rotator radiating from its full
-/// surface at heliocentric distance `distance_au` with geometric/Bond albedo
-/// `albedo`: T_eq = T_sun √(R_sun / 2d) (1 − A)^¼.
+/// surface at heliocentric distance `distance_au`:
+/// T_eq = T_sun √(R_sun / 2d) (1 − A)^¼. Strictly A is the BOND albedo;
+/// callers passing the geometric `ALBEDO_NEPTUNE` (0.41, vs Neptune's Bond
+/// ~0.29) overstate (1−A) by ~17%, which changes T_eq by ~4% — sub-kelvin at
+/// the distances this workspace evaluates.
 pub fn solar_equilibrium_temp(distance_au: f64, albedo: f64) -> f64 {
     let d_m = distance_au * AU_M;
     T_SUN * (R_SUN_M / (2.0 * d_m)).sqrt() * (1.0 - albedo).powf(0.25)

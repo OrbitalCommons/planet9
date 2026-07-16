@@ -77,7 +77,7 @@ pub const SURVEY_DEPTHS: [SurveyDepth; 5] = [
         survey: "WISE W1",
         limiting_mag: 16.5,
         band: "W1",
-        reference: "Wright et al. (2010)",
+        reference: "Meisner et al. (2018) unWISE coadd search depth",
     },
     SurveyDepth {
         survey: "CRTS",

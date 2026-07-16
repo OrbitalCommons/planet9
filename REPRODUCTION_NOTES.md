@@ -224,8 +224,9 @@ band's 3.4 µm and a plausible Planet Nine effective temperature of ≈40 K, hν
 blackbody thermal flux is ~10⁻⁵⁵ W/m²/Hz/sr — utterly negligible. The thermal channel only
 overtakes reflected sunlight above ≈175 K (at 15 M⊕, 400 AU), far hotter than any Planet Nine.
 So the W1 detectability this crate computes is, for a cold body, set by **reflected sunlight**;
-the thermal term is retained and would dominate for an implausibly warm planet. (The real search's
-W2 4.6 µm band is more thermally favorable; the shared survey table pins the deeper, bluer W1.)
+the thermal term is retained and would dominate for an implausibly warm planet. (W1 is the band
+Meisner et al. actually searched in the unWISE coadds — the one the shared survey table pins;
+W2 at 4.6 µm would be more thermally favorable but was not the search band.)
 - Consequence for the exclusion: with the labelled W1-BAND albedo (0.10 — the 3.3 µm CH₄ ν₃
   band suppresses ice-giant reflectance far below the V-band 0.41 a previous version applied),
   the reflected-light W1 reach is ≈185 AU (5 M⊕) to ≈220 AU (18 M⊕) and the exclusion over the

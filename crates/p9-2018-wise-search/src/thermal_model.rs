@@ -22,9 +22,10 @@
 //! WISE W1 detectability is in practice set by **reflected sunlight**, and
 //! this crate's "thermal-IR" exclusion is, at W1, a reflected-light exclusion
 //! — the thermal term is retained (and would dominate for an implausibly warm
-//! body) but contributes nothing at 40 K. The W2 (4.6 µm) band of the actual
-//! Meisner et al. search is somewhat more thermally favorable; we model the
-//! deeper, bluer W1 band that the shared survey table pins.
+//! body) but contributes nothing at 40 K. W1 (3.4 µm) is the band Meisner
+//! et al. (2018, arXiv:1712.04950) actually searched in the unWISE coadds —
+//! the same band the shared survey table pins. (W2 at 4.6 µm would be
+//! somewhat more thermally favorable, but was not the search band.)
 //!
 //! Both channels are converted to a Vega-system W1 magnitude with the WISE W1
 //! zero point F_ν0 = 309.540 Jy (Wright et al. 2010, Table 1). The radius law

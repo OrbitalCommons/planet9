@@ -106,7 +106,7 @@ pub fn observed_etno_r_bar() -> f64 {
 /// From the paper: randomly draw `n_draw` objects from the qualifying
 /// survivors (a ∈ [300,700], q < 80 AU, i < 50°) and check whether their Δϖ
 /// concentration reaches the *observed* 6-KBO mean resultant length
-/// (R̄ ≈ 0.96 from `observed_six_kbo_r_bar`, replacing a previous invented
+/// (R̄ ≈ 0.84 from `observed_six_kbo_r_bar`, replacing a previous invented
 /// R̄ > 0.5 cut). Returns the fraction of draws at least as confined as the
 /// observations.
 pub fn confinement_probability(

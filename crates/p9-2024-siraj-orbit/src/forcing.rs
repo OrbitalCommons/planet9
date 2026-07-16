@@ -5,7 +5,8 @@
 //! constant (the rate at which the perturber forces the test body's apsidal
 //! line) scales as
 //!
-//!   ω̇_sec ∝ G m_p a² / a_p⁵   (quadrupole, in the α = a/a_p ≪ 1 limit)
+//!   ω̇_sec ∝ n (m_p/M☉) (a/a_p)³ ∝ m_p a^{3/2} / a_p³   (quadrupole,
+//!   α = a/a_p ≪ 1 limit)
 //!
 //! At fixed test-particle semi-major axis `a`, the *mass-and-distance*
 //! dependence of the forcing that the clustered population responds to is
