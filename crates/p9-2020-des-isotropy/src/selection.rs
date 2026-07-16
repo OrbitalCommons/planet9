@@ -29,6 +29,7 @@ use rand::{Rng, SeedableRng};
 use p9_core::constants::{DEG2RAD, TWO_PI};
 
 use crate::des_sample::{Angle, DesEtno};
+use p9_core::analysis::surveys::des_footprint_contains;
 
 /// Ecliptic longitude/latitude (radians) of the perihelion direction for an
 /// orbit with inclination i, argument of perihelion ω and node Ω:
@@ -49,9 +50,8 @@ pub fn ecliptic_to_equatorial(lambda: f64, beta: f64) -> (f64, f64) {
 
 /// DES wide-survey footprint acceptance for a perihelion direction given in
 /// ecliptic coordinates: HARD membership in the ~5000 deg² box-union
-/// footprint (the same declination-banded RA boxes as
-/// p9-2021-des-catalog's completeness model — one geometry, tracked for
-/// consolidation into p9-core by the survey-geometry issue).
+/// footprint, from the single shared geometry in
+/// `p9_core::analysis::surveys::DES_FOOTPRINT_BANDS`.
 ///
 /// A previous version used a Gaussian declination band (σ = 30°) times a
 /// 0.25 floor over the complementary 190° of RA, and rejection-sampled with
@@ -60,23 +60,7 @@ pub fn ecliptic_to_equatorial(lambda: f64, beta: f64) -> (f64, f64) {
 /// biased the selection-aware p-values low.
 pub fn des_footprint_weight(lambda: f64, beta: f64) -> f64 {
     let (ra, dec) = ecliptic_to_equatorial(lambda, beta);
-    let (ra_deg, dec_deg) = (ra / DEG2RAD, dec / DEG2RAD);
-    let ra_n = ra_deg.rem_euclid(360.0);
-    let bands = [
-        (-65.0, -40.0, 300.0, 105.0),
-        (-40.0, -20.0, 335.0, 55.0),
-        (-20.0, 5.0, 355.0, 40.0),
-    ];
-    let inside = bands.iter().any(|&(dmin, dmax, rstart, rend)| {
-        let dec_ok = dec_deg >= dmin && dec_deg < dmax;
-        let ra_ok = if rstart <= rend {
-            ra_n >= rstart && ra_n < rend
-        } else {
-            ra_n >= rstart || ra_n < rend
-        };
-        dec_ok && ra_ok
-    });
-    if inside {
+    if des_footprint_contains(ra / DEG2RAD, dec / DEG2RAD) {
         1.0
     } else {
         0.0

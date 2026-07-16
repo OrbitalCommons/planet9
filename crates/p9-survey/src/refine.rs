@@ -30,6 +30,7 @@
 
 use crate::schema::SkyGrid;
 use p9_core::analysis::surveys::limiting_magnitude;
+use p9_core::analysis::surveys::{NORTHERN_SURVEY_DEC_LIMIT_DEG, ZTF_DEC_LIMIT_DEG};
 use p9_core::constants::DEG2RAD;
 use p9_core::coords::sky::equatorial_to_galactic_matrix;
 
@@ -99,7 +100,7 @@ pub fn prior_surveys() -> Vec<PriorSurvey> {
     vec![
         PriorSurvey {
             name: "ZTF",
-            footprint: Footprint::NorthOf(-31.0),
+            footprint: Footprint::NorthOf(ZTF_DEC_LIMIT_DEG),
             clean_depth: limiting_magnitude("ZTF").unwrap_or(20.5),
             clean_coverage: 0.70,
             plane_depth_penalty: 2.5,
@@ -107,7 +108,7 @@ pub fn prior_surveys() -> Vec<PriorSurvey> {
         },
         PriorSurvey {
             name: "PS1 3pi",
-            footprint: Footprint::NorthOf(-30.0),
+            footprint: Footprint::NorthOf(NORTHERN_SURVEY_DEC_LIMIT_DEG),
             clean_depth: limiting_magnitude("PS1 3pi").unwrap_or(21.5),
             clean_coverage: 0.75,
             plane_depth_penalty: 2.5,
@@ -246,6 +247,43 @@ mod tests {
         assert!(
             r_faint > r_bright,
             "faint {r_faint} should exceed bright {r_bright}"
+        );
+    }
+
+    #[test]
+    fn des_sgc_times_coverage_matches_the_box_union_area() {
+        // The DesSgc footprint (SGC box + |b| cut) with clean_coverage 0.60
+        // is an areal-coverage summary of the real box-union footprint in
+        // p9-core: box area x coverage must land on the box-union solid
+        // angle (~4,980 deg^2) to ~10%. This ties the two DES geometries the
+        // workspace keeps (membership vs coverage-summary) to one another.
+        use p9_core::analysis::surveys::des_footprint_solid_angle_deg2;
+        let des = prior_surveys()
+            .into_iter()
+            .find(|s| s.name == "DES")
+            .unwrap();
+        // MC solid angle of the DesSgc acceptance region.
+        let (n_ra, n_dec) = (720, 360);
+        let mut area = 0.0;
+        let cell = (360.0 / n_ra as f64) * (180.0 / n_dec as f64);
+        for iy in 0..n_dec {
+            let dec = -90.0 + (iy as f64 + 0.5) * 180.0 / n_dec as f64;
+            let w = (dec.to_radians()).cos();
+            for ix in 0..n_ra {
+                let ra = (ix as f64 + 0.5) * 360.0 / n_ra as f64;
+                let gal_b = galactic_latitude_deg(ra, dec);
+                if des.footprint.covers(ra, dec, gal_b) {
+                    area += cell * w;
+                }
+            }
+        }
+        let effective = area * des.clean_coverage;
+        let union = des_footprint_solid_angle_deg2();
+        let ratio = effective / union;
+        assert!(
+            (0.9..1.1).contains(&ratio),
+            "SGC box {area:.0} deg2 x {:.2} = {effective:.0} vs union {union:.0} (ratio {ratio:.2})",
+            des.clean_coverage
         );
     }
 }

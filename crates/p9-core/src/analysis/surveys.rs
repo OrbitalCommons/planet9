@@ -5,9 +5,14 @@
 //! 0.56 and 0.612-combined in three crates, and two crates disagreed about
 //! the DES depth (23.8 vs 24.1).
 
-/// Southern declination cutoff (deg) of the wide northern surveys: both ZTF
-/// (Palomar) and the Pan-STARRS1 3π survey adopt a footprint of δ > −30°.
+/// Southern declination cutoff (deg) of the Pan-STARRS1 3π survey footprint
+/// (δ > −30°, Chambers et al. 2016).
 pub const NORTHERN_SURVEY_DEC_LIMIT_DEG: f64 = -30.0;
+
+/// Southern declination cutoff (deg) of the ZTF footprint: Palomar reaches
+/// δ > −31° (Brown & Batygin 2022, §2). One degree south of the PS1 limit —
+/// the workspace previously mixed the two.
+pub const ZTF_DEC_LIMIT_DEG: f64 = -31.0;
 
 /// A survey's published contribution to the Planet Nine parameter-space
 /// exclusion.
@@ -102,6 +107,78 @@ pub const SURVEY_DEPTHS: [SurveyDepth; 5] = [
         reference: "Bernardinelli et al. (2022)",
     },
 ];
+
+/// One declination band of the DES wide footprint with a (possibly
+/// zero-wrapping) right-ascension range, all in degrees.
+#[derive(Debug, Clone, Copy)]
+pub struct DesFootprintBand {
+    pub dec_min_deg: f64,
+    pub dec_max_deg: f64,
+    /// RA range start; the range runs eastward to `ra_end_deg` and may wrap
+    /// through 0.
+    pub ra_start_deg: f64,
+    pub ra_end_deg: f64,
+}
+
+/// Piecewise-box approximation of the DES wide footprint (Abbott et al.
+/// 2021, Fig. 1): the main SPT region at −65 < δ < −40 spanning
+/// RA 300..105°, a mid band, and the northern Stripe-82/connecting region
+/// reaching δ = +5. The union's solid angle is ~4980 deg², matching the
+/// declared 5,000 deg² to better than 1%. The single source of DES
+/// geometry: p9-2022-des, the DES catalog/isotropy crates and the survey
+/// maps all consume this table.
+pub const DES_FOOTPRINT_BANDS: [DesFootprintBand; 3] = [
+    DesFootprintBand {
+        dec_min_deg: -65.0,
+        dec_max_deg: -40.0,
+        ra_start_deg: 300.0,
+        ra_end_deg: 105.0,
+    },
+    DesFootprintBand {
+        dec_min_deg: -40.0,
+        dec_max_deg: -20.0,
+        ra_start_deg: 335.0,
+        ra_end_deg: 55.0,
+    },
+    DesFootprintBand {
+        dec_min_deg: -20.0,
+        dec_max_deg: 5.0,
+        ra_start_deg: 355.0,
+        ra_end_deg: 40.0,
+    },
+];
+
+/// Is `ra_deg` inside the eastward range `start..end` (degrees), wrapping
+/// through 0 when `start > end`?
+fn ra_in_range(ra_deg: f64, start: f64, end: f64) -> bool {
+    let ra = ra_deg.rem_euclid(360.0);
+    if start <= end {
+        ra >= start && ra < end
+    } else {
+        ra >= start || ra < end
+    }
+}
+
+/// DES box-union footprint membership (equatorial RA/dec in degrees).
+pub fn des_footprint_contains(ra_deg: f64, dec_deg: f64) -> bool {
+    DES_FOOTPRINT_BANDS.iter().any(|b| {
+        (b.dec_min_deg..b.dec_max_deg).contains(&dec_deg)
+            && ra_in_range(ra_deg, b.ra_start_deg, b.ra_end_deg)
+    })
+}
+
+/// Exact solid angle of the DES box-union footprint in deg²: sum over bands
+/// of ΔRA · (sin δ_max − sin δ_min) · 180/π.
+pub fn des_footprint_solid_angle_deg2() -> f64 {
+    DES_FOOTPRINT_BANDS
+        .iter()
+        .map(|b| {
+            let dsin = b.dec_max_deg.to_radians().sin() - b.dec_min_deg.to_radians().sin();
+            let span = (b.ra_end_deg - b.ra_start_deg).rem_euclid(360.0);
+            span * dsin * (180.0 / std::f64::consts::PI)
+        })
+        .sum()
+}
 
 /// Logistic magnitude-efficiency roll-off shared by the survey models:
 /// ε(m) = 1 / (1 + exp((m − depth) · steepness)). Near 1 well above the

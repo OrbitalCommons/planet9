@@ -37,12 +37,9 @@
 use std::f64::consts::PI;
 
 use p9_core::analysis::photometry::{apparent_magnitude, opposition_delta};
+use p9_core::analysis::selection::VarpiSelection;
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::units::{radians, Angle};
-
-/// Ecliptic longitudes (radians) where the galactic plane crosses the
-/// ecliptic: λ ≈ 95° (toward the galactic center side) and 275°.
-pub const GALACTIC_CROSSING_LON_RAD: [f64; 2] = [95.0 * DEG2RAD, 275.0 * DEG2RAD];
 
 /// Tunable parameters of the simplified bias model. All values are
 /// assumptions documented here, not fits to the MPC catalog.
@@ -54,7 +51,7 @@ pub struct BiasParams {
     pub limiting_mag: f64,
     /// 1σ widths (radians) of the Gaussian galactic-plane suppression in
     /// perihelion ecliptic longitude, one per crossing
-    /// (`GALACTIC_CROSSING_LON_RAD` order: [anticenter λ ≈ 95°, center
+    /// (`p9_core::analysis::selection::GALACTIC_CROSSING_LON_DEG` order: [anticenter λ ≈ 95°, center
     /// λ ≈ 275°]). Assumption: the dip toward the galactic center is wider
     /// (bulge star fields) than toward the anticenter.
     pub galactic_lon_sigmas: [f64; 2],
@@ -163,21 +160,14 @@ pub fn angular_bias(varpi: f64, omega: f64, i: f64, params: &BiasParams) -> f64 
     let omega_big = varpi - omega;
     let (lon_peri, beta_peri) = perihelion_ecliptic_lon_lat(omega, omega_big, i);
 
-    // Longitude suppression: Gaussian dips at the two galactic crossings,
-    // each with its own width and floor (the galactic-center crossing is
-    // much more heavily suppressed than the anticenter one).
-    let mut lon_factor = 1.0_f64;
-    for (k, &lon_gal) in GALACTIC_CROSSING_LON_RAD.iter().enumerate() {
-        let mut d = (lon_peri - lon_gal).rem_euclid(TWO_PI);
-        if d > PI {
-            d -= TWO_PI;
-        }
-        let sigma = params.galactic_lon_sigmas[k];
-        let floor = params.galactic_lon_floors[k];
-        let z = d / sigma;
-        let dip = floor + (1.0 - floor) * (1.0 - (-0.5 * z * z).exp());
-        lon_factor = lon_factor.min(dip);
+    // Longitude suppression: the `FlooredCrossingDips` member of the shared
+    // selection family (p9_core::analysis::selection), bound to this
+    // parameter set's per-crossing widths and floors.
+    let lon_factor = VarpiSelection::FlooredCrossingDips {
+        sigmas: params.galactic_lon_sigmas,
+        floors: params.galactic_lon_floors,
     }
+    .weight(lon_peri);
 
     // Latitude effect: the *galactic* latitude is captured by the longitude
     // term; the latitude penalty models reduced wide-field coverage for

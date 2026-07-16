@@ -9,7 +9,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use p9_core::analysis::surveys::{limiting_magnitude, poisson_binomial_tail};
+use p9_core::analysis::surveys::{
+    des_footprint_contains, des_footprint_solid_angle_deg2, limiting_magnitude,
+    poisson_binomial_tail,
+};
 use p9_core::coords::observer::{EarthProvider, EarthState, Time, Timescale};
 use p9_core::coords::sky::{
     apparent_position_deg, apparent_position_with_earth_deg, phase_angle_with_earth,
@@ -29,46 +32,6 @@ pub enum DesBand {
     Y,
 }
 
-/// One declination band of the footprint with a (possibly zero-wrapping)
-/// right-ascension range.
-#[derive(Debug, Clone, Copy)]
-struct FootprintBand {
-    dec_min: f64,
-    dec_max: f64,
-    /// RA range start (deg); the range runs eastward from `ra_start` to
-    /// `ra_end` and may wrap through 0.
-    ra_start: f64,
-    ra_end: f64,
-}
-
-/// Piecewise-box approximation of the DES wide footprint (Abbott et al.
-/// 2021, Fig. 1): the main SPT region at -65 < dec < -40 spanning
-/// RA 300..105 deg, a mid band, and the northern Stripe-82/connecting
-/// region reaching dec = +5. The union's solid angle is ~4980 deg^2,
-/// matching the declared 5000 deg^2 to better than 1% (asserted in tests) —
-/// the previous simple box cut covered ~9300 deg^2, nearly twice the real
-/// footprint.
-const FOOTPRINT_BANDS: [FootprintBand; 3] = [
-    FootprintBand {
-        dec_min: -65.0,
-        dec_max: -40.0,
-        ra_start: 300.0,
-        ra_end: 105.0,
-    },
-    FootprintBand {
-        dec_min: -40.0,
-        dec_max: -20.0,
-        ra_start: 335.0,
-        ra_end: 55.0,
-    },
-    FootprintBand {
-        dec_min: -20.0,
-        dec_max: 5.0,
-        ra_start: 355.0,
-        ra_end: 40.0,
-    },
-];
-
 fn ra_in_range(ra: f64, start: f64, end: f64) -> bool {
     let ra = ra.rem_euclid(360.0);
     if start <= end {
@@ -76,10 +39,6 @@ fn ra_in_range(ra: f64, start: f64, end: f64) -> bool {
     } else {
         ra >= start || ra < end
     }
-}
-
-fn ra_span_deg(start: f64, end: f64) -> f64 {
-    (end - start).rem_euclid(360.0)
 }
 
 /// DES survey model parameters for Planet Nine detection.
@@ -188,21 +147,13 @@ impl DesSurvey {
 
     /// Footprint membership (equatorial RA/dec in degrees).
     pub fn is_in_footprint(&self, ra_deg: f64, dec_deg: f64) -> bool {
-        FOOTPRINT_BANDS.iter().any(|b| {
-            (b.dec_min..b.dec_max).contains(&dec_deg) && ra_in_range(ra_deg, b.ra_start, b.ra_end)
-        })
+        des_footprint_contains(ra_deg, dec_deg)
     }
 
     /// Exact solid angle of the box-union footprint in deg^2:
     /// sum over bands of dRA * (sin(dec_max) - sin(dec_min)) * 180/pi.
     pub fn solid_angle_deg2(&self) -> f64 {
-        FOOTPRINT_BANDS
-            .iter()
-            .map(|b| {
-                let dsin = b.dec_max.to_radians().sin() - b.dec_min.to_radians().sin();
-                ra_span_deg(b.ra_start, b.ra_end) * dsin * (180.0 / std::f64::consts::PI)
-            })
-            .sum()
+        des_footprint_solid_angle_deg2()
     }
 
     /// Observing epochs for one sky position: `nights_per_band` nights in

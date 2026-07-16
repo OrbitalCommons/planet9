@@ -6,7 +6,7 @@
 //! survey table in `p9_core::analysis::surveys`.
 
 use p9_core::analysis::surveys::{
-    limiting_magnitude, logistic_efficiency, poisson_binomial_tail, NORTHERN_SURVEY_DEC_LIMIT_DEG,
+    limiting_magnitude, logistic_efficiency, poisson_binomial_tail, ZTF_DEC_LIMIT_DEG,
 };
 use p9_core::units::{degrees, Angle};
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,7 @@ pub struct ZtfSurvey {
     /// defined 95% (N = 22 gives 96.0%).
     pub effective_epochs: u32,
     /// Southern declination limit of the footprint (degrees); ZTF observes
-    /// from Palomar and covers δ > −30°.
+    /// from Palomar and covers δ > −31°.
     pub dec_limit_deg: f64,
 }
 
@@ -48,7 +48,7 @@ impl Default for ZtfSurvey {
             efficiency_steepness: 4.0,
             min_detections: 7,
             effective_epochs: 22,
-            dec_limit_deg: NORTHERN_SURVEY_DEC_LIMIT_DEG,
+            dec_limit_deg: ZTF_DEC_LIMIT_DEG,
         }
     }
 }
@@ -106,7 +106,7 @@ mod tests {
     fn default_matches_shared_survey_table() {
         let survey = ZtfSurvey::default();
         assert!((survey.depth_limit - 20.5).abs() < 1e-10);
-        assert!((survey.dec_limit_deg - (-30.0)).abs() < 1e-10);
+        assert!((survey.dec_limit_deg - (-31.0)).abs() < 1e-10);
     }
 
     #[test]

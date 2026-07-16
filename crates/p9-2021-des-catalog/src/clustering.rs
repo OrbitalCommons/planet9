@@ -25,6 +25,7 @@ use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
 use p9_core::constants::{DEG2RAD, TWO_PI};
 
 use crate::catalog::{angle_values, Angle, DesTno};
+use p9_core::analysis::surveys::des_footprint_contains;
 
 /// Ecliptic (λ, β) of the perihelion direction for an orbit (i, ω, Ω), radians.
 pub fn perihelion_direction(i: f64, omega: f64, node: f64) -> (f64, f64) {
@@ -41,26 +42,6 @@ pub fn ecliptic_to_equatorial(lambda: f64, beta: f64) -> (f64, f64) {
     (ra.rem_euclid(TWO_PI), dec)
 }
 
-/// DES wide-survey footprint acceptance weight in [0, 1] for a perihelion
-/// direction (ecliptic λ, β). Southern field, peak near Dec −45°, soft RA gate
-/// over the SGP cap (RA 300°→110° through 0°); sharp cut north of +10°.
-pub fn des_footprint_weight(lambda: f64, beta: f64) -> f64 {
-    let (ra, dec) = ecliptic_to_equatorial(lambda, beta);
-    let dec_deg = dec / DEG2RAD;
-    if dec_deg > 10.0 {
-        return 0.0;
-    }
-    let dec_center = -45.0;
-    let dec_sigma = 30.0;
-    let dec_w = (-(dec_deg - dec_center).powi(2) / (2.0 * dec_sigma * dec_sigma)).exp();
-
-    let ra_deg = ra / DEG2RAD;
-    let in_field = ra_deg >= 300.0 || ra_deg <= 110.0;
-    let ra_w = if in_field { 1.0 } else { 0.25 };
-
-    (dec_w * ra_w).clamp(0.0, 1.0)
-}
-
 /// Null model for the clustering Monte-Carlo p-values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NullModel {
@@ -72,15 +53,25 @@ pub enum NullModel {
 
 /// Draw one isotropic (ω, Ω) pair for an inclination i under the chosen null.
 fn draw_angles(rng: &mut StdRng, i: f64, null: NullModel) -> (f64, f64) {
+    // Hard membership in the shared DES box-union footprint
+    // (p9-core::analysis::surveys), attempt-capped like the isotropy crate;
+    // the earlier Gaussian-band × 0.25-RA soft model with a 0.02 floor
+    // accepted an effective ~10–12 kdeg² — 2–3× the real footprint — and
+    // flattened this null toward uniform.
+    let mut attempts = 0usize;
     loop {
         let omega = rng.gen::<f64>() * TWO_PI;
         let node = rng.gen::<f64>() * TWO_PI;
         match null {
             NullModel::Uniform => return (omega, node),
             NullModel::DesSelection => {
+                attempts += 1;
+                if attempts > 100_000 {
+                    return (omega, node);
+                }
                 let (lambda, beta) = perihelion_direction(i, omega, node);
-                let w = des_footprint_weight(lambda, beta).max(0.02);
-                if rng.gen::<f64>() < w {
+                let (ra, dec) = ecliptic_to_equatorial(lambda, beta);
+                if des_footprint_contains(ra.to_degrees(), dec.to_degrees()) {
                     return (omega, node);
                 }
             }
