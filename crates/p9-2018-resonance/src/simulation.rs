@@ -519,15 +519,67 @@ mod tests {
         assert!(classify_particle(&series, &p9_samples, a_p9, &catalog).is_none());
     }
 
+    /// End-to-end (reduced scale, seeded): simulation → libration census →
+    /// resonance-type classification → p_simple → P(all 6 simple). The
+    /// headline statistic is now COMPUTED from the pipeline, not quoted —
+    /// this is the wiring whose absence let the N/1-classifier inversion
+    /// survive (issue #208).
+    #[test]
+    fn reduced_scale_pipeline_computes_p_simple() {
+        use crate::probability_analysis::p_all_simple;
+        let config = ResonanceSimConfig {
+            n_particles: 40,
+            t_total: 3e5 * YEAR_DAYS,
+            angle_sample_interval: 2e3 * YEAR_DAYS,
+            ..ResonanceSimConfig::for_eccentricity(0.5)
+        };
+        let result = run_planar_simulation(&config, 2018);
+        let stats = classify_by_resonance_type(&result, config.a_p9);
+        // Bookkeeping closes.
+        assert_eq!(
+            stats.n_over_1 + stats.n_over_2 + stats.high_order + stats.non_resonant,
+            stats.total
+        );
+        assert!(stats.total > 0);
+        // p_simple is a genuine census-derived probability, and the derived
+        // headline P(all 6 in N/1 or N/2) follows from it.
+        assert!(
+            (0.0..=1.0).contains(&stats.p_simple),
+            "p = {}",
+            stats.p_simple
+        );
+        let p6 = p_all_simple(stats.p_simple, 6);
+        assert!((0.0..=1.0).contains(&p6));
+        assert!(
+            (p6 - stats.p_simple.powi(6)).abs() < 1e-12,
+            "P(all 6) must be p_simple^6"
+        );
+    }
+
     /// Paper-scale eccentricity sweep (8 x 400 particles x 4 Gyr). Run only
-    /// deliberately.
+    /// deliberately. Asserts the crate's headline: with the full-length
+    /// census, the probability that all 6 observed KBOs sit in N/1 or N/2
+    /// resonances is below 5% (lib.rs's key finding, previously never
+    /// computed end-to-end).
     #[test]
     #[ignore]
     fn test_paper_scale_sweep() {
+        use crate::probability_analysis::p_all_simple;
         let sweep = eccentricity_sweep(false);
         assert_eq!(sweep.eccentricities.len(), 8);
         // Resonant occupation should exist for an eccentric P9.
         let last = sweep.census_results.last().unwrap();
         assert!(!last.is_empty());
+        // Headline: recompute the classification at the nominal e9 = 0.5 and
+        // pin P(all 6 simple) < 0.05.
+        let config = ResonanceSimConfig::for_eccentricity(0.5);
+        let result = run_planar_simulation(&config, 42);
+        let stats = classify_by_resonance_type(&result, config.a_p9);
+        let p6 = p_all_simple(stats.p_simple, 6);
+        assert!(
+            p6 < 0.05,
+            "P(all 6 in N/1 or N/2) = {p6:.4} (p_simple = {:.3})",
+            stats.p_simple
+        );
     }
 }
