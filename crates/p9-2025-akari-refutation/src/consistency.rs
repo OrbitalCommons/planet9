@@ -29,11 +29,15 @@
 //!
 //! The bound-object two-epoch separation envelope at the real epochs (with
 //! parallax orientation fixed by Earth and only the object's own orbit
-//! scanned) is computed in [`bound_object_envelope_arcmin`]; the candidate
-//! sits at its extreme and is reproducible only with a fine-tuned geometry.
-//! The single headline inconsistency metric is the ratio of the observed
-//! separation to the maximum bound-object parallax —
-//! [`parallax_inconsistency_ratio`].
+//! scanned) is computed in [`bound_object_envelope_arcmin`]. The HEADLINE
+//! discriminators are (1) envelope containment — at 700 AU the bound
+//! envelope cannot reach the observed 47.46′ at all — and (2) the implied
+//! circular distance falling below the 500 AU search floor.
+//! [`parallax_inconsistency_ratio`] is a COMPONENT diagnostic only: over a
+//! 23.5-yr baseline any bound object's separation is proper-motion-
+//! dominated (~45′ of circular PM at 500 AU), so observed/parallax > 3
+//! holds even for a genuine bound Planet Nine and refutes nothing by
+//! itself (a previous version presented it as the single headline metric).
 
 use nalgebra::Vector3;
 use p9_2025_iras_akari::orbital_constraints::{
@@ -160,11 +164,14 @@ pub fn bound_object_envelope_arcmin(
     (sep_min, sep_max)
 }
 
-/// The headline inconsistency metric: the ratio of the observed candidate
-/// separation to the maximum two-epoch parallax a bound object at `d_au`
-/// could show at the real epochs. A ratio `≫ 1` means parallax — the
-/// dominant term for a genuine bound P9 per Chen et al. — cannot account for
-/// the candidate's motion.
+/// COMPONENT diagnostic: the ratio of the observed candidate separation to
+/// the maximum two-epoch parallax a bound object at `d_au` could show at
+/// the real epochs. NOTE: this is NOT a refutation metric on its own — over
+/// 23.5 yr the separation of any bound object is dominated by proper
+/// motion, so the ratio exceeds 3 even for a genuine bound P9. It isolates
+/// how much of the separation the parallax channel alone could carry; the
+/// headline discriminators are the envelope containment and implied-
+/// distance tests.
 pub fn parallax_inconsistency_ratio(d_au: f64, e1: &Vector3<f64>, e2: &Vector3<f64>) -> f64 {
     let observed = candidate_constraints().separation_arcmin;
     observed / max_parallax_separation_arcmin(d_au, e1, e2)
@@ -353,10 +360,12 @@ mod tests {
 
     #[test]
     fn observed_separation_far_exceeds_parallax_budget() {
-        // Headline refutation: 47.46' is several times larger than the
-        // largest parallax a bound object could show at any distance in the
-        // search band. Parallax — the dominant term for a real bound P9 —
-        // cannot explain the pair.
+        // COMPONENT diagnostic (not the refutation): the parallax channel
+        // alone carries at most ~1/3.5 of the observed separation anywhere
+        // in the band. True for ANY 23.5-yr bound-object pair (proper
+        // motion dominates), so this bounds the parallax share; the
+        // refutation itself is the 700 AU envelope failure and the implied
+        // circular distance below the 500 AU floor (tests below).
         let (e1, e2) = earth_states();
         for &d in &[
             published::DISTANCE_MIN_AU,
@@ -409,8 +418,8 @@ mod tests {
         // the *magnitude* of the bound-object envelope at 500 AU spans the
         // observed 47.46' (its circular upper edge ~59'). This is exactly why
         // the magnitude looked "consistent" to Phan et al. — and why the
-        // refutation rests on the parallax budget and direction, not the
-        // separation magnitude alone.
+        // refutation rests on the 700 AU envelope failure and the implied-
+        // distance floor, not the separation magnitude alone.
         let (e1, e2) = earth_states();
         let bdays = baseline_days();
         let observed = candidate_constraints().separation_arcmin;

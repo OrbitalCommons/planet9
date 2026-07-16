@@ -29,9 +29,13 @@
 //! geometry fixed at the two real epochs, a bound object on a 500–700 AU
 //! orbit produces a *specific, bounded* two-epoch separation. The Phan
 //! candidate's 47.46′ separation requires an orbit and viewing geometry that
-//! the bound-object model can only reach at one extreme of its envelope and
-//! with a sky direction that does not match — i.e. the "pair" is far more
-//! naturally explained as **two unrelated infrared sources**.
+//! the bound-object model can only reach at one extreme of its envelope —
+//! i.e. the "pair" is far more naturally explained as **two unrelated
+//! infrared sources**. (A previous version also claimed the candidate's sky
+//! DIRECTION mismatches the bound-object prediction; no position-angle
+//! computation exists in this crate, so that claim was documentation only
+//! and has been removed — computing the two-epoch parallax position angle
+//! against the candidate's motion PA would be a genuine strengthening.)
 //!
 //! ## What is computed (no hard-coded answers)
 //!
