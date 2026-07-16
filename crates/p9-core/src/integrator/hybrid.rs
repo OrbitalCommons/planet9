@@ -33,6 +33,7 @@
 use nalgebra::Vector3;
 
 use crate::constants::GM_SUN;
+use crate::forces::{total_extra_acceleration, ExtraForce};
 use crate::integrator::bulirsch_stoer::{self, changeover_k};
 use crate::integrator::kepler_step::kepler_drift;
 use crate::integrator::kick;
@@ -138,7 +139,40 @@ pub fn hybrid_step(
     dt: f64,
     config: &SimConfig,
 ) -> usize {
+    hybrid_step_with_forces(bodies, particles, active, dt, config, &[])
+}
+
+/// [`hybrid_step`] with extra kick-stage accelerations (e.g.
+/// [`ExtraForce::J2Jsu`], the averaged J+S+U quadrupole), applied to bodies
+/// and non-encounter particles in both dt/2 kicks exactly as
+/// `WhmIntegrator::with_extra_forces` does. Particles inside the BS
+/// changeover get the direct planet forces from the BS integration itself;
+/// the smooth extra field still applies to them through the kicks (it varies
+/// on solar-system scales, not encounter scales).
+pub fn hybrid_step_with_forces(
+    bodies: &mut [MassiveBody],
+    particles: &mut [StateVector],
+    active: &mut [bool],
+    dt: f64,
+    config: &SimConfig,
+    extra_forces: &[ExtraForce],
+) -> usize {
     let half_dt = 0.5 * dt;
+
+    let apply_extra =
+        |bodies: &mut [MassiveBody], particles: &mut [StateVector], active: &[bool], dt: f64| {
+            if extra_forces.is_empty() {
+                return;
+            }
+            for body in bodies.iter_mut() {
+                body.state.vel += dt * total_extra_acceleration(extra_forces, &body.state.pos);
+            }
+            for (k, particle) in particles.iter_mut().enumerate() {
+                if active[k] {
+                    particle.vel += dt * total_extra_acceleration(extra_forces, &particle.pos);
+                }
+            }
+        };
 
     // Changeover radii and encounter mask, evaluated at the step start with
     // predicted minimum separations over [t, t+dt].
@@ -148,6 +182,7 @@ pub fn hybrid_step(
     // === KICK dt/2 ===
     kick::kick_bodies(bodies, half_dt);
     kick_particles_changeover(particles, active, bodies, &r_crit, half_dt);
+    apply_extra(bodies, particles, active, half_dt);
 
     // Snapshot body states for the BS force evaluation (BS drifts them to the
     // substep epochs internally).
@@ -183,6 +218,7 @@ pub fn hybrid_step(
     // === KICK dt/2 ===
     kick::kick_bodies(bodies, half_dt);
     kick_particles_changeover(particles, active, bodies, &r_crit, half_dt);
+    apply_extra(bodies, particles, active, half_dt);
 
     // === BOUNDARY CHECK ===
     for (i, particle) in particles.iter().enumerate() {
