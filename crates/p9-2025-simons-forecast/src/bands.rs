@@ -8,14 +8,14 @@
 /// the Rayleigh–Jeans regime.
 pub const SO_280: f64 = 280e9;
 
-/// SO 220 GHz LAT band centre (Hz).
-pub const SO_220: f64 = 220e9;
+/// SO 225 GHz LAT band centre (Hz).
+pub const SO_225: f64 = 225e9;
 
-/// SO 150 GHz LAT band centre (Hz).
-pub const SO_150: f64 = 150e9;
+/// SO 145 GHz LAT band centre (Hz).
+pub const SO_145: f64 = 145e9;
 
-/// SO 90 GHz LAT band centre (Hz).
-pub const SO_90: f64 = 90e9;
+/// SO 93 GHz LAT band centre (Hz).
+pub const SO_93: f64 = 93e9;
 
 /// ACT 229 GHz band centre (Hz), the highest-frequency ACT band used in the
 /// Naess et al. (2021) Planet Nine search (98 / 150 / 229 GHz).
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn bands_ordered() {
-        assert!(SO_90 < SO_150 && SO_150 < SO_220 && SO_220 < SO_280);
+        assert!(SO_93 < SO_145 && SO_145 < SO_225 && SO_225 < SO_280);
         assert!(ACT_229 < SO_280);
     }
 

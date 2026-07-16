@@ -102,7 +102,7 @@ impl Resonance {
 /// evaluated on the resonant stream λ = (p/q) λ₉ + φ/q (coplanar,
 /// anti-aligned apsides, Δϖ = π — the configuration of the confined
 /// population), returning (max_φ H − min_φ H)/2 over a grid of resonant
-/// phases. A softening b = 0.02 a₉ regularizes orbit-crossing geometries
+/// phases. A softening b = 0.005 a₉ regularizes orbit-crossing geometries
 /// (mutual inclination separates the orbits in reality).
 ///
 /// This is a direct numerical evaluation of the resonance strength — no

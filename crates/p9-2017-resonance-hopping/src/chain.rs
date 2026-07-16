@@ -68,11 +68,11 @@ const EARTH_MASS_SOLAR: f64 = 3.003_489e-6;
 /// A single interior p:q mean-motion resonance of Planet Nine.
 ///
 /// Convention (the workspace single convention): an interior particle in the
-/// p:q resonance completes q orbits while P9 completes p (p > q), sitting at
+/// p:q resonance completes p orbits while P9 completes q (p > q), sitting at
 /// `a_res = a9 (q/p)^{2/3} < a9`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct P9Resonance {
-    /// Planet Nine's integer (orbits of P9 per `q` orbits of the particle).
+    /// The particle's orbit count (per `q` orbits of P9).
     pub p: u32,
     /// Particle's integer.
     pub q: u32,

@@ -22,8 +22,10 @@
 //! - [`octupole`]: the coplanar secular Hamiltonian to quadrupole and octupole
 //!   order. The quadrupole piece REUSES
 //!   `p9_core::analysis::secular::coplanar_quadrupole`; the octupole piece adds
-//!   the literature `-C_oct e e_9 cos(dvarpi)` term with
-//!   `C_oct = (15/16)(GM_9/a_9) alpha^3 e_9/(1-e_9^2)^{5/2}`. The
+//!   the `+C_oct e e_9 cos(dvarpi)` term (positive sign, matching the exact
+//!   ring average) with
+//!   `C_oct = K_OCT (GM_9/a_9) alpha^3/(1-e_9^2)^{5/2}`, K_OCT = 1.05
+//!   calibrated against p9-core's numerical ring average. The
 //!   octupole-to-quadrupole strength ratio `epsilon_oct` and its scaling with
 //!   `e_9` and `alpha` are pinned. The analytic octupole amplitude is
 //!   cross-checked at small `alpha` against the cos(dvarpi) Fourier amplitude

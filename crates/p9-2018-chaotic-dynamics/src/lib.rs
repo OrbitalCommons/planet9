@@ -22,10 +22,11 @@
 //! - The resonance locations are cross-checked against the analytic Kepler
 //!   relation a_j = a9 j^{-2/3} to 1e-9.
 //!
-//! REUSE: the resonance widths come from
-//! `p9_core::analysis::resonance::{Resonance, chirikov_overlap_parameter,
-//! critical_perihelion}`; the secular Hamiltonian structure from
-//! `p9_core::analysis::secular`. Nothing here re-derives those.
+//! REUSE: the resonance locations come from
+//! `p9_core::analysis::resonance::resonance_semi_major_axis`, the overlap
+//! zone from `p9_core::analysis::resonance::overlap_zone_width_fraction`,
+//! and the width machinery from `p9_core::analysis::hansen`. Nothing here
+//! re-derives those.
 //!
 //! Published claims are kept as labelled reference constants in [`reference`];
 //! residuals against them are documented in the tests.

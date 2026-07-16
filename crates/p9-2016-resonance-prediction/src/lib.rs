@@ -11,15 +11,16 @@
 //! their observed orbital periods are commensurate with P9's period and
 //! therefore *predict* it. An object in the exterior p:q resonance sits at
 //!
-//!   a_ETNO = a9 · (p/q)^(2/3)        ⇔        P_ETNO / P9 = q / p,
+//!   a_ETNO = a9 · (q/p)^(2/3)        ⇔        P9 / P_ETNO = p / q,
 //!
-//! i.e. P9 completes p orbits while the ETNO completes q (p > q for an
-//! exterior body). Scanning a9 and asking which value places the whole
-//! distant set closest to low-order resonances localizes Planet Nine.
+//! i.e. the interior ETNO completes p orbits while P9 completes q (p > q).
+//! Scanning a9 and asking which value places the whole distant set closest
+//! to low-order resonances localizes Planet Nine.
 //!
 //! Malhotra et al. report a9 ≈ 665 AU (period ≈ 17,117 yr), with the four
 //! longest-period ETNOs (Sedna, 2004 VN112, 2010 GB174, 2012 VP113) near
-//! period ratios of small integers (e.g. 3:2, 4:3, 5:3, ...). Millholland &
+//! period ratios of small integers (3:2, 5:2, 3:1, 4:1 — the N:1 / N:2
+//! family the DEFAULT_Q_MAX = 2 scan admits). Millholland &
 //! Laughlin independently localize P9 near a9 ≈ 654 AU.
 //!
 //! HONEST CAVEAT. These resonance predictions are NOT confirmed. The sibling

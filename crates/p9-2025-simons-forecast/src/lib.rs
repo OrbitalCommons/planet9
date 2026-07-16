@@ -41,7 +41,7 @@
 //!
 //! The SO and ACT sensitivities are kept as **labelled reference constants**
 //! (`bands`), not derived: ACT's 8 mJy is the median of the published 4–12 mJy
-//! shift-and-stack limit; SO's deep/shallow limits (1.3 / 4.4 mJy) are the
+//! shift-and-stack limit; SO's deep/shallow limits (4.4 / 14.2 mJy) are the
 //! values that reproduce the paper's quoted 900 / 500 AU reach for a 5 M⊕ body
 //! under this thermal model. The crate then derives reach, SNR, and box
 //! coverage from them, and reproduces the published *direction* and *scale* of

@@ -26,7 +26,7 @@
 //!
 //! Over one full precession cycle the obliquity oscillates between 0 and
 //! 2·i_p. The solar-system age is a fraction of the precession period, so the
-//! achieved obliquity at 4.5 Gyr is 2·i_p·sin²(π·t/T_prec).
+//! achieved obliquity at 4.5 Gyr is 2·i_p·|sin(π·t/T_prec)|.
 //!
 //! The forced inclination i_p, the precession period T_prec, and hence the
 //! obliquity all depend on Planet Nine's mass, semimajor axis, and
