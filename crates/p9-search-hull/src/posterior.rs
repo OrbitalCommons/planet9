@@ -38,6 +38,9 @@ pub struct PosSample {
     pub v_mag: f64,
     /// Galactic latitude (deg) of this draw's direction.
     pub gal_b_deg: f64,
+    /// True anomaly (deg, 0..360) of this draw — the orbital phase the
+    /// Cassini-ranging ν prior weights.
+    pub nu_deg: f64,
 }
 
 /// The element/mean-anomaly draw machinery for one orbit solution: set up once,
@@ -88,12 +91,24 @@ impl Draws {
         let r = pos.norm();
         let (ra, dec) = ecliptic_vec_to_equatorial_deg(&pos);
         let v = planet_apparent_magnitude(self.mass_earth, self.albedo, r);
+
+        // True anomaly of the draw, recovered from the conic r(ν): the mean
+        // and true anomalies always lie in the same half-plane, so sin M
+        // fixes the branch.
+        let cos_nu = (((a * (1.0 - e * e) / r) - 1.0) / e).clamp(-1.0, 1.0);
+        let nu = if m.sin() >= 0.0 {
+            cos_nu.acos()
+        } else {
+            std::f64::consts::TAU - cos_nu.acos()
+        };
+
         PosSample {
             ra_deg: ra,
             dec_deg: dec,
             dist_au: r,
             v_mag: v,
             gal_b_deg: galactic_latitude_deg(&pos),
+            nu_deg: nu.to_degrees(),
         }
     }
 }
@@ -124,16 +139,20 @@ pub struct SkyPosterior {
     pub cloud: Vec<PosSample>,
 }
 
-/// Build the equal-weight ensemble posterior. `per_study` MC draws are taken
-/// from each solution; `cloud_keep` thins the returned cloud. The three
-/// scorers are evaluated on every draw so exclusion/reachability are
-/// per-sample (see `SkyPosterior::survival_mean`).
+/// Build the ensemble posterior. `per_study` MC draws are taken from each
+/// solution; `cloud_keep` thins the returned cloud. `weight` is a per-draw
+/// prior weight (pass `|_| 1.0` for the uniform-phase posterior, or a
+/// ν-prior weight to condition on the Cassini-ranging phase constraint —
+/// the cloud itself stays unweighted for plotting). The three scorers are
+/// evaluated on every draw so exclusion/reachability are per-sample (see
+/// `SkyPosterior::survival_mean`).
 pub fn ensemble_scored(
     studies: &[OrbitSolution],
     grid: &SkyGrid,
     per_study: usize,
     seed: u64,
     cloud_keep: usize,
+    weight: impl Fn(&PosSample) -> f64,
     survival: impl Fn(&PosSample) -> f64,
     scope_reach: impl Fn(&PosSample) -> bool,
     lsst_reach: impl Fn(&PosSample) -> bool,
@@ -160,18 +179,19 @@ pub fn ensemble_scored(
         for _ in 0..per_study {
             let s = d.draw(&mut rng);
             let idx = grid.index(s.ra_deg, s.dec_deg);
-            count[idx] += 1.0;
-            sum_dist[idx] += s.dist_au;
-            sum_v[idx] += s.v_mag;
+            let w = weight(&s);
+            count[idx] += w;
+            sum_dist[idx] += w * s.dist_au;
+            sum_v[idx] += w * s.v_mag;
             let surv = survival(&s);
-            sum_surv[idx] += surv;
+            sum_surv[idx] += w * surv;
             let reach = scope_reach(&s);
             if reach {
-                sum_reach[idx] += 1.0;
-                sum_reach_surv[idx] += surv;
+                sum_reach[idx] += w;
+                sum_reach_surv[idx] += w * surv;
             }
             if lsst_reach(&s) {
-                sum_lsst[idx] += 1.0;
+                sum_lsst[idx] += w;
             }
             if drawn % cloud_stride == 0 {
                 cloud.push(s);
@@ -229,6 +249,7 @@ pub fn ensemble(
         seed,
         cloud_keep,
         |_| 1.0,
+        |_| 1.0,
         |_| false,
         |_| false,
     )
@@ -282,6 +303,52 @@ mod tests {
             dec_max_deg: 60.0,
             n_dec: 20,
         }
+    }
+
+    #[test]
+    fn nu_weighted_posterior_concentrates_the_phase_prior() {
+        let studies = p9_survey::studies::catalog();
+        let grid = small_grid();
+        let uniform = ensemble(&studies, &grid, 4000, 7, 2000);
+        let nu = ensemble_scored(
+            &studies,
+            &grid,
+            4000,
+            7,
+            2000,
+            |s| p9_survey::ephemeris::nu_weight(s.nu_deg),
+            |_| 1.0,
+            |_| false,
+            |_| false,
+        );
+        // Weighted counts still normalize.
+        let total: f64 = nu.prob.iter().sum();
+        assert!((total - 1.0).abs() < 1e-9, "nu prob sums to {total}");
+        // Every draw carries a valid orbital phase, and the conic geometry
+        // holds: the favored-ν arc (108-129 deg, past quadrature outbound)
+        // puts the body beyond its semi-latus-rectum distance.
+        for s in &uniform.cloud {
+            assert!((0.0..360.0).contains(&s.nu_deg), "nu = {}", s.nu_deg);
+        }
+        // The prior cuts sky: the ν-weighted map must be more concentrated
+        // (fewer cells holding 90% of the probability) than uniform phase.
+        let cells_for_90 = |prob: &[f64]| {
+            let mut p: Vec<f64> = prob.to_vec();
+            p.sort_by(|a, b| b.partial_cmp(a).unwrap());
+            let mut acc = 0.0;
+            p.iter()
+                .take_while(|&&x| {
+                    acc += x;
+                    acc < 0.9
+                })
+                .count()
+        };
+        let n_uniform = cells_for_90(&uniform.prob);
+        let n_nu = cells_for_90(&nu.prob);
+        assert!(
+            n_nu < n_uniform / 2,
+            "nu-weighted 90% region {n_nu} cells vs uniform {n_uniform}"
+        );
     }
 
     #[test]

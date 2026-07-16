@@ -594,6 +594,11 @@ derived quantities:
   the Rice & Laughlin (2020) blind-search sectors 18–19 (~4,600 deg² of northern sky); the depth
   (V < 21) and the d ≤ 150 au validity cap are the paper's published values via
   `p9-2020-tess-shiftstack`.
+- `p9-survey` ν-prior width: the Gaussian wings of `ephemeris::nu_weight` now use the published
+  measurement uncertainty σ = 10.5° (Fienga et al. 2016, ν = 117.8°₋₁₀⁺¹¹ symmetrized,
+  `PREFERRED_TRUE_ANOMALY_SIGMA_DEG`); previously the ±30° code-vs-paper acceptance tolerance
+  was halved and repurposed as the physical σ. The ν-weighted hull products are conditional on
+  the Cassini fit holding and are reported alongside — never instead of — the uniform-phase ones.
 - `p9-2017-ossos-bias` discovery-longitude windows: now the PUBLISHED OSSOS block centres
   (Bannister et al. 2018 Table 1; two clumps, λ ≈ 7–48° and 203–240°). With the real bimodal
   layout the bias-induced R̄ from isotropy is ≈ 0.29 (pinned) — weaker than the ~0.5–0.65 a

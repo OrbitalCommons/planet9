@@ -24,7 +24,7 @@ mod surveys;
 use p9_core::constants::DEG2RAD;
 use serde::Serialize;
 
-use p9_survey::{default_grid, schema::SkyGrid, studies, telescope};
+use p9_survey::{default_grid, ephemeris, schema::SkyGrid, studies, telescope};
 
 /// MC draws per orbit solution.
 const PER_STUDY: usize = 60_000;
@@ -81,6 +81,9 @@ struct Cells {
     best_survey: Vec<Option<&'static str>>,
     exclusion_prob: Vec<f64>,
     residual_prob: Vec<f64>,
+    /// Residual probability under the Cassini-ranging ν prior — meaningful
+    /// only if that ephemeris fit holds (see `Summary::nu_weighted`).
+    residual_nu_prob: Vec<f64>,
     reach_dist_au: Vec<Option<f64>>,
     space_reachable: Vec<bool>,
     /// Whether the Rubin/LSST footprint reaches this direction AND is deep
@@ -141,6 +144,20 @@ struct Summary {
     /// Sky area (deg²) searched deeper than the given V thresholds.
     area_searched_deg2: Vec<(f64, f64)>,
     sky_area_in_grid_deg2: f64,
+    /// The same exclusion bookkeeping with each draw weighted by the
+    /// Cassini-ranging favored-ν prior (Fienga et al. 2016). A CONDITIONAL
+    /// product: it applies only if that ephemeris fit holds, which is why it
+    /// is reported alongside — not instead of — the uniform-phase numbers.
+    nu_weighted: NuWeightedSummary,
+}
+
+#[derive(Serialize)]
+struct NuWeightedSummary {
+    excluded_prob: f64,
+    residual_prob: f64,
+    residual_space_reachable_prob: f64,
+    nu_sigma_deg: f64,
+    note: &'static str,
 }
 
 #[derive(Serialize)]
@@ -188,28 +205,35 @@ fn main() {
     // V and PER-SAMPLE survey survival: the ensemble mixes solutions whose V
     // medians straddle the survey depths, so exclusion must be evaluated
     // draw-by-draw (1[E[V] <= depth] != E[1[V <= depth]]).
-    let surveys_for_scoring = surveys.clone();
-    let scope_fp_scoring = scope_fp.clone();
-    let rubin_fp_scoring = rubin_fp.clone();
-    let post = posterior::ensemble_scored(
-        &studies,
-        &grid,
-        PER_STUDY,
-        SEED,
-        CLOUD_KEEP,
-        move |s| {
-            1.0 - surveys::exclusion_probability(
-                &surveys_for_scoring,
-                s.ra_deg,
-                s.dec_deg,
-                s.gal_b_deg,
-                s.dist_au,
-                s.v_mag,
-            )
-        },
-        move |s| scope_fp_scoring.accepts(s.dec_deg, s.gal_b_deg) && s.v_mag <= scope_depth,
-        move |s| rubin_fp_scoring.accepts(s.dec_deg, s.gal_b_deg) && s.v_mag <= rubin_depth,
-    );
+    let scored = |weight: fn(&posterior::PosSample) -> f64| {
+        let surveys_for_scoring = surveys.clone();
+        let scope_fp_scoring = scope_fp.clone();
+        let rubin_fp_scoring = rubin_fp.clone();
+        posterior::ensemble_scored(
+            &studies,
+            &grid,
+            PER_STUDY,
+            SEED,
+            CLOUD_KEEP,
+            weight,
+            move |s| {
+                1.0 - surveys::exclusion_probability(
+                    &surveys_for_scoring,
+                    s.ra_deg,
+                    s.dec_deg,
+                    s.gal_b_deg,
+                    s.dist_au,
+                    s.v_mag,
+                )
+            },
+            move |s| scope_fp_scoring.accepts(s.dec_deg, s.gal_b_deg) && s.v_mag <= scope_depth,
+            move |s| rubin_fp_scoring.accepts(s.dec_deg, s.gal_b_deg) && s.v_mag <= rubin_depth,
+        )
+    };
+    let post = scored(|_| 1.0);
+    // The same ensemble conditioned on the Cassini-ranging orbital-phase
+    // prior: identical seeds, so the two maps differ only by the ν weight.
+    let post_nu = scored(|s| ephemeris::nu_weight(s.nu_deg));
 
     let n = grid.len();
     let mut gal_b = vec![0.0_f64; n];
@@ -219,6 +243,7 @@ fn main() {
     let mut best_survey: Vec<Option<&'static str>> = vec![None; n];
     let mut excl = vec![0.0_f64; n];
     let mut residual = vec![0.0_f64; n];
+    let mut residual_nu = vec![0.0_f64; n];
     let mut reach_dist = vec![None; n];
     let mut space_reachable = vec![false; n];
     let mut lsst_reachable = vec![false; n];
@@ -231,6 +256,9 @@ fn main() {
     let mut excluded_prob = 0.0;
     let mut residual_prob = 0.0;
     let mut residual_reach = 0.0;
+    let mut nu_excluded_prob = 0.0;
+    let mut nu_residual_prob = 0.0;
+    let mut nu_residual_reach = 0.0;
 
     for iy in 0..grid.n_dec {
         let dec = grid.dec_center(iy);
@@ -286,6 +314,20 @@ fn main() {
             residual_reach += p * post.reach_survival_mean[idx];
             lsst_reachable[idx] = post.lsst_frac[idx] > 0.5;
         }
+    }
+
+    // ν-weighted exclusion bookkeeping ("if the Cassini fit holds"), same
+    // cells, same survey model — only the orbital-phase prior differs.
+    for idx in 0..n {
+        let p = post_nu.prob[idx];
+        if p <= 0.0 || !post_nu.survival_mean[idx].is_finite() {
+            continue;
+        }
+        let surv = post_nu.survival_mean[idx];
+        residual_nu[idx] = p * surv;
+        nu_excluded_prob += p * (1.0 - surv);
+        nu_residual_prob += residual_nu[idx];
+        nu_residual_reach += p * post_nu.reach_survival_mean[idx];
     }
 
     // Rank space-reachable cells by residual probability.
@@ -393,6 +435,7 @@ fn main() {
             best_survey,
             exclusion_prob: excl,
             residual_prob: residual,
+            residual_nu_prob: residual_nu,
             reach_dist_au: reach_dist,
             space_reachable,
             lsst_reachable,
@@ -410,16 +453,26 @@ fn main() {
                 .map(|(&t, &a)| (t, a))
                 .collect(),
             sky_area_in_grid_deg2: sky_area,
+            nu_weighted: NuWeightedSummary {
+                excluded_prob: nu_excluded_prob,
+                residual_prob: nu_residual_prob,
+                residual_space_reachable_prob: nu_residual_reach,
+                nu_sigma_deg: ephemeris::nu_sigma_deg(),
+                note: "Draws reweighted by the Cassini-ranging favored                        true-anomaly prior (Fienga et al. 2016, v = 117.8 -10/+11 deg);                        conditional on that fit holding.",
+            },
         },
     };
 
     let json = serde_json::to_string_pretty(&dataset).expect("serialize");
     std::fs::write("figures/search_hull.json", json).expect("write figures/search_hull.json");
     eprintln!(
-        "wrote figures/search_hull.json  (excluded {:.0}%, residual {:.0}%, space-reachable residual {:.0}%)",
+        "wrote figures/search_hull.json  (excluded {:.0}%, residual {:.0}%, space-reachable residual {:.0}%; nu-weighted: excluded {:.0}%, residual {:.0}%, reachable {:.0}%)",
         100.0 * excluded_prob,
         100.0 * residual_prob,
         100.0 * residual_reach,
+        100.0 * nu_excluded_prob,
+        100.0 * nu_residual_prob,
+        100.0 * nu_residual_reach,
     );
 }
 

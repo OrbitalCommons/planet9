@@ -39,6 +39,13 @@ pub const PREFERRED_TRUE_ANOMALY_DEG: f64 = 117.8;
 /// (Fienga et al. 2016, Conclusions / Fig 6 green zone).
 pub const FAVORED_INTERVAL_DEG: (f64, f64) = (108.0, 129.0);
 
+/// 1σ uncertainty (degrees) on the preferred true anomaly, symmetrized from
+/// the published asymmetric error bar `v = 117.8°₋₁₀⁺¹¹` (Fienga et al. 2016,
+/// §4). This is the PHYSICAL width of the ν prior; the reproduction-test
+/// tolerance [`TRUE_ANOMALY_TOLERANCE_DEG`] is a code-vs-paper acceptance
+/// band, not a statement about the measurement.
+pub const PREFERRED_TRUE_ANOMALY_SIGMA_DEG: f64 = 10.5;
+
 /// Tolerance (deg) within which an analytic-proxy favored anomaly should land
 /// of the published preferred true anomaly.
 pub const TRUE_ANOMALY_TOLERANCE_DEG: f64 = 30.0;
