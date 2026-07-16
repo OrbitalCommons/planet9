@@ -114,7 +114,11 @@ impl EnsembleChain {
                     * means.iter().map(|&mu| (mu - grand).powi(2)).sum::<f64>();
 
                 if within <= 0.0 {
-                    return 1.0; // all walkers frozen at the same value
+                    // Zero within-chain variance is only "converged" when
+                    // the walkers also agree with each other. Frozen walkers
+                    // at DIFFERENT values (between > 0) is the worst
+                    // non-convergence — report it as such, not as R-hat = 1.
+                    return if between > 1e-30 { f64::INFINITY } else { 1.0 };
                 }
                 let var_plus = (n - 1) as f64 / n as f64 * within + between / n as f64;
                 (var_plus / within).sqrt()
@@ -143,6 +147,13 @@ impl EnsembleChain {
                     let mean = series.iter().sum::<f64>() / n as f64;
                     let var = series.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
                     if var <= 0.0 {
+                        // A stuck walker is maximally autocorrelated: it
+                        // contributes ACF = 1 at every lag (tau -> n), so it
+                        // LOWERS the ensemble ESS. (Skipping it while still
+                        // dividing by m did the opposite.)
+                        for acf in acf_sum.iter_mut() {
+                            *acf += 1.0;
+                        }
                         continue;
                     }
                     for (lag, acf) in acf_sum.iter_mut().enumerate() {
@@ -423,6 +434,62 @@ mod tests {
         assert!(
             (total as i64 - 49_100).abs() < 100,
             "paper sample count: {total}"
+        );
+    }
+
+    #[test]
+    fn frozen_divergent_walkers_are_reported_as_nonconverged() {
+        // Every walker frozen at a DIFFERENT value: within-chain variance is
+        // zero but the walkers disagree — the worst non-convergence. R-hat
+        // must not report 1.0, and a stuck walker must LOWER the ESS.
+        let n_steps = 20;
+        let frozen = EnsembleChain {
+            samples: (0..n_steps)
+                .map(|_| (0..4).map(|w| vec![w as f64]).collect())
+                .collect(),
+            log_probs: vec![vec![0.0; 4]; n_steps],
+            acceptance_rate: 0.0,
+            seed: 0,
+        };
+        assert!(frozen.gelman_rubin(0)[0].is_infinite());
+
+        // All walkers frozen at the SAME value: degenerate but consistent.
+        let same = EnsembleChain {
+            samples: (0..n_steps).map(|_| vec![vec![3.0]; 4]).collect(),
+            log_probs: vec![vec![0.0; 4]; n_steps],
+            acceptance_rate: 0.0,
+            seed: 0,
+        };
+        assert_eq!(same.gelman_rubin(0)[0], 1.0);
+
+        // Mixed ensemble: three noisy walkers + one stuck. ESS with the
+        // stuck walker must be LOWER than with its noisy replacement.
+        let noisy = |w: usize, s: usize| ((s * 7 + w * 13) % 11) as f64 - 5.0;
+        let mixed = EnsembleChain {
+            samples: (0..n_steps)
+                .map(|s| {
+                    (0..4)
+                        .map(|w| vec![if w == 3 { 42.0 } else { noisy(w, s) }])
+                        .collect()
+                })
+                .collect(),
+            log_probs: vec![vec![0.0; 4]; n_steps],
+            acceptance_rate: 0.5,
+            seed: 0,
+        };
+        let healthy = EnsembleChain {
+            samples: (0..n_steps)
+                .map(|s| (0..4).map(|w| vec![noisy(w, s)]).collect())
+                .collect(),
+            log_probs: vec![vec![0.0; 4]; n_steps],
+            acceptance_rate: 0.5,
+            seed: 0,
+        };
+        let ess_mixed = mixed.effective_sample_size(0)[0];
+        let ess_healthy = healthy.effective_sample_size(0)[0];
+        assert!(
+            ess_mixed < ess_healthy,
+            "stuck walker should lower ESS: {ess_mixed:.1} !< {ess_healthy:.1}"
         );
     }
 }
