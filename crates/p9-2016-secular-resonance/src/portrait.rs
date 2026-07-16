@@ -170,6 +170,52 @@ impl ResonantHamiltonian {
         rh
     }
 
+    /// Build the pendulum with the PHYSICAL external frequency: g₉ is Planet
+    /// Nine's own apsidal precession under the giants' quadrupole
+    /// ([`SecularModel::p9_apsidal_rate`]), and the resonant action Γ* is
+    /// SOLVED from g_free(Γ*) = g₉ on the action grid (previously the
+    /// commensurability was self-tuned at a hand-picked eccentricity, so the
+    /// island's "high-e" placement was an input, not a result). Returns
+    /// `None` when the free-precession band never crosses g₉ at this `a`.
+    pub fn new_physical(model: SecularModel) -> Option<Self> {
+        let g9 = model.p9_apsidal_rate();
+        // Physical free precession includes the giants' J2 (previously
+        // missing from a₀ entirely). Build the action grid, then re-tune.
+        let mut rh = Self::new(model.with_giants_j2(), RESONANT_ECCENTRICITY);
+        // Collect every g_free = g9 crossing on the tabulated grid. The free
+        // precession is non-monotone: the giants' J2 keeps it prograde and
+        // above g₉ at low e, while the P9 ring term drives it down (through
+        // retrograde) as the orbit approaches crossing geometry — Beust's
+        // resonance is the descending high-eccentricity branch.
+        let mut crossings = Vec::new();
+        for k in 1..rh.gammas.len() {
+            let (f0, f1) = (rh.gfree[k - 1] - g9, rh.gfree[k] - g9);
+            if f0 == 0.0 {
+                crossings.push(rh.gammas[k - 1]);
+            } else if f0 * f1 < 0.0 {
+                let t = f0 / (f0 - f1);
+                crossings.push(rh.gammas[k - 1] + t * (rh.gammas[k] - rh.gammas[k - 1]));
+            }
+        }
+        // Prefer the highest-eccentricity crossing that hosts a genuine
+        // libration island.
+        for &gamma_star in crossings.iter().rev() {
+            rh.g_p = g9;
+            rh.e_resonant = rh.model.eccentricity(gamma_star);
+            rh.c1_star = rh.c1(gamma_star);
+            if rh.island().is_some() {
+                return Some(rh);
+            }
+        }
+        None
+    }
+
+    /// The eccentricity the pendulum is tuned at (solved from the physical
+    /// commensurability in [`ResonantHamiltonian::new_physical`]).
+    pub fn resonant_eccentricity(&self) -> f64 {
+        self.e_resonant
+    }
+
     /// Override the external (Planet Nine) apsidal rate g₉, *detuning* the
     /// system away from resonance. With g₉ pushed outside the band of free
     /// precession rates the model spans, `g_free(Γ) − g₉` never vanishes, so
@@ -333,8 +379,29 @@ pub fn libration_island(model: &SecularModel) -> Option<Island> {
     if c1.abs() < 1e-18 {
         return None;
     }
+    // The TUNED high-e portrait configuration (Beust's reported regime,
+    // where c₁ < 0 makes Δϖ = π the stable center). This is a hand-placed
+    // commensurability, NOT a derived one: solving the physical condition
+    // g_free(Γ*) = g₉ (see [`physical_island`]) puts the resonance at
+    // e* ≈ 0.24 for the nominal P9 — a documented residual
+    // (REPRODUCTION_NOTES §22). The pendulum dynamics demonstrated on this
+    // configuration (libration vs circulation, mass scaling) are regime-
+    // independent.
     let rh = ResonantHamiltonian::new(*model, RESONANT_ECCENTRICITY);
     rh.island()
+}
+
+/// The PHYSICAL secular-resonance island: g₉ from P9's own apsidal precession
+/// under the giants' quadrupole, Γ* solved from g_free(Γ*) = g₉ with the
+/// giants' J2 included in the free precession. Returns the island and the
+/// solved resonant eccentricity. At the nominal P9 this lands at e* ≈ 0.24 —
+/// far below the tuned high-e portrait — because g₉ is nearly zero
+/// (P9's apse precesses on a ~10¹¹-yr timescale) and the particle's free
+/// precession crosses zero only once, on its low-e ascending branch.
+pub fn physical_island(model: &SecularModel) -> Option<(Island, f64)> {
+    let rh = ResonantHamiltonian::new_physical(*model)?;
+    let e_star = rh.resonant_eccentricity();
+    rh.island().map(|isl| (isl, e_star))
 }
 
 #[cfg(test)]
@@ -343,6 +410,31 @@ mod tests {
     use crate::published;
     use approx::assert_relative_eq;
     use p9_core::types::P9Params;
+
+    /// The honest physical result issue #226 exposed: solving the real
+    /// commensurability g_free(Γ*) = g₉ — with P9's own apsidal rate as g₉
+    /// and the giants' J2 in the free precession — puts the resonance at
+    /// e* ≈ 0.24 for the nominal P9, NOT in the tuned portrait's high-e
+    /// regime. Beust's high-e anti-aligned island corresponds to a
+    /// hand-placed frame rate (see `libration_island` docs and
+    /// REPRODUCTION_NOTES §22).
+    #[test]
+    fn physical_commensurability_lands_at_low_e() {
+        let model = SecularModel::new(
+            published::REPRESENTATIVE_ETNO_A_AU,
+            &published::nominal_p9(),
+        );
+        let (island, e_star) = physical_island(&model).expect("physical island");
+        assert!(
+            (0.1..0.4).contains(&e_star),
+            "physical resonant e* = {e_star:.3}"
+        );
+        assert!(island.omega_lib > 0.0);
+        // g₉ itself is minuscule: P9's apse precesses on a ~1e11-yr
+        // timescale under the giants' quadrupole.
+        let g9 = model.p9_apsidal_rate();
+        assert!(g9 > 0.0 && g9 < 1e-11, "g9 = {g9:.3e} rad/day");
+    }
 
     #[test]
     fn typed_island_and_rate_accessors_match_f64() {
