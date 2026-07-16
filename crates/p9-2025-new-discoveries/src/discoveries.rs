@@ -4,7 +4,7 @@
 //! osculating solutions, fetched 2026-06-14, epoch JD 2461200.5 (TDB),
 //! frame ECLIPJ2000 (same heliocentric ecliptic frame as
 //! `p9_core::data::etno::BROWN_2017_SAMPLE`). The discovery-paper abstracts
-//! quote only rounded headline numbers (830 AU / 45 AU for 2017 OF201;
+//! quote only rounded headline numbers (838 AU / 44.9 AU for 2017 OF201;
 //! 252 AU / 66 AU / 11° for Ammonite); the full angular elements ω and Ω —
 //! which the ϖ clustering analysis needs — come from the JPL fits, which are
 //! the same arc the papers report.
@@ -45,7 +45,9 @@ impl NewDiscovery {
 ///
 /// JPL SBDB solution 2 (soln 2025-07-03, 25 obs, arc 2004–2018):
 /// a = 823.64 AU, e = 0.94519, i = 16.221°, ω = 337.835°, Ω = 328.760°.
-/// Paper headline: a ≈ 830 AU, q ≈ 45 AU, dwarf-planet-sized (H ≈ 3.5).
+/// Paper headline: a ≈ 838 AU, q ≈ 44.9 AU, dwarf-planet-sized (H ≈ 3.5)
+/// (Cheng, Yang et al., arXiv:2505.15806; a previous version misquoted
+/// 830/45.0, which also hid a real JPL-vs-paper a offset of ~14 AU).
 /// Its ϖ ≈ 307° sits far from the clustered ETNO mean (~52°): an object that
 /// Planet Nine should herd, yet is not aligned.
 pub fn of201() -> NewDiscovery {
@@ -60,8 +62,8 @@ pub fn of201() -> NewDiscovery {
             h_mag: 3.49,
         },
         arxiv: "2505.15806",
-        paper_a_au: 830.0,
-        paper_q_au: 45.0,
+        paper_a_au: 838.0,
+        paper_q_au: 44.9,
         note: "very distant ETNO with ϖ outside the clustered group",
     }
 }
@@ -92,7 +94,7 @@ pub fn ammonite() -> NewDiscovery {
 }
 
 /// Published headline semi-major axis for 2017 OF201 (AU), Cheng et al. 2025.
-pub const OF201_PAPER_A_AU: f64 = 830.0;
+pub const OF201_PAPER_A_AU: f64 = 838.0;
 
 /// Ammonite is reported as the FOURTH (misaligned) sednoid, Chen et al. 2025.
 pub const AMMONITE_SEDNOID_RANK: u32 = 4;
@@ -121,11 +123,14 @@ mod tests {
     #[test]
     fn of201_is_very_distant() {
         let d = of201();
-        // Paper headline a ≈ 830 AU; JPL osculating a within ~1% of it.
+        // Paper headline a ≈ 838 AU; the JPL osculating solution (823.6)
+        // sits ~14 AU below it — a real fit/epoch offset for this
+        // weakly-constrained orbit, documented rather than hidden (the old
+        // misquoted 830 headline made the gap look like <10 AU).
         assert_relative_eq!(d.paper_a_au, OF201_PAPER_A_AU);
         assert!(
-            (d.etno.a - OF201_PAPER_A_AU).abs() < 10.0,
-            "JPL a = {} AU vs paper 830 AU",
+            (d.etno.a - OF201_PAPER_A_AU).abs() < 20.0,
+            "JPL a = {} AU vs paper 838 AU",
             d.etno.a
         );
         assert!(d.etno.a > 800.0, "a = {} AU", d.etno.a);
