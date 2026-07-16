@@ -14,11 +14,20 @@ use p9_2025_stellar_flybys::{
 };
 
 #[test]
-fn combined_probability_is_at_most_five_percent() {
+fn combined_probability_pins_the_computed_band() {
+    // The component bands guarantee p <= 5%, so that alone certifies
+    // nothing. The computed value is ~0.42% — an order of magnitude below
+    // the paper's ≲5% CEILING (the paper quotes an upper bound, not a
+    // point estimate; our factorized F_SUCCESS x geometry x close-encounter
+    // product sits well inside it). Pin the computed band.
     let p = total_probability();
     assert!(
-        p > 0.0 && p <= PUBLISHED_MAX_PROBABILITY,
-        "P_total = {p:.4} should be in (0, {PUBLISHED_MAX_PROBABILITY}] (published ≲5%)"
+        (0.003..0.006).contains(&p),
+        "P_total = {p:.4} drifted out of the computed 0.3-0.6% band"
+    );
+    assert!(
+        p <= PUBLISHED_MAX_PROBABILITY,
+        "P_total = {p:.4} must respect the published ≲{PUBLISHED_MAX_PROBABILITY} ceiling"
     );
 }
 

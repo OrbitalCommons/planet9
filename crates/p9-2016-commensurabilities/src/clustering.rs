@@ -162,10 +162,12 @@ mod tests {
                 obs.r_bar
             );
             // A single random control of the same size is, with high
-            // probability, less grouped than the observed sample.
+            // probability, less grouped than the observed sample. (This
+            // previously OR'd in `p_mc < 0.2`, already asserted above, so
+            // the comparison could never fire.)
             let random_r = uniform_control_r_bar(n, 9999);
             assert!(
-                obs.r_bar > random_r - 0.05 || p_mc < 0.2,
+                obs.r_bar > random_r - 0.05,
                 "{:?}: obs R̄ {:.3} vs random {:.3}",
                 angle,
                 obs.r_bar,

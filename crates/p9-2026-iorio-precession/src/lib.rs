@@ -489,7 +489,19 @@ mod tests {
             saturn_perihelion_precession_arcsec_per_cy(&px),
             SATURN_PRECESSION_BOUND_ARCSEC_PER_CY
         );
-        // These two are recorded as computed facts (whichever way they fall):
-        let _ = (is_excluded(&p9), is_excluded(&py));
+        // The other two verdicts are computed facts — assert them, don't
+        // discard them: the ~6 M⊕/460 AU Planet Nine precesses Saturn at
+        // ~0.5 mas/cy, inside the 1 mas/cy bound (allowed); the close warp
+        // Planet Y at ~1.3 mas/cy is excluded.
+        assert!(
+            !is_excluded(&p9),
+            "Planet Nine ({:.3e} as/cy) should sit inside the bound",
+            saturn_perihelion_precession_arcsec_per_cy(&p9)
+        );
+        assert!(
+            is_excluded(&py),
+            "warp Planet Y ({:.3e} as/cy) should exceed the bound",
+            saturn_perihelion_precession_arcsec_per_cy(&py)
+        );
     }
 }

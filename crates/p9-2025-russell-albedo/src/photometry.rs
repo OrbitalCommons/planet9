@@ -20,7 +20,8 @@ use crate::composition::Composition;
 /// Most-likely current heliocentric distance of Planet Nine from the Reference
 /// Population 3.0 orbit (AU).
 ///
-/// Solved so that the two composition endpoints' apparent magnitudes straddle
+/// BACK-SOLVED, not sourced: the paper publishes H and m but not this
+/// distance. Solved so that the two composition endpoints' apparent magnitudes straddle
 /// the published m = +21.9..+22.7 band: at this distance the bright (H = −6.1)
 /// endpoint sits at m ≈ 21.8 and the faint (H = −5.2) endpoint at m ≈ 22.7.
 /// This lands in the few-hundred-AU regime expected near the most-likely
@@ -73,9 +74,16 @@ mod tests {
 
     #[test]
     fn apparent_v_brackets_published_band() {
+        // NOT an independent reproduction of the published +21.9..+22.7
+        // band: MOST_LIKELY_DISTANCE_AU (625 AU) is back-solved from that
+        // very band (the paper does not publish the distance), so this test
+        // certifies only the CONSISTENCY of the (H, distance, m) triangle —
+        // that the genuine H = −6.1/−5.2 pins, propagated through the
+        // shared distance law, land on the published magnitudes at one
+        // common distance. The independent physics pins are the H test
+        // above and the distance-scaling test below.
         let m_bright = apparent_v_most_likely(&LARGE_COLD);
         let m_faint = apparent_v_most_likely(&SMALL_WARM);
-        // Published apparent-magnitude band is +21.9..+22.7.
         assert!((m_bright - 21.9).abs() < 0.3, "m(bright) = {m_bright:.3}");
         assert!((m_faint - 22.7).abs() < 0.3, "m(faint) = {m_faint:.3}");
         // Brighter absolute magnitude ⇒ brighter (smaller) apparent magnitude.

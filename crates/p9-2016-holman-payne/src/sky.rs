@@ -161,10 +161,12 @@ mod tests {
         let p = brown_batygin_orbit();
         let sky = favored_sky_position(&p, 1440);
         let sep = sky.separation_deg(published::PREFERRED_RA_DEG, published::PREFERRED_DEC_DEG);
-        // Honest bound: the computed direction lands within ~one orbit-quadrant
-        // of the published region. (See REPRODUCTION_NOTES for the offset.)
+        // Recorded offset: the computed direction lands at (RA ≈ 47°,
+        // Dec ≈ −12°), 7.5° from the published region center — comfortably
+        // inside its ~20° half-extent. (A previous bound of 120° — one
+        // orbit-quadrant — could not fail.)
         assert!(
-            sep < 120.0,
+            sep < 15.0,
             "favored sky point (RA {:.0}°, Dec {:.0}°) is {sep:.0}° from published \
              (RA {:.0}°, Dec {:.0}°)",
             sky.ra_deg,

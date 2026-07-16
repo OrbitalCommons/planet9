@@ -267,9 +267,10 @@ mod tests {
         let grid = ParameterGrid::paper_grid();
         let viable = grid.count_viable();
         // Paper reports ~1,134 viable simulations
-        assert!(
-            viable > 500 && viable < 2000,
-            "Expected ~1134 viable, got {}",
+        // The grid reproduces the paper's count exactly; pin it.
+        assert_eq!(
+            viable, 1134,
+            "Expected the paper's 1134 viable, got {}",
             viable
         );
     }

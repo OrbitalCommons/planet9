@@ -207,7 +207,9 @@ pub fn perihelion_bias(
     brightness * angular_bias(varpi, omega, i, params)
 }
 
-/// Compute bias weights for a grid of (ϖ, Ω) values.
+/// Compute bias weights for a grid of (ϖ, Ω) values — a DIAGNOSTIC map of
+/// the selection model (the Monte-Carlo sampler does not consume it; it
+/// rejection-samples against the exact bound 1.0, valid because B ∈ [0, 1]).
 ///
 /// Returns a 2D array of bias values for each (ϖ, Ω) combination,
 /// with inclination marginalized over a sin(i) prior restricted to the
@@ -251,8 +253,9 @@ pub fn bias_grid(
     grid
 }
 
-/// Maximum of the raw bias over (ϖ, Ω) for a given (a, e, H, i): the true
-/// envelope needed for un-clamped rejection sampling.
+/// Maximum of the raw bias over (ϖ, Ω) for a given (a, e, H, i) — a
+/// DIAGNOSTIC of the selection contrast, not a sampler input (the sampler
+/// rejects against 1.0, the exact envelope since B ∈ [0, 1]).
 pub fn bias_max(a: f64, e: f64, h_mag: f64, i: f64, params: &BiasParams) -> f64 {
     let n = 72;
     let mut max = 0.0_f64;
