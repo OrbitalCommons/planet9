@@ -209,20 +209,21 @@ mod tests {
     #[test]
     fn mm_outreaches_wise_w1_for_a_cold_body() {
         // The headline: at the same cold (40 K) temperature, the mm band
-        // reaches a P9 at greater distance than WISE W1, whose cold-body reach
-        // is set by reflected sunlight and tops out around ~290 AU at 10 M⊕
-        // (with the geometric-albedo opposition flux law; the pre-fix /4 error
-        // had it near 190 AU, which made this margin look like >2x).
+        // reaches a P9 at far greater distance than WISE W1, whose cold-body
+        // reach is set by reflected sunlight — ~200 AU at 10 M⊕ with the
+        // corrected flux law AND the W1-band (CH₄-suppressed) albedo of 0.10
+        // (issues #197/#249: the /4 flux error and the V-band 0.41 albedo
+        // partially cancelled; both are now independently right).
         let cmp = compare_reach(&ActSurvey::default(), 10.0);
         let w1 = cmp.wise_w1_au.expect("W1 reach finite for 10 M⊕");
         assert!(
-            cmp.act_mm_au > 1.4 * w1,
-            "ACT mm reach {:.0} AU should exceed WISE W1 {:.0} AU by >40%",
+            cmp.act_mm_au > 2.0 * w1,
+            "ACT mm reach {:.0} AU should be >2x WISE W1 {:.0} AU",
             cmp.act_mm_au,
             w1
         );
         assert!(
-            (250.0..350.0).contains(&w1),
+            (180.0..230.0).contains(&w1),
             "cold-body W1 reflected reach at 10 M⊕ = {w1:.0} AU"
         );
     }
