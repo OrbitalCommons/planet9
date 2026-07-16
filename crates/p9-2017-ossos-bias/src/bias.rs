@@ -149,15 +149,20 @@ mod tests {
     }
 
     /// Reproduced quantity: pin the magnitude of the bias-induced R̄ for the
-    /// default model at a fixed seed. Documents that the apparent clustering
-    /// strength produced from isotropy is ~0.3–0.6 in mean resultant length.
+    /// default model at a fixed seed. With the PUBLISHED OSSOS block layout
+    /// (two clumps roughly opposite on the circle, Bannister et al. 2018)
+    /// the apparent clustering strength produced from isotropy is R̄ ≈ 0.29 —
+    /// weaker than the ~0.5–0.65 the previously invented single-side window
+    /// layout manufactured (opposite clumps partially cancel the resultant),
+    /// but still Rayleigh-significant at survey sample sizes: selection alone
+    /// creates apparent ϖ structure.
     #[test]
     fn test_bias_induced_r_bar_magnitude() {
         let exp = run_default(80_000, 42);
         let r = exp.detected.r_bar;
         assert!(
-            r > 0.3 && r < 0.85,
-            "detected R̄ = {r:.4} outside expected bias-induced band [0.3, 0.85]"
+            r > 0.15 && r < 0.5,
+            "detected R̄ = {r:.4} outside expected bias-induced band [0.15, 0.5]"
         );
         // Document the value in the test output.
         eprintln!(

@@ -98,24 +98,30 @@ impl Default for SurveyModel {
         // from the shared survey table.
         let limiting_mag = limiting_magnitude("DES").unwrap_or(23.8);
 
-        // Discovery-longitude windows. OSSOS observed a handful of blocks at
-        // specific ecliptic longitudes; combined with the other wide-field
-        // surveys that contributed large-a TNOs, the effective coverage is a
-        // few longitude blocks, NOT the full circle, and those blocks are
-        // *clumped* on the sky rather than evenly spaced (the deep large-a
-        // discoveries came from a limited set of nearby fields). That clumping
-        // — not the mere fact of incomplete coverage — is what manufactures a
-        // single dominant apparent-ϖ lobe out of an isotropic parent: evenly
-        // spaced blocks would seed several antipodal lobes and wash R̄ back
-        // toward zero. Centres mimic a clumped block layout around
-        // λ ≈ 0°–60° with one offset block, each ~20° half-width.
-        let windows = [0.0, 30.0, 60.0, 210.0]
-            .iter()
-            .map(|&c| LongitudeWindow {
-                center: c * DEG2RAD,
-                half_width: 20.0 * DEG2RAD,
-            })
-            .collect();
+        // Discovery-longitude windows: the PUBLISHED OSSOS block centres
+        // (Bannister et al. 2018, OSSOS VII, Table 1), by ecliptic
+        // longitude. The blocks form two clumps roughly opposite on the
+        // circle — the "B" blocks near λ ≈ 7–48° (13BL, 14BH, 15BS/BT,
+        // 15BC/BD) and the "A" blocks near λ ≈ 203–240° (13AE, 13AO, 15AP,
+        // 15AM) — NOT the single-side layout a previous version invented
+        // (centres [0°, 30°, 60°, 210°], chosen to "mimic" clumping). Each
+        // window is a block clump with a half-width covering its members.
+        // The two-clump reality still manufactures apparent-ϖ structure out
+        // of an isotropic parent (discovery at perihelion maps sky clumps
+        // onto ϖ clumps), but with a genuinely bimodal — not single-lobe —
+        // selection, which is what the debiased statistics must beat.
+        let windows = [
+            (13.0, 18.0),  // 13BL(13°) + 15BS(7°) + 15BT(8°) + 14BH(24°)
+            (47.0, 8.0),   // 15BC/15BD (46-49°)
+            (209.0, 12.0), // 15AP(203°) + 13AE(215°)
+            (237.0, 8.0),  // 15AM(234°) + 13AO(240°)
+        ]
+        .iter()
+        .map(|&(c, hw): &(f64, f64)| LongitudeWindow {
+            center: c * DEG2RAD,
+            half_width: hw * DEG2RAD,
+        })
+        .collect();
 
         Self {
             limiting_mag,
