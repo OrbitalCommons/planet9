@@ -15,26 +15,35 @@
 //! coadd depth that lets the search reach ~800 AU instead of the
 //! single-exposure ~430 AU quoted in the abstract.
 //!
-//! Per-band single-frame depths: the shared survey table pins W1 = 16.5. The
-//! single-frame W2 depth is shallower (W2 is intrinsically noisier and the
-//! published single-exposure 5σ W2 limit, Wright et al. 2010, is ≈ 15.6 Vega);
-//! we keep it as a labelled reference constant. The *coadd* W1 90%-completeness
-//! depth the 2016 paper actually reports, W1 ≈ 16.66, is kept as a labelled
-//! reference for cross-checking the gain.
-
-use p9_2018_wise_search::survey_model::W1_DEPTH_REFERENCE;
+//! Per-band depth bookkeeping (Vega), disentangled from a previous version
+//! that fed the shared table's 16.5 — itself a single-COVERAGE STACK depth
+//! (~8 L1b exposures per sky pass) — into the √N law as if it were one
+//! exposure, making `coadd_depth(W1, 100) = 19.0` a depth no WISE coadd
+//! achieves and "explaining" the published 16.66 with a nonsensical
+//! N ≈ 1.3:
+//!
+//! - single L1b exposure, 5σ:  W1 ≈ 15.3, W2 ≈ 14.5 (Wright et al. 2010)
+//! - one coverage (~8 exp):    W1 ≈ 15.3 + 1.25·log₁₀8 ≈ 16.4 — the shared
+//!   table's 16.5 "single-frame-stack" reference
+//! - Meisner et al. (2016) coadd 90% completeness: W1 ≈ 16.66, i.e.
+//!   N ≈ 12 exposures per ~1-day bin from the single-exposure base — the
+//!   physically sensible epoch depth.
 
 use crate::band::{WiseBand, W2};
 
-/// Single-frame W1 depth (Vega), from the shared survey table via the sibling.
-pub const SINGLE_FRAME_W1_DEPTH: f64 = W1_DEPTH_REFERENCE;
+/// Single L1b EXPOSURE W1 depth (Vega, 5σ; Wright et al. 2010). The base of
+/// the √N coadd law. (The shared survey table's 16.5 is the ~8-exposure
+/// single-coverage stack, NOT one frame — see the module docs.)
+pub const SINGLE_FRAME_W1_DEPTH: f64 = 15.3;
 
-/// Single-frame W2 depth (Vega), labelled reference constant. WISE W2 is
-/// intrinsically noisier than W1; the published single-exposure 5σ W2 limit is
-/// ≈ 15.6 Vega (Wright et al. 2010). Kept here as a reference; the coadd gain
-/// is band-independent (√N law), so the W2/W1 detectability contrast is driven
-/// by the *flux* (band.rs), not by the depth offset.
-pub const SINGLE_FRAME_W2_DEPTH: f64 = 15.6;
+/// The shared survey table's W1 = 16.5 single-coverage stack reference,
+/// consistent with ≈8 exposures over the single-exposure base.
+pub const STACK_REFERENCE_W1_DEPTH: f64 = 16.5;
+
+/// Single L1b exposure W2 depth (Vega, 5σ). W2 is intrinsically noisier; the
+/// familiar 15.6 figure is its ~8-exposure coverage depth, putting one
+/// exposure near 14.5.
+pub const SINGLE_FRAME_W2_DEPTH: f64 = 14.5;
 
 /// Published 2016 coadd W1 completeness depth (Vega): Meisner et al. (2016)
 /// quote 90% completeness at W1 < 16.66 over ∼2000 deg². Labelled reference.
@@ -115,19 +124,20 @@ mod tests {
 
     #[test]
     fn frames_reproduce_published_coadd_depth() {
-        // The published W1 coadd 90% depth (16.66) is ~0.16 mag deeper than the
-        // single-frame 16.5; under √N that is a very small effective stack
-        // (~1.3 frames), consistent with ∼1-day daily coadds being only a few
-        // exposures deep per ~1-day bin near the ecliptic.
+        // The published W1 coadd 90% depth (16.66) sits 1.36 mag over the
+        // single-EXPOSURE base: N ≈ 12 exposures per ~1-day bin — the
+        // physically sensible epoch depth (the old 16.5-as-single-frame
+        // bookkeeping "explained" it with N ≈ 1.3).
         let gain = PUBLISHED_COADD_W1_DEPTH - SINGLE_FRAME_W1_DEPTH;
         let n = frames_for_gain(gain);
-        assert!(gain > 0.0 && n > 1.0, "gain {gain:.3} -> N {n:.2}");
-        // Round-trip: applying that N reproduces the published depth.
-        assert_relative_eq!(
-            coadd_depth(W1, n.round() as u32),
-            SINGLE_FRAME_W1_DEPTH + coadd_depth_gain(n.round() as u32),
-            max_relative = 1e-12
+        assert!(
+            (8.0..20.0).contains(&n),
+            "gain {gain:.3} -> N {n:.1} exposures/epoch"
         );
+        // And the shared table's 16.5 single-coverage reference is the
+        // ~8-exposure stack over the same base.
+        let n_cov = frames_for_gain(STACK_REFERENCE_W1_DEPTH - SINGLE_FRAME_W1_DEPTH);
+        assert!((5.0..13.0).contains(&n_cov), "coverage N = {n_cov:.1}");
     }
 
     #[test]
