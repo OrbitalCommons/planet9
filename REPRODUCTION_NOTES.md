@@ -602,6 +602,16 @@ derived quantities:
   `PREFERRED_TRUE_ANOMALY_SIGMA_DEG`); previously the ±30° code-vs-paper acceptance tolerance
   was halved and repurposed as the physical σ. The ν-weighted hull products are conditional on
   the Cassini fit holding and are reported alongside — never instead of — the uniform-phase ones.
+- Survey geometry is now single-sourced (issue #257): the DES box-union footprint lives once in
+  `p9_core::analysis::surveys::DES_FOOTPRINT_BANDS` (consumed by p9-2022-des, both DES catalog
+  crates, the isotropy null and — as an areal-coverage summary tied by test to the union's
+  ~4,980 deg² — the DesSgc box in p9-survey/p9-search-hull); the p9-2021-des-catalog clustering
+  null switched from the old Gaussian-band × 0.25-RA soft model to hard box-union membership.
+  ZTF's dec limit is −31° everywhere (`ZTF_DEC_LIMIT_DEG`, Brown & Batygin 2022) vs PS1's −30°.
+  The ϖ-selection stand-ins are one labeled family (`p9_core::analysis::selection`), with a
+  core test pinning that the clustering verdict flips between the cluster-aligned lobe
+  (p ≫ 0.05) and the plane-avoidance members (p < 0.05) on the same ETNO sample. The survey
+  fiducial albedo is core's 0.41 (was a duplicate 0.40).
 - `p9-2017-ossos-bias` discovery-longitude windows: now the PUBLISHED OSSOS block centres
   (Bannister et al. 2018 Table 1; two clumps, λ ≈ 7–48° and 203–240°). With the real bimodal
   layout the bias-induced R̄ from isotropy is ≈ 0.29 (pinned) — weaker than the ~0.5–0.65 a

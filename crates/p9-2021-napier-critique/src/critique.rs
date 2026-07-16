@@ -23,6 +23,7 @@
 //! (arXiv:2102.05601).
 
 use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
+use p9_core::analysis::selection::VarpiSelection;
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::units::{radians, Angle};
 use rand::Rng;
@@ -91,13 +92,18 @@ impl Default for SelectionFunction {
 }
 
 impl SelectionFunction {
-    /// Detection weight w(ϖ) ≥ 0 (unnormalized). Strictly positive for the
-    /// default amplitudes (minimum ≈ 0.19 over the circle); the `max(0.0)`
-    /// guards larger user-supplied amplitudes.
+    /// Detection weight w(ϖ) ≥ 0 (unnormalized): the `CosineLobes` member
+    /// of the shared selection family (`p9_core::analysis::selection`)
+    /// bound to this struct's amplitudes/phases. Strictly positive for the
+    /// defaults (minimum ≈ 0.19 over the circle).
     pub fn weight(&self, varpi: f64) -> f64 {
-        let w =
-            1.0 + self.a1 * (varpi - self.phi1).cos() + self.a2 * (2.0 * (varpi - self.phi2)).cos();
-        w.max(0.0)
+        VarpiSelection::CosineLobes {
+            a1: self.a1,
+            phi1: self.phi1,
+            a2: self.a2,
+            phi2: self.phi2,
+        }
+        .weight(varpi)
     }
 
     /// First-harmonic phase ϕ₁ as a dimension-checked [`Angle`].

@@ -5,6 +5,7 @@ pub mod photometry;
 pub mod poles;
 pub mod resonance;
 pub mod secular;
+pub mod selection;
 pub mod stacking;
 pub mod stats;
 pub mod surveys;

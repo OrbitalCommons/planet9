@@ -24,6 +24,7 @@
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
+use p9_core::analysis::surveys::des_footprint_contains;
 use p9_core::analysis::surveys::limiting_magnitude;
 use p9_core::constants::DEG2RAD;
 
@@ -76,27 +77,6 @@ pub fn galactic_latitude(ra: f64, dec: f64) -> f64 {
     (dec.sin() * dec_ngp.sin() + dec.cos() * dec_ngp.cos() * (ra - ra_ngp).cos()).asin()
 }
 
-/// DES wide-survey footprint membership (southern field, declination band,
-/// SGP-cap RA gate). Mirrors the box-union footprint of `p9-2022-des` at the
-/// resolution this crate needs.
-pub fn in_footprint(ra_deg: f64, dec_deg: f64) -> bool {
-    let ra = ra_deg.rem_euclid(360.0);
-    let bands = [
-        (-65.0, -40.0, 300.0, 105.0),
-        (-40.0, -20.0, 335.0, 55.0),
-        (-20.0, 5.0, 355.0, 40.0),
-    ];
-    bands.iter().any(|&(dmin, dmax, rstart, rend)| {
-        let dec_ok = dec_deg >= dmin && dec_deg < dmax;
-        let ra_ok = if rstart <= rend {
-            ra >= rstart && ra < rend
-        } else {
-            ra >= rstart || ra < rend
-        };
-        dec_ok && ra_ok
-    })
-}
-
 /// Fraction of the full sphere covered by the DES footprint after masking the
 /// galactic plane (|b| < `b_cut_deg`), by uniform-sphere Monte Carlo.
 pub fn sky_coverage_fraction(b_cut_deg: f64, seed: u64, n: usize) -> f64 {
@@ -108,7 +88,7 @@ pub fn sky_coverage_fraction(b_cut_deg: f64, seed: u64, n: usize) -> f64 {
         let dec = z.asin();
         let dec_deg = dec / DEG2RAD;
         let b = galactic_latitude(ra_deg * DEG2RAD, dec) / DEG2RAD;
-        if b.abs() >= b_cut_deg && in_footprint(ra_deg, dec_deg) {
+        if b.abs() >= b_cut_deg && des_footprint_contains(ra_deg, dec_deg) {
             hits += 1;
         }
     }

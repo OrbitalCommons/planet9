@@ -19,7 +19,9 @@
 //! over the surveys `s` whose footprint contains that direction.
 
 use p9_2020_tess_shiftstack::published::{SENSITIVITY_DISTANCE_AU, SENSITIVITY_V_LIMIT};
-use p9_core::analysis::surveys::{limiting_magnitude, Footprint, NORTHERN_SURVEY_DEC_LIMIT_DEG};
+use p9_core::analysis::surveys::{
+    limiting_magnitude, Footprint, NORTHERN_SURVEY_DEC_LIMIT_DEG, ZTF_DEC_LIMIT_DEG,
+};
 
 /// One archival wide-field optical search for Planet Nine.
 #[derive(Debug, Clone)]
@@ -109,11 +111,15 @@ pub fn real_surveys() -> Vec<RealSurvey> {
         },
         // ZTF (Palomar): δ > −30°, used by Brown & Batygin (2022) for a P9
         // shift-stack non-detection.
+        // Plane treatment: ZTF images |b| < 10° but tracklet linking there
+        // is crowding-limited; the hull takes the CONSERVATIVE hard hole
+        // (unexcluded), while p9-survey::refine models it as
+        // shallower-but-imaged. Same survey, two deliberate fidelities.
         RealSurvey {
             name: "ZTF",
             depth: depth("ZTF"),
             footprint: Footprint {
-                dec_min_deg: NORTHERN_SURVEY_DEC_LIMIT_DEG,
+                dec_min_deg: ZTF_DEC_LIMIT_DEG,
                 dec_max_deg: 90.0,
                 galactic_lat_min_deg: 10.0,
                 coverage_fraction: 0.70,

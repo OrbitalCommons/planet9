@@ -10,13 +10,11 @@
 //! "tuned/assumed parameters").
 
 use crate::schema::OrbitSolution;
+use p9_core::analysis::photometry::ALBEDO_NEPTUNE;
 use p9_core::constants::RAD2DEG;
 use p9_core::types::P9Params;
 
 /// Fiducial geometric albedo (Neptune V-band) used for every brightness
-/// estimate unless a study motivates otherwise. See p9-core photometry.
-pub const FIDUCIAL_ALBEDO: f64 = 0.40;
-
 fn from_p9params(
     name: &str,
     citation: &str,
@@ -30,7 +28,7 @@ fn from_p9params(
         citation: citation.to_string(),
         arxiv: arxiv.to_string(),
         mass_earth: p.mass_earth,
-        albedo: FIDUCIAL_ALBEDO,
+        albedo: ALBEDO_NEPTUNE,
         a_au: p.a,
         a_sigma_au: sa,
         e: p.e,
@@ -96,7 +94,7 @@ pub fn catalog() -> Vec<OrbitSolution> {
         citation: "Siraj, Chyba & Tremaine 2024".to_string(),
         arxiv: "2410.18170".to_string(),
         mass_earth: siraj::SIRAJ_2024_MASS_EARTH,
-        albedo: FIDUCIAL_ALBEDO,
+        albedo: ALBEDO_NEPTUNE,
         a_au: siraj::SIRAJ_2024_A_AU,
         a_sigma_au: siraj::SIRAJ_2024_A_SIGMA_AU,
         e: 0.30,

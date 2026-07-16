@@ -17,6 +17,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
+use p9_core::analysis::selection::VarpiSelection;
 use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::data::etno::longitudes_of_perihelion;
 use p9_core::units::{radians, Angle};
@@ -82,21 +83,15 @@ pub enum NullModel {
 }
 
 /// Relative discovery weight for a perihelion longitude (radians) under the
-/// simplified survey-bias model: unit weight away from the galactic plane,
-/// suppressed by `1 − depth·exp(−Δλ²/2σ²)` near each crossing
-/// (depth = 0.85, σ = 20°).
+/// simplified survey-bias model: the `CrossingDips` member of the shared
+/// selection family (`p9_core::analysis::selection`) with depth = 0.85,
+/// σ = 20°.
 pub fn survey_bias_weight(varpi: f64) -> f64 {
-    let depth = 0.85;
-    let sigma = 20.0 * DEG2RAD;
-    let mut w = 1.0;
-    for crossing_deg in [95.0, 275.0] {
-        let mut d = (varpi - crossing_deg * DEG2RAD).rem_euclid(TWO_PI);
-        if d > std::f64::consts::PI {
-            d -= TWO_PI;
-        }
-        w -= depth * (-d * d / (2.0 * sigma * sigma)).exp();
+    VarpiSelection::CrossingDips {
+        depth: 0.85,
+        sigma: 20.0 * DEG2RAD,
     }
-    w.max(0.0)
+    .weight(varpi)
 }
 
 /// Seeded Monte Carlo clustering significance.
