@@ -7,7 +7,13 @@
 //!
 //! Elements are osculating, heliocentric, ecliptic J2000.0 from JPL SBDB
 //! (epoch ~2016). The struct is data-only: published orbit-fit covariances
-//! are not transcribed here.
+//! are not transcribed here. Perihelia re-verified against JPL 2026-07
+//! (the well-determined element for these orbits): each row's q now matches
+//! the JPL solution to ≲0.2 AU. Note that current-epoch SBDB serves these
+//! weakly-constrained orbits at ~3 significant figures and their heliocentric
+//! osculating a wobbles with the giant planets (Sedna reads a ≈ 544 at epoch
+//! 2461200.5) — this table deliberately pins the paper-epoch solutions;
+//! covering it with the sbdb-refresh differ is tracked separately (#258).
 //!
 //! Overlap with [`crate::data::etno`]: this is a *distinct* table, not a
 //! subset of `BROWN_2017_SAMPLE`. It pins the 6-object stability sample from
@@ -63,7 +69,7 @@ pub fn stable_kbos() -> Vec<KboRecord> {
             designation: "2004 VN112",
             elements: OrbitalElements {
                 a: 327.5,
-                e: 0.8527,
+                e: 0.8554, // q = 47.4 (previous 0.8527 gave q = 48.2, ~1 AU high)
                 i: 25.56 * DEG2RAD,
                 omega: 327.15 * DEG2RAD,
                 omega_big: 66.01 * DEG2RAD,
@@ -74,8 +80,11 @@ pub fn stable_kbos() -> Vec<KboRecord> {
             name: "2010 GB174",
             designation: "2010 GB174",
             elements: OrbitalElements {
-                a: 371.7,
-                e: 0.8627,
+                // a/e re-paired from a single JPL solution (the previous row
+                // mixed a = 371.7 from one fit with e = 0.8627 from another,
+                // giving q = 51.0 AU vs the well-determined ~48.5).
+                a: 351.1,
+                e: 0.8619,
                 i: 21.54 * DEG2RAD,
                 omega: 347.77 * DEG2RAD,
                 omega_big: 130.59 * DEG2RAD,
@@ -87,7 +96,7 @@ pub fn stable_kbos() -> Vec<KboRecord> {
             designation: "2000 CR105",
             elements: OrbitalElements {
                 a: 228.8,
-                e: 0.8024,
+                e: 0.8065, // q = 44.3 (previous 0.8024 gave 45.2, ~1 AU high)
                 i: 22.75 * DEG2RAD,
                 omega: 316.74 * DEG2RAD,
                 omega_big: 128.28 * DEG2RAD,
@@ -99,7 +108,7 @@ pub fn stable_kbos() -> Vec<KboRecord> {
             designation: "2010 VZ98",
             elements: OrbitalElements {
                 a: 153.2,
-                e: 0.7706,
+                e: 0.7757, // q = 34.4 (previous 0.7706 gave 35.1, ~0.7 AU high)
                 i: 4.51 * DEG2RAD,
                 omega: 313.90 * DEG2RAD,
                 omega_big: 117.39 * DEG2RAD,
