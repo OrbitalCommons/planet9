@@ -38,20 +38,34 @@ use uom::si::length::astronomical_unit;
 
 use crate::oort_cloud::{generate_ioc_population, generate_scattered_disk, OortCloudConfig};
 
-/// Number of segments in the P9 Gauss ring.
-const RING_SEGMENTS: usize = 24;
+/// Number of segments in the P9 Gauss ring. Sized so the inter-segment arc
+/// (≈2π·a₉/N ≈ 25 AU at a₉ = 500) is comparable to the 5%·a₉ softening: with
+/// the previous N = 24 the spacing was ~130 AU — 5× the softening — so
+/// ring-crossing particles saw 24 grainy ~60 M⊕ point masses (with the ×300
+/// mass boost) instead of the smooth secular field the model claims. The
+/// convergence test below pins the field against a doubled segment count.
+const RING_SEGMENTS: usize = 128;
 
 /// Build Planet Nine's softened Gauss ring as a custom kick force: the
 /// planet's (boosted) mass distributed along its orbit with dwell-time
 /// weights dM/dE ∝ (1 − e cos E), softened by 5% of a₉ — the standard
 /// double-averaging picture of the secular problem.
 pub fn p9_gauss_ring(p9: &P9Params, mass_boost: f64) -> ExtraForce {
+    p9_gauss_ring_with_segments(p9, mass_boost, RING_SEGMENTS)
+}
+
+/// [`p9_gauss_ring`] with an explicit segment count (convergence testing).
+pub fn p9_gauss_ring_with_segments(
+    p9: &P9Params,
+    mass_boost: f64,
+    n_segments: usize,
+) -> ExtraForce {
     let gm_total = p9.gm() * mass_boost;
     let softening2 = (0.05 * p9.a).powi(2);
 
-    let mut segments: Vec<(Vector3<f64>, f64)> = Vec::with_capacity(RING_SEGMENTS);
-    let de = TWO_PI / RING_SEGMENTS as f64;
-    for k in 0..RING_SEGMENTS {
+    let mut segments: Vec<(Vector3<f64>, f64)> = Vec::with_capacity(n_segments);
+    let de = TWO_PI / n_segments as f64;
+    for k in 0..n_segments {
         let ea = (k as f64 + 0.5) * de;
         let elem = OrbitalElements {
             a: p9.a,
@@ -62,7 +76,7 @@ pub fn p9_gauss_ring(p9: &P9Params, mass_boost: f64) -> ExtraForce {
             mean_anomaly: ea - p9.e * ea.sin(),
         };
         let pos = elem.to_state_vector(GM_SUN).pos;
-        let weight = (1.0 - p9.e * ea.cos()) / RING_SEGMENTS as f64;
+        let weight = (1.0 - p9.e * ea.cos()) / n_segments as f64;
         segments.push((pos, gm_total * weight));
     }
 
@@ -96,7 +110,6 @@ pub struct InjectionConfig {
     /// innermost test particles (the static ring imposes no constraint)
     pub dt_days: f64,
     /// Number of element checks for q(t)-crossing detection
-    pub n_q_checks: usize,
     /// Size of the simulated scattered-disk comparison population
     pub n_scattered: usize,
 }
@@ -114,7 +127,6 @@ impl InjectionConfig {
             duration_gyr: 4.0,
             mass_boost: 100.0,
             dt_days: 4.0e5,
-            n_q_checks: 200,
             n_scattered: 100,
         }
     }
@@ -175,7 +187,6 @@ pub fn evolve_population(
     mass_boost: f64,
     duration_days: f64,
     dt_days: f64,
-    _n_checks: usize,
 ) -> Vec<ParticleOutcome> {
     let ring = p9.map(|p| p9_gauss_ring(p, mass_boost));
 
@@ -296,7 +307,6 @@ pub fn simulate_injection<R: Rng>(config: &InjectionConfig, rng: &mut R) -> Inje
         config.mass_boost,
         duration_days,
         config.dt_days,
-        config.n_q_checks,
     );
     let control_run = evolve_population(
         &ioc_pop,
@@ -304,7 +314,6 @@ pub fn simulate_injection<R: Rng>(config: &InjectionConfig, rng: &mut R) -> Inje
         config.mass_boost,
         duration_days,
         config.dt_days,
-        config.n_q_checks,
     );
     // The scattered disk is closer to P9 (secular times ~ (a/a₉)^{3/2}
     // shorter), so a tenth of the IOC duration suffices for its apsidal
@@ -316,7 +325,6 @@ pub fn simulate_injection<R: Rng>(config: &InjectionConfig, rng: &mut R) -> Inje
         config.mass_boost,
         duration_days / 10.0,
         7.0e4,
-        config.n_q_checks,
     );
 
     // Injection: q(t) crossed below threshold during the run (started above).
@@ -503,7 +511,7 @@ mod tests {
             omega_big: 2.0,
             mean_anomaly: 0.5,
         }];
-        let out = evolve_population(&elems, None, 1.0, 3.0e8, 1.5e5, 10);
+        let out = evolve_population(&elems, None, 1.0, 3.0e8, 1.5e5);
         let fin = out[0].final_elements.as_ref().expect("survives");
         assert!((fin.a - 3000.0).abs() < 0.5);
         assert!((fin.e - 0.9).abs() < 1e-3);
@@ -601,5 +609,50 @@ mod tests {
         let result = simulate_injection(&config, &mut rng);
         assert!(result.n_injected >= 5);
         assert!(result.f_varpi_scattered > result.f_varpi_control);
+    }
+
+    #[test]
+    fn ring_field_converged_in_segment_count() {
+        // The softened ring must be a smooth field, not a chain of point
+        // masses: accelerations at probe points spanning the ring-crossing
+        // band agree between N = 128 and N = 256 segments to ~1%.
+        let p9 = P9Params::nominal_2016();
+        let f128 = p9_gauss_ring_with_segments(&p9, 300.0, 128);
+        let f256 = p9_gauss_ring_with_segments(&p9, 300.0, 256);
+        for &r in &[250.0, 400.0, 520.0, 700.0, 900.0] {
+            for &ang in &[0.0f64, 1.1, 2.3, 4.0] {
+                let p = Vector3::new(r * ang.cos(), r * ang.sin(), 30.0);
+                let a1 = f128.acceleration(&p);
+                let a2 = f256.acceleration(&p);
+                let rel = (a1 - a2).norm() / a2.norm().max(1e-30);
+                assert!(
+                    rel < 0.02,
+                    "segment-count sensitivity {rel:.4} at r = {r}, ang = {ang}"
+                );
+            }
+        }
+        // And the old N = 24 graininess is visible for probes near the ring
+        // path itself (within ~a softening length of a segment), where
+        // crossing particles actually pass.
+        let f24 = p9_gauss_ring_with_segments(&p9, 300.0, 24);
+        let mut worst: f64 = 0.0;
+        // Points along the ring locus, offset vertically by ~the softening.
+        for k in 0..48 {
+            let ea = k as f64 * TWO_PI / 48.0;
+            let elem = OrbitalElements {
+                a: p9.a,
+                e: p9.e,
+                i: p9.i,
+                omega: p9.omega,
+                omega_big: p9.omega_big,
+                mean_anomaly: ea - p9.e * ea.sin(),
+            };
+            let mut pos = elem.to_state_vector(GM_SUN).pos;
+            pos.z += 0.05 * p9.a;
+            let rel = (f24.acceleration(&pos) - f256.acceleration(&pos)).norm()
+                / f256.acceleration(&pos).norm();
+            worst = worst.max(rel);
+        }
+        assert!(worst > 0.05, "N = 24 graininess near the ring = {worst:.3}");
     }
 }
