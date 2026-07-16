@@ -4,12 +4,18 @@
 //! - i₉ ∈ {1, 10, 20, 30, 60, 90, 120, 150°}
 //! - ω₉ ∈ (0-360°, 30° steps)
 //!
-//! For each combination, runs a scattered disk simulation and evaluates
-//! whether the resulting population matches the observed KBO clustering.
+//! For each combination, [`run_inclination_point`] runs the inclined
+//! scattered-disk simulation (p9-core `scattered_disk_sim`, giants as the
+//! J2-averaged quadrupole, P9 direct) and evaluates whether the surviving
+//! population's orbital-pole statistics match the observed KBO sample.
 
 use p9_core::constants::*;
+use p9_core::initial_conditions::scattered_disk_sim::{run_scattered_disk, DiskSimConfig};
 use p9_core::types::P9Params;
 use p9_core::units::{radians, Angle};
+use rayon::prelude::*;
+
+use crate::parameter_grid::SurveyRunConfig;
 
 /// Inclination survey grid point.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -130,6 +136,103 @@ pub fn evaluate_inclination_acceptance(
         && confinement_prob > 0.5
 }
 
+/// Run one (i₉, ω₉) survey point: inclined scattered-disk simulation with the
+/// grid point's Planet Nine, then orbital-pole statistics of the surviving
+/// distant population against the observed ETNO comparison values.
+///
+/// `confinement_prob` is the anti-aligned Δϖ fraction of the qualifying
+/// survivors — the same confinement statistic the planar Section-2 survey
+/// uses, evaluated here alongside the 3D pole criteria.
+pub fn run_inclination_point(
+    point: &InclinationGridPoint,
+    run: &SurveyRunConfig,
+    seed: u64,
+) -> InclinationResult {
+    let mut config = DiskSimConfig::inclined_nominal();
+    config.p9 = grid_point_to_p9(point);
+    config.n_particles = run.n_particles;
+    config.t_total = run.t_total;
+    config.dt = run.dt;
+    config.snapshot_interval = run.t_total;
+
+    let snapshots = run_scattered_disk(&config, seed);
+    let last = snapshots.last().expect("at least the initial snapshot");
+
+    // Distant survivors in the clustering band.
+    let survivors: Vec<_> = last
+        .elements
+        .iter()
+        .filter(|el| el.a >= run.a_min_cluster && el.a <= run.a_max_cluster)
+        .collect();
+
+    if survivors.is_empty() {
+        return InclinationResult {
+            point: *point,
+            pole_angle_mean: f64::NAN,
+            pole_angle_rms: f64::NAN,
+            confinement_prob: 0.0,
+            accepted: false,
+        };
+    }
+
+    // Mean pole direction and scatter of the surviving population.
+    let poles: Vec<(f64, f64, f64)> = survivors
+        .iter()
+        .map(|el| pole_direction(el.i, el.omega_big))
+        .collect();
+    let mut mean = (0.0, 0.0, 0.0);
+    for p in &poles {
+        mean.0 += p.0;
+        mean.1 += p.1;
+        mean.2 += p.2;
+    }
+    let mag = (mean.0 * mean.0 + mean.1 * mean.1 + mean.2 * mean.2)
+        .sqrt()
+        .max(1e-12);
+    let mean = (mean.0 / mag, mean.1 / mag, mean.2 / mag);
+    let pole_angle_mean = pole_separation_deg(mean, (0.0, 0.0, 1.0));
+    let pole_angle_rms = (poles
+        .iter()
+        .map(|&p| pole_separation_deg(mean, p).powi(2))
+        .sum::<f64>()
+        / poles.len() as f64)
+        .sqrt();
+
+    // Anti-aligned Δϖ confinement fraction among the survivors.
+    let anti = survivors
+        .iter()
+        .filter(|el| {
+            let dv = (el.omega + el.omega_big - last.varpi_p9).rem_euclid(std::f64::consts::TAU);
+            (dv - std::f64::consts::PI).abs() < std::f64::consts::FRAC_PI_2
+        })
+        .count();
+    let confinement_prob = anti as f64 / survivors.len() as f64;
+
+    InclinationResult {
+        point: *point,
+        pole_angle_mean,
+        pole_angle_rms,
+        confinement_prob,
+        accepted: evaluate_inclination_acceptance(
+            pole_angle_mean,
+            pole_angle_rms,
+            confinement_prob,
+        ),
+    }
+}
+
+/// Run the full (i₉, ω₉) survey in parallel with deterministic per-point seeds.
+pub fn run_inclination_grid(
+    grid: &[InclinationGridPoint],
+    run: &SurveyRunConfig,
+    base_seed: u64,
+) -> Vec<InclinationResult> {
+    grid.par_iter()
+        .enumerate()
+        .map(|(k, point)| run_inclination_point(point, run, base_seed.wrapping_add(k as u64)))
+        .collect()
+}
+
 /// Compute the pole angle of an orbit relative to the ecliptic.
 ///
 /// The orbital pole is at (sin(i)sin(Ω), -sin(i)cos(Ω), cos(i)) in ecliptic coords.
@@ -150,6 +253,30 @@ pub fn pole_separation_deg(pole1: (f64, f64, f64), pole2: (f64, f64, f64)) -> f6
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reduced_scale_runner_produces_populated_results() {
+        // The Section-3 survey now has a real runner: a low-inclination P9
+        // at the nominal orientation, run at reduced scale, yields finite
+        // pole statistics from actual surviving particles (this was the
+        // "no runner / InclinationResult never constructed" gap).
+        use crate::parameter_grid::SurveyRunConfig;
+        let point = InclinationGridPoint {
+            i_p9: 20.0 * DEG2RAD,
+            omega_p9: 150.0 * DEG2RAD,
+        };
+        let run = SurveyRunConfig::reduced();
+        let res = run_inclination_point(&point, &run, 2016);
+        assert!(
+            res.pole_angle_mean.is_finite(),
+            "no survivors at reduced scale"
+        );
+        assert!(res.pole_angle_rms >= 0.0);
+        assert!((0.0..=1.0).contains(&res.confinement_prob));
+        // Acceptance is a computed verdict either way, not a constant.
+        let (_obs_tilt, obs_rms) = observed_pole_stats();
+        assert!(obs_rms > 0.0);
+    }
 
     #[test]
     fn test_inclination_grid_size() {
