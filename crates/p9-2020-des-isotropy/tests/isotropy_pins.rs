@@ -42,8 +42,12 @@ fn varpi_consistent_with_isotropy_under_selection() {
             p.p_values()
         );
     }
-    // Case 4 (n = 3): borderline, p ≈ 0.03 across the suite — documented, not
-    // forced to isotropy.
+    // Case 4 (n = 3): with the REAL ~5000 deg² box-union footprint the
+    // selection null is concentrated enough to explain even this tight
+    // trio — p ≈ 0.26 across the suite, comfortably consistent with
+    // isotropy. (Under the old 2-3x-too-broad floored acceptance this case
+    // read as borderline p ≈ 0.03: the flattened null under-credited the
+    // footprint, biasing selection-aware p-values low.)
     let c4 = angle_p_values(
         &case_sample(SampleCase::Case4),
         Angle::Varpi,
@@ -54,8 +58,8 @@ fn varpi_consistent_with_isotropy_under_selection() {
     assert!(c4.r_bar > 0.95, "Case4 ϖ R̄ = {:.3}", c4.r_bar);
     for p in c4.p_values() {
         assert!(
-            (0.01..0.05).contains(&p),
-            "Case4 ϖ p = {p:.4} (expected borderline)"
+            (0.08..0.6).contains(&p),
+            "Case4 ϖ p = {p:.4} (expected consistent under the real footprint)"
         );
     }
 }

@@ -48,30 +48,39 @@ pub fn ecliptic_to_equatorial(lambda: f64, beta: f64) -> (f64, f64) {
 }
 
 /// DES wide-survey footprint acceptance for a perihelion direction given in
-/// ecliptic coordinates. The DES wide survey is a ~5000 deg² southern field
-/// (roughly −70° < Dec < +5°, concentrated in the SGP cap RA 300°–110°). We
-/// model acceptance as a smooth declination band centred on the DES footprint
-/// with a soft RA gate, returning a weight in [0, 1].
+/// ecliptic coordinates: HARD membership in the ~5000 deg² box-union
+/// footprint (the same declination-banded RA boxes as
+/// p9-2021-des-catalog's completeness model — one geometry, tracked for
+/// consolidation into p9-core by the survey-geometry issue).
+///
+/// A previous version used a Gaussian declination band (σ = 30°) times a
+/// 0.25 floor over the complementary 190° of RA, and rejection-sampled with
+/// a 0.02 floor — an effective acceptance area of ~10–12 kdeg², 2–3× the
+/// real footprint, which flattened the selection null toward uniform and
+/// biased the selection-aware p-values low.
 pub fn des_footprint_weight(lambda: f64, beta: f64) -> f64 {
     let (ra, dec) = ecliptic_to_equatorial(lambda, beta);
-
-    // Declination band: DES wide survey is southern, peak near −45°, with a
-    // Gaussian falloff; sharp cut north of +10°.
-    let dec_deg = dec / DEG2RAD;
-    if dec_deg > 10.0 {
-        return 0.0;
+    let (ra_deg, dec_deg) = (ra / DEG2RAD, dec / DEG2RAD);
+    let ra_n = ra_deg.rem_euclid(360.0);
+    let bands = [
+        (-65.0, -40.0, 300.0, 105.0),
+        (-40.0, -20.0, 335.0, 55.0),
+        (-20.0, 5.0, 355.0, 40.0),
+    ];
+    let inside = bands.iter().any(|&(dmin, dmax, rstart, rend)| {
+        let dec_ok = dec_deg >= dmin && dec_deg < dmax;
+        let ra_ok = if rstart <= rend {
+            ra_n >= rstart && ra_n < rend
+        } else {
+            ra_n >= rstart || ra_n < rend
+        };
+        dec_ok && ra_ok
+    });
+    if inside {
+        1.0
+    } else {
+        0.0
     }
-    let dec_center = -45.0;
-    let dec_sigma = 30.0;
-    let dec_w = (-(dec_deg - dec_center).powi(2) / (2.0 * dec_sigma * dec_sigma)).exp();
-
-    // RA gate: the DES field straddles RA ~300°→110° (through 0°). Soft
-    // suppression in the complementary ~110°–300° region.
-    let ra_deg = ra / DEG2RAD;
-    let in_field = ra_deg >= 300.0 || ra_deg <= 110.0;
-    let ra_w = if in_field { 1.0 } else { 0.25 };
-
-    (dec_w * ra_w).clamp(0.0, 1.0)
 }
 
 /// Null model for the isotropy tests.
@@ -86,17 +95,26 @@ pub enum NullModel {
 }
 
 /// Draw one isotropic (ω, Ω) pair for an object of inclination i, accepting
-/// under the chosen null. For `DesSelection` we rejection-sample on the
-/// footprint weight (with a small floor so the loop always terminates).
+/// under the chosen null. For `DesSelection` we rejection-sample on the hard
+/// footprint (capped attempts guard against inclination/footprint
+/// combinations with vanishing acceptance — the previous 0.02 floor let
+/// never-detectable geometries through instead).
 fn draw_angles(rng: &mut StdRng, i: f64, null: NullModel) -> (f64, f64) {
+    let mut attempts = 0usize;
     loop {
         let omega = rng.gen::<f64>() * TWO_PI;
         let node = rng.gen::<f64>() * TWO_PI;
         match null {
             NullModel::Uniform => return (omega, node),
             NullModel::DesSelection => {
+                attempts += 1;
+                if attempts > 100_000 {
+                    // Effectively zero acceptance for this inclination: fall
+                    // back to the raw draw rather than looping forever.
+                    return (omega, node);
+                }
                 let (lambda, beta) = perihelion_direction(i, omega, node);
-                let w = des_footprint_weight(lambda, beta).max(0.02);
+                let w = des_footprint_weight(lambda, beta);
                 if rng.gen::<f64>() < w {
                     return (omega, node);
                 }
