@@ -233,8 +233,8 @@ mod tests {
                 mutual_inclination: 0.35,
                 omega_big_sun: 0.0,
                 i_9: 0.35,
-                omega_big_9: 3.14,
-                delta_omega_big: -3.14,
+                omega_big_9: std::f64::consts::PI,
+                delta_omega_big: -std::f64::consts::PI,
             },
             ObliquitySnapshot {
                 t: 4.5 * GYR_DAYS,
