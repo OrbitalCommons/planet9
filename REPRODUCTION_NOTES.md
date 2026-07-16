@@ -594,6 +594,10 @@ derived quantities:
 - `p9-2019-clustering` / `p9-2021-orbit` survey-bias null: longitude suppression near
   λ ≈ 95°/275° + δ > −30° coverage — same caveat.
 - `p9-2025-clustering` selection weighting w(ϖ) = 1 + 0.3cos(ϖ − 60°) in the bias-resampling MC.
+- `p9-2025-simons-forecast` SO flux limits (deep 4.4 mJy / shallow 14.2 mJy at 280 GHz) — reverse-
+  engineered from the paper's published 900/500 AU 5 M⊕ reaches under this thermal model (the
+  paper quotes reaches, not point-source limits); the SO reach test is therefore a round-trip
+  consistency pin, with the published ACT 8 mJy band as the independent anchor.
 - `p9-search-hull` TESS entry footprint (dec 0–90°, areal coverage 0.20) — a coarse stand-in for
   the Rice & Laughlin (2020) blind-search sectors 18–19 (~4,600 deg² of northern sky); the depth
   (V < 21) and the d ≤ 150 au validity cap are the paper's published values via

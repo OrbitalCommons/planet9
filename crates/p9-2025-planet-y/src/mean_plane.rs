@@ -44,30 +44,6 @@ pub fn mean_plane_tilt_deg(a_au: f64, planet_y: &PlanetY) -> f64 {
     angular_distance(&forced_pole(a_au, planet_y), &reference_pole()) / DEG2RAD
 }
 
-/// First-order debiasing of a measured mean-plane tilt.
-///
-/// An inclination-limited sample (detection efficiency ∝ a smooth, decreasing
-/// function of ecliptic inclination) under-weights high-inclination members,
-/// pulling the *measured* pole toward the ecliptic. To leading order the
-/// measured tilt is suppressed by a factor `efficiency_slope ∈ (0, 1]`
-/// relative to the true forced tilt; debiasing divides it back out.
-///
-/// `measured_tilt_deg`: the raw mean-plane tilt from the (biased) sample.
-/// `efficiency_slope`: the fractional suppression (1.0 = unbiased).
-pub fn debias_tilt_deg(measured_tilt_deg: f64, efficiency_slope: f64) -> f64 {
-    assert!(
-        efficiency_slope > 0.0 && efficiency_slope <= 1.0,
-        "efficiency_slope must be in (0, 1]"
-    );
-    measured_tilt_deg / efficiency_slope
-}
-
-/// Forward model of a *biased* measurement: apply the inclination suppression
-/// to the true forced tilt. Used to verify that debiasing inverts the bias.
-pub fn biased_tilt_deg(a_au: f64, planet_y: &PlanetY, efficiency_slope: f64) -> f64 {
-    mean_plane_tilt_deg(a_au, planet_y) * efficiency_slope
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,25 +67,6 @@ mod tests {
         let tilt = mean_plane_tilt_deg(72.0, &py);
         let i_f = forced_inclination(72.0, &py) / DEG2RAD;
         assert_relative_eq!(tilt, i_f, max_relative = 1e-9);
-    }
-
-    #[test]
-    fn test_debias_inverts_bias() {
-        let py = nominal();
-        let slope = 0.7;
-        let true_tilt = mean_plane_tilt_deg(75.0, &py);
-        let measured = biased_tilt_deg(75.0, &py, slope);
-        let recovered = debias_tilt_deg(measured, slope);
-        assert_relative_eq!(recovered, true_tilt, max_relative = 1e-12);
-    }
-
-    #[test]
-    fn test_bias_pulls_toward_ecliptic() {
-        // A biased measurement is always closer to flat than the truth.
-        let py = nominal();
-        let true_tilt = mean_plane_tilt_deg(78.0, &py);
-        let measured = biased_tilt_deg(78.0, &py, 0.6);
-        assert!(measured < true_tilt && measured > 0.0);
     }
 
     #[test]

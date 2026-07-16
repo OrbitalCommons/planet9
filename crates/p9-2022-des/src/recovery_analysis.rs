@@ -283,10 +283,13 @@ mod tests {
         // Coarse per-model regression against Table 1 (the single
         // calibrated night-usability parameter is shared across models, so
         // inter-model differences are genuinely computed from colors).
+        // Tolerance ±0.04: tighter than the full Table-1 inter-model
+        // spread (0.113), so a column shift between models (the #212 bug,
+        // which a 0.12 tolerance let through) cannot pass.
         for model in color_models::all_models() {
             let r = compute_recovery_for_model(&model, 3000, 11).recovery_frac;
             assert!(
-                (r - model.paper_recovery).abs() < 0.12,
+                (r - model.paper_recovery).abs() < 0.04,
                 "{}: computed {r:.3} vs Table 1 {:.3}",
                 model.name,
                 model.paper_recovery

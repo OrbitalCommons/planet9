@@ -194,6 +194,11 @@ mod tests {
 
     #[test]
     fn so_reach_matches_published_5me_band() {
+        // ROUND-TRIP of the tuned limits, not an independent check: the SO
+        // flux limits are reverse-engineered from these very reaches (see
+        // `bands`), so this pins only that the inversion stays consistent.
+        // The independent computed pins are the ACT band test above (ACT's
+        // 8 mJy is a published limit) and the scaling tests below.
         // SO forecast: 5 M⊕ detectable from 500 AU (shallow) to 900 AU (deep).
         let deep = (max_detectable_distance(5.0, &SO_SENSITIVITY) / au(1.0)).value;
         let shallow = (max_detectable_distance(5.0, &SO_SENSITIVITY_SHALLOW) / au(1.0)).value;

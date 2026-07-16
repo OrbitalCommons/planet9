@@ -11,8 +11,10 @@
 //!   `p9_core::forces::j2_secular`) and Planet Y's exterior ring torque
 //!   (∝ m_Y), and measures the warp amplitude.
 //! - [`mean_plane`] expresses the forced plane as an observable mean-plane pole
-//!   (reusing p9-core pole geometry) and applies a first-order debiasing of an
-//!   inclination-limited sample.
+//!   (reusing p9-core pole geometry). (A previous "debiasing" here was an
+//!   x·s/s identity around a free efficiency-slope knob — deleted rather
+//!   than dressed up; a real ε(i) would have to be derived over the
+//!   librating population.)
 
 pub mod laplace_plane;
 pub mod mean_plane;
