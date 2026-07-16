@@ -181,27 +181,47 @@ fn h_of_canonical(a: f64, h_z: f64, omega: f64, g: f64, params: &HamiltonianPara
 }
 
 /// Right-hand side of Hamilton's equations in (omega, G), via central
-/// differences of H. `h_z` is the conserved vertical Delaunay momentum.
+/// differences of H, falling back to one-sided differences when one side of
+/// the stencil leaves the physical strip g ∈ (|H_z|, L). `h_z` is the
+/// conserved vertical Delaunay momentum.
+///
+/// (A previous version mapped ANY out-of-strip stencil point to a
+/// derivative of 0.0, freezing trajectories at an artificial fixed point
+/// exactly at the e → 0 / kinematic-|J_z| turning points of the deep vZLK
+/// excursions — and a frozen point trivially conserves H, so the invariant
+/// tests never caught it.)
 fn hamilton_rhs(a: f64, h_z: f64, omega: f64, g: f64, params: &HamiltonianParams) -> (f64, f64) {
     let l = (GM_SUN * a).sqrt();
     let dg = 1e-6 * l;
     let domega = 1e-6;
 
+    let h_0 = h_of_canonical(a, h_z, omega, g, params);
     let h_gp = h_of_canonical(a, h_z, omega, g + dg, params);
     let h_gm = h_of_canonical(a, h_z, omega, g - dg, params);
-    let dh_dg = match (h_gp, h_gm) {
-        (Some(p), Some(m)) => (p - m) / (2.0 * dg),
-        _ => 0.0,
-    };
+    let dh_dg = one_dimensional_derivative(h_gm, h_0, h_gp, dg);
 
     let h_op = h_of_canonical(a, h_z, omega + domega, g, params);
     let h_om = h_of_canonical(a, h_z, omega - domega, g, params);
-    let dh_domega = match (h_op, h_om) {
-        (Some(p), Some(m)) => (p - m) / (2.0 * domega),
-        _ => 0.0,
-    };
+    let dh_domega = one_dimensional_derivative(h_om, h_0, h_op, domega);
 
     (dh_dg, -dh_domega)
+}
+
+/// Central difference when both neighbours exist, one-sided against the
+/// centre when only one does, 0 only when the whole stencil is outside the
+/// strip (no information at all).
+fn one_dimensional_derivative(
+    minus: Option<f64>,
+    centre: Option<f64>,
+    plus: Option<f64>,
+    h: f64,
+) -> f64 {
+    match (minus, centre, plus) {
+        (Some(m), _, Some(p)) => (p - m) / (2.0 * h),
+        (None, Some(c), Some(p)) => (p - c) / h,
+        (Some(m), Some(c), None) => (c - m) / h,
+        _ => 0.0,
+    }
 }
 
 /// Integrate the secular equations of motion at fixed (a, J_z) from
@@ -479,5 +499,33 @@ mod tests {
             tau > 4.5,
             "tau = {tau} Gyr should exceed the solar system age"
         );
+    }
+
+    #[test]
+    fn boundary_stencil_does_not_freeze_the_flow() {
+        // Start exactly at the kinematic floor g = |H_z| (eta0 = j_z, i = 0):
+        // the -dg side of the FD stencil is outside the physical strip. The
+        // old code returned dG/dt = 0 there, freezing e at an artificial
+        // fixed point; the one-sided difference must keep the level-set flow
+        // alive (either omega or e moves within a few steps).
+        let params = cheap_params();
+        let a = 5000.0;
+        let j_z = 0.5;
+        let e0 = (1.0f64 - j_z * j_z).sqrt() - 1e-9; // eta0 = j_z + epsilon
+        let traj = integrate_vzlk(a, j_z, e0, 90.0 * DEG2RAD, &params, 5.0e6, 40);
+        let first = &traj[0];
+        let last = traj.last().unwrap();
+        let moved = (last.e - first.e).abs() > 1e-9 || (last.omega - first.omega).abs() > 1e-6;
+        assert!(
+            moved,
+            "trajectory frozen at the strip boundary: de = {:.3e}, domega = {:.3e}",
+            (last.e - first.e).abs(),
+            (last.omega - first.omega).abs()
+        );
+        // And the RHS at the boundary is finite (no NaN from the one-sided
+        // fallback).
+        for p in &traj {
+            assert!(p.e.is_finite() && p.omega.is_finite() && p.h_value.is_finite());
+        }
     }
 }
