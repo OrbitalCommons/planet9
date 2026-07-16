@@ -203,14 +203,17 @@ pub fn forced_varpi(
 }
 
 /// Small-amplitude libration frequency about the forced equilibrium ϖ_forced
-/// (rad/day), from the 1-D secular pendulum
+/// (rad/day), from the linearized (e, ϖ) secular system
 ///
-///   ϖ̈ = -ω_lib² (ϖ - ϖ_forced),   ω_lib² = -(∂ϖ̇/∂ϖ)|_eq.
+///   δϖ̇ = A·δe,   δė = −B·δϖ,   ω_lib² = A·B,
 ///
-/// `ϖ̇ = (√(1−e²)/(n a² e)) ∂R̄/∂e`, so the libration frequency follows from
-/// the mixed second derivative ∂²R̄/∂e∂ϖ at the equilibrium. Returns the
-/// magnitude; a real frequency (positive ω_lib²) confirms a stable libration
-/// center rather than an unstable fixed point.
+/// with A = ∂ϖ̇/∂e and B = C(e)·∂²R̄/∂ϖ² (from the Lagrange pair
+/// ϖ̇ = C·∂R̄/∂e, ė = −C·∂R̄/∂ϖ, C = √(1−e²)/(n a² e)). The diagonal terms
+/// vanish at the fixed point — for the pure-second-harmonic EFE tide
+/// ∂ϖ̇/∂ϖ|_eq ≡ 0 identically, so a previous version that finite-differenced
+/// exactly that quantity returned √(quadrature noise), and its "stability"
+/// test passed on noise. Returns √|ω²| with stability decided by the SIGN of
+/// A·B (positive ⇒ stable libration center).
 pub fn libration_frequency(
     a: f64,
     e: f64,
@@ -219,12 +222,42 @@ pub fn libration_frequency(
     geom: &PlaneGeometry,
     n_quad: usize,
 ) -> f64 {
+    libration_frequency_squared(a, e, a_efe, n, geom, n_quad)
+        .abs()
+        .sqrt()
+}
+
+/// Signed ω_lib² = (∂ϖ̇/∂e)·(C·∂²R̄/∂ϖ²) at the forced apse (rad²/day²);
+/// positive for a stable libration center.
+pub fn libration_frequency_squared(
+    a: f64,
+    e: f64,
+    a_efe: f64,
+    n: &Vector3<f64>,
+    geom: &PlaneGeometry,
+    n_quad: usize,
+) -> f64 {
     let varpi0 = forced_varpi(a, e, a_efe, n, geom, n_quad);
+
+    // A = ∂ϖ̇/∂e at the fixed point.
+    let he = 1e-4;
+    let rate_p = precession_rate(a, e + he, varpi0, a_efe, n, geom, n_quad);
+    let rate_m = precession_rate(a, e - he, varpi0, a_efe, n, geom, n_quad);
+    let a_coef = (rate_p - rate_m) / (2.0 * he);
+
+    // B = C(e)·∂²R̄/∂ϖ² via the torque derivative: ė = −C·∂R̄/∂ϖ, so
+    // ∂ė/∂ϖ = −C·∂²R̄/∂ϖ².
     let hv = 1e-3;
-    let rate_p = precession_rate(a, e, varpi0 + hv, a_efe, n, geom, n_quad);
-    let rate_m = precession_rate(a, e, varpi0 - hv, a_efe, n, geom, n_quad);
-    let dvarpidot_dvarpi = (rate_p - rate_m) / (2.0 * hv);
-    (-dvarpidot_dvarpi).abs().sqrt()
+    let t_p = apsidal_torque(a, e, varpi0 + hv, a_efe, n, geom, n_quad);
+    let t_m = apsidal_torque(a, e, varpi0 - hv, a_efe, n, geom, n_quad);
+    let d2r_dv2 = (t_p - t_m) / (2.0 * hv);
+    let nm = (mean_motion_typed(a) / (radians(1.0) / days(1.0))).value;
+    let c = (1.0 - e * e).sqrt() / (nm * a * a * e);
+    let b_coef = c * d2r_dv2;
+
+    // δϖ̈ = A·δė = −A·B·δϖ with B = C·R̄_ϖϖ: ω² = A·C·R̄_ϖϖ. Stability sign:
+    // restoring when A and R̄_ϖϖ combine to a positive squared frequency.
+    -a_coef * (-b_coef)
 }
 
 /// Smallest signed angular separation between two longitudes (radians), in
@@ -364,16 +397,25 @@ mod tests {
     }
 
     #[test]
-    fn test_libration_frequency_scales_as_sqrt_amplitude() {
-        // ω_lib² ∝ A_efe (the secular potential is linear in A), so
-        // ω_lib ∝ √A: quadrupling A doubles ω_lib.
+    fn test_libration_frequency_scales_linearly_with_amplitude() {
+        // In this ISOLATED-tide secular problem both linearized coefficients
+        // (A = ∂ϖ̇/∂e and B = C·∂²R̄/∂ϖ²) are linear in A_efe, so
+        // ω_lib = √(A·B) ∝ A_efe: quadrupling the amplitude quadruples the
+        // frequency (timescale ∝ 1/A_efe). The old test asserted ω ∝ √A —
+        // an artifact of the noise-based ω it was testing (√ of a quantity
+        // whose numerical residue happened to scale with A). A √A law would
+        // hold only with an A-independent restoring term (e.g. the giants'
+        // precession), which this crate deliberately excludes.
         let n = galactic_center_ecliptic();
         let geom = ecliptic_plane();
         let a = 350.0;
         let e = 0.7;
         let w1 = libration_frequency(a, e, 2.5e-13, &n, &geom, 256);
         let w4 = libration_frequency(a, e, 1.0e-12, &n, &geom, 256);
-        assert_relative_eq!(w4 / w1, 2.0, epsilon = 1e-3);
+        assert_relative_eq!(w4 / w1, 4.0, epsilon = 1e-3);
+        // And the equilibrium is a genuinely STABLE center: signed ω² > 0.
+        let w2 = libration_frequency_squared(a, e, 5.0e-13, &n, &geom, 256);
+        assert!(w2 > 0.0, "omega^2 = {w2:.3e} must be positive (stable)");
     }
 
     #[test]
