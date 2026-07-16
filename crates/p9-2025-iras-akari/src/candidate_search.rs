@@ -247,25 +247,40 @@ impl GalacticDensityModel {
     }
 }
 
+/// Fraction of the sky RETAINED after the paper's galactic cuts (|b| ≥ 10°
+/// plus the 27.5°-radius bulge exclusion, Phan et al. Fig. 4): ≈ 0.79.
+pub const RETAINED_SKY_FRACTION: f64 = 0.79;
+
+/// Paper post-cut catalogue counts (Phan et al. Fig. 4): IRAS sources and
+/// AKARI-MUSL sources surviving all flux/colour/plane cuts, i.e. the
+/// populations the pairing actually runs on.
+pub const PAPER_POST_CUT_IRAS: usize = 2479;
+pub const PAPER_POST_CUT_AKARI: usize = 108;
+
 /// Expected number of chance-alignment pairs in the separation annulus,
-/// conditioned on the *post-flux-cut* source counts (the population the
-/// pair search actually runs on — using the full-catalogue counts
-/// overestimates by ~3 orders of magnitude), including the
-/// galactic-latitude pair enhancement.
+/// conditioned on the *post-cut* source counts over the *retained* sky:
 ///
-///   λ = N_iras · N_akari · π(θ_max² − θ_min²)/A_sky · ⟨w²⟩
+///   λ = N_iras · N_akari · π(θ_max² − θ_min²) / A_retained.
+///
+/// The paper removes |b| < 10° and the bulge BEFORE pairing, so the post-cut
+/// populations live only on the retained ~79% of the sky where the disk
+/// density term is absent — the correct area factor is 1/A_retained with NO
+/// galactic pair enhancement. (A previous version divided by the full sky
+/// and multiplied by ⟨w²⟩ ≈ 1.59 — modeling plane-concentrated catalogues
+/// that the paper's cuts had already excluded — which inflated λ to ~19 and
+/// was most of the documented λ-vs-13 residual. With the Fig. 4 counts this
+/// form gives λ ≈ 22, matching the paper's 22 raw window pairs.)
 pub fn expected_chance_pairs(
     n_iras_post_cut: usize,
     n_akari_post_cut: usize,
     sep_min_arcmin: f64,
     sep_max_arcmin: f64,
-    density: &GalacticDensityModel,
+    _density: &GalacticDensityModel,
 ) -> f64 {
     // Full sky = 41,253 deg² = 41,253 × 3600 arcmin²
-    let full_sky_arcmin2 = 41_253.0 * 3600.0;
+    let retained_arcmin2 = 41_253.0 * 3600.0 * RETAINED_SKY_FRACTION;
     let annulus_area = std::f64::consts::PI * (sep_max_arcmin.powi(2) - sep_min_arcmin.powi(2));
-    (n_iras_post_cut as f64) * (n_akari_post_cut as f64) * annulus_area / full_sky_arcmin2
-        * density.pair_enhancement()
+    (n_iras_post_cut as f64) * (n_akari_post_cut as f64) * annulus_area / retained_arcmin2
 }
 
 /// Poisson false-alarm probability of finding at least one surviving pair
@@ -542,5 +557,22 @@ mod tests {
             n_chance > 0.2 * lambda_patch && n_chance < 5.0 * lambda_patch,
             "chance pairs {n_chance} vs expectation {lambda_patch:.1}"
         );
+    }
+
+    #[test]
+    fn lambda_with_paper_counts_matches_raw_window_pairs() {
+        // With the paper's Fig. 4 post-cut counts over the retained sky,
+        // the expected chance pairs in the 42'-69.6' window is ~22 —
+        // matching the paper's 22 raw window pairs (13 remain after their
+        // colour-consistency cut).
+        let density = GalacticDensityModel::default();
+        let lambda = expected_chance_pairs(
+            PAPER_POST_CUT_IRAS,
+            PAPER_POST_CUT_AKARI,
+            42.0,
+            69.6,
+            &density,
+        );
+        assert!((18.0..26.0).contains(&lambda), "lambda = {lambda:.1}");
     }
 }
