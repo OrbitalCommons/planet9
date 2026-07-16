@@ -1,0 +1,16 @@
+[package]
+name = "p9-rubin-watch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+p9-2026-apsidal-clustering = { path = "../p9-2026-apsidal-clustering" }
+p9-2021-perihelion-gap = { path = "../p9-2021-perihelion-gap" }
+p9-2024-neptune-crossing = { path = "../p9-2024-neptune-crossing" }
+p9-2016-inclined-tnos = { path = "../p9-2016-inclined-tnos" }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+rand = { workspace = true }
+ureq = "3.3.0"
+flate2 = "1.1.9"

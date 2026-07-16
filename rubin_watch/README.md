@@ -48,11 +48,21 @@ and turns each discovery into a recomputed verdict.
 
 ## Status
 
-- 2026-07-16 — design directory written; no implementation yet. External
-  endpoints verified: MPC `distant_extended.json.gz` (updates daily), JPL
-  `sbdb_query.api` constraint queries (82 objects with a > 150 AU, q > 30 AU
-  today), SBDB single-object lookups. Fink LSST registration not yet
-  requested.
+- 2026-07-16 (later) — **Phase 1 implemented and seeded.**
+  `crates/p9-rubin-watch` (`mpc-sync` subcommand) + `RUNBOOK-mpc.md`;
+  ledger seeded with the live census (370 minor planets: 358 SBDB
+  ∩/∪ 347 MPC-distant; comets excluded via `sb-kind=a` after their
+  discoverer-name aliases poisoned the join). Inaugural delta report at
+  `reports/rubin-watch/2026-07-16-mpc.md`: the cut-defined vetted ETNO
+  sample is now n = 20 with R̄ = 0.175 (Rayleigh p = 0.55) vs the curated
+  10-object baseline's R̄ = 0.649 (2.64σ) — the clustering question now has
+  a live, reproducible dashboard. 11 gap-band and 61 Neptune-crossing-class
+  curation candidates surfaced; posterior-staleness flag set (16-object
+  sample diff). Fink scaffold at `scripts/rubin_watch/fink_pull.py`
+  (blocked on registration).
+- 2026-07-16 — design directory written. External endpoints verified: MPC
+  `distant_extended.json.gz` (updates daily), JPL `sbdb_query.api`
+  constraint queries, SBDB single-object lookups.
 
 ## Glossary
 

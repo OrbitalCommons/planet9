@@ -61,7 +61,7 @@ guaranteed to connect those dots; ours can be.
 
 | ID | Requirement | Driver |
 |---|---|---|
-| SR-1 | Track objects with a ≥ 150 AU or q ≥ 40 AU or (q > 30 AU and a ≥ 100 AU) or i ≥ 60° | superset of every sample any crate consumes (design/02 class table) |
+| SR-1 | Census cut: (a ≥ 100 AU) ∨ (i ≥ 60° ∧ a ≥ 30 AU ∧ q ≥ 15 AU) — a bare q-cut would haul in the classical belt, and a bare i-cut ~650 damocloids; measured census 962 objects (2026-07-16) | superset of every sample any crate consumes (design/02 class table) |
 | SR-2 | Distinguish provisional (1-opposition) from vetted (multi-opposition) orbits; statistics run on both, reported separately | the a–e fit degeneracy documented in `p9_core::data::refresh`; Rubin's first-year orbits will swing |
 | SR-3 | Clustering deltas reported under all three labeled selection stand-ins (`p9_core::analysis::selection::VarpiSelection`) | the verdict is selection-model dependent (core verdict-sensitivity test) |
 | SR-4 | Slow-mover search covers apparent rates 2–14″/day near opposition and is ephemeris-aware through stationary points | d ∈ [300, 1000] AU ⇒ 3.4–11.2″/day at opposition, → 0 at stationary epochs |
