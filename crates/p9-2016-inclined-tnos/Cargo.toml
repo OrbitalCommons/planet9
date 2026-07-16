@@ -16,3 +16,6 @@ uom = "0.38.0"
 
 [dev-dependencies]
 approx = { workspace = true }
+
+[features]
+sbdb-refresh = ["p9-core/sbdb-refresh"]
