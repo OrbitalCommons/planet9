@@ -33,6 +33,14 @@ pub const NEPTUNE_MASS_EARTH: f64 = 17.147;
 /// Neptune's geometric albedo (V band).
 pub const ALBEDO_NEPTUNE: f64 = 0.41;
 
+/// Solar V − r color (AB, Willmer 2018): the color of a neutral (gray)
+/// reflector, used to convert the workspace's V-band population magnitudes
+/// onto r-band survey depths (m_r = m_V − 0.36). A Neptune-like body is
+/// somewhat BLUER in the red (CH₄ absorption pulls V − r toward ~0.2), so
+/// the neutral color slightly overstates the r-band brightness — a labeled
+/// systematic of a few tenths of a magnitude, not a hidden one.
+pub const SOLAR_V_MINUS_R: f64 = 0.36;
+
 /// Mass-radius relation for Neptunian (volatile-envelope) planets, anchored
 /// at Neptune:
 ///

@@ -20,6 +20,7 @@ use p9_core::types::OrbitalElements;
 use p9_core::units::{degrees, Angle};
 
 use crate::survey_model::Ps1StackSurvey;
+use p9_core::analysis::photometry::SOLAR_V_MINUS_R;
 
 /// A reference-population member reduced to the observables the survey model
 /// needs: an equatorial declination and an apparent r magnitude.
@@ -73,7 +74,9 @@ pub fn reference_targets(n: usize, seed: u64) -> Vec<DetectionTarget> {
             };
             DetectionTarget {
                 dec_deg: declination_deg(&elements),
-                r_magnitude: p.v_magnitude,
+                // The reference population carries V; the PS1 depth is r.
+                // Convert with the labeled neutral-reflector color.
+                r_magnitude: p.v_magnitude - SOLAR_V_MINUS_R,
             }
         })
         .collect()
