@@ -694,6 +694,19 @@ p9-core machinery rather than the constant against itself; the suppression-crite
 - Pinned: `crates/p9-2016-inclination-instability/src/growth.rs`
   (`efolding_time_in_the_published_order_unity_band`), `src/suppression.rs`.
 
+### 23d. p9-2026-apsidal-clustering — tuned synthetics demonstrate the mechanism; the real sample lands at σ ≈ 2.6
+
+The stable-21/25 synthetic samples are TUNED (their concentrations were solved from the
+published 2.7σ → 1.9σ outputs), so those headline values are reproduced by construction — they
+pin only the dilution mechanism. The genuine data test runs the same von Mises
+log-likelihood-ratio estimator on the vetted 10-object ϖ sample (`p9_core::data::etno`):
+κ ≈ 1.73, σ ≈ 2.64 — independently at the paper's ~2.7σ scale (pinned). The asymptotic Wilks
+p = exp(−Λ) is cross-checked against the small-n-corrected Rayleigh series from p9-core on the
+same sample (agreement within ~0.3σ; the Wilks form is the more optimistic). The paper's exact
+stable-21/25 element tables are not transcribed.
+- Pinned: `crates/p9-2026-apsidal-clustering/src/samples.rs`
+  (`real_etno_sample_is_significantly_clustered`).
+
 ### 24. p9-2025-stacking — analytic matched-filter / metric reproduction, not a pixel pipeline
 
 Geringer-Sameth et al. (2025) build a full image-stacking search with an orbit-
