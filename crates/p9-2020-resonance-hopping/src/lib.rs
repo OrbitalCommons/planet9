@@ -15,9 +15,18 @@
 //! What this crate computes (no hard-coded answers): a seeded synthetic
 //! distant-TNO population in semimajor axis, each object classified by
 //!   (a) proximity to the nearest P9 n:1 / n:2 resonance, and
-//!   (b) whether the neighbouring resonances OVERLAP (resonance-overlap K),
-//! reusing `p9_core::analysis::resonance` and the resonance catalog /
-//! `identify_resonance` machinery from `p9-2018-resonance`.
+//!   (b) whether the neighbouring resonances OVERLAP (resonance-overlap K).
+//!
+//! The overlap machinery is LOCAL to this crate: a labelled pendulum
+//! half-width δa = a·C·√μ·e^{order/2} (`classification::resonance_half_width`,
+//! width_coeff an O(1) model constant) over the dense P9 commensurability
+//! spectrum. It shares the Chirikov √μ mass scaling with the BMN21-anchored
+//! `p9_core::analysis::resonance` (cross-pinned in the tests) but NOT the
+//! absolute normalization — the core covers Neptune's 2:j chain, not the P9
+//! n:1/n:2 chain — so only the *trends* (K rising toward P9, hopping fraction
+//! rising with a) are load-bearing, never absolute K values. (A previous
+//! version claimed to reuse a resonance catalog / `identify_resonance`
+//! machinery from `p9-2018-resonance` that this crate never depended on.)
 //!
 //! It then reports the fraction of the population in each class and shows
 //! that the hopping fraction RISES with semimajor axis (more overlap), while

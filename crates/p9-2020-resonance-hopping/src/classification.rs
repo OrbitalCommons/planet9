@@ -400,4 +400,24 @@ mod tests {
             Class::Resonant | Class::Hopping | Class::NonResonant
         ));
     }
+
+    #[test]
+    fn overlap_k_shares_core_chirikov_mass_scaling() {
+        // The local pendulum width and the BMN21-anchored core Chirikov both
+        // scale as sqrt(mu): quadrupling P9's mass doubles K in both. This
+        // cross-pin (plus the trend tests) is the honest link to the
+        // core-validated criterion — absolute normalizations intentionally
+        // differ (different resonance chains).
+        let landscape = ResonanceLandscape::new(500.0, 150.0, 490.0, 4);
+        let a = 420.0;
+        let k1 = resonance_overlap_k(&landscape, a, 0.6, 3.0e-5, 1.2).unwrap();
+        let k4 = resonance_overlap_k(&landscape, a, 0.6, 1.2e-4, 1.2).unwrap();
+        assert!(
+            ((k4 / k1) - 2.0).abs() < 1e-9,
+            "local K mass scaling: {}",
+            k4 / k1
+        );
+        let c1 = p9_core::analysis::resonance::chirikov_overlap_parameter(500.0, 40.0);
+        assert!(c1 > 0.0, "core Chirikov sanity: {c1}");
+    }
 }
