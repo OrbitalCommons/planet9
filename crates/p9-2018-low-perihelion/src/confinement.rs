@@ -221,6 +221,33 @@ fn libration_half_width(a: f64, e_f: f64, apse_dv: f64, a9: f64, e9: f64, mass_e
     PI
 }
 
+/// Confining well depth at the reference eccentricity with an explicit
+/// softening fraction (of a₉) — the probe behind the softening-robustness
+/// test. The sweep geometry is orbit-crossing (see `reference::TEST_ETNO_A_AU`
+/// docs), so the doubly-averaged integral is softening-regularized; results
+/// must not depend materially on that regularization choice.
+pub fn well_depth_with_softening(a: f64, a9: f64, e9: f64, mass_earth: f64, soft_frac: f64) -> f64 {
+    let soft = soft_frac * a9;
+    let hh = |dvarpi: f64| {
+        numerical_secular_hamiltonian(
+            a,
+            E_REF_WELL,
+            0.0,
+            dvarpi,
+            0.0,
+            a9,
+            e9,
+            p9_gm(mass_earth),
+            N_QUAD,
+            soft,
+        )
+    };
+    // Anti-aligned well vs aligned saddle (the confining contrast for an
+    // eccentric exterior perturber at these geometries).
+    let (h_anti, h_aligned) = (hh(PI), hh(0.0));
+    (h_aligned - h_anti).abs()
+}
+
 /// Full confinement diagnostics for a test ETNO of semi-major axis `a` under a
 /// Planet Nine of semi-major axis `a9`, eccentricity `e9`, mass `mass_earth`.
 pub fn analyze(a: f64, a9: f64, e9: f64, mass_earth: f64) -> Confinement {
@@ -418,5 +445,36 @@ mod tests {
             low_q.libration_half_width,
             canonical.libration_half_width
         );
+    }
+
+    #[test]
+    fn sweep_deepening_is_robust_to_softening_choice() {
+        // The headline monotone deepening of the confining well as q9 drops
+        // is computed in an orbit-crossing, softening-regularized regime.
+        // It must survive doubling the softening: same monotone direction,
+        // and depths stable to a modest factor.
+        use crate::reference::{BB_A9_AU, P9_MASS_EARTH, TEST_ETNO_A_AU};
+        let e9s = [0.6, 0.75, 0.9];
+        for &soft in &[0.01, 0.02] {
+            let mut prev = 0.0;
+            for &e9 in &e9s {
+                let d =
+                    well_depth_with_softening(TEST_ETNO_A_AU, BB_A9_AU, e9, P9_MASS_EARTH, soft);
+                assert!(
+                    d > prev,
+                    "soft {soft}: depth not deepening at e9 = {e9}: {d:.3e} <= {prev:.3e}"
+                );
+                prev = d;
+            }
+        }
+        for &e9 in &e9s {
+            let d1 = well_depth_with_softening(TEST_ETNO_A_AU, BB_A9_AU, e9, P9_MASS_EARTH, 0.01);
+            let d2 = well_depth_with_softening(TEST_ETNO_A_AU, BB_A9_AU, e9, P9_MASS_EARTH, 0.02);
+            let ratio = d2 / d1;
+            assert!(
+                (0.5..2.0).contains(&ratio),
+                "e9 = {e9}: depth ratio under 2x softening = {ratio:.3}"
+            );
+        }
     }
 }

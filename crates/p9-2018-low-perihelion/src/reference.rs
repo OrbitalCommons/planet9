@@ -35,8 +35,14 @@ pub const E9_SWEEP_HI: f64 = 0.9;
 pub const LOW_Q9_MIN_AU: f64 = BB_A9_AU * (1.0 - E9_SWEEP_HI);
 
 /// Representative test-ETNO semi-major axis (AU). Sedna-scale, deep in the
-/// clustered population (a ≳ 250 AU) and well inside any swept P9 perihelion so
-/// the doubly-averaged secular treatment is valid (non-crossing geometry).
+/// clustered population (a ≳ 250 AU). NOTE: at the equilibrium-search
+/// eccentricities (e up to 0.95) this orbit radially OVERLAPS the swept P9
+/// perihelia (down to 70 AU), i.e. the geometry is orbit-crossing across the
+/// whole sweep — where the doubly-averaged 1/Δ integral is singular and every
+/// confinement number is regularized by the 1%·a₉ softening (a previous
+/// version claimed "non-crossing geometry" here, which was false). The
+/// softening-robustness test in `confinement` pins that the sweep's monotone
+/// deepening survives a 2× softening change.
 pub const TEST_ETNO_A_AU: f64 = 500.0;
 
 /// Median semi-major axis of the vetted ETNO sample (AU), computed from the
