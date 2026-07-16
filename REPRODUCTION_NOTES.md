@@ -481,6 +481,17 @@ Beust's published libration *amplitude/period* numbers are configuration-specifi
 read-offs not quoted as single scalars in the abstract, so the crate pins the qualitative
 structure (anti-aligned center, high-e island, mass scaling, libration vs circulation) and the
 self-consistency of the pendulum rather than a published amplitude figure.
+
+Honest residual (issue #226): the high-e placement of the tuned portrait island is an INPUT,
+not a derived result. Solving the physical commensurability — g₉ from P9's own apsidal
+precession under the giants' quadrupole (≈2×10⁻¹³ rad/day, a ~10¹¹-yr apse period) with the
+giants' J2 included in the particle's free precession — puts the resonance at e* ≈ 0.24 for the
+nominal P9 at a = 250 AU (`portrait::physical_island`, pinned): the free precession is
+retrograde at low e (P9 ring dominating), crosses the tiny g₉ once on its ascending branch, and
+never returns to it at high e. Reproducing Beust's high-eccentricity anti-aligned islands as a
+*derived* feature requires his full frame treatment (mutual precession), beyond this reduced
+pendulum; the tuned portrait is retained as the paper's-regime demonstration with that caveat
+documented at the definition.
 - Pinned: `crates/p9-2016-secular-resonance/src/portrait.rs`
   (`island_exists_for_nominal_p9_and_is_anti_aligned`, `circular_perturber_has_no_island`,
   `resonance_strengthens_with_p9_mass`, `every_etno_admits_an_anti_aligned_island`),

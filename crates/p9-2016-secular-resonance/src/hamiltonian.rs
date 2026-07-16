@@ -28,6 +28,7 @@
 
 use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::{GM_SUN, TWO_PI};
+use p9_core::forces::j2_secular::combined_j2_jsu;
 use p9_core::types::P9Params;
 use p9_core::units::{au, gm_from_au3_day2, GravitationalParameter, Length};
 
@@ -49,6 +50,12 @@ pub struct SecularModel {
     pub n_quad: usize,
     /// Softening length (AU) regularizing orbit-crossing geometries.
     pub softening: f64,
+    /// Include the giant planets' orbit-averaged J2 quadrupole in the
+    /// axisymmetric part of the Hamiltonian. Off by default (the tuned
+    /// portrait and the ring-average oracle pins use the bare P9 Gauss
+    /// ring); the PHYSICAL commensurability path
+    /// (`ResonantHamiltonian::new_physical`) turns it on.
+    pub giants_j2: bool,
 }
 
 impl SecularModel {
@@ -61,7 +68,15 @@ impl SecularModel {
             gm_p: p9.gm(),
             n_quad: 64,
             softening: 0.02 * p9.a,
+            giants_j2: false,
         }
+    }
+
+    /// Include the giants' J2 term in the axisymmetric Hamiltonian (used by
+    /// the physical commensurability path).
+    pub fn with_giants_j2(mut self) -> Self {
+        self.giants_j2 = true;
+        self
     }
 
     /// Override the perturber GM (used to scan Planet Nine's mass).
@@ -90,7 +105,7 @@ impl SecularModel {
     /// constant monopole term that does not affect the dynamics).
     pub fn hamiltonian(&self, e: f64, dvarpi: f64) -> f64 {
         // Coplanar: i = 0, Ω = 0, ω = Δϖ measured from the perturber apse.
-        numerical_secular_hamiltonian(
+        let ring = numerical_secular_hamiltonian(
             self.a,
             e,
             0.0,
@@ -101,7 +116,37 @@ impl SecularModel {
             self.gm_p,
             self.n_quad,
             self.softening,
-        )
+        );
+        ring + if self.giants_j2 {
+            self.giants_j2_term(e)
+        } else {
+            0.0
+        }
+    }
+
+    /// The giants' orbit-averaged J2 contribution to the axisymmetric part,
+    /// +GM_eff·J2_eff/(2a³η³). In the deficit-action convention
+    /// (Γ = L − G, dΔϖ/dt = +∂H/∂Γ = −∂H/∂G) the POSITIVE sign yields the
+    /// standard prograde apsidal precession (3/2)·n·J2_eff/(a²η⁴), which was
+    /// previously missing from the free precession entirely.
+    pub fn giants_j2_term(&self, e: f64) -> f64 {
+        let (j2, _j4, gm_boost) = combined_j2_jsu();
+        let gm_eff = GM_SUN + gm_boost;
+        let eta2 = 1.0 - e * e;
+        gm_eff * j2 / (2.0 * self.a.powi(3) * eta2.powf(1.5))
+    }
+
+    /// Planet Nine's OWN apsidal precession rate g₉ (rad/day) under the
+    /// giants' averaged quadrupole: (3/2)·n₉·J2_eff/(a₉²η₉⁴), prograde. This
+    /// is the physical external frequency the secular resonance condition
+    /// g_free(Γ*) = g₉ refers to (previously g₉ was self-tuned to the free
+    /// rate at a hand-picked eccentricity).
+    pub fn p9_apsidal_rate(&self) -> f64 {
+        let (j2, _j4, gm_boost) = combined_j2_jsu();
+        let gm_eff = GM_SUN + gm_boost;
+        let n9 = (gm_eff / self.a_p.powi(3)).sqrt();
+        let eta4 = (1.0 - self.e_p * self.e_p).powi(2);
+        1.5 * n9 * j2 / (self.a_p * self.a_p * eta4)
     }
 
     /// Delaunay deficit action Γ = √(GM·a)·(1 − √(1 − e²)) (AU²/day),
