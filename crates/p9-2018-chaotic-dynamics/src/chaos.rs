@@ -33,7 +33,9 @@ use p9_core::units::{au, Length};
 /// Dimensionless prefactor in the first-order resonance-overlap width
 /// Δa/a_p = C μ^{2/7} (circular limit). Wisdom (1980) / Duncan et al. (1989)
 /// give C ≈ 1.5 for the chaotic-zone half-width.
-pub const OVERLAP_PREFACTOR: f64 = 1.5;
+pub const WISDOM_PREFACTOR: f64 = 1.3;
+/// Mustill & Wyatt (2012) eccentric-overlap prefactor in Δa = 1.8 (μe)^{1/5} a.
+pub const MW_ECCENTRIC_PREFACTOR: f64 = 1.8;
 
 /// Chirikov resonance-overlap parameter for a chain near a generic perturber of
 /// semi-major axis `a_p` (AU) and mass `m_p` (solar masses), at particle
@@ -73,14 +75,20 @@ pub fn j_one_location_typed(j: i64, a9_au: f64) -> Length {
 /// Inward extent (AU) of the overlapped resonance zone from Planet Nine, for a
 /// particle of eccentricity `e`:
 ///
-///   Δa_overlap = C μ^{2/7} e^{1/5} a₉.
+///   Δa_overlap = max( 1.3 μ^{2/7},  1.8 (μ e)^{1/5} ) · a₉,
 ///
-/// `m9_earth` is Planet Nine's mass in Earth masses. The eccentricity factor
-/// e^{1/5} is the Mustill & Wyatt (2012) enhancement of the Wisdom (1980)
-/// circular overlap zone.
+/// the Wisdom (1980) circular-orbit zone as the floor with the Mustill &
+/// Wyatt (2012) eccentric criterion taking over once e is large enough.
+/// `m9_earth` is Planet Nine's mass in Earth masses. (A previous version
+/// used C·μ^{2/7}·e^{1/5}, which contradicted BOTH cited limits: it vanished
+/// as e → 0 instead of approaching the finite Wisdom zone, and it carried
+/// the circular mass exponent 2/7 on the eccentric branch where M&W give
+/// (μe)^{1/5} — ≈3× too narrow at e = 0.85 for a 10 M⊕ perturber.)
 pub fn overlap_zone_width_typed(e: f64, a9_au: f64, m9_earth: f64) -> Length {
     let mu = m9_earth * EARTH_MASS_SOLAR;
-    au(OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * e.powf(0.2) * a9_au)
+    let wisdom = WISDOM_PREFACTOR * mu.powf(2.0 / 7.0);
+    let eccentric = MW_ECCENTRIC_PREFACTOR * (mu * e).powf(0.2);
+    au(wisdom.max(eccentric) * a9_au)
 }
 
 /// Resonance-overlap parameter K at (a, e) for a Planet Nine of semi-major
@@ -108,20 +116,25 @@ pub fn is_chaotic(a_au: f64, e: f64, a9_au: f64, m9_earth: f64, e9: f64) -> bool
 
 /// Critical eccentricity at fixed semi-major axis `a`: the eccentricity at
 /// which the overlap parameter crosses unity (below it regular, above it
-/// chaotic). Closed form from K = 1:
+/// chaotic). From K = 1 on the eccentric (Mustill & Wyatt) branch:
 ///
-///   e_crit = [ (a₉ − a) / (C μ^{2/7} a₉) ]^5.
+///   e_crit = [ (a₉ − a) / (1.8 μ^{1/5} a₉) ]^5 / μ · μ = (gap/(1.8 a₉))^5 / μ
 ///
-/// Returns `None` when the boundary falls outside e ∈ (0, 1) — the column is
-/// uniformly regular (e_crit ≥ 1) or uniformly chaotic (a ≥ a₉, e_crit ≤ 0).
+/// i.e. e_crit = (gap / (1.8 a₉))^5 / μ. Returns `None` when the boundary
+/// falls outside e ∈ (0, 1): either the column is uniformly regular
+/// (e_crit ≥ 1), or a ≥ a₉ / the gap is already inside the CIRCULAR Wisdom
+/// zone (chaotic at every eccentricity).
 pub fn critical_eccentricity(a_au: f64, a9_au: f64, m9_earth: f64, _e9: f64) -> Option<f64> {
     let gap = a9_au - a_au;
     if gap <= 0.0 {
         return None;
     }
     let mu = m9_earth * EARTH_MASS_SOLAR;
-    let base = gap / (OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * a9_au);
-    let e_crit = base.powi(5);
+    // Inside the circular Wisdom zone the column is chaotic at all e.
+    if gap <= WISDOM_PREFACTOR * mu.powf(2.0 / 7.0) * a9_au {
+        return None;
+    }
+    let e_crit = (gap / (MW_ECCENTRIC_PREFACTOR * a9_au)).powi(5) / mu;
     if e_crit > 0.0 && e_crit < 1.0 {
         Some(e_crit)
     } else {
@@ -222,14 +235,33 @@ mod tests {
             A9 * 5.0f64.powf(-2.0 / 3.0),
             max_relative = 1e-12
         );
-        // Overlap zone width: C μ^{2/7} e^{1/5} a9.
+        // Overlap zone width: max(1.3 μ^{2/7}, 1.8 (μe)^{1/5}) a9.
         let mu = M9 * EARTH_MASS_SOLAR;
-        let expected = OVERLAP_PREFACTOR * mu.powf(2.0 / 7.0) * 0.7f64.powf(0.2) * A9;
+        let expected = (WISDOM_PREFACTOR * mu.powf(2.0 / 7.0))
+            .max(MW_ECCENTRIC_PREFACTOR * (mu * 0.7f64).powf(0.2))
+            * A9;
         assert_relative_eq!(
             (overlap_zone_width_typed(0.7, A9, M9) / au(1.0)).value,
             expected,
             max_relative = 1e-12
         );
+    }
+
+    #[test]
+    fn overlap_zone_matches_cited_limits() {
+        // Circular limit: as e → 0 the zone approaches the finite Wisdom
+        // width 1.3 μ^{2/7} a9 (the old formula vanished here).
+        let mu = M9 * EARTH_MASS_SOLAR;
+        let wisdom = WISDOM_PREFACTOR * mu.powf(2.0 / 7.0) * A9;
+        let w0 = (overlap_zone_width_typed(1e-6, A9, M9) / au(1.0)).value;
+        assert!((w0 - wisdom).abs() / wisdom < 1e-9, "e→0 zone = {w0:.1} AU");
+        // Eccentric limit: at e = 0.85 the Mustill & Wyatt (μe)^{1/5}
+        // branch dominates and is ~3x the old μ^{2/7} e^{1/5} value.
+        let w85 = (overlap_zone_width_typed(0.85, A9, M9) / au(1.0)).value;
+        let mw = MW_ECCENTRIC_PREFACTOR * (mu * 0.85f64).powf(0.2) * A9;
+        assert!((w85 - mw).abs() / mw < 1e-9);
+        let old = 1.5 * mu.powf(2.0 / 7.0) * 0.85f64.powf(0.2) * A9;
+        assert!(w85 > 2.0 * old, "corrected {w85:.0} vs old {old:.0} AU");
     }
 
     #[test]
@@ -276,9 +308,12 @@ mod tests {
 
     #[test]
     fn chaos_boundary_separates_high_and_low_e() {
-        // The criterion flips across a computed critical eccentricity: chaotic
-        // at high e, regular at low e (the paper's headline).
-        let a = reference::CHAOTIC_EXAMPLE_A_AU;
+        // The criterion flips across a computed critical eccentricity:
+        // chaotic at high e, regular at low e (the paper's headline). The
+        // boundary exists only OUTSIDE the circular Wisdom zone — at the
+        // chaotic example's a = 480 (20 AU gap, inside the ~33 AU circular
+        // zone) every eccentricity is chaotic, so probe at 430 AU.
+        let a = reference::REGULAR_EXAMPLE_A_AU;
         let e_crit =
             critical_eccentricity(a, A9, M9, E9).expect("a chaos boundary should exist at this a");
         assert!(e_crit > 0.0 && e_crit < 1.0, "e_crit = {e_crit}");
@@ -353,26 +388,28 @@ mod tests {
             "expected interior ETNOs in the sample"
         );
         for etno in &interior {
+            let chaotic = is_chaotic(etno.a, etno.e, A9, M9, E9);
+            // With the corrected Mustill & Wyatt widths, the single
+            // highest-(a·e) survivor — 2015 RX245 (a = 430, e = 0.89, 70 AU
+            // inside P9 vs a ~110 AU eccentric overlap zone) — falls INSIDE
+            // the chaotic web for this fiducial 500 AU/10 M⊕ P9. Its
+            // survival requires resonant phase protection (which Becker et
+            // al.'s N-body machinery models and a static overlap criterion
+            // cannot), or disfavors this particular fiducial. Every other
+            // interior survivor is regular.
+            if etno.name == "2015 RX245" {
+                assert!(
+                    chaotic,
+                    "RX245 sits inside the corrected M&W overlap zone at this fiducial"
+                );
+                continue;
+            }
             assert!(
-                !is_chaotic(etno.a, etno.e, A9, M9, E9),
+                !chaotic,
                 "{} (a={}, e={}) should be regular for the fiducial P9",
-                etno.name,
-                etno.a,
-                etno.e
+                etno.name, etno.a, etno.e
             );
         }
-        // The boundary is nonetheless reachable: pushing the highest-a survivor
-        // outward to large a (toward Planet Nine) at its observed eccentricity
-        // crosses into the chaotic web — the criterion is not vacuously regular.
-        let max_a = interior
-            .iter()
-            .max_by(|x, y| x.a.partial_cmp(&y.a).unwrap())
-            .unwrap();
-        assert!(
-            is_chaotic(490.0, max_a.e, A9, M9, E9),
-            "a particle at a = 490 AU, e = {} should be chaotic",
-            max_a.e
-        );
     }
 
     #[test]

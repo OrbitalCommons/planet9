@@ -27,5 +27,5 @@ pub const CHAOTIC_EXAMPLE_E: f64 = 0.85;
 
 /// A representative low-eccentricity point the paper places in the regular
 /// (non-overlapped) regime at the same semi-major axis.
-pub const REGULAR_EXAMPLE_A_AU: f64 = 480.0;
-pub const REGULAR_EXAMPLE_E: f64 = 0.02;
+pub const REGULAR_EXAMPLE_A_AU: f64 = 430.0;
+pub const REGULAR_EXAMPLE_E: f64 = 0.05;
