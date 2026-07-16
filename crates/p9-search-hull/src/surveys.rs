@@ -18,6 +18,7 @@
 //!
 //! over the surveys `s` whose footprint contains that direction.
 
+use p9_2020_tess_shiftstack::published::{SENSITIVITY_DISTANCE_AU, SENSITIVITY_V_LIMIT};
 use p9_core::analysis::surveys::{limiting_magnitude, Footprint, NORTHERN_SURVEY_DEC_LIMIT_DEG};
 
 /// One archival wide-field optical search for Planet Nine.
@@ -34,6 +35,12 @@ pub struct RealSurvey {
     /// term — without it DES's 5,000 deg² was painted across the whole
     /// δ ∈ [−65, +5] band (~14,000 deg² it never imaged).
     pub ra_exclusion_deg: Option<(f64, f64)>,
+    /// Maximum heliocentric distance (au) to which this search's method is
+    /// valid, or `None` for stationary-depth catalog searches. Shift-stack
+    /// searches only probe the trial tracks they ran: TESS's grid stops at
+    /// 150 au, so its non-detection says nothing about a body at 400 au even
+    /// if that body is brighter than the stacked depth.
+    pub max_distance_au: Option<f64>,
     pub reference: &'static str,
 }
 
@@ -51,6 +58,15 @@ impl RealSurvey {
             None => true,
         }
     }
+
+    /// Does this survey constrain a body at direction (ra, dec, b) and
+    /// heliocentric distance `dist_au`? Geometry plus the method's distance
+    /// validity; a NaN distance fails any cap (unknown distance is treated as
+    /// hull-typical, i.e. far).
+    pub fn constrains(&self, ra_deg: f64, dec_deg: f64, gal_b_deg: f64, dist_au: f64) -> bool {
+        self.accepts(ra_deg, dec_deg, gal_b_deg)
+            && self.max_distance_au.is_none_or(|cap| dist_au <= cap)
+    }
 }
 
 /// Look up a depth from the shared table, panicking if the name is missing so a
@@ -64,6 +80,16 @@ fn depth(name: &str) -> f64 {
 /// These are the optical reflected-light searches; the thermal/IR channels
 /// (WISE, AKARI) constrain a different (size, distance) slice and are tracked
 /// by `p9-viability`, so they are deliberately out of this optical hull.
+///
+/// TESS (Rice & Laughlin 2020) is included with a DISTANCE cap: a shift-stack
+/// search only constrains bodies whose motion matches a searched trial track,
+/// and that search's track grid stops at heliocentric distances d ≤ 150 au
+/// (`p9_2020_tess_shiftstack::published::SENSITIVITY_DISTANCE_AU`). Most of
+/// the posterior ensemble sits far beyond that, but the low-a/high-e tails
+/// (e.g. Siraj 2024 draws near perihelion) do dip inside — so TESS is a real
+/// exclusion channel for exactly those draws and must not claim the rest.
+/// Listing it uncapped at its stacked depth would falsely mark directions
+/// excluded where no track at Planet Nine's sky rate was ever searched.
 pub fn real_surveys() -> Vec<RealSurvey> {
     vec![
         // Catalina Real-Time Transient Survey: shallow but very wide, both
@@ -78,6 +104,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
                 coverage_fraction: 0.60,
             },
             ra_exclusion_deg: None,
+            max_distance_au: None,
             reference: "Drake et al. (2009); footprint approx.",
         },
         // ZTF (Palomar): δ > −30°, used by Brown & Batygin (2022) for a P9
@@ -92,6 +119,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
                 coverage_fraction: 0.70,
             },
             ra_exclusion_deg: None,
+            max_distance_au: None,
             reference: "Brown & Batygin (2022), ZTF non-detection",
         },
         // Pan-STARRS1 3π: δ > −30°, near-all-northern-sky to r ≈ 21.5.
@@ -105,6 +133,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
                 coverage_fraction: 0.75,
             },
             ra_exclusion_deg: None,
+            max_distance_au: None,
             reference: "Chambers et al. (2016); Belyakov et al. (2024)",
         },
         // Dark Energy Survey: deep but small southern footprint (~5000 deg²
@@ -123,7 +152,26 @@ pub fn real_surveys() -> Vec<RealSurvey> {
                 coverage_fraction: 0.60,
             },
             ra_exclusion_deg: Some((100.0, 300.0)),
+            max_distance_au: None,
             reference: "Bernardinelli et al. (2022); SGC box as p9-survey::refine",
+        },
+        // TESS shift-stack (Rice & Laughlin 2020): the blind search's
+        // demonstrated V < 21 sensitivity applies only along the trial
+        // tracks it ran, d <= 150 au — hence the distance cap. The blind
+        // sectors (18-19) are two ~2,300 deg^2 northern strips; the coarse
+        // dec band + areal fraction below carries that ~4,600 deg^2.
+        RealSurvey {
+            name: "TESS",
+            depth: SENSITIVITY_V_LIMIT,
+            footprint: Footprint {
+                dec_min_deg: 0.0,
+                dec_max_deg: 90.0,
+                galactic_lat_min_deg: 0.0,
+                coverage_fraction: 0.20,
+            },
+            ra_exclusion_deg: None,
+            max_distance_au: Some(SENSITIVITY_DISTANCE_AU),
+            reference: "Rice & Laughlin (2020), PSJ 1, 81; sectors 18-19",
         },
     ]
 }
@@ -137,17 +185,20 @@ pub struct CellCoverage {
     pub best_survey: Option<&'static str>,
 }
 
-/// Deepest survey reaching a direction (geometry only — the areal coverage of
-/// that survey is returned alongside, not applied).
+/// Deepest survey reaching a direction for a body at heliocentric distance
+/// `dist_au` (areal coverage of that survey is returned alongside, not
+/// applied). The distance gates the method-validity caps: pass the cell's
+/// posterior mean distance (a NaN — empty cell — fails any cap).
 pub fn cell_coverage(
     surveys: &[RealSurvey],
     ra_deg: f64,
     dec_deg: f64,
     gal_b_deg: f64,
+    dist_au: f64,
 ) -> CellCoverage {
     let mut best: Option<(&RealSurvey,)> = None;
     for s in surveys {
-        if s.accepts(ra_deg, dec_deg, gal_b_deg) {
+        if s.constrains(ra_deg, dec_deg, gal_b_deg, dist_au) {
             match best {
                 Some((b,)) if b.depth >= s.depth => {}
                 _ => best = Some((s,)),
@@ -166,19 +217,21 @@ pub fn cell_coverage(
     }
 }
 
-/// Probability a body of apparent magnitude `v` at this direction would already
-/// have been caught: the per-survey OR of (covered this direction) × (deep
-/// enough) × (areal coverage).
+/// Probability a body of apparent magnitude `v` at this direction and
+/// heliocentric distance `dist_au` would already have been caught: the
+/// per-survey OR of (covers this direction and distance) × (deep enough) ×
+/// (areal coverage).
 pub fn exclusion_probability(
     surveys: &[RealSurvey],
     ra_deg: f64,
     dec_deg: f64,
     gal_b_deg: f64,
+    dist_au: f64,
     v: f64,
 ) -> f64 {
     let mut survive = 1.0_f64;
     for s in surveys {
-        if s.accepts(ra_deg, dec_deg, gal_b_deg) && s.depth >= v {
+        if s.constrains(ra_deg, dec_deg, gal_b_deg, dist_au) && s.depth >= v {
             survive *= 1.0 - s.footprint.coverage_fraction;
         }
     }
@@ -202,7 +255,7 @@ mod tests {
     fn deepest_survey_wins_the_hull() {
         // A southern, off-plane direction inside the DES SGC box (RA 30°):
         // DES (23.8) is deepest.
-        let c = cell_coverage(&real_surveys(), 30.0, -40.0, 40.0);
+        let c = cell_coverage(&real_surveys(), 30.0, -40.0, 40.0, 400.0);
         assert_eq!(c.best_survey, Some("DES"));
         assert_eq!(c.best_depth, Some(23.8));
     }
@@ -212,10 +265,10 @@ mod tests {
         // Same declination band but RA 200° — the ~14,000 deg² the old
         // RA-less footprint wrongly painted as DES-deep. CRTS (19.5) is the
         // only survey there.
-        let c = cell_coverage(&real_surveys(), 200.0, -40.0, 40.0);
+        let c = cell_coverage(&real_surveys(), 200.0, -40.0, 40.0, 400.0);
         assert_eq!(c.best_survey, Some("CRTS"));
         // And the RA wrap: RA 330° is back inside the SGC box.
-        let c2 = cell_coverage(&real_surveys(), 330.0, -40.0, 40.0);
+        let c2 = cell_coverage(&real_surveys(), 330.0, -40.0, 40.0, 400.0);
         assert_eq!(c2.best_survey, Some("DES"));
     }
 
@@ -223,7 +276,7 @@ mod tests {
     fn northern_direction_falls_to_ps1() {
         // Far north, on no southern survey: PS1 (21.5) is the deepest all-sky
         // northern reach (deeper than ZTF 20.5).
-        let c = cell_coverage(&real_surveys(), 30.0, 60.0, 40.0);
+        let c = cell_coverage(&real_surveys(), 30.0, 60.0, 40.0, 400.0);
         assert_eq!(c.best_survey, Some("PS1 3pi"));
     }
 
@@ -231,14 +284,45 @@ mod tests {
     fn faint_planet_is_less_excluded_than_bright() {
         let s = real_surveys();
         // A southern, off-plane direction in the SGC box: CRTS + DES cover it.
-        let p_bright = exclusion_probability(&s, 30.0, -40.0, 40.0, 19.0); // CRTS + DES
-        let p_faint = exclusion_probability(&s, 30.0, -40.0, 40.0, 23.0); // only DES reaches
+        let p_bright = exclusion_probability(&s, 30.0, -40.0, 40.0, 400.0, 19.0); // CRTS + DES
+        let p_faint = exclusion_probability(&s, 30.0, -40.0, 40.0, 400.0, 23.0); // only DES reaches
         assert!(p_bright > p_faint, "{p_bright} !> {p_faint}");
         // A planet fainter than every survey here cannot be excluded.
-        let p_too_faint = exclusion_probability(&s, 30.0, -40.0, 40.0, 25.0);
+        let p_too_faint = exclusion_probability(&s, 30.0, -40.0, 40.0, 400.0, 25.0);
         assert_eq!(p_too_faint, 0.0);
         // Outside the RA window, the faint planet is not excluded at all.
-        let p_faint_out = exclusion_probability(&s, 200.0, -40.0, 40.0, 23.0);
+        let p_faint_out = exclusion_probability(&s, 200.0, -40.0, 40.0, 400.0, 23.0);
         assert_eq!(p_faint_out, 0.0);
+    }
+
+    #[test]
+    fn tess_constrains_only_its_searched_distances() {
+        let s = real_surveys();
+        let tess = s.iter().find(|x| x.name == "TESS").unwrap();
+        assert_eq!(tess.max_distance_au, Some(SENSITIVITY_DISTANCE_AU));
+        assert_eq!(tess.depth, SENSITIVITY_V_LIMIT);
+        // A northern direction, body inside the searched track grid: TESS
+        // constrains it...
+        assert!(tess.constrains(30.0, 40.0, 30.0, 100.0));
+        // ...but the same direction at hull-typical distance is NOT
+        // constrained (no trial track was run there), and an unknown (NaN)
+        // distance is treated as far.
+        assert!(!tess.constrains(30.0, 40.0, 30.0, 400.0));
+        assert!(!tess.constrains(30.0, 40.0, 30.0, f64::NAN));
+
+        // The distance cap flows through exclusion: at V=20.7 north of the
+        // CRTS band, PS1 (21.5, cov 0.75) reaches at any distance and ZTF
+        // (20.5) at none — TESS's 20% only ORs in when the body is inside
+        // its searched tracks.
+        let p_close = exclusion_probability(&s, 30.0, 80.0, 30.0, 100.0, 20.7);
+        let p_far = exclusion_probability(&s, 30.0, 80.0, 30.0, 400.0, 20.7);
+        assert_eq!(p_far, 0.75);
+        assert!((p_close - (1.0 - 0.25 * 0.80)).abs() < 1e-12, "{p_close}");
+
+        // And through the hull map: at 100 au TESS's V<21 beats nothing
+        // deeper than PS1 21.5 — PS1 still wins where both apply, so the cap
+        // only ever ADDS coverage, never displaces a deeper survey.
+        let c = cell_coverage(&s, 30.0, 60.0, 40.0, 100.0);
+        assert_eq!(c.best_survey, Some("PS1 3pi"));
     }
 }

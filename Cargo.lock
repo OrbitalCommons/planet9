@@ -2135,6 +2135,7 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "nalgebra",
+ "p9-2020-tess-shiftstack",
  "p9-core",
  "p9-survey",
  "rand 0.8.5",
