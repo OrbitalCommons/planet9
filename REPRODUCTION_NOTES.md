@@ -76,14 +76,18 @@ P9 and the giants (full N-body), which the static-ring model cannot represent. T
 numbers are documented as out of reach of this model rather than asserted.
 - Documented: `crates/p9-2021-oort-cloud/src/injection_simulation.rs:437-443`.
 
-### 7. p9-2025-iras-akari — expected chance pairs: λ ≈ 19 vs the paper's 13 observed
+### 7. p9-2025-iras-akari — expected chance pairs: λ ≈ 22 vs the paper's 22 raw window pairs
 
-The post-cut Poisson estimate (conditioned on post-cut source counts with a galactic-latitude-
-dependent IRAS density model) lands at the right order of magnitude but ~50% high. Sensitive to
-the assumed post-cut catalog sizes and the disk/isotropic density split, both documented
-assumptions. The false-alarm probability for ≥1 surviving pair, P = 1 − e^(−λ), is the key new
-statistic and is reported alongside.
-- Documented: `crates/p9-2025-iras-akari/src/candidate_search.rs:202-241`.
+The Poisson estimate is conditioned on the paper's Fig. 4 post-cut counts (2,479 IRAS × 108
+AKARI-MUSL) over the RETAINED sky (~79% after the |b| ≥ 10° + bulge cuts) with no galactic pair
+enhancement — the plane-concentrated density term does not apply to catalogues the cuts have
+already de-planed. This lands at λ ≈ 22, matching the paper's 22 raw separation-window pairs
+(13 survive their colour-consistency cut). The previous λ ≈ 19-vs-13 discrepancy documented
+here was mostly a modeling error (full-sky area × ⟨w²⟩ ≈ 1.59 enhancement), not the count
+assumptions. The false-alarm probability for ≥1 surviving pair, P = 1 − e^(−λ), remains the key
+new statistic reported alongside.
+- Pinned: `crates/p9-2025-iras-akari/src/candidate_search.rs`
+  (`lambda_with_paper_counts_matches_raw_window_pairs`).
 
 ### 8. p9-2025-perturbation — Hansen asymptotic prefactors corrected against quadrature
 
