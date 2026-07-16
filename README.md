@@ -11,3 +11,11 @@ Planet Nine is a hypothetical large planet in the far outer Solar System, propos
 - **Michael E. Brown** — Caltech
   - Website: https://mikebrown.caltech.edu/
   - ORCID: [0000-0002-8255-0545](https://orcid.org/0000-0002-8255-0545)
+
+## Live data watch
+
+- `paper_watch/` — arXiv literature watch ledger and findings.
+- `rubin_watch/` — design and (future) operations for hitching into
+  Rubin/LSST alerts and MPC publishing: discovery ingestion, coverage
+  tracking, and a slow-mover search. Start at
+  [rubin_watch/README.md](rubin_watch/README.md).
