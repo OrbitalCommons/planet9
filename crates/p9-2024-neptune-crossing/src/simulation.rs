@@ -155,15 +155,33 @@ impl SimulationOptions {
 
     /// Paper-scale options (hours-to-days of CPU; used behind #[ignore]).
     pub fn full_scale(with_p9: bool) -> Self {
-        let p9 = with_p9.then(|| P9InclusiveConfig::default_paper().p9);
+        // Both paper models parameterize their own run: the P9-inclusive
+        // config for the signal run, P9FreeConfig for the null control.
+        let (n_particles, t_days, p9, include_galactic_tide) = if with_p9 {
+            let c = P9InclusiveConfig::default_paper();
+            (
+                c.n_particles,
+                c.t_gyr * p9_core::constants::GYR_DAYS,
+                Some(c.p9),
+                true,
+            )
+        } else {
+            let c = P9FreeConfig::default_paper();
+            (
+                c.n_particles,
+                (c.integration_time() / days(1.0)).value,
+                None,
+                c.include_galactic_tide,
+            )
+        };
         Self {
-            n_particles: P9InclusiveConfig::default_paper().n_particles,
-            t_days: P9InclusiveConfig::default_paper().t_gyr * p9_core::constants::GYR_DAYS,
+            n_particles,
+            t_days,
             dt_days: 2500.0,
             snapshot_every_steps: 40_000,
             p9,
             direct_neptune: true,
-            include_galactic_tide: true,
+            include_galactic_tide,
             seed: 20240417,
         }
     }
@@ -438,10 +456,15 @@ mod tests {
     }
 
     #[test]
-    fn test_p9_free_config() {
+    fn test_p9_free_config_drives_the_null_run() {
+        // P9FreeConfig is consumed, not decorative: the full-scale control
+        // run derives its particle count, duration and tide flag from it.
         let config = P9FreeConfig::default_paper();
-        assert_eq!(config.n_particles, 2_000);
-        assert!(config.include_galactic_tide);
+        let opts = SimulationOptions::full_scale(false);
+        assert_eq!(opts.n_particles, config.n_particles);
+        assert_eq!(opts.include_galactic_tide, config.include_galactic_tide);
+        assert!(((opts.t_days / p9_core::constants::GYR_DAYS) - config.t_gyr).abs() < 1e-12);
+        assert!(opts.p9.is_none());
     }
 
     #[test]
