@@ -239,6 +239,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::analysis::resonance::chirikov_overlap_parameter;
+    use p9_core::analysis::resonance::overlap_zone_width_fraction;
     use uom::si::length::astronomical_unit;
 
     const A9: f64 = published::A9_AU;
@@ -440,5 +441,25 @@ mod tests {
 
         // Anchor: the validated core function rises with a, as ours does.
         assert!(chirikov_overlap_parameter(500.0, 40.0) > chirikov_overlap_parameter(300.0, 40.0));
+    }
+
+    #[test]
+    fn hopping_onset_cross_checks_the_sourced_overlap_zone() {
+        // This crate's per-resonance pendulum-width chain model and the
+        // sourced Wisdom/Mustill&Wyatt zone edge in p9-core are different
+        // formulations of the same physics; their overlap onsets must agree
+        // to within the O(1) model spread (documented: the chain gives
+        // a_hop ~ 590 AU at a9 = 700, the sourced zone edge sits within
+        // ~15% of it for the same mass and eccentricity).
+        let mu = mass_ratio(published::M9_EARTH);
+        let e = published::TNO_E;
+        let chain = first_order_chain(2, 60);
+        let a_hop = hopping_threshold_au(&chain, A9, mu, e).expect("chain overlaps");
+        let a_zone = A9 * (1.0 - overlap_zone_width_fraction(mu, e));
+        let spread = (a_hop - a_zone).abs() / a_zone;
+        assert!(
+            spread < 0.15,
+            "chain onset {a_hop:.0} AU vs sourced zone edge {a_zone:.0} AU ({spread:.2})"
+        );
     }
 }

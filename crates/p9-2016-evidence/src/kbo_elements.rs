@@ -6,6 +6,7 @@
 //! assumed dispersions below.
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length};
+use p9_core::analysis::poles::{pole_resultant_length, pole_vector};
 use p9_core::constants::*;
 use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos, KboRecord};
 use p9_core::forces::ExtraForce;
@@ -146,24 +147,6 @@ pub fn clone_stability_screen(
     }
 }
 
-/// Orbital pole unit vector in ecliptic coordinates.
-fn pole_vector(elem: &OrbitalElements) -> [f64; 3] {
-    let (si, ci) = (elem.i.sin(), elem.i.cos());
-    let (so, co) = (elem.omega_big.sin(), elem.omega_big.cos());
-    [si * so, -si * co, ci]
-}
-
-/// Mean resultant length of a set of pole unit vectors: |Σ p̂|/n.
-fn pole_resultant_length(poles: &[[f64; 3]]) -> f64 {
-    let mut s = [0.0; 3];
-    for p in poles {
-        s[0] += p[0];
-        s[1] += p[1];
-        s[2] += p[2];
-    }
-    (s[0] * s[0] + s[1] * s[1] + s[2] * s[2]).sqrt() / poles.len() as f64
-}
-
 /// Observed clustering statistics from the 6-KBO sample, computed with
 /// circular (not arithmetic) means: (mean ϖ, mean Ω, mean ω) in radians.
 pub fn observed_clustering_stats() -> (f64, f64, f64) {
@@ -221,7 +204,10 @@ pub fn joint_clustering_significance(n_trials: usize, seed: u64) -> JointCluster
         .iter()
         .map(|k| longitude_of_perihelion(&k.elements))
         .collect();
-    let poles_obs: Vec<[f64; 3]> = kbos.iter().map(|k| pole_vector(&k.elements)).collect();
+    let poles_obs: Vec<[f64; 3]> = kbos
+        .iter()
+        .map(|k| pole_vector(k.elements.i, k.elements.omega_big))
+        .collect();
     let inclinations: Vec<f64> = kbos.iter().map(|k| k.elements.i).collect();
 
     let r_bar_varpi_obs = mean_resultant_length(&varpis_obs);
@@ -238,8 +224,7 @@ pub fn joint_clustering_significance(n_trials: usize, seed: u64) -> JointCluster
         for k in 0..n {
             sim_varpis[k] = rng.gen_range(0.0..TWO_PI);
             let node = rng.gen_range(0.0..TWO_PI);
-            let (si, ci) = (inclinations[k].sin(), inclinations[k].cos());
-            sim_poles[k] = [si * node.sin(), -si * node.cos(), ci];
+            sim_poles[k] = pole_vector(inclinations[k], node);
         }
 
         let varpi_hit = mean_resultant_length(&sim_varpis) >= r_bar_varpi_obs;

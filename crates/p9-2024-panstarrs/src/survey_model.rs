@@ -7,6 +7,7 @@
 //! cuts, and the measured 99.2% linking efficiency. The single-exposure
 //! depth comes from the shared `p9_core::analysis::surveys` table.
 
+use p9_core::analysis::surveys::logistic_efficiency;
 use p9_core::analysis::surveys::{
     limiting_magnitude, poisson_binomial_tail, NORTHERN_SURVEY_DEC_LIMIT_DEG,
 };
@@ -70,7 +71,11 @@ impl Ps1Survey {
     /// roll-off centered on the depth limit (P3 fix: previously a hard step
     /// at 21.5 next to DES's logistic, and the cadence was ignored).
     pub fn epoch_efficiency(&self, apparent_magnitude: f64) -> f64 {
-        1.0 / (1.0 + ((apparent_magnitude - self.depth_limit) * self.efficiency_steepness).exp())
+        logistic_efficiency(
+            apparent_magnitude,
+            self.depth_limit,
+            self.efficiency_steepness,
+        )
     }
 
     /// Whether a sky position falls in the 3-pi footprint (equatorial

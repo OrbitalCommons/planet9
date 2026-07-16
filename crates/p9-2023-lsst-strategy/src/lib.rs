@@ -37,7 +37,7 @@ pub use discoverable::{
     dec_and_galactic_lat_deg, discoverable_fraction, discovery_probability, DiscoverableResult,
     P9Sample,
 };
-pub use strategy::{binomial_survival, LsstStrategy};
+pub use strategy::LsstStrategy;
 
 #[cfg(test)]
 mod headline_tests {

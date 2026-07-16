@@ -9,9 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub use p9_core::analysis::resonance::{
-    chirikov_overlap_parameter, critical_perihelion, is_chaotic,
-};
+use p9_core::analysis::resonance::chirikov_overlap_parameter;
 
 /// Standard map stochasticity parameter K from the resonance overlap
 /// parameter s = Δω/δω.
@@ -73,6 +71,7 @@ impl OverlapGrid {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use p9_core::analysis::resonance::{critical_perihelion, is_chaotic};
 
     #[test]
     fn test_overlap_increases_with_a() {

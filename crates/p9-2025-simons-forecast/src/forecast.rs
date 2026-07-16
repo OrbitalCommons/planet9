@@ -17,6 +17,7 @@ use p9_core::units::{au, earth_masses, Length, Mass};
 
 use crate::bands::MmSensitivity;
 use crate::thermal::P9Thermal;
+use p9_core::analysis::thermal::max_detectable_distance as core_max_detectable_distance;
 
 /// Maximum heliocentric distance at which a Planet Nine of `mass_earth`
 /// emits at least `sens.flux_limit_mjy` at the sensitivity's band frequency,
@@ -27,26 +28,13 @@ use crate::thermal::P9Thermal;
 /// `d_lo` if even the nearest distance is too faint and `d_hi` if the body is
 /// still detectable at the far bracket.
 pub fn max_detectable_distance(mass_earth: f64, sens: &MmSensitivity) -> Length {
-    let flux_at = |d: f64| P9Thermal::new(mass_earth, d).flux_mjy(sens.nu_hz);
-    let (mut lo, mut hi) = (50.0_f64, 5000.0_f64);
-    if flux_at(lo) < sens.flux_limit_mjy {
-        return au(lo);
-    }
-    if flux_at(hi) >= sens.flux_limit_mjy {
-        return au(hi);
-    }
-    for _ in 0..200 {
-        let mid = 0.5 * (lo + hi);
-        if flux_at(mid) >= sens.flux_limit_mjy {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-        if hi - lo < 1e-6 {
-            break;
-        }
-    }
-    au(0.5 * (lo + hi))
+    // Flux falls monotonically with distance, so negated flux plays the role
+    // of a "magnitude" (dimmer = larger) for the shared core bisection.
+    let (lo, hi) = (50.0_f64, 5000.0_f64);
+    let reach = core_max_detectable_distance(lo, hi, -sens.flux_limit_mjy, |d| {
+        -P9Thermal::new(mass_earth, d).flux_mjy(sens.nu_hz)
+    });
+    au(reach.unwrap_or(lo))
 }
 
 /// Expected detection significance (signal-to-noise ratio) of a Planet Nine of
@@ -139,27 +127,15 @@ mod tests {
         use uom::si::mass::kilogram;
 
         // The bisection root recomputed inline must equal the typed reach.
+        // The reach is defined by F(reach) == flux limit; check the
+        // shared-core bisection lands on that root.
         let reach = max_detectable_distance(5.0, &SO_SENSITIVITY);
-        let expected_au = {
-            let flux_at = |d: f64| P9Thermal::new(5.0, d).flux_mjy(SO_SENSITIVITY.nu_hz);
-            let (mut lo, mut hi) = (50.0_f64, 5000.0_f64);
-            for _ in 0..200 {
-                let mid = 0.5 * (lo + hi);
-                if flux_at(mid) >= SO_SENSITIVITY.flux_limit_mjy {
-                    lo = mid;
-                } else {
-                    hi = mid;
-                }
-                if hi - lo < 1e-6 {
-                    break;
-                }
-            }
-            0.5 * (lo + hi)
-        };
+        let d = reach.get::<astronomical_unit>();
+        assert!((50.0..5000.0).contains(&d), "reach = {d}");
         assert_relative_eq!(
-            reach.get::<astronomical_unit>(),
-            expected_au,
-            epsilon = 1e-9
+            P9Thermal::new(5.0, d).flux_mjy(SO_SENSITIVITY.nu_hz),
+            SO_SENSITIVITY.flux_limit_mjy,
+            max_relative = 1e-6
         );
         let bx = ReferenceBox::nominal();
         assert_relative_eq!(

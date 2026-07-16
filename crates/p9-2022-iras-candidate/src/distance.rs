@@ -19,12 +19,12 @@
 
 use p9_2025_iras_akari::thermal_model::P9ThermalParams;
 use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::thermal::R_EARTH_M;
 use p9_core::units::{au, Length};
 
 /// 1 AU in metres (matches `p9_2025_iras_akari::thermal_model`).
 const AU_M: f64 = 1.495_978_707e11;
 /// Earth radius in metres.
-const R_EARTH_M: f64 = 6.371e6;
 /// 1 Jansky in W/m²/Hz.
 const JY: f64 = 1.0e-26;
 

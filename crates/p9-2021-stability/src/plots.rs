@@ -2,8 +2,8 @@
 
 use std::fmt::Write;
 
-use crate::chirikov::critical_perihelion;
 use crate::stability::{classify, StabilityClass};
+use p9_core::analysis::resonance::critical_perihelion;
 
 /// Generate a stability map plot on the (a, q) plane.
 pub fn stability_map_plot(

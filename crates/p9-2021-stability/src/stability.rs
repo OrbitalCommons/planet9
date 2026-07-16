@@ -13,10 +13,11 @@
 use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::resonance::chirikov_overlap_parameter;
-use p9_core::constants::{A_NEPTUNE_AU, GM_SUN, MASS_NEPTUNE_SOLAR};
+use p9_core::constants::GM_SUN;
 use p9_core::units::{days, Time};
 
 use crate::chirikov::OVERLAP_GLOBAL_CHAOS;
+use p9_core::analysis::resonance::neptune_diffusion_coefficient;
 
 /// Stability classification of a scattered disk orbit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,26 +57,11 @@ pub fn lyapunov_time(a: f64) -> Time {
     days(lyapunov_time_days(a))
 }
 
-/// Semi-major axis diffusion coefficient (AU^2/yr).
-///
-/// D_a ~ (8/(5*pi)) * (m_N/M_sun) * sqrt(GM_sun * a_N) * exp(-(q/a_N)^2/2)
-///
-/// Notably independent of semi-major axis.
-pub fn diffusion_coefficient(q: f64) -> f64 {
-    let v_n = (GM_SUN * A_NEPTUNE_AU).sqrt(); // ~sqrt(GM * 30) in AU/day
-    let d_per_day = (8.0 / (5.0 * std::f64::consts::PI))
-        * MASS_NEPTUNE_SOLAR
-        * v_n
-        * (-(q / A_NEPTUNE_AU).powi(2) / 2.0).exp();
-    // Convert from AU^2/day to AU^2/yr
-    d_per_day * 365.25
-}
-
 /// Timescale for semi-major axis diffusion to change a by delta_a (yr).
 ///
 /// tau ~ delta_a^2 / D_a
 pub fn diffusion_timescale(q: f64, delta_a: f64) -> f64 {
-    let d = diffusion_coefficient(q);
+    let d = neptune_diffusion_coefficient(q);
     if d < 1e-30 {
         return f64::INFINITY;
     }
@@ -116,6 +102,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use p9_core::analysis::resonance::{critical_perihelion, is_chaotic};
+    use p9_core::constants::A_NEPTUNE_AU;
     use uom::si::time::day;
 
     #[test]
@@ -191,14 +178,14 @@ mod tests {
 
     #[test]
     fn test_diffusion_coefficient_positive() {
-        let d = diffusion_coefficient(35.0);
+        let d = neptune_diffusion_coefficient(35.0);
         assert!(d > 0.0, "D_a should be positive");
     }
 
     #[test]
     fn test_diffusion_decreases_with_q() {
-        let d30 = diffusion_coefficient(30.0);
-        let d40 = diffusion_coefficient(40.0);
+        let d30 = neptune_diffusion_coefficient(30.0);
+        let d40 = neptune_diffusion_coefficient(40.0);
         assert!(d30 > d40, "diffusion should decrease with perihelion");
     }
 

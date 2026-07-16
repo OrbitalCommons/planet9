@@ -5,7 +5,9 @@
 //! used in Brown & Batygin (2021). The depth limit comes from the shared
 //! survey table in `p9_core::analysis::surveys`.
 
-use p9_core::analysis::surveys::{limiting_magnitude, NORTHERN_SURVEY_DEC_LIMIT_DEG};
+use p9_core::analysis::surveys::{
+    limiting_magnitude, logistic_efficiency, poisson_binomial_tail, NORTHERN_SURVEY_DEC_LIMIT_DEG,
+};
 use p9_core::units::{degrees, Angle};
 use serde::{Deserialize, Serialize};
 
@@ -56,8 +58,11 @@ impl ZtfSurvey {
     /// [`Self::single_epoch_m50`] (the self-calibration curve from
     /// known-asteroid injections).
     pub fn single_epoch_efficiency(&self, apparent_magnitude: f64) -> f64 {
-        1.0 / (1.0
-            + ((apparent_magnitude - self.single_epoch_m50) * self.efficiency_steepness).exp())
+        logistic_efficiency(
+            apparent_magnitude,
+            self.single_epoch_m50,
+            self.efficiency_steepness,
+        )
     }
 
     /// Object-level detection efficiency: the probability of accumulating at
@@ -67,16 +72,8 @@ impl ZtfSurvey {
     /// P(X >= 7), X ~ Bin(N, ε(m)).
     pub fn detection_efficiency(&self, apparent_magnitude: f64) -> f64 {
         let eps = self.single_epoch_efficiency(apparent_magnitude);
-        let n = self.effective_epochs;
-        let mut p_lt = 0.0_f64; // P(X < min_detections)
-        let mut coeff = 1.0_f64; // C(n, k)
-        for k in 0..self.min_detections {
-            if k > 0 {
-                coeff *= (n - k + 1) as f64 / k as f64;
-            }
-            p_lt += coeff * eps.powi(k as i32) * (1.0 - eps).powi((n - k) as i32);
-        }
-        (1.0 - p_lt).clamp(0.0, 1.0)
+        let epochs = vec![eps; self.effective_epochs as usize];
+        poisson_binomial_tail(&epochs, self.min_detections)
     }
 
     /// Whether a sky position falls in the ZTF footprint (declination cut).

@@ -420,4 +420,27 @@ mod tests {
         let c1 = p9_core::analysis::resonance::chirikov_overlap_parameter(500.0, 40.0);
         assert!(c1 > 0.0, "core Chirikov sanity: {c1}");
     }
+
+    #[test]
+    fn overlap_onset_cross_checks_the_sourced_zone() {
+        // width_coeff = 1.2 is this crate's O(1) model constant; the sourced
+        // Wisdom/Mustill&Wyatt zone edge in p9-core is the reference. The a
+        // where this model's K first crosses 1 must sit within ~20% of the
+        // sourced zone edge a9·(1 − Δa/a9) for the same (mass, e).
+        use p9_core::analysis::resonance::overlap_zone_width_fraction;
+        let a9 = 500.0;
+        let e = 0.6;
+        let mu = 5.0 * p9_core::constants::EARTH_MASS_SOLAR;
+        let l = ResonanceLandscape::new(a9, 100.0, 499.0, 20);
+        let onset = (100..499)
+            .map(|a| a as f64)
+            .find(|&a| resonance_overlap_k(&l, a, e, mu, 1.2).is_some_and(|k| k >= 1.0))
+            .expect("model K crosses 1");
+        let a_zone = a9 * (1.0 - overlap_zone_width_fraction(mu, e));
+        let spread = (onset - a_zone).abs() / a_zone;
+        assert!(
+            spread < 0.2,
+            "model onset {onset:.0} AU vs sourced zone edge {a_zone:.0} AU ({spread:.2})"
+        );
+    }
 }

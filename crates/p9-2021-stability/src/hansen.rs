@@ -11,14 +11,12 @@
 //! test below checks it against the convergence-controlled numerical
 //! coefficient on the chain itself.
 
-pub use p9_core::analysis::hansen::{
-    hansen_coefficient, hansen_x0_neg3_0, hansen_x_neg3_2_neptune_chain, mean_to_true_anomaly,
-};
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::resonance_chain::resonance_semimajor;
+    use p9_core::analysis::hansen::{
+        hansen_coefficient, hansen_x0_neg3_0, hansen_x_neg3_2_neptune_chain, mean_to_true_anomaly,
+    };
 
     #[test]
     fn test_asymptotic_trends() {

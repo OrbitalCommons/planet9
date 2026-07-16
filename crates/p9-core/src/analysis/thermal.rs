@@ -33,6 +33,12 @@ pub const AU_M: f64 = 1.495_978_707e11;
 /// 1 Jansky in W/m²/Hz.
 pub const JY: f64 = 1.0e-26;
 
+/// Mean Earth radius (m).
+pub const R_EARTH_M: f64 = 6.371e6;
+
+/// Wien displacement constant for the B_λ peak (m·K): λ_peak = b / T.
+pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
+
 /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
 ///
 /// The dimensionless argument x = hν/kT is guarded: for x > 700 (deep on the
@@ -211,7 +217,6 @@ mod tests {
         use crate::analysis::photometry::{
             absolute_magnitude, apparent_magnitude, ALBEDO_NEPTUNE, NEPTUNE_RADIUS_EARTH,
         };
-        const R_EARTH_M: f64 = 6.371e6;
         const V_BAND_HZ: f64 = C_LIGHT / 0.55e-6;
         const V_VEGA_ZP_JY: f64 = 3636.0;
 

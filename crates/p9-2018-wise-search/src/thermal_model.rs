@@ -32,6 +32,7 @@
 //! `p9_core::analysis::photometry` (R ≈ 3.34 R⊕ at 10 M⊕).
 
 use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
+use p9_core::analysis::thermal::R_EARTH_M;
 use p9_core::analysis::thermal::{
     effective_temp, flux_to_magnitude, reflected_flux_jy, solar_equilibrium_temp, thermal_flux_jy,
     C_LIGHT,
@@ -39,7 +40,6 @@ use p9_core::analysis::thermal::{
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Earth radius (m).
-const R_EARTH_M: f64 = 6.371e6;
 
 /// WISE W1 effective wavelength in meters (3.3526 µm; Wright et al. 2010).
 pub const W1_WAVELENGTH_M: f64 = 3.3526e-6;

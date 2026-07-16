@@ -3,7 +3,7 @@
 //! Integrates test particles with Neptune on a circular orbit using the
 //! p9-core Wisdom-Holman integrator and feeds the resulting a(t) series into
 //! the MSD diffusion estimator, so the analytic
-//! `stability::diffusion_coefficient` is checked against real dynamics
+//! `p9_core::analysis::resonance::neptune_diffusion_coefficient` is checked against real dynamics
 //! instead of against itself (the previous "validation" set
 //! `d_measured = d_analytical` and asserted ratio ≈ 1).
 //!

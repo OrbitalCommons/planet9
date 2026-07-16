@@ -21,8 +21,6 @@ use p9_core::types::OrbitalElements;
 use crate::detection_efficiency::detection_probability_for_orbit;
 use crate::survey_model::ZtfSurvey;
 
-pub use p9_core::analysis::surveys::{combined_unique_exclusion, EXCLUSION_FRACTIONS};
-
 /// Result of the exclusion analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExclusionResult {
@@ -64,6 +62,7 @@ pub fn compute_exclusion(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use p9_core::analysis::surveys::{combined_unique_exclusion, EXCLUSION_FRACTIONS};
     use p9_core::constants::DEG2RAD;
     use p9_core::data::reference_population::generate_reference_population;
     use rand::SeedableRng;

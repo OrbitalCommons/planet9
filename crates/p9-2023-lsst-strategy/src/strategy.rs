@@ -27,6 +27,7 @@
 //! computed from a real reference Planet Nine population in
 //! [`crate::discoverable`].
 
+use p9_core::analysis::surveys::poisson_binomial_tail;
 use p9_core::units::{degrees, Angle};
 use serde::{Deserialize, Serialize};
 
@@ -174,36 +175,11 @@ impl LsstStrategy {
     /// detection depth, e.g. via the stack) raises `ε` and so raises it.
     pub fn linking_probability(&self, apparent_magnitude: f64) -> f64 {
         let eps = self.single_visit_efficiency(apparent_magnitude);
-        binomial_survival(self.visits_per_field, self.visits_for_linking, eps)
+        poisson_binomial_tail(
+            &vec![eps; self.visits_per_field as usize],
+            self.visits_for_linking,
+        )
     }
-}
-
-/// `P[X ≥ k]` for `X ~ Binomial(n, p)`, computed by a stable forward
-/// recurrence on the pmf (`p(j+1) = p(j) · (n-j)/(j+1) · p/(1-p)`), summing
-/// the tail `j = k..=n`. Handles the `p = 0` / `p = 1` edges exactly.
-pub fn binomial_survival(n: u32, k: u32, p: f64) -> f64 {
-    if k == 0 {
-        return 1.0;
-    }
-    if k > n {
-        return 0.0;
-    }
-    if p <= 0.0 {
-        return 0.0;
-    }
-    if p >= 1.0 {
-        return 1.0;
-    }
-    let n = n as i64;
-    // pmf at j = 0: (1-p)^n
-    let mut pmf = (1.0 - p).powi(n as i32);
-    let mut cdf_below = 0.0; // sum of pmf for j < k
-    for j in 0..k {
-        cdf_below += pmf;
-        // advance to j+1
-        pmf *= ((n - j as i64) as f64) / ((j + 1) as f64) * (p / (1.0 - p));
-    }
-    (1.0 - cdf_below).clamp(0.0, 1.0)
 }
 
 #[cfg(test)]
@@ -269,18 +245,18 @@ mod tests {
     fn binomial_survival_matches_known_values() {
         // P[X >= 1], X ~ Bin(n, p): 1 - (1-p)^n.
         assert_relative_eq!(
-            binomial_survival(30, 1, 0.1),
+            poisson_binomial_tail(&[0.1; 30], 1),
             1.0 - 0.9_f64.powi(30),
             epsilon = 1e-12
         );
         // Symmetric coin: P[X >= 3], X ~ Bin(5, 0.5) = 16/32 = 0.5.
-        assert_relative_eq!(binomial_survival(5, 3, 0.5), 0.5, epsilon = 1e-12);
+        assert_relative_eq!(poisson_binomial_tail(&[0.5; 5], 3), 0.5, epsilon = 1e-12);
         // P[X >= 0] = 1 always; P[X >= n+1] = 0.
-        assert_eq!(binomial_survival(10, 0, 0.3), 1.0);
-        assert_eq!(binomial_survival(10, 11, 0.3), 0.0);
+        assert_eq!(poisson_binomial_tail(&[0.3; 10], 0), 1.0);
+        assert_eq!(poisson_binomial_tail(&[0.3; 10], 11), 0.0);
         // Edge probabilities.
-        assert_eq!(binomial_survival(10, 4, 0.0), 0.0);
-        assert_eq!(binomial_survival(10, 4, 1.0), 1.0);
+        assert_eq!(poisson_binomial_tail(&[0.0; 10], 4), 0.0);
+        assert_eq!(poisson_binomial_tail(&[1.0; 10], 4), 1.0);
     }
 
     #[test]

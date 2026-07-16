@@ -30,6 +30,7 @@ use p9_core::constants::{DEG2RAD, TWO_PI};
 use p9_core::data::etno::Etno;
 
 use crate::sim_grid::ElementSample;
+use p9_core::analysis::circular::bessel_i0;
 
 /// Below this semi-major axis the fractional bandwidth is 5%
 /// (Brown & Batygin 2021, Section 3).
@@ -102,29 +103,6 @@ fn clamped_bin(edges: &[f64], x: f64) -> usize {
         }
     }
     n - 1
-}
-
-/// Modified Bessel function I0 (Abramowitz & Stegun 9.8.1/9.8.2 polynomial
-/// approximations, |error| < 2e-7). Needed for the von Mises normalization.
-fn bessel_i0(x: f64) -> f64 {
-    let ax = x.abs();
-    if ax < 3.75 {
-        let t = (ax / 3.75).powi(2);
-        1.0 + t
-            * (3.5156229
-                + t * (3.0899424
-                    + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))))
-    } else {
-        let t = 3.75 / ax;
-        (ax.exp() / ax.sqrt())
-            * (0.39894228
-                + t * (0.01328592
-                    + t * (0.00225319
-                        + t * (-0.00157565
-                            + t * (0.00916281
-                                + t * (-0.02057706
-                                    + t * (0.02635537 + t * (-0.01647633 + t * 0.00392377))))))))
-    }
 }
 
 /// Von Mises density on [0, 2 pi).

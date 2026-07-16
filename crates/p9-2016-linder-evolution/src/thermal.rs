@@ -33,12 +33,9 @@
 //! is most trustworthy.
 
 use p9_core::analysis::photometry::mass_radius_neptunian;
+use p9_core::analysis::thermal::R_EARTH_M;
 use p9_core::analysis::thermal::{flux_to_magnitude, thermal_flux_jy, C_LIGHT};
-use p9_core::constants::EARTH_RADIUS_KM;
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
-
-/// Earth radius in meters (from the shared `EARTH_RADIUS_KM`).
-const R_EARTH_M: f64 = EARTH_RADIUS_KM * 1.0e3;
 
 /// Equilibrium temperature contribution from internal heat after Gyr of
 /// cooling (K). Linder & Mordasini (2016) find a nominal 10 M⊕ Planet Nine
