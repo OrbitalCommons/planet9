@@ -104,13 +104,23 @@ impl SkyGrid {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    /// Flat index for an (RA, Dec) sample, clamped into the grid.
-    pub fn index(&self, ra_deg: f64, dec_deg: f64) -> usize {
-        let ix = (((ra_deg - self.ra_min_deg) / self.dra()) as isize)
-            .clamp(0, self.n_ra as isize - 1) as usize;
-        let iy = (((dec_deg - self.dec_min_deg) / self.ddec()) as isize)
-            .clamp(0, self.n_dec as isize - 1) as usize;
-        iy * self.n_ra + ix
+    /// Flat index for an (RA, Dec) sample, or `None` when the sample falls
+    /// outside the grid. (A previous version clamped out-of-band samples
+    /// into the edge rows — with the ±60° Dec grid and the sampled i/Ω
+    /// dispersions, high-declination draws DO occur, and the clamp piled a
+    /// few percent of spurious probability onto the ±58.5° rows, distorting
+    /// area68/95 and the edge-row targets.)
+    pub fn index(&self, ra_deg: f64, dec_deg: f64) -> Option<usize> {
+        let fx = (ra_deg - self.ra_min_deg) / self.dra();
+        let fy = (dec_deg - self.dec_min_deg) / self.ddec();
+        if fx < 0.0 || fy < 0.0 {
+            return None;
+        }
+        let (ix, iy) = (fx as usize, fy as usize);
+        if ix >= self.n_ra || iy >= self.n_dec {
+            return None;
+        }
+        Some(iy * self.n_ra + ix)
     }
     /// Dec at the center of row `i_dec` (for cos-weighted solid angle).
     pub fn dec_center(&self, i_dec: usize) -> f64 {
@@ -353,5 +363,17 @@ mod tests {
             c.favored_nu_lo_deg,
             epsilon = 1e-12
         );
+    }
+
+    #[test]
+    fn out_of_grid_samples_are_dropped_not_clamped() {
+        let grid = crate::default_grid();
+        assert!(grid.index(100.0, 0.0).is_some());
+        assert!(
+            grid.index(100.0, 65.0).is_none(),
+            "above +60 must not clamp"
+        );
+        assert!(grid.index(100.0, -61.0).is_none());
+        assert!(grid.index(-1.0, 0.0).is_none());
     }
 }

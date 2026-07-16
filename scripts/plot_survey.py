@@ -325,11 +325,12 @@ def main() -> None:
     ax2 = fig.add_subplot(gs[1]); ax2.set_facecolor(th["bg"] or "none")
     studies = [s.solution.name.split("(")[0].strip() for s in d.studies]
     x = np.arange(len(studies)); w = 0.26
+    n_tel = len(d.telescopes)
     for j, t in enumerate(d.telescopes):
         col = next((c for k, c in TELE_COLORS.items() if k in t.telescope.name), FG)
         probs = [next(p.detection_prob for p in t.per_study
                       if p.study_name == s.solution.name) for s in d.studies]
-        ax2.bar(x + (j - 1) * w, np.array(probs) * 100, w, color=col, alpha=0.9,
+        ax2.bar(x + (j - (n_tel - 1) / 2) * w, np.array(probs) * 100, w, color=col, alpha=0.9,
                 label=f"{t.telescope.name.split('(')[0].strip()} (m<{t.telescope.limiting_mag:.1f})")
     ax2.set_xticks(x)
     ax2.set_xticklabels([s.replace("Batygin & Brown", "B&B").replace("Batygin et al.", "Batygin+")

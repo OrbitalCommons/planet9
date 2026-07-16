@@ -88,7 +88,9 @@ pub fn run_study(
         let gal_b = galactic_latitude_deg(&pos);
         let v = planet_apparent_magnitude(sol.mass_earth, sol.albedo, r);
 
-        prob[grid.index(ra, dec)] += 1.0;
+        if let Some(idx) = grid.index(ra, dec) {
+            prob[idx] += 1.0;
+        }
         dists.push(r);
         vmags.push(v);
 
@@ -233,7 +235,9 @@ pub fn ephemeris_weighted_grid(
         };
         let pos = elements_to_cartesian(&elem, GM_SUN).pos;
         let (ra, dec) = ecliptic_vec_to_equatorial_deg(&pos);
-        prob[grid.index(ra, dec)] += w;
+        if let Some(idx) = grid.index(ra, dec) {
+            prob[idx] += w;
+        }
     }
     let total: f64 = prob.iter().sum();
     if total > 0.0 {
