@@ -1,8 +1,8 @@
 //! The massive, eccentric, apsidally-aligned debris disk as a set of confocal
 //! eccentric rings (Sefilian & Touma 2019, arXiv:1804.06859).
 //!
-//! The disk spans the 100-1000 AU region, carries a total mass M_disk of order
-//! a few-to-ten Earth masses, and is internally apsidally aligned: every ring
+//! The disk spans the paper's 40-750 AU region, carries a total mass M_disk of
+//! order a few-to-ten Earth masses, and is internally apsidally aligned: every ring
 //! shares the disk's longitude of perihelion `varpi_disk` and follows a
 //! prescribed eccentricity profile e_d(a). Such a disk is what the paper shows
 //! can SHEPHERD test ETNOs into apsidal anti-alignment without a planet.
@@ -14,10 +14,13 @@ use std::f64::consts::PI;
 /// Reference / published values from Sefilian & Touma (2019), kept as labelled
 /// constants (never silently baked into the computation).
 pub mod reference {
-    /// Inner edge of the modeled disk (AU).
-    pub const A_INNER_AU: f64 = 100.0;
-    /// Outer edge of the modeled disk (AU).
-    pub const A_OUTER_AU: f64 = 1000.0;
+    /// Inner edge of the modeled disk (AU): the paper's a_in = 40 AU
+    /// (Sefilian & Touma 2019 Sec. 2; a previous version carried 100 AU
+    /// under this "published values" label — false provenance).
+    pub const A_INNER_AU: f64 = 40.0;
+    /// Outer edge of the modeled disk (AU): the paper's a_out = 750 AU
+    /// (previously 1000 AU).
+    pub const A_OUTER_AU: f64 = 750.0;
     /// Fiducial disk mass: the paper explores a few to ~10 Earth masses; its
     /// headline shepherding case uses ~10 M_earth (Sec. 3-4).
     pub const M_DISK_EARTH_FIDUCIAL: f64 = 10.0;
