@@ -6,30 +6,31 @@ use serde::{Deserialize, Serialize};
 
 use crate::resonance::Resonance;
 
-/// Check if two adjacent resonances overlap.
-///
-/// Modified Chirikov criterion (Belyakov & Batygin 2025): the *narrower*
-/// resonance interacts with the wider one only up to its own full-width
-/// extent (2× its half-width), capped at the wider one's half-width. The
-/// implementation is symmetric in its arguments (the previous form used
-/// `r1`'s half-width unconditionally, so `overlap(r1, r2) ≠
-/// overlap(r2, r1)` and results depended on chain iteration direction).
+/// Check if two adjacent resonances overlap: K ≥ 1 on the core-consistent
+/// normalization (see [`overlap_parameter`]) — the libration islands'
+/// half-extents meet across the spacing. Symmetric in its arguments.
 pub fn resonances_overlap(r1: &Resonance, r2: &Resonance) -> bool {
-    let separation = (r1.a_nominal - r2.a_nominal).abs();
-    let wide = r1.delta_a.max(r2.delta_a);
-    let narrow = r1.delta_a.min(r2.delta_a);
-    separation < wide + (2.0 * narrow).min(wide)
+    overlap_parameter(r1, r2) >= 1.0
 }
 
-/// Overlap parameter for adjacent resonances (symmetric):
+/// Overlap parameter for adjacent resonances (symmetric), on the same
+/// normalization as the BMN21-anchored `p9_core::analysis::resonance`
+/// Chirikov (whose K = 1 root reproduces the published q_crit = 41.4 AU):
 ///
-/// K = (delta_a1 + delta_a2) / |a1 - a2|
+/// K = (delta_a1 + delta_a2) / (2 · |a1 - a2|)
+///
+/// `Resonance::delta_a` is the FULL pendulum width (Belyakov & Batygin
+/// Eq. C12, ΔΦ̃ = 4√(γ/β)); summing two full widths against the spacing
+/// therefore needs the factor 2 for K = 1 to mean "islands touch". A
+/// previous version omitted it — every overlap verdict fired at K_core ≈ 0.5,
+/// flagging chaos out to twice the calibrated separation — while the crate's
+/// own core cross-check test certified the ÷2 form.
 pub fn overlap_parameter(r1: &Resonance, r2: &Resonance) -> f64 {
     let separation = (r1.a_nominal - r2.a_nominal).abs();
     if separation < 1e-10 {
         return f64::INFINITY;
     }
-    (r1.delta_a + r2.delta_a) / separation
+    (r1.delta_a + r2.delta_a) / (2.0 * separation)
 }
 
 /// Count the number of overlapping pairs in a resonance chain.
@@ -180,9 +181,11 @@ mod tests {
 
     #[test]
     fn test_overlap_touching() {
+        // Full widths 5 + 5 over 2·sep: K = 1 at sep = 5 — islands' half-
+        // extents meet. sep = 4.5 overlaps, 5.5 does not.
         let r1 = make_res(100.0, 5.0);
-        let r2 = make_res(108.0, 5.0);
-        assert!(resonances_overlap(&r1, &r2));
+        assert!(resonances_overlap(&r1, &make_res(104.5, 5.0)));
+        assert!(!resonances_overlap(&r1, &make_res(105.5, 5.0)));
     }
 
     #[test]
@@ -215,23 +218,26 @@ mod tests {
     }
 
     #[test]
-    fn test_weaker_resonance_reach_limited() {
-        // Wide (5.0) + narrow (1.0): the narrow side contributes its full
-        // width (2.0), so the threshold is 7.0 — not the naive 6.0 sum
-        // and not the order-dependent 10.0.
+    fn test_asymmetric_widths_threshold() {
+        // Wide (5.0) + narrow (1.0) full widths: K = 1 at
+        // sep = (5+1)/2 = 3 — the two islands' half-extents meet there.
         let wide = make_res(100.0, 5.0);
-        let narrow_in = make_res(106.9, 1.0);
-        let narrow_out = make_res(107.1, 1.0);
-        assert!(resonances_overlap(&wide, &narrow_in));
-        assert!(!resonances_overlap(&wide, &narrow_out));
+        assert!(resonances_overlap(&wide, &make_res(102.9, 1.0)));
+        assert!(!resonances_overlap(&wide, &make_res(103.1, 1.0)));
     }
 
     #[test]
     fn test_overlap_parameter() {
+        // Full widths 5 + 5 over spacing 10: K = (5+5)/(2·10) = 0.5 on the
+        // core-consistent normalization (the pre-fix form returned 1.0 here,
+        // flagging chaos at twice the calibrated separation).
         let r1 = make_res(100.0, 5.0);
         let r2 = make_res(110.0, 5.0);
         let k = overlap_parameter(&r1, &r2);
-        assert!((k - 1.0).abs() < 0.01);
+        assert!((k - 0.5).abs() < 0.01, "K = {k}");
+        // K = 1 exactly when the half-extents meet.
+        let touching = make_res(105.0, 5.0);
+        assert!((overlap_parameter(&r1, &touching) - 1.0).abs() < 1e-12);
     }
 
     #[test]
