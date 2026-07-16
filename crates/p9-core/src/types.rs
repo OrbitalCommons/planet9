@@ -117,10 +117,6 @@ pub struct MassiveBody {
     pub state: StateVector,
     /// Equatorial radius in AU (for Hill sphere computation)
     pub radius_au: f64,
-    /// J2 oblateness (optional)
-    pub j2: Option<f64>,
-    /// J4 oblateness (optional)
-    pub j4: Option<f64>,
 }
 
 impl MassiveBody {
@@ -274,8 +270,6 @@ impl P9Params {
             mass: self.mass_solar(),
             state,
             radius_au,
-            j2: None,
-            j4: None,
         }
     }
 }

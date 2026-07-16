@@ -142,6 +142,16 @@ pub fn hybrid_step(
     hybrid_step_with_forces(bodies, particles, active, dt, config, &[])
 }
 
+/// Timestep sanity for the WHM stage, enforced in ALL build profiles (the
+/// WHM-internal check is debug-only): a caller stepping Jupiter directly at
+/// dt = 300 d would otherwise get quietly wrong secular evolution in
+/// release builds.
+fn assert_timestep_resolves_orbits(bodies: &[MassiveBody], dt: f64) {
+    if let Err(msg) = crate::integrator::whm::validate_timestep(bodies, dt) {
+        panic!("hybrid_step: {msg}");
+    }
+}
+
 /// [`hybrid_step`] with extra kick-stage accelerations (e.g.
 /// [`ExtraForce::J2Jsu`], the averaged J+S+U quadrupole), applied to bodies
 /// and non-encounter particles in both dt/2 kicks exactly as
@@ -157,6 +167,7 @@ pub fn hybrid_step_with_forces(
     config: &SimConfig,
     extra_forces: &[ExtraForce],
 ) -> usize {
+    assert_timestep_resolves_orbits(bodies, dt);
     let half_dt = 0.5 * dt;
 
     let apply_extra =
@@ -262,8 +273,6 @@ mod tests {
             mass: gm / GM_SUN,
             state: StateVector::new(Vector3::new(a, 0.0, 0.0), Vector3::new(0.0, v, 0.0)),
             radius_au: 4.78e-4,
-            j2: None,
-            j4: None,
         }
     }
 
@@ -338,5 +347,17 @@ mod tests {
         assert!(active[0], "particle should survive");
         let r = particles[0].pos.norm();
         assert!(r.is_finite() && r > 0.1 && r < 1e4, "r = {r}");
+    }
+
+    #[test]
+    #[should_panic(expected = "hybrid_step")]
+    fn hybrid_step_rejects_unresolvable_timestep() {
+        // Jupiter direct at dt = 300 d (needs <~ 215 d) must panic in every
+        // build profile, not silently corrupt the secular evolution.
+        let mut bodies = vec![crate::initial_conditions::planets::jupiter_j2000()];
+        let mut particles: Vec<StateVector> = vec![];
+        let mut active: Vec<bool> = vec![];
+        let config = test_config(300.0);
+        hybrid_step(&mut bodies, &mut particles, &mut active, 300.0, &config);
     }
 }

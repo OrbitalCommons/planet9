@@ -8,7 +8,9 @@
 //! - Planet-planet gravitational interactions
 //! - Planet-particle gravitational interactions
 //! - Indirect term (barycentric correction)
-//! - Optionally: J2/J4 oblateness
+//! - J2/J4 oblateness helpers ([`j2_acceleration`]), applied through
+//!   `crate::forces::ExtraForce` (e.g. the J2Jsu solar-quadrupole proxy) —
+//!   NOT read from per-body fields
 
 use nalgebra::Vector3;
 

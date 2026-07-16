@@ -390,8 +390,6 @@ mod tests {
             mass: gm_planet / GM_SUN,
             state: StateVector::new(Vector3::new(a, 0.0, 0.0), Vector3::new(0.0, v, 0.0)),
             radius_au: 4.78e-4,
-            j2: None,
-            j4: None,
         }
     }
 
@@ -405,8 +403,6 @@ mod tests {
             mass: gm_planet / GM_SUN,
             state: StateVector::new(Vector3::new(0.0, a, 0.0), Vector3::new(-v, 0.0, 0.0)),
             radius_au: 4.03e-4,
-            j2: None,
-            j4: None,
         }
     }
 

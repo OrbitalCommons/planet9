@@ -30,8 +30,6 @@ pub fn neptune_circular() -> MassiveBody {
             Vector3::new(0.0, v, 0.0),
         ),
         radius_au: 1.655e-4,
-        j2: None,
-        j4: None,
     }
 }
 

@@ -42,43 +42,17 @@ use crate::types::{MassiveBody, StateVector};
 /// 1550–2650; DE421 (also used by `coords::observer`) covers 1900–2050.
 pub const PLANET_EPHEMERIS_FILES: [&str; 2] = ["de440.bsp", "de421.bsp"];
 
-/// Attach p9-core's physical parameters (system GM/mass, radius, J2/J4) to
-/// a giant-planet state. Single source for both the hard-coded J2000 states
+/// Attach p9-core's physical parameters (system GM/mass, radius) to a
+/// giant-planet state. Single source for both the hard-coded J2000 states
 /// and the ephemeris path, so the two can never disagree on masses.
+/// (Planetary J2/J4 enter the dynamics only through the solar-quadrupole
+/// proxy in `crate::forces::j2_secular`, not per-body fields.)
 fn giant_body(body: Body, state: StateVector) -> MassiveBody {
-    let (name, gm, mass, radius_au, j2, j4) = match body {
-        Body::Jupiter => (
-            "Jupiter",
-            GM_JUPITER,
-            MASS_JUPITER_SOLAR,
-            RADIUS_JUPITER_AU,
-            J2_JUPITER,
-            J4_JUPITER,
-        ),
-        Body::Saturn => (
-            "Saturn",
-            GM_SATURN,
-            MASS_SATURN_SOLAR,
-            RADIUS_SATURN_AU,
-            J2_SATURN,
-            J4_SATURN,
-        ),
-        Body::Uranus => (
-            "Uranus",
-            GM_URANUS,
-            MASS_URANUS_SOLAR,
-            RADIUS_URANUS_AU,
-            J2_URANUS,
-            J4_URANUS,
-        ),
-        Body::Neptune => (
-            "Neptune",
-            GM_NEPTUNE,
-            MASS_NEPTUNE_SOLAR,
-            RADIUS_NEPTUNE_AU,
-            J2_NEPTUNE,
-            J4_NEPTUNE,
-        ),
+    let (name, gm, mass, radius_au) = match body {
+        Body::Jupiter => ("Jupiter", GM_JUPITER, MASS_JUPITER_SOLAR, RADIUS_JUPITER_AU),
+        Body::Saturn => ("Saturn", GM_SATURN, MASS_SATURN_SOLAR, RADIUS_SATURN_AU),
+        Body::Uranus => ("Uranus", GM_URANUS, MASS_URANUS_SOLAR, RADIUS_URANUS_AU),
+        Body::Neptune => ("Neptune", GM_NEPTUNE, MASS_NEPTUNE_SOLAR, RADIUS_NEPTUNE_AU),
         other => panic!("{} is not a giant planet", other.name()),
     };
     MassiveBody {
@@ -87,8 +61,6 @@ fn giant_body(body: Body, state: StateVector) -> MassiveBody {
         mass,
         state,
         radius_au,
-        j2: Some(j2),
-        j4: Some(j4),
     }
 }
 
