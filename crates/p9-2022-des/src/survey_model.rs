@@ -97,8 +97,12 @@ pub struct DesSurvey {
     /// 2019).
     pub nights_per_band: u32,
     /// Detections on at least this many distinct nights are required to
-    /// form a linkable orbit: "more than 7 unique nights of detections"
-    /// (Belyakov et al. 2022, Sec. 2), i.e. >= 8.
+    /// form a linkable orbit: the paper's criterion is NUNIQUE >= 7
+    /// (inherited from Bernardinelli et al. 2022, "appear in at least 7
+    /// nights of data"). Belyakov et al.'s prose "more than 7 unique nights"
+    /// contradicts its own math; a previous version resolved it as >= 8 — a
+    /// strictly harsher cut whose deficit the night_usability calibration
+    /// silently absorbed.
     pub min_nights: u32,
     /// 50%-completeness magnitude in g: 24.1, the logit-fit m50 measured by
     /// injecting synthetic Planet Nines into the DES difference-imaging
@@ -135,12 +139,12 @@ impl Default for DesSurvey {
             footprint_area: 5000.0,
             n_nights: 575,
             nights_per_band: 10,
-            min_nights: 8,
+            min_nights: 7,
             depth_g: 24.1,
             depth_r: limiting_magnitude("DES").expect("DES depth in p9-core survey table"),
             depth_i: 23.3,
             depth_z: 22.6,
-            night_usability: 0.285,
+            night_usability: 0.255,
             bands: vec![DesBand::G, DesBand::R, DesBand::I, DesBand::Z],
         }
     }
@@ -355,8 +359,9 @@ mod tests {
         assert!((survey.depth_g - 24.1).abs() < 1e-10);
         // r depth comes from the shared p9-core table (23.8).
         assert!((survey.depth_r - 23.8).abs() < 1e-10);
-        // "More than 7 unique nights of detections."
-        assert_eq!(survey.min_nights, 8);
+        // NUNIQUE >= 7 (the paper's stated criterion; the prose "more than
+        // 7" contradicts its own math and a previous version pinned 8).
+        assert_eq!(survey.min_nights, 7);
     }
 
     #[test]
