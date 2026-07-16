@@ -26,7 +26,7 @@ pub fn parameter_evolution_diagram() -> String {
 
     writeln!(
         svg,
-        r##"<text x="{}" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#2c5f8a">Evolution of Planet Nine Parameter Estimates (2016–2024)</text>"##,
+        r##"<text x="{}" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#2c5f8a">Evolution of Planet Nine Parameter Estimates</text>"##,
         w / 2
     )
     .unwrap();
@@ -520,8 +520,12 @@ pub fn hypothesis_synthesis_diagram() -> String {
             "Neptune-crossing",
             "Batygin+",
             "#1565c0",
-            ["17 N-crossing TNOs", "KS + A-D tests", "P9-free rejected"],
-            "~5\u{03C3} rej.",
+            [
+                "17 N-crossing TNOs",
+                "KS p=0.0034 (~2.7\u{03C3})",
+                "\u{03B6} ~5\u{03C3} below null",
+            ],
+            "rejected",
         ),
     ];
 
