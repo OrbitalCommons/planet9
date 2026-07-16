@@ -17,6 +17,8 @@
 use p9_core::constants::{DEG2RAD, GM_SUN, GYR_DAYS, YEAR_DAYS};
 use p9_core::forces::ExtraForce;
 use p9_core::initial_conditions::planets;
+use p9_core::integrator::hybrid::hybrid_step_with_forces;
+#[cfg(test)]
 use p9_core::integrator::whm::WhmIntegrator;
 use p9_core::types::{cartesian_to_elements, OrbitalElements, P9Params, SimConfig as CoreConfig};
 use p9_core::units::{au, days, degrees, radians, Angle, Length, Time};
@@ -310,7 +312,12 @@ pub fn run_simulation(config: &SimConfig, seed: u64, include_p9: bool) -> RunRes
         bs_epsilon: 1e-11,
     };
 
-    let integrator = WhmIntegrator::with_extra_forces(vec![ExtraForce::J2Jsu]);
+    // Hybrid integrator: WHM everywhere, Bulirsch-Stoer through close
+    // Neptune encounters (the seeded q ∈ [30, 36] AU population crosses
+    // Neptune, where fixed-step WHM produced unphysical kicks — the
+    // hybrid_changeover_hill config field was previously dead). The averaged
+    // J+S+U quadrupole rides along as the extra kick force.
+    let extra = [ExtraForce::J2Jsu];
 
     let mut max_i_deg: Vec<f64> = initial.iter().map(|p| p.inclination_deg()).collect();
 
@@ -319,12 +326,13 @@ pub fn run_simulation(config: &SimConfig, seed: u64, include_p9: bool) -> RunRes
     let snap_every = (config.snapshot_interval / config.dt).ceil().max(1.0) as usize;
 
     for step in 1..=n_steps {
-        integrator.step(
+        hybrid_step_with_forces(
             &mut bodies,
             &mut particles,
             &mut active,
             config.dt,
             &core_config,
+            &extra,
         );
 
         if step % snap_every == 0 || step == n_steps {
