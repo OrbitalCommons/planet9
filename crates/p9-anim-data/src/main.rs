@@ -5,17 +5,19 @@
 use std::collections::BTreeMap;
 
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
+use p9_core::analysis::photometry::{ALBEDO_NEPTUNE, planet_apparent_magnitude};
 use p9_core::analysis::resonance::{critical_perihelion, resonance_semi_major_axis};
 use p9_core::analysis::secular::phase_portrait;
-use p9_core::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
 use p9_core::analysis::surveys::SURVEY_DEPTHS;
-use p9_core::analysis::thermal::{effective_temp, planck_bnu, solar_equilibrium_temp, C_LIGHT};
+use p9_core::analysis::thermal::{
+    C_LIGHT, H_PLANCK, K_BOLTZ, effective_temp, planck_bnu, solar_equilibrium_temp,
+};
 use p9_core::data::etno::BROWN_2017_SAMPLE;
 use p9_core::data::stable_kbos::{longitude_of_perihelion, stable_kbos};
-use p9_core::types::{helio_distance_at_true_anomaly, P9Params};
+use p9_core::types::{P9Params, helio_distance_at_true_anomaly};
 
 use p9_2016_cassini_ranging::perturbation::{favored_true_anomaly, range_perturbation_curve};
 use p9_2024_panstarrs::combined_exclusion::compute_combined_from_population;
@@ -112,12 +114,18 @@ fn thermal() -> Value {
         .collect();
     let peak = raw.iter().cloned().fold(0.0_f64, f64::max).max(1e-300);
     let norm: Vec<f64> = raw.iter().map(|b| b / peak).collect();
+    // The exported curve is B_ν (per-frequency Planck), so the marker must be
+    // the B_ν peak: ν_peak = x·kT/h with x = 2.8214… (Wien's law, frequency
+    // form), i.e. λ ≈ 127 µm at 40 K — NOT the B_λ peak b/T ≈ 72 µm, which
+    // sits 0.25 dex off the plotted maximum.
+    const WIEN_X_NU: f64 = 2.821_439_372;
+    let nu_peak = WIEN_X_NU * K_BOLTZ * t_cold / H_PLANCK;
     json!({
         "wavelength_um": wl_um,
         "planck_norm_40k": norm,
         "t_eq_600": solar_equilibrium_temp(600.0, 0.41),
         "t_eff_600": effective_temp(600.0, 0.41, 40.0),
-        "wien_peak_um": 2.897_771_955e3 / t_cold, // b(µm·K)/T
+        "wien_peak_um": 1e6 * C_LIGHT / nu_peak,
     })
 }
 
@@ -175,7 +183,9 @@ fn cassini() -> Value {
 
 /// Scattered-disk stability boundary: critical perihelion vs semimajor axis.
 fn stability() -> Value {
-    let a: Vec<f64> = (0..=60).map(|k| 200.0 + k as f64 * (800.0 / 60.0)).collect();
+    let a: Vec<f64> = (0..=60)
+        .map(|k| 200.0 + k as f64 * (800.0 / 60.0))
+        .collect();
     let q_crit: Vec<f64> = a.iter().map(|&av| critical_perihelion(av)).collect();
     json!({ "a_au": a, "q_crit_au": q_crit })
 }
@@ -263,4 +273,42 @@ fn main() {
     std::fs::create_dir_all("animations/data").unwrap();
     std::fs::write("animations/data/anim.json", json).unwrap();
     eprintln!("wrote animations/data/anim.json ({} sections)", out.len());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wien_marker_sits_on_the_exported_curve_peak() {
+        // The marker and the curve must agree: the exported spectrum is
+        // B_nu, so the peak is ~127 um at 40 K, within one log-grid step.
+        let v = thermal();
+        let wl: Vec<f64> = v["wavelength_um"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_f64().unwrap())
+            .collect();
+        let pn: Vec<f64> = v["planck_norm_40k"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_f64().unwrap())
+            .collect();
+        let k_max = pn
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .unwrap()
+            .0;
+        let wien = v["wien_peak_um"].as_f64().unwrap();
+        assert!((125.0..130.0).contains(&wien), "wien = {wien:.1} um");
+        let dex = (wl[k_max] / wien).log10().abs();
+        assert!(
+            dex < 4.0 / 120.0,
+            "curve peak {:.1} um vs marker {wien:.1} um ({dex:.3} dex)",
+            wl[k_max]
+        );
+    }
 }

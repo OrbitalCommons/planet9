@@ -204,7 +204,7 @@ class P10Thermal(Scene):
             wien = float(data["wien_peak_um"])
             wln = Line(ax.c2p(np.log10(wien), 0), ax.c2p(np.log10(wien), 1.05),
                        color=P.TEAL, stroke_width=2).set_stroke(opacity=0.7)
-            wlbl = layout.label(f"Wien peak {wien:.0f} µm", font_size=13, color=P.TEAL)
+            wlbl = layout.label(f"Wien peak (Bν) {wien:.0f} µm", font_size=13, color=P.TEAL)
             wlbl.next_to(ax.c2p(np.log10(wien), 1.05), UP, buff=0.05)
             self.play(Create(wln), FadeIn(wlbl))
             self.wait(0.3)
