@@ -590,6 +590,10 @@ derived quantities:
 - `p9-2019-clustering` / `p9-2021-orbit` survey-bias null: longitude suppression near
   λ ≈ 95°/275° + δ > −30° coverage — same caveat.
 - `p9-2025-clustering` selection weighting w(ϖ) = 1 + 0.3cos(ϖ − 60°) in the bias-resampling MC.
+- `p9-search-hull` TESS entry footprint (dec 0–90°, areal coverage 0.20) — a coarse stand-in for
+  the Rice & Laughlin (2020) blind-search sectors 18–19 (~4,600 deg² of northern sky); the depth
+  (V < 21) and the d ≤ 150 au validity cap are the paper's published values via
+  `p9-2020-tess-shiftstack`.
 - `p9-2017-ossos-bias` discovery-longitude windows: now the PUBLISHED OSSOS block centres
   (Bannister et al. 2018 Table 1; two clumps, λ ≈ 7–48° and 203–240°). With the real bimodal
   layout the bias-induced R̄ from isotropy is ≈ 0.29 (pinned) — weaker than the ~0.5–0.65 a

@@ -12,6 +12,7 @@ rand = { workspace = true }
 rand_distr = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+p9-2020-tess-shiftstack = { version = "0.1.0", path = "../p9-2020-tess-shiftstack" }
 
 [dev-dependencies]
 approx = { workspace = true }
