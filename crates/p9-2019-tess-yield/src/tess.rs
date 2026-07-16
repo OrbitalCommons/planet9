@@ -46,14 +46,20 @@ pub struct TessStack {
     pub efficiency_steepness: f64,
 }
 
+/// Single 30-minute FFI limiting magnitude (I_C): the paper's own
+/// independently quoted per-frame depth ("boosting sensitivity from I ~ 18"),
+/// anchored here as a labelled constant. A previous version back-solved this
+/// from the published stacked 22.0 — making the headline depth test an
+/// identity that could not catch a wrong stacking exponent or frame count.
+pub const TESS_SINGLE_FFI_DEPTH_IC: f64 = 18.1;
+
 impl Default for TessStack {
-    /// Sector-scale stack reproducing the published I_C ≈ 22.0 threshold.
+    /// Sector-scale stack built from the independent single-FFI depth; the
+    /// derived stacked depth is then a real prediction tested against the
+    /// published I_C ≈ 22.0.
     fn default() -> Self {
-        // Solve single_frame_depth so that the +1.25 log10(N) gain lands on
-        // the published 22.0 at N = 1300: single = 22.0 - 1.25 log10(1300).
-        let gain = 1.25 * TESS_FRAMES_PER_SECTOR.log10();
         Self {
-            single_frame_depth: TESS_STACKED_DEPTH_IC - gain,
+            single_frame_depth: TESS_SINGLE_FFI_DEPTH_IC,
             frames: TESS_FRAMES_PER_SECTOR,
             efficiency_steepness: 4.0,
         }
@@ -86,9 +92,16 @@ mod tests {
 
     #[test]
     fn default_stack_reproduces_published_depth() {
+        // A genuine derivation: independent single-FFI base (I ~ 18.1) +
+        // 1.25·log10(1300) ≈ 3.89 lands within the paper's quoted ±0.5 of
+        // I_C = 22.0. A wrong stacking exponent or frame count fails this
+        // (the old version back-solved the base from 22.0, so it could not).
         let stack = TessStack::default();
-        // Reconstructed from the +1.25 log10(N) scaling, not hard-coded.
-        assert_relative_eq!(stack.stacked_depth(), TESS_STACKED_DEPTH_IC, epsilon = 1e-9);
+        assert!(
+            (stack.stacked_depth() - TESS_STACKED_DEPTH_IC).abs() <= TESS_STACKED_DEPTH_SIGMA,
+            "derived stack {:.2} vs published {TESS_STACKED_DEPTH_IC}",
+            stack.stacked_depth()
+        );
     }
 
     #[test]
