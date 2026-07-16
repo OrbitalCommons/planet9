@@ -158,7 +158,10 @@ pub struct P9Params {
 }
 
 impl P9Params {
-    /// Batygin & Brown (2016) nominal parameters
+    /// Batygin & Brown (2016) nominal parameters (Ω = 113° per Fienga et al.
+    /// 2016 Table 1 / `data::ephemeris_constraint::brown_batygin_orbit`; a
+    /// previous 100° here left the same nominal orbit in two orientations 13°
+    /// apart in node across the workspace).
     pub fn nominal_2016() -> Self {
         Self {
             mass_earth: 10.0,
@@ -166,12 +169,13 @@ impl P9Params {
             e: 0.6,
             i: 30.0 * DEG2RAD,
             omega: 150.0 * DEG2RAD,
-            omega_big: 100.0 * DEG2RAD,
+            omega_big: 113.0 * DEG2RAD,
             mean_anomaly: 0.0,
         }
     }
 
-    /// Batygin & Brown (2016) variant used in inclined-TNOs paper
+    /// Batygin & Brown (2016) variant used in inclined-TNOs paper (node as
+    /// [`P9Params::nominal_2016`]).
     pub fn inclined_tnos_2016() -> Self {
         Self {
             mass_earth: 10.0,
@@ -179,12 +183,14 @@ impl P9Params {
             e: 0.5,
             i: 30.0 * DEG2RAD,
             omega: 150.0 * DEG2RAD,
-            omega_big: 100.0 * DEG2RAD,
+            omega_big: 113.0 * DEG2RAD,
             mean_anomaly: 0.0,
         }
     }
 
-    /// Batygin et al. (2019) revised parameters (review paper best fit)
+    /// Batygin et al. (2019) revised parameters (review paper best fit; node
+    /// aligned with the 2016 published orientation, see
+    /// [`P9Params::nominal_2016`]).
     pub fn revised_2019() -> Self {
         Self {
             mass_earth: 5.0,
@@ -192,7 +198,7 @@ impl P9Params {
             e: 0.25,
             i: 20.0 * DEG2RAD,
             omega: 150.0 * DEG2RAD,
-            omega_big: 100.0 * DEG2RAD,
+            omega_big: 113.0 * DEG2RAD,
             mean_anomaly: 0.0,
         }
     }

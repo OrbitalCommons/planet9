@@ -14,7 +14,7 @@ use crate::types::P9Params;
 /// Fienga et al. (2016), Table 1: `a = 700 AU`, `e = 0.6`, `i = 30°`,
 /// `ω = 150°`, `Ω = 113°` (IERS ecliptic). The mean anomaly is irrelevant for
 /// the favored-ν analysis — callers sweep the true anomaly explicitly. Note
-/// `Ω = 113°` differs from `P9Params::nominal_2016()` (`Ω = 100°`), so this
+/// `Ω = 113°` now matches `P9Params::nominal_2016()`, so this
 /// paper-reference orbit is built directly.
 pub fn brown_batygin_orbit() -> P9Params {
     P9Params {
