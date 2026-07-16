@@ -9,12 +9,25 @@
 //! - [`stable_25`] — the same 21 objects plus 4 additional, less-aligned
 //!   stable objects (broader scatter, offset mean), yielding ≈1.9σ.
 //!
-//! The samples are NOT the answer: the significances are computed from them by
-//! the estimator. The point of the construction is that the SAME estimator on
-//! the larger, diluted sample returns a LOWER significance.
+//! These synthetic samples are TUNED (the concentrations were solved from
+//! the published 2.7σ/1.9σ outputs), so the headline values they reproduce
+//! are circular — they demonstrate only the dilution MECHANISM (same
+//! estimator, larger diluted sample ⇒ lower significance). The genuine data
+//! test is [`vetted_etno_varpi`]: the real 10-object ϖ sample run through
+//! the same estimator (pinned in the tests, and documented in
+//! REPRODUCTION_NOTES).
 //!
 //! Wrapped-normal draws are used (σ ↔ κ via R̄ = exp(−σ²/2)); the von Mises
 //! fit then recovers an effective κ from the realized sample.
+
+/// The REAL vetted ETNO ϖ sample from `p9_core::data::etno` (10 objects,
+/// Brown 2017 selection) — the workspace's actual data, previously never fed
+/// to the estimator (only tuned synthetics were). Not the paper's exact
+/// stable-21/25 tables (those element lists are not transcribed here), but a
+/// genuine, independent sample the estimator must find clustered.
+pub fn vetted_etno_varpi() -> Vec<f64> {
+    p9_core::data::etno::longitudes_of_perihelion()
+}
 
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -95,5 +108,34 @@ mod tests {
         for (a, b) in s21.iter().zip(s25.iter()) {
             assert_eq!(a, b);
         }
+    }
+
+    #[test]
+    fn real_etno_sample_is_significantly_clustered() {
+        // The genuine data test issue #248 asked for: the vetted 10-object
+        // ϖ sample (p9-core, Brown 2017 selection) through the SAME
+        // estimator gives κ ≈ 1.73 and σ ≈ 2.64 — independently landing at
+        // the paper's ~2.7σ scale with real data, unlike the tuned
+        // synthetics (which reproduce their targets by construction).
+        let v = vetted_etno_varpi();
+        assert_eq!(v.len(), 10);
+        let fit = crate::estimator::fit(&v);
+        let lam = crate::estimator::log_likelihood_ratio(&v, fit.mu, fit.kappa);
+        let sig = crate::significance::sigma(lam);
+        assert!((1.6..1.9).contains(&fit.kappa), "kappa = {:.3}", fit.kappa);
+        assert!((2.3..3.0).contains(&sig), "sigma = {sig:.3}");
+
+        // Small-sample cross-check: the asymptotic Wilks p = exp(−Λ) vs the
+        // small-n-corrected Rayleigh series from p9-core on the same sample.
+        // At n = 10 they agree to within ~0.3σ; the Wilks form is the more
+        // optimistic (uncorrected O(1/n) bias), documented here.
+        let p_wilks = crate::significance::lambda_to_p_value(lam);
+        let p_rayleigh = p9_core::analysis::circular::rayleigh_p_value(&v);
+        let s_wilks = crate::significance::p_value_to_sigma(p_wilks);
+        let s_rayleigh = crate::significance::p_value_to_sigma(p_rayleigh);
+        assert!(
+            (s_wilks - s_rayleigh).abs() < 0.5,
+            "Wilks {s_wilks:.2}σ vs small-n Rayleigh {s_rayleigh:.2}σ"
+        );
     }
 }
