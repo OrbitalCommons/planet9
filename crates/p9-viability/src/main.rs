@@ -24,6 +24,7 @@ use p9_core::units::au;
 
 use p9_2018_wise_search::detectability::max_detectable_distance as wise_reach;
 use p9_2018_wise_search::survey_model::WiseSurvey;
+use p9_2025_iras_akari::survey_model::AkariFisSurvey;
 
 use p9_2025_simons_forecast::bands::{ACT_SENSITIVITY, SO_SENSITIVITY};
 use p9_2025_simons_forecast::forecast::max_detectable_distance as mm_reach;
@@ -67,7 +68,7 @@ struct SurveyReach {
     kind: &'static str, // "optical" | "thermal" | "mm"
     /// Whether this is real archival data ("data") or a forecast ("forecast").
     status: &'static str,
-    /// "allsky" (≳3/4 sky — excludes regardless of where P9 sits) or "partial"
+    /// "wide" (≳3/4 sky — excludes regardless of where P9 sits) or "partial"
     /// (deep but small footprint — only excludes in-footprint objects).
     coverage: &'static str,
     /// Approximate fraction of sky searched (for the footprint caveat).
@@ -106,10 +107,11 @@ struct Dataset {
     /// deepest anyone has seen at each mass. Below this, P9 is excluded *if* it
     /// fell in the relevant footprint.
     detection_envelope_au: Vec<Option<f64>>,
-    /// Upper envelope over near-all-sky real-data surveys only: the robust
-    /// exclusion floor — below this, P9 is ruled out *regardless* of sky
-    /// position. This is the boundary of the genuinely-viable region.
-    allsky_envelope_au: Vec<Option<f64>>,
+    /// Upper envelope over the WIDE (≳3/4-sky) real-data surveys: below
+    /// this, P9 is excluded over ~70–80% of the sky — a strong but NOT
+    /// direction-independent statement (the wide surveys share the δ > −30°
+    /// and galactic-plane holes; p9-search-hull resolves the directions).
+    wide_envelope_au: Vec<Option<f64>>,
     nominal_orbits: Vec<NominalOrbit>,
     /// Favoured current-distance band (AU) from the Cassini true-anomaly window.
     favored_distance_band_au: [f64; 2],
@@ -117,6 +119,28 @@ struct Dataset {
     distance_au: Vec<f64>,
     mag_curves: Vec<MagCurve>,
     survey_optical_depths: Vec<(&'static str, f64)>,
+}
+
+/// Favoured current-distance band (AU): the heliocentric distances the
+/// nominal orbits span across the Cassini favoured true-anomaly interval —
+/// derived, not hand-drawn (a previous version hard-set [400, 800] whose
+/// upper edge corresponded to nothing computed).
+fn favored_band(orbits: &[P9Params]) -> [f64; 2] {
+    use p9_core::data::ephemeris_constraint::FAVORED_INTERVAL_DEG;
+    let (nu_lo, nu_hi) = (
+        FAVORED_INTERVAL_DEG.0.to_radians(),
+        FAVORED_INTERVAL_DEG.1.to_radians(),
+    );
+    let mut lo = f64::INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for p in orbits {
+        for nu in [nu_lo, nu_hi] {
+            let d = helio_distance_at_true_anomaly(p, nu);
+            lo = lo.min(d);
+            hi = hi.max(d);
+        }
+    }
+    [lo, hi]
 }
 
 fn nominal(name: &'static str, p: P9Params) -> NominalOrbit {
@@ -141,11 +165,11 @@ fn main() {
     // Optical reflected-light surveys (limiting r/V magnitude, real archival
     // data). Fields: name, status, coverage, sky_fraction, reference, depth.
     let optical: &[(&str, &str, &str, f64, &str, f64)] = &[
-        ("CRTS", "data", "allsky", 0.75, "Catalina RTS, V~19.5", 19.5),
+        ("CRTS", "data", "wide", 0.75, "Catalina RTS, V~19.5", 19.5),
         (
             "ZTF",
             "data",
-            "allsky",
+            "wide",
             0.70,
             "Brown & Batygin 2022, r~20.5",
             20.5,
@@ -153,7 +177,7 @@ fn main() {
         (
             "Pan-STARRS1 3pi",
             "data",
-            "allsky",
+            "wide",
             0.75,
             "Brown/Holman/Batygin 2024, r~21.5",
             21.5,
@@ -215,8 +239,8 @@ fn main() {
         name: "WISE W1",
         kind: "thermal",
         status: "data",
-        coverage: "allsky",
-        sky_fraction: 0.95,
+        coverage: "wide",
+        sky_fraction: wise.sky_coverage_fraction(),
         reference: "Meisner et al. 2018, W1~16.5",
         reach: mass_earth.iter().map(|&m| wise_reach(&wise, m)).collect(),
     });
@@ -228,7 +252,7 @@ fn main() {
         name: "IRAS 60um",
         kind: "thermal",
         status: "data",
-        coverage: "allsky",
+        coverage: "wide",
         sky_fraction: 0.96,
         reference: "Phan et al. 2025, FSC ~0.2 Jy",
         reach: mass_earth
@@ -240,12 +264,12 @@ fn main() {
         name: "AKARI 90um",
         kind: "thermal",
         status: "data",
-        coverage: "allsky",
+        coverage: "wide",
         sky_fraction: 0.94,
-        reference: "Phan et al. 2025, MU ~0.55 Jy",
+        reference: "Phan et al. 2025, MUSL ~0.21 Jy",
         reach: mass_earth
             .iter()
-            .map(|&m| thermal_reach(m, akari_nu, 0.55))
+            .map(|&m| thermal_reach(m, akari_nu, AkariFisSurvey::default().sensitivity_jy))
             .collect(),
     });
 
@@ -304,8 +328,13 @@ fn main() {
     };
     // All real data (footprint ignored) vs near-all-sky real data (robust floor).
     let detection_envelope_au = envelope(&|s| s.status == "data");
-    let allsky_envelope_au = envelope(&|s| s.status == "data" && s.coverage == "allsky");
+    let wide_envelope_au = envelope(&|s| s.status == "data" && s.coverage == "wide");
 
+    let nominal_orbits_params = [
+        P9Params::nominal_2016(),
+        P9Params::revised_2019(),
+        P9Params::mcmc_2021(),
+    ];
     let nominal_orbits = vec![
         nominal("Batygin & Brown 2016", P9Params::nominal_2016()),
         nominal("Batygin et al. 2019 (review)", P9Params::revised_2019()),
@@ -330,9 +359,9 @@ fn main() {
         mass_earth,
         surveys,
         detection_envelope_au,
-        allsky_envelope_au,
+        wide_envelope_au,
         nominal_orbits,
-        favored_distance_band_au: [400.0, 800.0],
+        favored_distance_band_au: favored_band(&nominal_orbits_params),
         distance_au,
         mag_curves,
         survey_optical_depths: vec![
