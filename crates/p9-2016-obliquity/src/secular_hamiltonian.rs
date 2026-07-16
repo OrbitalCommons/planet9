@@ -19,6 +19,7 @@ use p9_core::initial_conditions::giant_planets;
 use p9_core::units::{au, days, radians, solar_masses, Angle, Length, Mass, Time};
 
 use crate::solar_model;
+use p9_core::analysis::secular::quadrupole_coupling_constant;
 
 /// State of the spin-orbit system as three unit vectors.
 ///
@@ -124,17 +125,6 @@ impl SecularParams {
     }
 }
 
-/// Quadrupole coupling constant for two wires.
-///
-///   C = G * m₁ * m₂ / (4 * a_outer) * (a_inner/a_outer)² / ε_outer³
-///
-/// For circular outer orbit, ε = 1.
-fn coupling_constant(m1: f64, m2: f64, a_inner: f64, a_outer: f64, epsilon_outer: f64) -> f64 {
-    let g = G_AU3_MSUN_DAY2; // G in AU³/(M_sun * day²)
-    let ratio = a_inner / a_outer;
-    g * m1 * m2 / (4.0 * a_outer) * ratio * ratio / epsilon_outer.powi(3)
-}
-
 /// Giant-planet ↔ Planet Nine coupling, summed planet by planet
 /// (∝ Σ mᵢaᵢ²). Collapsing the giants into one L-conserving ring (as a
 /// previous version did) underestimates this sum by ~45%, a near-2×
@@ -143,7 +133,7 @@ fn coupling_constant(m1: f64, m2: f64, a_inner: f64, a_outer: f64, epsilon_outer
 fn coupling_gp_9(m9_solar: f64, a9: f64, epsilon_9: f64) -> f64 {
     giant_planets::GIANT_PLANETS
         .iter()
-        .map(|&(m_i, a_i)| coupling_constant(m_i, m9_solar, a_i, a9, epsilon_9))
+        .map(|&(m_i, a_i)| quadrupole_coupling_constant(m_i, m9_solar, a_i, a9, epsilon_9))
         .sum()
 }
 
@@ -152,7 +142,7 @@ fn coupling_gp_9(m9_solar: f64, a9: f64, epsilon_9: f64) -> f64 {
 fn coupling_sun_gp(m_sun_eff: f64, a_tilde: f64) -> f64 {
     giant_planets::GIANT_PLANETS
         .iter()
-        .map(|&(m_i, a_i)| coupling_constant(m_sun_eff, m_i, a_tilde, a_i, 1.0))
+        .map(|&(m_i, a_i)| quadrupole_coupling_constant(m_sun_eff, m_i, a_tilde, a_i, 1.0))
         .sum()
 }
 
@@ -354,8 +344,13 @@ pub fn integrate_obliquity(
             let m_sun_eff = l_sun_mag / (G_AU3_MSUN_DAY2 * a_tilde).sqrt();
 
             let c_sun_gp = coupling_sun_gp(m_sun_eff, a_tilde);
-            let c_sun_9 =
-                coupling_constant(m_sun_eff, params.m9_solar, a_tilde, params.a9, epsilon_9);
+            let c_sun_9 = quadrupole_coupling_constant(
+                m_sun_eff,
+                params.m9_solar,
+                a_tilde,
+                params.a9,
+                epsilon_9,
+            );
 
             (l_sun_mag, c_sun_gp, c_sun_9)
         };
@@ -489,7 +484,7 @@ mod tests {
 
     #[test]
     fn test_coupling_constant_positive() {
-        let c = coupling_constant(1e-3, 3e-5, 10.0, 700.0, 0.8);
+        let c = quadrupole_coupling_constant(1e-3, 3e-5, 10.0, 700.0, 0.8);
         assert!(c > 0.0, "Coupling constant should be positive");
         assert!(c.is_finite());
     }
@@ -505,7 +500,7 @@ mod tests {
 
         let m9 = 10.0 * EARTH_MASS_SOLAR;
         let (a9, eps9) = (700.0, 0.8);
-        let c_collapsed_gp9 = coupling_constant(m_total, m9, a_eff, a9, eps9);
+        let c_collapsed_gp9 = quadrupole_coupling_constant(m_total, m9, a_eff, a9, eps9);
         let c_per_planet_gp9 = coupling_gp_9(m9, a9, eps9);
         let ratio_gp9 = c_per_planet_gp9 / c_collapsed_gp9;
         assert!(
@@ -515,7 +510,7 @@ mod tests {
 
         let a_tilde = 1e-4; // a_tilde << a_planet: ratio independent of it
         let m_sun_eff = 1e-2;
-        let c_collapsed_sgp = coupling_constant(m_sun_eff, m_total, a_tilde, a_eff, 1.0);
+        let c_collapsed_sgp = quadrupole_coupling_constant(m_sun_eff, m_total, a_tilde, a_eff, 1.0);
         let c_per_planet_sgp = coupling_sun_gp(m_sun_eff, a_tilde);
         let ratio_sgp = c_per_planet_sgp / c_collapsed_sgp;
         assert!(

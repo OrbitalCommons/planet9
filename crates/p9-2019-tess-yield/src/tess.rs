@@ -20,6 +20,7 @@
 //! few tenths of a magnitude; we treat the depth as a V-equivalent reference
 //! and document the residual in tests rather than applying an unpinned color.
 
+use p9_core::analysis::surveys::logistic_efficiency;
 use serde::{Deserialize, Serialize};
 
 /// Published 50%-completeness stacked depth of a single TESS sector,
@@ -80,8 +81,11 @@ impl TessStack {
     /// centered on [`stacked_depth`](Self::stacked_depth) (0.5 at the limit,
     /// →1 brighter, →0 fainter), mirroring the ZTF survey model.
     pub fn detection_efficiency(&self, apparent_magnitude: f64) -> f64 {
-        let d = self.stacked_depth();
-        1.0 / (1.0 + ((apparent_magnitude - d) * self.efficiency_steepness).exp())
+        logistic_efficiency(
+            apparent_magnitude,
+            self.stacked_depth(),
+            self.efficiency_steepness,
+        )
     }
 }
 

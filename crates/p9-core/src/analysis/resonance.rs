@@ -108,6 +108,47 @@ pub fn critical_perihelion(a_au: f64) -> f64 {
     A_NEPTUNE_AU * argument.ln().sqrt()
 }
 
+/// Dimensionless prefactor of the first-order resonance-overlap zone width
+/// Δa/a_p = C μ^{2/7} in the circular limit (Wisdom 1980; Duncan et al.
+/// 1989 give C ≈ 1.3–1.5 for the chaotic-zone half-width).
+pub const WISDOM_PREFACTOR: f64 = 1.3;
+
+/// Mustill & Wyatt (2012) eccentric resonance-overlap prefactor in
+/// Δa/a_p = 1.8 (μe)^{1/5}.
+pub const MW_ECCENTRIC_PREFACTOR: f64 = 1.8;
+
+/// Fractional inward extent Δa/a_p of the overlapped first-order resonance
+/// zone around a perturber of mass ratio `mu` = m_p/M☉, for a particle of
+/// eccentricity `e`:
+///
+///   Δa/a_p = max( 1.3 μ^{2/7},  1.8 (μ e)^{1/5} )
+///
+/// — the Wisdom (1980) circular-orbit zone as the floor, with the Mustill &
+/// Wyatt (2012) eccentric criterion taking over at large e. This is the one
+/// sourced overlap-zone width; the resonance-hopping crates' per-resonance
+/// pendulum widths are model-specific and cross-check against it.
+pub fn overlap_zone_width_fraction(mu: f64, e: f64) -> f64 {
+    let wisdom = WISDOM_PREFACTOR * mu.powf(2.0 / 7.0);
+    let eccentric = MW_ECCENTRIC_PREFACTOR * (mu * e.max(0.0)).powf(0.2);
+    wisdom.max(eccentric)
+}
+
+/// Neptune-scattering semi-major-axis diffusion coefficient (AU²/yr) at
+/// perihelion `q_au` (Batygin, Mardling & Nesvorný 2021):
+///
+///   D_a ≈ (8 / 5π) (m_N/M☉) √(GM☉ a_N) · exp(−(q/a_N)²/2)
+///
+/// Notably independent of the particle's semi-major axis.
+pub fn neptune_diffusion_coefficient(q_au: f64) -> f64 {
+    use crate::constants::{A_NEPTUNE_AU, GM_SUN, MASS_NEPTUNE_SOLAR, YEAR_DAYS};
+    let v_n = (GM_SUN * A_NEPTUNE_AU).sqrt();
+    let d_per_day = (8.0 / (5.0 * std::f64::consts::PI))
+        * MASS_NEPTUNE_SOLAR
+        * v_n
+        * (-(q_au / A_NEPTUNE_AU).powi(2) / 2.0).exp();
+    d_per_day * YEAR_DAYS
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

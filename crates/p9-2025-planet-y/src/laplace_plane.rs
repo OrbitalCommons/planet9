@@ -52,6 +52,7 @@
 //! arXiv:2508.14156.
 
 use p9_core::analysis::elements::mean_motion;
+use p9_core::analysis::secular::laplace_coefficient;
 use p9_core::constants::{
     DEG2RAD, EARTH_MASS_SOLAR, MASS_JUPITER_SOLAR, MASS_NEPTUNE_SOLAR, MASS_SATURN_SOLAR,
     MASS_URANUS_SOLAR,
@@ -146,25 +147,6 @@ pub fn inner_torque_coeff(a_au: f64) -> f64 {
     0.75 * n * quad_sum
 }
 
-/// Leading Laplace coefficient b_{3/2}^{(1)}(α) for an exterior perturber,
-/// evaluated by direct quadrature of
-///
-///   b_{3/2}^{(s)}(α) = (1/π) ∫_0^{2π} cos(sψ) (1 − 2α cosψ + α²)^{-3/2} dψ.
-///
-/// For α → 0 this tends to 3α, recovering the bare (a/a_Y)³ ring torque; for
-/// the α ≈ 0.3–0.8 relevant to the warp band the exact coefficient matters.
-fn laplace_b_three_half_1(alpha: f64) -> f64 {
-    let n = 2048;
-    let dpsi = std::f64::consts::TAU / n as f64;
-    let mut sum = 0.0;
-    for k in 0..n {
-        let psi = (k as f64 + 0.5) * dpsi;
-        let denom = (1.0 - 2.0 * alpha * psi.cos() + alpha * alpha).powf(1.5);
-        sum += psi.cos() / denom;
-    }
-    sum * dpsi / std::f64::consts::PI
-}
-
 /// Outer (Planet Y) nodal-precession coefficient on an interior particle at
 /// semi-major axis `a` (rad/day, magnitude).
 ///
@@ -179,7 +161,7 @@ fn laplace_b_three_half_1(alpha: f64) -> f64 {
 pub fn outer_torque_coeff(a_au: f64, planet_y: &PlanetY) -> f64 {
     let alpha = a_au / planet_y.a_au;
     let n = mean_motion(a_au);
-    let b1 = laplace_b_three_half_1(alpha);
+    let b1 = laplace_coefficient(1.5, 1, alpha, 0.0);
     0.25 * n * planet_y.mass_solar * alpha * alpha * b1
 }
 
@@ -327,7 +309,7 @@ mod tests {
     fn test_laplace_coeff_small_alpha_limit() {
         // b_{3/2}^{(1)}(α) → 3α as α → 0.
         let alpha = 1e-3;
-        let b1 = laplace_b_three_half_1(alpha);
+        let b1 = laplace_coefficient(1.5, 1, alpha, 0.0);
         assert_relative_eq!(b1, 3.0 * alpha, max_relative = 1e-3);
     }
 

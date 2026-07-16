@@ -32,12 +32,8 @@
 
 use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
 use p9_core::analysis::thermal::{planck_bnu, reflected_flux_jy, thermal_flux_jy, C_LIGHT, JY};
+use p9_core::analysis::thermal::{R_EARTH_M, WIEN_B_M_K};
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
-
-/// Wien displacement-law constant b for the wavelength of peak B_λ (m·K).
-pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
-/// Earth radius (m).
-pub const R_EARTH_M: f64 = 6.371e6;
 
 /// Effective temperature adopted by Cowan et al. (2016) (K).
 pub const COWAN_TEMP_K: f64 = 40.0;

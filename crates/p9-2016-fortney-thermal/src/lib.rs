@@ -52,6 +52,7 @@ use std::f64::consts::PI;
 
 use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
 use p9_core::analysis::thermal::{planck_bnu, thermal_flux_jy, C_LIGHT, L_SUN_W};
+use p9_core::analysis::thermal::{R_EARTH_M, WIEN_B_M_K};
 use p9_core::constants::AU_M;
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
@@ -59,11 +60,6 @@ pub mod published;
 
 /// Stefan-Boltzmann constant (W / m² / K⁴), 2018 CODATA.
 pub const SIGMA_SB: f64 = 5.670_374_419e-8;
-/// Wien displacement constant b = h c / (4.965114231 k) (m·K).
-pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
-/// Earth radius (m); matches the photometry mass-radius anchor.
-pub const R_EARTH_M: f64 = 6.371e6;
-
 /// WISE W2 effective wavelength (4.6 µm); the redder of the two short WISE
 /// bands and the one the Meisner et al. (2018) shift-and-stack search uses.
 pub const W2_WAVELENGTH_M: f64 = 4.6028e-6;

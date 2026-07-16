@@ -103,6 +103,13 @@ pub const SURVEY_DEPTHS: [SurveyDepth; 5] = [
     },
 ];
 
+/// Logistic magnitude-efficiency roll-off shared by the survey models:
+/// ε(m) = 1 / (1 + exp((m − depth) · steepness)). Near 1 well above the
+/// depth (brighter), 0.5 at the depth, → 0 below it; `steepness` in mag⁻¹.
+pub fn logistic_efficiency(mag: f64, depth: f64, steepness: f64) -> f64 {
+    1.0 / (1.0 + ((mag - depth) * steepness).exp())
+}
+
 /// Look up a survey's limiting magnitude by name.
 pub fn limiting_magnitude(survey: &str) -> Option<f64> {
     SURVEY_DEPTHS

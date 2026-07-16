@@ -12,6 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 use p9_core::analysis::surveys::limiting_magnitude;
+use p9_core::analysis::surveys::logistic_efficiency;
 use p9_core::units::{degrees, Angle};
 
 /// Published WISE W1 single-exposure / shift-and-stack depth (Vega mag),
@@ -52,7 +53,7 @@ impl WiseSurvey {
     /// on the W1 depth (ε = 0.5 at the limit, → 1 well above it in flux /
     /// below it in magnitude, → 0 for faint sources).
     pub fn detection_efficiency(&self, w1_mag: f64) -> f64 {
-        1.0 / (1.0 + ((w1_mag - self.w1_depth) * self.efficiency_steepness).exp())
+        logistic_efficiency(w1_mag, self.w1_depth, self.efficiency_steepness)
     }
 
     /// Whether a galactic latitude (degrees) lies outside the masked plane.

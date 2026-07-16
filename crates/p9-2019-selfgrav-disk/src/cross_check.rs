@@ -16,7 +16,7 @@
 //! != 0). This pins that our Laplace-Lagrange operator agrees with the exact
 //! ring average to the expected second-order accuracy.
 
-use crate::laplace::softened_laplace;
+use p9_core::analysis::secular::laplace_coefficient;
 use p9_core::analysis::secular::numerical_secular_hamiltonian;
 use p9_core::constants::GM_SUN;
 
@@ -30,7 +30,7 @@ pub fn single_ring_a_coeff(a: f64, a_ring: f64, mass_ring_solar: f64, eps: f64) 
     } else {
         (a_ring / a, 1.0)
     };
-    let b1 = softened_laplace(1.5, 1, alpha, eps, 1024);
+    let b1 = laplace_coefficient(1.5, 1, alpha, eps);
     0.25 * n * mass_ring_solar * alpha * abar * b1
 }
 

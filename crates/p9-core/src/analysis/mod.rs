@@ -2,9 +2,11 @@ pub mod circular;
 pub mod elements;
 pub mod hansen;
 pub mod photometry;
+pub mod poles;
 pub mod resonance;
 pub mod secular;
 pub mod stacking;
+pub mod stats;
 pub mod surveys;
 pub mod thermal;
 

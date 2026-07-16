@@ -16,6 +16,7 @@ use p9_core::units::{radians, Angle};
 use rayon::prelude::*;
 
 use crate::parameter_grid::SurveyRunConfig;
+use p9_core::analysis::poles::{mean_pole_direction, pole_separation_deg, pole_vector};
 
 /// Inclination survey grid point.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -91,21 +92,13 @@ pub struct InclinationResult {
 /// degrees. These are the comparison values for the inclination survey,
 /// replacing previously invented thresholds (20°, 6.2°).
 pub fn observed_pole_stats() -> (f64, f64) {
-    let poles: Vec<(f64, f64, f64)> = p9_core::data::etno::BROWN_2017_SAMPLE
+    let poles: Vec<[f64; 3]> = p9_core::data::etno::BROWN_2017_SAMPLE
         .iter()
-        .map(|k| pole_direction(k.i_deg * DEG2RAD, k.omega_big_deg * DEG2RAD))
+        .map(|k| pole_vector(k.i_deg * DEG2RAD, k.omega_big_deg * DEG2RAD))
         .collect();
 
-    let mut mean = (0.0, 0.0, 0.0);
-    for p in &poles {
-        mean.0 += p.0;
-        mean.1 += p.1;
-        mean.2 += p.2;
-    }
-    let mag = (mean.0 * mean.0 + mean.1 * mean.1 + mean.2 * mean.2).sqrt();
-    let mean = (mean.0 / mag, mean.1 / mag, mean.2 / mag);
-
-    let tilt = pole_separation_deg(mean, (0.0, 0.0, 1.0));
+    let mean = mean_pole_direction(&poles);
+    let tilt = pole_separation_deg(mean, [0.0, 0.0, 1.0]);
     let rms = (poles
         .iter()
         .map(|&p| pole_separation_deg(mean, p).powi(2))
@@ -176,21 +169,12 @@ pub fn run_inclination_point(
     }
 
     // Mean pole direction and scatter of the surviving population.
-    let poles: Vec<(f64, f64, f64)> = survivors
+    let poles: Vec<[f64; 3]> = survivors
         .iter()
-        .map(|el| pole_direction(el.i, el.omega_big))
+        .map(|el| pole_vector(el.i, el.omega_big))
         .collect();
-    let mut mean = (0.0, 0.0, 0.0);
-    for p in &poles {
-        mean.0 += p.0;
-        mean.1 += p.1;
-        mean.2 += p.2;
-    }
-    let mag = (mean.0 * mean.0 + mean.1 * mean.1 + mean.2 * mean.2)
-        .sqrt()
-        .max(1e-12);
-    let mean = (mean.0 / mag, mean.1 / mag, mean.2 / mag);
-    let pole_angle_mean = pole_separation_deg(mean, (0.0, 0.0, 1.0));
+    let mean = mean_pole_direction(&poles);
+    let pole_angle_mean = pole_separation_deg(mean, [0.0, 0.0, 1.0]);
     let pole_angle_rms = (poles
         .iter()
         .map(|&p| pole_separation_deg(mean, p).powi(2))
@@ -239,16 +223,6 @@ pub fn run_inclination_grid(
 /// The pole angle is arccos(cos(i)) = i for inclination.
 /// But the paper's "pole angle" refers to the angular distance between the
 /// orbital pole and a reference direction.
-pub fn pole_direction(i: f64, omega_big: f64) -> (f64, f64, f64) {
-    let sin_i = i.sin();
-    (sin_i * omega_big.sin(), -sin_i * omega_big.cos(), i.cos())
-}
-
-/// Compute angular separation between two pole directions (degrees).
-pub fn pole_separation_deg(pole1: (f64, f64, f64), pole2: (f64, f64, f64)) -> f64 {
-    let dot = pole1.0 * pole2.0 + pole1.1 * pole2.1 + pole1.2 * pole2.2;
-    dot.clamp(-1.0, 1.0).acos() * RAD2DEG
-}
 
 #[cfg(test)]
 mod tests {
@@ -314,27 +288,6 @@ mod tests {
             (point.argument_of_perihelion() / radians(1.0)).value,
             point.omega_p9,
             max_relative = 1e-12
-        );
-    }
-
-    #[test]
-    fn test_pole_direction() {
-        // Ecliptic orbit: pole at (0, 0, 1)
-        let (x, y, z) = pole_direction(0.0, 0.0);
-        assert!((z - 1.0).abs() < 1e-10);
-        assert!(x.abs() < 1e-10);
-        assert!(y.abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_pole_separation() {
-        let pole1 = pole_direction(0.0, 0.0);
-        let pole2 = pole_direction(30.0 * DEG2RAD, 0.0);
-        let sep = pole_separation_deg(pole1, pole2);
-        assert!(
-            (sep - 30.0).abs() < 0.1,
-            "Separation should be ~30°: {:.1}",
-            sep
         );
     }
 

@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use p9_core::units::{au, Length};
 
-use crate::stability::diffusion_coefficient;
+use p9_core::analysis::resonance::neptune_diffusion_coefficient;
 
 /// Result of a diffusion measurement for a single configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,7 +186,7 @@ pub fn measurement_from_ensemble(
         a_initial: a,
         q_initial: q,
         d_measured: fit.d,
-        d_analytical: diffusion_coefficient(q),
+        d_analytical: neptune_diffusion_coefficient(q),
     })
 }
 

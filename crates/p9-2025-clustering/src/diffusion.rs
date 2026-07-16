@@ -11,18 +11,8 @@
 //! exp(−q²/2a_N²) of `p9_core::analysis::resonance` — D_a ∝ K, the
 //! Chirikov overlap parameter, at fixed a (see the consistency test).
 
-use p9_core::constants::{A_NEPTUNE_AU, GM_SUN, MASS_NEPTUNE_SOLAR, YEAR_DAYS};
+use p9_core::analysis::resonance::neptune_diffusion_coefficient;
 use serde::{Deserialize, Serialize};
-
-/// Analytical diffusion coefficient (AU^2/yr) from Batygin et al. (2021).
-pub fn analytical_diffusion(q: f64) -> f64 {
-    let v_n = (GM_SUN * A_NEPTUNE_AU).sqrt();
-    let d_per_day = (8.0 / (5.0 * std::f64::consts::PI))
-        * MASS_NEPTUNE_SOLAR
-        * v_n
-        * (-(q / A_NEPTUNE_AU).powi(2) / 2.0).exp();
-    d_per_day * YEAR_DAYS
-}
 
 /// Measure the diffusion coefficient (AU²/yr) from a time series of
 /// semi-major axis values sampled every `dt_yr` years.
@@ -127,7 +117,7 @@ pub fn aggregate_clone_diffusion(name: &'static str, d_values: &[f64], q: f64) -
             name,
             d_mean: 0.0,
             d_std: 0.0,
-            d_analytical: analytical_diffusion(q),
+            d_analytical: neptune_diffusion_coefficient(q),
         };
     }
 
@@ -156,7 +146,7 @@ pub fn aggregate_clone_diffusion(name: &'static str, d_values: &[f64], q: f64) -
         name,
         d_mean: mean,
         d_std: var.sqrt(),
-        d_analytical: analytical_diffusion(q),
+        d_analytical: neptune_diffusion_coefficient(q),
     }
 }
 
@@ -168,14 +158,14 @@ mod tests {
 
     #[test]
     fn test_analytical_diffusion_positive() {
-        let d = analytical_diffusion(35.0);
+        let d = neptune_diffusion_coefficient(35.0);
         assert!(d > 0.0);
     }
 
     #[test]
     fn test_analytical_diffusion_decreases_with_q() {
-        let d30 = analytical_diffusion(30.0);
-        let d40 = analytical_diffusion(40.0);
+        let d30 = neptune_diffusion_coefficient(30.0);
+        let d40 = neptune_diffusion_coefficient(40.0);
         assert!(d30 > d40);
     }
 
@@ -184,7 +174,7 @@ mod tests {
         // H3: at fixed a, D_a(q) ∝ K(a, q) — the same exp(−q²/2a_N²).
         use p9_core::analysis::resonance::chirikov_overlap_parameter;
         let a = 300.0;
-        let ratio_d = analytical_diffusion(32.0) / analytical_diffusion(42.0);
+        let ratio_d = neptune_diffusion_coefficient(32.0) / neptune_diffusion_coefficient(42.0);
         let ratio_k = chirikov_overlap_parameter(a, 32.0) / chirikov_overlap_parameter(a, 42.0);
         assert!(
             (ratio_d - ratio_k).abs() < 1e-9 * ratio_k,

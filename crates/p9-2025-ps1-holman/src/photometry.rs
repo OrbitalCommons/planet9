@@ -11,6 +11,7 @@ use p9_core::analysis::photometry::{planet_apparent_magnitude, ALBEDO_NEPTUNE};
 use p9_core::units::{au, Length};
 
 use crate::survey_model::Ps1StackSurvey;
+use p9_core::analysis::thermal::max_detectable_distance;
 
 /// Apparent r magnitude (Neptune albedo, at opposition) of a P9 of
 /// `mass_earth` at heliocentric distance `r_au`. Thin wrapper over the
@@ -30,25 +31,10 @@ pub fn apparent_r_magnitude(mass_earth: f64, r_au: f64) -> f64 {
 /// `R_MAX_AU` if even there the object is detectable, `R_MIN_AU` if it is
 /// never detectable.
 pub fn max_detectable_distance_typed(survey: &Ps1StackSurvey, mass_earth: f64) -> Length {
-    let target = survey.effective_depth();
-    let mut lo = R_MIN_AU;
-    let mut hi = R_MAX_AU;
-    // At lo the object is brightest (smallest m); detectable means m <= target.
-    if apparent_r_magnitude(mass_earth, lo) > target {
-        return au(R_MIN_AU); // not detectable anywhere in range
-    }
-    if apparent_r_magnitude(mass_earth, hi) <= target {
-        return au(R_MAX_AU); // detectable everywhere in range
-    }
-    for _ in 0..100 {
-        let mid = 0.5 * (lo + hi);
-        if apparent_r_magnitude(mass_earth, mid) <= target {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    au(0.5 * (lo + hi))
+    let reach = max_detectable_distance(R_MIN_AU, R_MAX_AU, survey.effective_depth(), |r| {
+        apparent_r_magnitude(mass_earth, r)
+    });
+    au(reach.unwrap_or(R_MIN_AU))
 }
 
 /// Inner bound of the bisection bracket (AU). Objects closer than the giant
@@ -91,26 +77,16 @@ mod tests {
     }
 
     #[test]
-    fn typed_distance_matches_inline_bisection() {
+    fn typed_distance_sits_on_the_depth_crossing() {
+        // The reach is defined by m(reach) == effective depth; check the
+        // shared-core bisection lands on that root.
         let s = Ps1StackSurvey::default();
-        // Inline the same bracket-bisection root the typed function computes,
-        // then check the typed result (in AU) matches it exactly.
-        let target = s.effective_depth();
-        let mut lo = R_MIN_AU;
-        let mut hi = R_MAX_AU;
-        for _ in 0..100 {
-            let mid = 0.5 * (lo + hi);
-            if apparent_r_magnitude(6.0, mid) <= target {
-                lo = mid;
-            } else {
-                hi = mid;
-            }
-        }
-        let expected = 0.5 * (lo + hi);
+        let reach = (max_detectable_distance_typed(&s, 6.0) / au(1.0)).value;
+        assert!((R_MIN_AU..R_MAX_AU).contains(&reach), "reach = {reach}");
         assert_relative_eq!(
-            (max_detectable_distance_typed(&s, 6.0) / au(1.0)).value,
-            expected,
-            epsilon = 1e-12
+            apparent_r_magnitude(6.0, reach),
+            s.effective_depth(),
+            epsilon = 1e-6
         );
     }
 

@@ -41,13 +41,11 @@
 //! this is the apsidal confinement / shepherding.
 
 use crate::disk::DiskProfile;
-use crate::laplace::softened_laplace;
 use p9_core::analysis::circular::wrap_to_pi;
 use p9_core::analysis::elements::mean_motion;
+use p9_core::analysis::secular::laplace_coefficient;
 use p9_core::units::{days, radians, Angle, AngularVelocity, Time};
 use std::f64::consts::PI;
-
-const N_LAPLACE_QUAD: usize = 512;
 
 /// Result of the Laplace-Lagrange secular analysis for one test particle.
 #[derive(Debug, Clone, Copy)]
@@ -124,8 +122,8 @@ pub fn solve(a: f64, disk: &DiskProfile) -> SecularSolution {
             (ring.a / a, 1.0)
         };
 
-        let b1 = softened_laplace(1.5, 1, alpha, eps, N_LAPLACE_QUAD);
-        let b2 = softened_laplace(1.5, 2, alpha, eps, N_LAPLACE_QUAD);
+        let b1 = laplace_coefficient(1.5, 1, alpha, eps);
+        let b2 = laplace_coefficient(1.5, 2, alpha, eps);
 
         let pref = 0.25 * n * m_ratio * alpha * abar;
         a_coeff += pref * b1;
@@ -179,8 +177,8 @@ pub fn hamiltonian_coeffs(a: f64, disk: &DiskProfile) -> (f64, f64) {
         } else {
             (ring.a / a, 1.0)
         };
-        let b1 = softened_laplace(1.5, 1, alpha, eps, N_LAPLACE_QUAD);
-        let b2 = softened_laplace(1.5, 2, alpha, eps, N_LAPLACE_QUAD);
+        let b1 = laplace_coefficient(1.5, 1, alpha, eps);
+        let b2 = laplace_coefficient(1.5, 2, alpha, eps);
         let pref = 0.25 * n * m_ratio * alpha * abar;
         a_coeff += pref * b1;
         b_coeff += -pref * b2 * ring.e;

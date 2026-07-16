@@ -27,15 +27,11 @@
 //! `chirikov_overlap_parameter` to 1e-12.
 
 use p9_core::analysis::resonance::resonance_semi_major_axis;
+use p9_core::analysis::resonance::{
+    overlap_zone_width_fraction, MW_ECCENTRIC_PREFACTOR, WISDOM_PREFACTOR,
+};
 use p9_core::constants::EARTH_MASS_SOLAR;
 use p9_core::units::{au, Length};
-
-/// Dimensionless prefactor in the first-order resonance-overlap width
-/// Δa/a_p = C μ^{2/7} (circular limit). Wisdom (1980) / Duncan et al. (1989)
-/// give C ≈ 1.5 for the chaotic-zone half-width.
-pub const WISDOM_PREFACTOR: f64 = 1.3;
-/// Mustill & Wyatt (2012) eccentric-overlap prefactor in Δa = 1.8 (μe)^{1/5} a.
-pub const MW_ECCENTRIC_PREFACTOR: f64 = 1.8;
 
 /// Chirikov resonance-overlap parameter for a chain near a generic perturber of
 /// semi-major axis `a_p` (AU) and mass `m_p` (solar masses), at particle
@@ -86,9 +82,7 @@ pub fn j_one_location_typed(j: i64, a9_au: f64) -> Length {
 /// (μe)^{1/5} — ≈3× too narrow at e = 0.85 for a 10 M⊕ perturber.)
 pub fn overlap_zone_width_typed(e: f64, a9_au: f64, m9_earth: f64) -> Length {
     let mu = m9_earth * EARTH_MASS_SOLAR;
-    let wisdom = WISDOM_PREFACTOR * mu.powf(2.0 / 7.0);
-    let eccentric = MW_ECCENTRIC_PREFACTOR * (mu * e).powf(0.2);
-    au(wisdom.max(eccentric) * a9_au)
+    au(overlap_zone_width_fraction(mu, e) * a9_au)
 }
 
 /// Resonance-overlap parameter K at (a, e) for a Planet Nine of semi-major

@@ -34,13 +34,13 @@
 //! two reproductions share a physical body.
 
 use p9_core::analysis::photometry::{mass_radius_neptunian, ALBEDO_NEPTUNE};
+use p9_core::analysis::thermal::R_EARTH_M;
 use p9_core::analysis::thermal::{
     effective_temp, planck_bnu, rayleigh_jeans_bnu, solar_equilibrium_temp, thermal_flux_jy,
 };
 use p9_core::units::{au, earth_masses, meters, Length, Mass};
 
 /// Earth radius (m).
-const R_EARTH_M: f64 = 6.371e6;
 
 /// Internal-luminosity effective-temperature floor (K). A several-Earth-mass
 /// ice giant retains formation/radiogenic heat; Fortney et al. (2016) and the

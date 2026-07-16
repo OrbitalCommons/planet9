@@ -22,7 +22,7 @@
 
 use std::f64::consts::PI;
 
-use crate::constants::{GM_SUN, YEAR_DAYS};
+use crate::constants::{GM_SUN, G_AU3_MSUN_DAY2, YEAR_DAYS};
 
 /// Radians per arcsecond (1 arcsec = π/648000 rad).
 const ARCSEC_PER_RAD: f64 = 648_000.0 / PI;
@@ -379,5 +379,78 @@ mod tests {
                 assert!(h.is_finite() && h < 0.0);
             }
         }
+    }
+}
+
+/// Quadrupole secular coupling constant of two coplanar wires of masses
+/// `m1`, `m2` (M☉) at semi-major axes `a_inner` < `a_outer` (AU), with outer
+/// eccentricity factor `epsilon_outer` = √(1 − e²) (energy units,
+/// M☉·AU²/day²):
+///
+///   C = G m₁ m₂ / (4 a_outer) · (a_inner/a_outer)² / ε_outer³
+///
+/// For a circular outer orbit ε = 1.
+pub fn quadrupole_coupling_constant(
+    m1: f64,
+    m2: f64,
+    a_inner: f64,
+    a_outer: f64,
+    epsilon_outer: f64,
+) -> f64 {
+    let ratio = a_inner / a_outer;
+    G_AU3_MSUN_DAY2 * m1 * m2 / (4.0 * a_outer) * ratio * ratio / epsilon_outer.powi(3)
+}
+
+/// Laplace coefficient b_s^{(j)}(α), optionally softened:
+///
+///   b_s^{(j)}(α) = (1/π) ∫₀^{2π} cos(jψ) (1 − 2α cos ψ + α² + ε²)^{-s} dψ
+///
+/// with `softening` ε added in quadrature to the denominator distance
+/// (ε = 0 recovers the classical coefficient, valid for α bounded away
+/// from 1; a nonzero ε represents finite ring thickness / disk scale
+/// height). Midpoint quadrature with 2048 nodes — spectrally converged for
+/// the smooth kernel. For α → 0, b_{3/2}^{(1)} → 3α.
+pub fn laplace_coefficient(s: f64, j: i32, alpha: f64, softening: f64) -> f64 {
+    let n = 2048;
+    let dpsi = 2.0 * PI / n as f64;
+    let eps2 = softening * softening;
+    let mut sum = 0.0;
+    for k in 0..n {
+        let psi = (k as f64 + 0.5) * dpsi;
+        let denom = 1.0 - 2.0 * alpha * psi.cos() + alpha * alpha + eps2;
+        sum += (j as f64 * psi).cos() / denom.powf(s);
+    }
+    sum * dpsi / PI
+}
+
+#[cfg(test)]
+mod laplace_tests {
+    use super::*;
+
+    #[test]
+    fn laplace_small_alpha_series() {
+        // Series expansions (Murray & Dermott Eq. 6.69-6.70), small alpha:
+        //   b_{1/2}^{(0)} ~ 2 + (1/2) alpha^2, b_{1/2}^{(1)} ~ alpha + (3/8) alpha^3,
+        //   b_{3/2}^{(1)} ~ 3 alpha, b_{3/2}^{(2)} ~ (15/4) alpha^2.
+        let alpha = 0.05;
+        assert!(
+            (laplace_coefficient(0.5, 0, alpha, 0.0) - (2.0 + 0.5 * alpha * alpha)).abs() < 1e-4
+        );
+        assert!(
+            (laplace_coefficient(0.5, 1, alpha, 0.0) - (alpha + 0.375 * alpha.powi(3))).abs()
+                < 1e-4
+        );
+        let a2 = 0.04;
+        assert!((laplace_coefficient(1.5, 1, a2, 0.0) - 3.0 * a2).abs() < 5e-4);
+        assert!((laplace_coefficient(1.5, 2, a2, 0.0) - 3.75 * a2 * a2).abs() < 1e-4);
+    }
+
+    #[test]
+    fn laplace_softening_tames_divergence() {
+        // Near alpha = 1 the bare b_{3/2} blows up; softening keeps it finite
+        // and below the bare value.
+        let bare = laplace_coefficient(1.5, 1, 0.98, 0.0);
+        let soft = laplace_coefficient(1.5, 1, 0.98, 0.05);
+        assert!(soft.is_finite() && soft < bare, "{soft} vs {bare}");
     }
 }

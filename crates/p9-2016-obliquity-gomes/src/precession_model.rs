@@ -40,6 +40,7 @@
 
 use std::f64::consts::PI;
 
+use p9_core::analysis::secular::quadrupole_coupling_constant;
 use p9_core::constants::*;
 use p9_core::initial_conditions::giant_planets;
 use p9_core::units::{au, days, earth_masses, radians, Angle, AngularVelocity, Length, Mass, Time};
@@ -127,23 +128,13 @@ pub fn forced_inclination_typed(p: &GomesParams) -> Angle {
     radians(((l9 / ltot) * p.i9.sin()).clamp(-1.0, 1.0).asin())
 }
 
-/// Quadrupole secular coupling constant of two coplanar wires of mass m1, m2
-/// at semimajor axes a_inner < a_outer (M_sun·AU²/day², energy units).
-///
-///   C = G m1 m2 / (4 a_outer) · (a_inner/a_outer)² / ε_outer³
-fn coupling_constant(m1: f64, m2: f64, a_inner: f64, a_outer: f64, epsilon_outer: f64) -> f64 {
-    let g = G_AU3_MSUN_DAY2;
-    let ratio = a_inner / a_outer;
-    g * m1 * m2 / (4.0 * a_outer) * ratio * ratio / epsilon_outer.powi(3)
-}
-
 /// Total giant-planet ↔ Planet Nine quadrupole coupling, summed per planet
 /// (∝ Σ mᵢ aᵢ²), reusing the giant-planet wire set from p9-core.
 pub fn coupling_planets_p9(p: &GomesParams) -> f64 {
     let eps9 = p.epsilon_9();
     giant_planets::GIANT_PLANETS
         .iter()
-        .map(|&(m_i, a_i)| coupling_constant(m_i, p.m9_solar(), a_i, p.a9, eps9))
+        .map(|&(m_i, a_i)| quadrupole_coupling_constant(m_i, p.m9_solar(), a_i, p.a9, eps9))
         .sum()
 }
 

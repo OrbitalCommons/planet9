@@ -16,7 +16,7 @@
 //!   test particle at a ~ 250 AU: the FORCED eccentricity e_forced and forced
 //!   apse, the disk-induced apsidal precession rate A = dvarpi/dt, and the
 //!   secular timescale 2 pi / A. The Laplace coefficients are built in
-//!   `laplace` (softened for the disk's finite radial width); the precession
+//!   `p9_core::analysis::secular::laplace_coefficient` (softened for the disk's finite radial width); the precession
 //!   sign/magnitude is cross-checked against `p9_core::analysis::secular`
 //!   numerical ring averaging in the tests.
 //! - The secular phase portrait (`portrait`) shows a libration island for
@@ -51,6 +51,5 @@
 
 pub mod cross_check;
 pub mod disk;
-pub mod laplace;
 pub mod portrait;
 pub mod secular;
