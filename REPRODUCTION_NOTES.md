@@ -558,6 +558,17 @@ the initial mutual inclination i₀ ≈ i₉, and the test varies that.
 
 ---
 
+### p9-2021-act-mm — mm reach ~15–20% below the published 425–775 AU band
+
+The thermal model gives d_max(10 M⊕) ≈ 364 AU at 12 mJy and ≈ 631 AU at 4 mJy vs Naess et
+al.'s 425–775 AU — a uniform under-prediction from the Neptune-anchored mass–radius relation
+and the 40 K temperature floor, where the paper uses Fortney evolutionary radii/temperatures
+(larger and warmer at 10 M⊕). Survey constants (18,000 deg², 4–12 mJy, 98/150/229 GHz, 10
+candidates) verified correct. Untuned; the sub-band reaches are pinned tightly with the
+offset direction asserted.
+- Pinned: `crates/p9-2021-act-mm/src/detectability.rs`
+  (`mm_reach_band_offset_from_paper_is_pinned`).
+
 ## Agreements within tolerance (for completeness)
 
 | Quantity | Computed | Published | Pinned at |
