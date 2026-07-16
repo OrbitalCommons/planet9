@@ -37,9 +37,11 @@ use p9_core::units::{days, radians, AngularVelocity, Time};
 /// Madigan & McCourt (2016) find the inclination e-folds on the order of one
 /// disc secular time t_sec (their Fig. 3 / Section 4). Choosing C_GROWTH = 2 pi
 /// sets one e-fold per disc secular *period* (tau = 1 * t_sec), the published
-/// order. This is a *labelled* reference value tied to the paper's reported
-/// secular-time scaling, not a free fit; the resulting fiducial timescale is
-/// pinned in the tests and documented in the crate's residual notes.
+/// order. This is an ANSATZ anchored to the paper's N-body measurement — no
+/// eigenvalue is derived in this crate (that needs the full N-ring linearised
+/// secular operator; documented in REPRODUCTION_NOTES). Tests therefore pin
+/// the *scalings* against independent p9-core machinery and the paper's
+/// order-unity band, not tau/t_sec == 1 (which is true by construction).
 pub const C_GROWTH: f64 = TWO_PI;
 
 /// Mean motion n = sqrt(GM_sun / a^3) as a typed [`AngularVelocity`] for an
@@ -216,14 +218,26 @@ mod tests {
     }
 
     #[test]
-    fn test_efolding_time_is_one_secular_time() {
-        // With C_GROWTH = 2 pi the e-folding time equals one disc secular
-        // time t_sec = (M_sun/M_d) P exactly.
+    fn efolding_time_in_the_published_order_unity_band() {
+        // The e-folding time in units of the disc secular time must sit in
+        // Madigan & McCourt's measured order-unity band (their Fig. 3:
+        // e-folding within a few t_sec). Unlike the previous
+        // tau/t_sec == 1 assertion (true by construction of C_GROWTH), this
+        // band is the actual published constraint the ansatz must satisfy —
+        // a different C_GROWTH convention (e.g. the old lib.rs multiplier
+        // form, off by (2pi)^2) fails it.
         let m = fiducial_mass_solar();
         let a = FIDUCIAL_A_AU;
-        let tau = efolding_time_typed(m, a);
-        let t_sec = secular_time_typed(m, a);
-        assert!(((tau / t_sec).value - 1.0).abs() < 1e-12);
+        let ratio = (efolding_time_typed(m, a) / secular_time_typed(m, a)).value;
+        assert!(
+            (0.3..3.0).contains(&ratio),
+            "tau / t_sec = {ratio:.2} outside the published order-unity band"
+        );
+        // And the growth rate is the secular frequency over C_GROWTH,
+        // cross-checked against the independent p9-core mean motion.
+        let n = ref_mean_motion(a);
+        let gamma_days = growth_rate_typed(m, a).get::<radian_per_second>() * 86_400.0;
+        assert!((gamma_days - m * n / C_GROWTH).abs() / gamma_days < 1e-12);
     }
 
     #[test]

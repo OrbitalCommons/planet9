@@ -653,6 +653,18 @@ mass, tighter input ⇒ heavier MAP) now pin the corrected behavior.
 - Pinned: `crates/p9-2024-siraj-orbit/src/lib.rs` (`test_map_tracks_sample_concentration`),
   `src/posterior.rs` (`test_inference_is_falsifiable`).
 
+### 23c. p9-2016-inclination-instability — C_GROWTH is an ansatz, not a derived eigenvalue
+
+The growth-rate prefactor (γ = (M_d/M_⊙)·n / C_GROWTH with C_GROWTH = 2π, i.e. one e-fold per
+disc secular time) is anchored to Madigan & McCourt's N-body measurement that the inclination
+e-folds in about one t_sec — it is NOT derived here. Deriving it requires the full N-ring
+linearised secular operator (the collective eccentric-disc mode), beyond this reduced crate.
+Tests pin the paper's order-unity τ/t_sec band and the M_d/a scalings against independent
+p9-core machinery rather than the constant against itself; the suppression-criterion crossover
+(giants' precession vs disc frequency) is the crate's genuinely computed content.
+- Pinned: `crates/p9-2016-inclination-instability/src/growth.rs`
+  (`efolding_time_in_the_published_order_unity_band`), `src/suppression.rs`.
+
 ### 24. p9-2025-stacking — analytic matched-filter / metric reproduction, not a pixel pipeline
 
 Geringer-Sameth et al. (2025) build a full image-stacking search with an orbit-

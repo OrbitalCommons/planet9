@@ -21,13 +21,16 @@
 //! self-gravity secular frequency of a near-Keplerian disc). The instability
 //! grows on this secular time, so the e-folding growth rate scales as
 //!
-//!   gamma = C_growth * (M_d / M_sun) * n,
+//!   gamma = (M_d / M_sun) * n / C_growth,
 //!
 //! a *linear-theory* growth rate proportional to the disc mass (collective
-//! self-gravity). C_growth is an order-unity dimensionless eigenvalue of the
-//! linearised secular problem; Madigan & McCourt's N-body experiments give
-//! e-folding times of order a few disc secular times, and we adopt the labelled
-//! constant [`growth::C_GROWTH`] documented there.
+//! self-gravity). C_growth is an order-unity (times 2π) dimensionless
+//! prefactor standing in for the eigenvalue of the linearised secular
+//! problem — an ANSATZ anchored to Madigan & McCourt's N-body measurement
+//! that the inclination e-folds in about one disc secular time, NOT a
+//! derived quantity (see [`growth::C_GROWTH`] and the REPRODUCTION_NOTES
+//! entry). A previous version of this header wrote the formula with
+//! C_growth as a multiplier, contradicting the code by (2π)².
 //!
 //! See [`growth`] for the growth rate / e-folding time, and [`suppression`]
 //! for the Das & Batygin (2023) critical-mass criterion.
