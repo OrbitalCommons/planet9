@@ -96,14 +96,15 @@ mod tests {
         let result = compute_exclusion(&survey, &population);
 
         let published = EXCLUSION_FRACTIONS[0].unique_fraction; // ZTF: 0.564
-                                                                // Computed 0.477 with the BB21-faithful reference population
-                                                                // ((m/3)R⊕ radius, U(0.2, 0.75) per-object albedo). The undershoot vs
-                                                                // the published 0.564 reflects reading the V = 20.5 limit as a 50%
-                                                                // logistic midpoint where BB21 define it as the 95% completeness
-                                                                // depth (issue #255); the old +0.045 overshoot came from a reference
-                                                                // population ~0.6 mag brighter than BB21's stated assumptions.
+                                                                // Computed 0.528 with the BB21-faithful reference population
+                                                                // ((m/3)R⊕ radius, U(0.2, 0.75) per-object albedo) and the
+                                                                // object-level P(>= 7 detections) completeness whose 95% point is
+                                                                // pinned at V = 20.5 as BB21 define it (was 0.477 when 20.5 was
+                                                                // misread as a 50% logistic midpoint). The remaining -0.036 is the
+                                                                // documented residual: per-field cadence/weather structure we don't
+                                                                // model.
         assert!(
-            (result.fraction_excluded - published).abs() < 0.12,
+            (result.fraction_excluded - published).abs() < 0.05,
             "exclusion {:.3} vs published {published}",
             result.fraction_excluded
         );

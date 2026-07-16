@@ -38,18 +38,21 @@ arithmetic (0.564 + 0.050 + 0.171 = 0.785) is preserved exactly via the shared
 - Pinned: `crates/p9-2024-panstarrs/src/combined_exclusion.rs:227-252` (table identity to 1e-10;
   population-based values within stated tolerances).
 
-### 3. p9-2021-ztf — exclusion fraction: computed 0.477 vs published 0.564
+### 3. p9-2021-ztf — exclusion fraction: computed 0.528 vs published 0.564
 
-Our per-orbit model (sky position from elements, δ > −30° footprint, logistic
-magnitude efficiency, linking factor), fed by the BB21-faithful reference population
-(r₉ = (m₉/3)R⊕, per-object albedo U(0.2, 0.75)), under-excludes by ~9 points. The dominant
-remaining model difference is the depth semantics: we treat V = 20.5 as a 50% logistic
-midpoint, while BB21 define it as the 95%-completeness depth for ≥7 detections — an
-effectively deeper survey (issue #255). (Before the population fix the model computed 0.609:
-a reference population ~0.6 mag brighter than BB21's stated assumptions more than compensated
-for the shallow efficiency reading.) Untuned — no free parameter was adjusted to close the gap.
-- Pinned: `crates/p9-2021-ztf/src/exclusion.rs` (asserted within 0.12 of 0.564, fed by the
-  seeded BB21-faithful reference population).
+Our per-orbit model (sky position from elements, δ > −30° footprint, object-level
+completeness, linking factor), fed by the BB21-faithful reference population
+(r₉ = (m₉/3)R⊕, per-object albedo U(0.2, 0.75)), under-excludes by ~3.6 points. The depth is
+now modeled with BB21's own semantics: completeness = P(≥7 single-epoch detections over
+N = 22 effective epochs), per-epoch logistic centered at the DES paper's independent
+single-epoch reading (m50 = 20.75 g ≈ 20.48 V), with N the one calibrated quantity (smallest
+N whose completeness at V = 20.5 reaches the defined 95%). Under the earlier misreading of
+20.5 as a 50% logistic midpoint the model computed 0.477; before the population fix it
+computed 0.609 (a reference population ~0.6 mag brighter than BB21's stated assumptions
+more than compensated for the shallow efficiency reading). The remaining gap is per-field
+cadence/weather structure we don't model.
+- Pinned: `crates/p9-2021-ztf/src/exclusion.rs` (asserted within 0.05 of 0.564, fed by the
+  seeded BB21-faithful reference population); `survey_model.rs` pins the 95% point at 20.5.
 
 ### 4. p9-2021-orbit — clustering confidence: computed ≈0.989 vs published 0.996
 

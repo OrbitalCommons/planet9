@@ -83,8 +83,11 @@ pub const SURVEY_DEPTHS: [SurveyDepth; 5] = [
     SurveyDepth {
         survey: "ZTF",
         limiting_mag: 20.5,
-        band: "r",
-        reference: "Brown & Batygin (2022)",
+        band: "V",
+        reference: "Brown & Batygin (2022): V = 20.5 is the 95% completeness \
+                    depth for >= 7 detections (their population magnitudes \
+                    are V); the DES paper's independent reading is a \
+                    single-epoch m50 = 20.75 g ~ 20.48 V",
     },
     SurveyDepth {
         survey: "PS1 3pi",
