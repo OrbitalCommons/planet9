@@ -30,6 +30,7 @@ use p9_core::coords::sky::{ecliptic_vec_to_equatorial_deg, equatorial_to_galacti
 use p9_core::types::OrbitalElements;
 
 use crate::strategy::LsstStrategy;
+use p9_core::analysis::photometry::SOLAR_V_MINUS_R;
 
 /// One synthetic Planet Nine realization: its orbital elements (for the sky
 /// position) and its reflected-light apparent `V` magnitude at that position.
@@ -82,7 +83,13 @@ pub fn discovery_probability(strategy: &LsstStrategy, sample: &P9Sample) -> f64 
     if !footprint.accepts(dec_deg, gal_lat_deg) {
         return 0.0;
     }
-    footprint.coverage_fraction * strategy.linking_probability(sample.v_magnitude)
+    footprint.coverage_fraction * strategy.linking_probability(r_magnitude(sample))
+}
+
+/// r-band apparent magnitude of a sample: the population carries V, the
+/// LSST depths are r — convert with the labeled neutral-reflector color.
+fn r_magnitude(sample: &P9Sample) -> f64 {
+    sample.v_magnitude - SOLAR_V_MINUS_R
 }
 
 /// Discoverable fraction of `population` under `strategy`: the mean per-orbit
@@ -107,7 +114,7 @@ pub fn discoverable_fraction(
         let (dec_deg, gal_lat_deg) = dec_and_galactic_lat_deg(&s.elements);
         if footprint.accepts(dec_deg, gal_lat_deg) {
             in_fp += footprint.coverage_fraction;
-            expected += footprint.coverage_fraction * strategy.linking_probability(s.v_magnitude);
+            expected += footprint.coverage_fraction * strategy.linking_probability(r_magnitude(s));
         }
     }
     DiscoverableResult {
