@@ -61,6 +61,17 @@ Queue retention is ~7 days; streams are replayable within it. Verified
 2026-07-17: live LSST hostless alerts (diaObjectId-keyed) and ZTF SSO
 candidates both delivered.
 
+## Landing livestream alerts into the store
+
+```bash
+~/.venvs/fink/bin/python scripts/rubin_watch/fink_pull.py   --poll-livestream --survey ztf --limit 100 --timeout 60
+```
+
+Writes `night=YYYYMMDD/tile=<nside8>/part-NNNN.parquet` per design/07
+(dedup on read via alert_id). Verified 2026-07-17: 12 live ZTF SSO alerts
+landed across two nights, healpix-tiled, full column set, known-object
+associations (`ss_name`) intact.
+
 ## Data Transfer (the LSST SSO path)
 
 1. Create the job in the portal: https://lsst.fink-portal.org/download —

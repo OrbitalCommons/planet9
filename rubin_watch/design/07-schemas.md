@@ -90,10 +90,16 @@ Partitioning `night=YYYYMMDD/tile=<nside8 pixel>/part-*.parquet`:
 | `band` | utf8 (1 char) | |
 | `psf_mag`, `psf_mag_err` | f32 | |
 | `reliability` | f32 | broker/DIA real-bogus |
-| `visit`, `detector` | u64, u16 | coverage derivation |
+| `visit`, `detector` | u64 nullable, u16 nullable | coverage derivation (LSST only) |
+| `ss_name` | utf8 nullable | associated object designation when the packet carries one (ZTF `ssnamenr`) |
+| `object_id` | utf8 nullable | survey object key (ZTF objectId / LSST diaObjectId as string) |
 | `fink_class` | utf8 nullable | crossmatch label at intake time |
-| `selection` | utf8 | "A" (sso-tagged) or "B" (unassociated) |
-| `ingested_at` | timestamp | |
+| `topic`, `survey` | utf8 | provenance |
+
+(Selection membership is implied by the pull that produced the partition —
+topic/provenance columns replace the earlier `selection`/`ingested_at`
+fields; file mtimes carry ingest time. Implemented and validated against
+live ZTF SSO alerts 2026-07-17.)
 
 ## `rubin_watch/candidates/<id>.json` (Layer 4)
 
