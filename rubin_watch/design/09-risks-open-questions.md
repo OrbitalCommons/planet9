@@ -21,7 +21,7 @@
 |---|---|---|---|
 | OQ-1 | Policy on deriving astrometry from public alert packets and submitting discoveries to the MPC (attribution, duplicate-submission etiquette vs Rubin SSP) | Layer 4 external reporting only | ask on the Rubin community forum + MPC helpdesk *before* any candidate leaves the repo; until answered, candidates stop at internal reports |
 | OQ-2 | Does the user hold Rubin data rights (US astronomer)? | nothing (design avoids RSP) | if yes, ConsDB visit tables upgrade Layer 2 (option 3 → option 1); check at leisure |
-| OQ-3 | Exact Fink LSST server-side filter surface (which of our selection-B cuts run broker-side) | Phase-3 efficiency, not correctness | resolve during registration; measured in the first pull |
+| OQ-3 | ~~Exact Fink LSST server-side filter surface~~ **Answered 2026-07-17**: no LSST SSO livestream topic exists (11 curated topics, SN/extragalactic + uniform-sample + hostless); LSST SSO data flows via Data Transfer jobs only, with `b_is_solar_system`/Light-SSO packets applied job-side. Remaining sub-question: which selection-B quality cuts the DT job builder accepts — measured in the first pull | — | first portal Data Transfer job |
 | OQ-4 | SNAPS API availability (public-access paper Apr 2026, API "coming soon") | Phase 5 only | quarterly check; adopt for SSO enrichment when live |
 | OQ-5 | Published machine-readable completed-visit feed (schedview/almanac) as Layer-2 source 2 | quality upgrade only | one-afternoon spike during Phase 2 |
 | OQ-6 | Negative-flux DIA sources: does Fink transfer carry them with usable reliability scores? | R-4 mitigation from year 2 | test in Phase 3 with a known slow mover (e.g. Sedna: d ≈ 80 AU, in template, dipole signature expected) |
@@ -43,7 +43,10 @@
 
 ## Explicit dependencies on user action
 
-1. **Fink registration** with an exclosure email (Phase 3 gate) — design/04.
+1. ~~Fink registration~~ **Done 2026-07-17** (username matthew, group
+   matthew_cosmicfrontier; connectivity verified both surveys). Remaining
+   user-adjacent step: create the first portal Data Transfer job (browser
+   login) — after that everything is scripted.
 2. OQ-2 data-rights check (optional upgrade).
 3. Frozen-table adoptions and candidate confirmations are human-reviewed
    PRs by design — the automation proposes, the human disposes.

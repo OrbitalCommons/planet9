@@ -48,6 +48,14 @@ and turns each discovery into a recomputed verdict.
 
 ## Status
 
+- 2026-07-17 — **Fink access live** (Phase 3 opened). Registered both
+  surveys with fink-client 11.0; topic inventories pulled via Kafka
+  metadata; real alerts consumed from `fink_hostless_candidate_lsst`
+  (LSST) and `fink_sso_ztf_candidates_ztf` (ZTF). Key fact: no LSST SSO
+  livestream topic exists yet — Data Transfer is the LSST SSO path, as
+  designed. See `RUNBOOK-fink.md` and
+  `reports/rubin-watch/2026-07-17-fink-spike.md`. Next: first portal
+  Data Transfer job (browser step) → volume spike.
 - 2026-07-16 (later) — **Phase 1 implemented and seeded.**
   `crates/p9-rubin-watch` (`mpc-sync` subcommand) + `RUNBOOK-mpc.md`;
   ledger seeded with the live census (370 minor planets: 358 SBDB

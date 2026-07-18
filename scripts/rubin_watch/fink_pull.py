@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Fink Data Transfer pull for the Rubin watch (Layer 3, design/04).
 
-Credential-gated: does nothing useful until Fink registration lands
-(`rubin_watch/design/04-layer3-broker-intake.md`). Registration writes
-~/.finkclient/lsst_credentials.yml via `fink_client_register -survey lsst ...`;
-this script refuses to run without it rather than half-working.
+Registration landed 2026-07-17 (see rubin_watch/RUNBOOK-fink.md for the
+verified environment: uv venv at ~/.venvs/fink, fink-client >= 11,
+servers kafka-{lsst,ztf}.fink-broker.org:24499). Credentials live in
+~/.finkclient/{lsst,ztf}_credentials.yml; this script refuses to run
+without them rather than half-working.
 
 Usage:
   fink_pull.py --check-creds
@@ -62,7 +63,11 @@ def pull(topic: str, outdir: pathlib.Path) -> int:
         # Imported lazily: fink-client is only needed on the machine that pulls.
         from fink_client.consumer import AlertConsumer  # noqa: F401
     except ImportError:
-        print("pip install fink-client (>=10, LSST-era) first", file=sys.stderr)
+        print(
+            "fink-client >= 11 required; run under ~/.venvs/fink "
+            "(see rubin_watch/RUNBOOK-fink.md)",
+            file=sys.stderr,
+        )
         return 2
     # Consumption loop lands with the Phase-3 spike once credentials exist:
     # fink_datatransfer is the reference consumer; this script will either
