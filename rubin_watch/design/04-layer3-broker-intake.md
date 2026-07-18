@@ -8,7 +8,7 @@ are world-public with no proprietary period; the practical tap is a broker.
 
 | Broker | Role here | Basis |
 |---|---|---|
-| **Fink** (primary) | Data Transfer (batch, by-night, server-side filtered) + later Kafka livestream | most SSO-developed full-stream broker; LSST API/portal gained SSO support 2026; registration = username via email, PLAINTEXT Kafka, `fink-client` pip package |
+| **Fink** (primary) | Data Transfer (batch, by-night, server-side filtered) + later Kafka livestream | most SSO-developed full-stream broker; LSST API/portal gained SSO support 2026; registration = username via email, PLAINTEXT Kafka, `fink-client` pip package (≥ 11 for the LSST era; verified 11.0) |
 | **ALeRCE** (secondary) | per-object API cross-checks (ssObjectId, stamp-classifier movers) | working SSO notebooks; independent classifier for candidate sanity checks |
 | **SNAPS** (watch) | future: dedicated SSO enrichment/outlier alerts | the one solar-system downstream broker; public-access paper Apr 2026, API "coming soon" — integrate when it ships (design/09 OQ-4) |
 | Lasair | none | explicitly does not handle solar-system alerts |
