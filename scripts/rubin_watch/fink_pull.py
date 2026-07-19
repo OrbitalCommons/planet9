@@ -102,17 +102,21 @@ def extract_record(alert: dict, survey: str, topic: str) -> dict | None:
             "topic": topic,
             "survey": survey,
         }
-    # LSST packet (diaSource-rooted; field names per the Rubin alert schema
-    # as served by Fink — verified against the first Data Transfer pull).
-    d = alert.get("diaSource") or {}
+    # LSST packet. Two shapes exist: livestream packets nest under
+    # "diaSource"; Data-Transfer Light-SSO packets are FLAT (verified against
+    # ftransfer_lsst_2026-07-19_391190, lsst.v11_1: diaSourceId, ssObjectId,
+    # psfFlux[nJy], band, midpointMjdTai, ra, dec, reliability, phaseAngle,
+    # snr, unpacked_primary_provisional_designation, ...).
+    d = alert.get("diaSource") or alert
     if d.get("ra") is None or d.get("midpointMjdTai") is None:
         return None
+    ss_name = alert.get("unpacked_primary_provisional_designation")
     return {
         "alert_id": int(alert.get("alertId") or d.get("diaSourceId") or 0),
         "dia_source_id": int(d.get("diaSourceId") or 0),
         "dia_object_id": None if d.get("diaObjectId") is None else int(d["diaObjectId"]),
         "ss_object_id": None if d.get("ssObjectId") in (None, 0) else int(d["ssObjectId"]),
-        "ss_name": None,
+        "ss_name": None if ss_name in (None, "") else str(ss_name),
         "object_id": None if d.get("diaObjectId") is None else str(d["diaObjectId"]),
         "mjd": float(d["midpointMjdTai"]),
         "ra": float(d["ra"]),
@@ -121,7 +125,9 @@ def extract_record(alert: dict, survey: str, topic: str) -> dict | None:
         "dec_err": None if d.get("decErr") is None else float(d["decErr"]),
         "band": str(d.get("band")),
         "psf_mag": None if d.get("psfFlux") is None else _njy_to_mag(float(d["psfFlux"])),
-        "psf_mag_err": None,
+        "psf_mag_err": None
+        if d.get("psfFluxErr") is None or not d.get("psfFlux")
+        else 1.0857 * float(d["psfFluxErr"]) / abs(float(d["psfFlux"])),
         "reliability": None if d.get("reliability") is None else float(d["reliability"]),
         "visit": None if d.get("visit") is None else int(d["visit"]),
         "detector": None if d.get("detector") is None else int(d["detector"]),

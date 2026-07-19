@@ -48,6 +48,15 @@ and turns each discovery into a recomputed verdict.
 
 ## Status
 
+- 2026-07-19 — **First LSST Data Transfer landed** (Phase-3 volume spike
+  complete). 45,185 SSO-tagged alert rows from one night, 100% extracted
+  into the partitioned store, 0% contamination, all acceptance checks
+  green — including a ledger cross-match: Rubin caught our tracked
+  distant object **2014 JW80** (a = 138 AU) at z = 22.0. See
+  `reports/rubin-watch/2026-07-19-lsst-transfer-spike.md`. (A first
+  portal job failed in Fink's server-side date parsing — reported
+  upstream; broker metadata showed their LSST transfers stalled for all
+  users since 07-15.) Next: selection-B job + coverage-map builder.
 - 2026-07-17 — **Fink access live** (Phase 3 opened). Registered both
   surveys with fink-client 11.0; topic inventories pulled via Kafka
   metadata; real alerts consumed from `fink_hostless_candidate_lsst`
