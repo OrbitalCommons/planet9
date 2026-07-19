@@ -48,7 +48,10 @@ SNAPS/Fink announce stable SSO topics.
 
 ## Volume budget
 
-Order-of-magnitude, to be re-measured in the first week of operation:
+**Measured 2026-07-19 (first transfer)**: selection A (SSO-tagged) is
+~45k rows/night early-survey (4.7 MB raw) — an order of magnitude inside
+the budget below. Selection B remains to be measured. Original estimate,
+kept for the derivation:
 ~10M alerts/night over ~9,600 deg² visited ⇒ ~10³/deg²/night raw. Fink's
 non-SSO, non-variable, high-reliability residue historically prunes 1–2
 orders of magnitude; our footprint intersects a fraction of any night's
