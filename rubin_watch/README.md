@@ -48,6 +48,13 @@ and turns each discovery into a recomputed verdict.
 
 ## Status
 
+- 2026-07-19 (later) — **Phase 2 (coverage) implemented.** Store →
+  `rubin_watch/lsst_coverage.json` (sparse, healpy-convention; Rust
+  `ang2pix_ring` fixture-locked to healpy) → hull "LSST (to date)" entry
+  with per-pixel linked depth (P(≥3) = 95%) and crowding exclusion →
+  viability "to date" row. First real map: 1,187 deg² covered / 155 deg²
+  linkable from one night; hull headline correctly unmoved. See
+  `RUNBOOK-coverage.md`.
 - 2026-07-19 — **First LSST Data Transfer landed** (Phase-3 volume spike
   complete). 45,185 SSO-tagged alert rows from one night, 100% extracted
   into the partitioned store, 0% contamination, all acceptance checks

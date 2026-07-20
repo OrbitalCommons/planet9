@@ -180,6 +180,45 @@ pub fn des_footprint_solid_angle_deg2() -> f64 {
         .sum()
 }
 
+/// Deepest magnitude at which an object is LINKABLE — detected on at least
+/// `n_required` of `n_visits` independent visits with probability
+/// `completeness` — given a per-visit logistic efficiency centered on
+/// `single_visit_depth` with `steepness` (mag⁻¹). `None` when the visit
+/// count cannot meet the requirement at any magnitude. Monotone in
+/// `n_visits`; for large visit counts the linkable depth exceeds the
+/// single-visit depth (many chances beat one).
+pub fn linked_depth(
+    n_visits: u32,
+    single_visit_depth: f64,
+    steepness: f64,
+    n_required: u32,
+    completeness: f64,
+) -> Option<f64> {
+    if n_visits < n_required {
+        return None;
+    }
+    let tail = |m: f64| {
+        let eps = logistic_efficiency(m, single_visit_depth, steepness);
+        poisson_binomial_tail(&vec![eps; n_visits as usize], n_required)
+    };
+    let (mut lo, mut hi) = (single_visit_depth - 9.0, single_visit_depth + 4.0);
+    if tail(lo) < completeness {
+        return None; // even a very bright object can't make the count
+    }
+    if tail(hi) >= completeness {
+        return Some(hi);
+    }
+    for _ in 0..60 {
+        let mid = 0.5 * (lo + hi);
+        if tail(mid) >= completeness {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    Some(0.5 * (lo + hi))
+}
+
 /// Logistic magnitude-efficiency roll-off shared by the survey models:
 /// ε(m) = 1 / (1 + exp((m − depth) · steepness)). Near 1 well above the
 /// depth (brighter), 0.5 at the depth, → 0 below it; `steepness` in mag⁻¹.
@@ -318,5 +357,24 @@ mod tests {
         assert!(!fp.accepts(70.0, 25.0));
         // Inside the galactic plane cut.
         assert!(!fp.accepts(0.0, 5.0));
+    }
+
+    #[test]
+    fn linked_depth_physics() {
+        // Below the requirement: no depth at all.
+        assert!(linked_depth(2, 24.3, 4.0, 3, 0.95).is_none());
+        // Exactly 3 visits: need all three -> shallower than single-visit.
+        let d3 = linked_depth(3, 24.3, 4.0, 3, 0.95).unwrap();
+        assert!(d3 < 24.3, "d3 = {d3}");
+        // Monotone in visit count, and with many chances the linkable depth
+        // exceeds the single-visit depth.
+        let d10 = linked_depth(10, 24.3, 4.0, 3, 0.95).unwrap();
+        let d200 = linked_depth(200, 24.3, 4.0, 3, 0.95).unwrap();
+        assert!(d3 < d10 && d10 < d200);
+        assert!(d200 > 24.3, "d200 = {d200}");
+        // Self-consistency: at the returned depth the tail is ~completeness.
+        let eps = logistic_efficiency(d10, 24.3, 4.0);
+        let t = poisson_binomial_tail(&vec![eps; 10], 3);
+        assert!((t - 0.95).abs() < 0.01, "tail at depth = {t}");
     }
 }

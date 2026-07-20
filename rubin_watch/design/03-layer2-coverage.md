@@ -1,5 +1,13 @@
 # 03 — Layer 2: LSST coverage-to-date → search hull (Phase 2)
 
+> **Status 2026-07-19: implemented.** Builder
+> `scripts/rubin_watch/build_coverage.py` (healpy; dilated-visit
+> reconstruction), validator `p9-rubin-watch coverage`, hull entry
+> "LSST (to date)" via `PixelDepthMap` + `p9_core::analysis::surveys::
+> linked_depth`, viability "to date" row. First real map: 199 visits,
+> 1,187 deg² covered, 155 deg² linkable (r ≥ 3 visits) from the single
+> transfer night. Schema went sparse (design/07).
+
 Purpose: keep goal G2 — the hull/viability numbers quoted anywhere in this
 repo reflect what Rubin has *actually* observed, updated monthly. Today the
 hull treats Rubin as a forecast; within a year LSST will have converted a
