@@ -56,20 +56,27 @@ keys, fixed float formatting) so no-op runs are byte-identical.
   "healpix": { "nside": 64, "ordering": "ring" },
   "window": { "first_night": "2026-06-30", "last_night": "2026-07-31" },
   "source": "fink_alert_metadata",         // + optional visit-feed cross-check
-  "bands": {
-    "r": {
-      "n_visits":            [ /* 49152 × u16 */ ],
-      "last_visit_mjd":      [ /* 49152 × f32, 0 = never */ ],
-      "depth_single_median": [ /* 49152 × f32, 0 = never */ ]
+  "band_fiducial_depth": { "r": 24.3 /* … */ },
+  "bands": {                       // SPARSE: aligned lists over covered
+    "r": {                         // pixels only (kept the file at ~90 KB
+      "pixels":         [ /* sorted pixel indices */ ],   // vs 2.6 MB dense)
+      "n_visits":       [ /* aligned, all ≥ 1 */ ],
+      "last_visit_mjd": [ /* aligned */ ]
     }
-    // g, i as available
+    // g, i, z as available
   },
-  "flags": {
-    "template_epoch": [ /* 49152 × bool */ ],   // design/03 systematic 1
-    "crowding":       [ /* 49152 × bool */ ]    // |b| < 10°
+  "flags": {                       // sparse index lists
+    "template_epoch_pixels": [],   // design/03 systematic 1
+    "crowding_pixels": [ /* |b| < 10° */ ]
   }
 }
 ```
+
+Single-visit depth is the band fiducial for every covered pixel and is
+carried once in `band_fiducial_depth`, not per pixel. Pixel indices are
+HEALPix RING **by healpy convention** (the Rust `p9_core::coords::healpix`
+is fixture-locked to healpy; astropy-healpix differs at the exact-equator
+boundary and is not the reference).
 
 Derived quantities (`depth_linked(pix, N)` etc.) are computed by consumers,
 never stored (design/03).

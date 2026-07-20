@@ -43,12 +43,36 @@ pub struct RealSurvey {
     /// 150 au, so its non-detection says nothing about a body at 400 au even
     /// if that body is brighter than the stacked depth.
     pub max_distance_au: Option<f64>,
+    /// Per-pixel LINKED depth map (HEALPix ring) for surveys whose coverage
+    /// is an observed pixel set rather than an analytic footprint (the
+    /// "LSST (to date)" entry). When present it overrides both the
+    /// footprint geometry and the scalar depth: a direction is covered iff
+    /// its pixel depth > 0.
+    pub depth_map: Option<PixelDepthMap>,
     pub reference: &'static str,
+}
+
+/// Dense per-pixel depth (mag; 0 = uncovered), HEALPix RING.
+#[derive(Debug, Clone)]
+pub struct PixelDepthMap {
+    pub nside: u32,
+    pub depth: Vec<f32>,
+}
+
+impl PixelDepthMap {
+    pub fn depth_at(&self, ra_deg: f64, dec_deg: f64) -> Option<f64> {
+        let pix = p9_core::coords::healpix::ang2pix_ring(self.nside, ra_deg, dec_deg);
+        let d = *self.depth.get(pix)?;
+        (d > 0.0).then_some(d as f64)
+    }
 }
 
 impl RealSurvey {
     /// Does this survey's geometry contain the direction (ra, dec, b)?
     pub fn accepts(&self, ra_deg: f64, dec_deg: f64, gal_b_deg: f64) -> bool {
+        if let Some(map) = &self.depth_map {
+            return map.depth_at(ra_deg, dec_deg).is_some();
+        }
         if !self.footprint.accepts(dec_deg, gal_b_deg) {
             return false;
         }
@@ -58,6 +82,17 @@ impl RealSurvey {
                 ra <= lo || ra >= hi
             }
             None => true,
+        }
+    }
+
+    /// Limiting depth at a direction: the pixel depth for map-based
+    /// surveys, the scalar depth otherwise (None = direction not covered).
+    pub fn effective_depth(&self, ra_deg: f64, dec_deg: f64, gal_b_deg: f64) -> Option<f64> {
+        match &self.depth_map {
+            Some(map) => map.depth_at(ra_deg, dec_deg),
+            None => self
+                .accepts(ra_deg, dec_deg, gal_b_deg)
+                .then_some(self.depth),
         }
     }
 
@@ -107,6 +142,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
             },
             ra_exclusion_deg: None,
             max_distance_au: None,
+            depth_map: None,
             reference: "Drake et al. (2009); footprint approx.",
         },
         // ZTF (Palomar): δ > −30°, used by Brown & Batygin (2022) for a P9
@@ -126,6 +162,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
             },
             ra_exclusion_deg: None,
             max_distance_au: None,
+            depth_map: None,
             reference: "Brown & Batygin (2022), ZTF non-detection",
         },
         // Pan-STARRS1 3π: δ > −30°, near-all-northern-sky to r ≈ 21.5.
@@ -140,6 +177,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
             },
             ra_exclusion_deg: None,
             max_distance_au: None,
+            depth_map: None,
             reference: "Chambers et al. (2016); Belyakov et al. (2024)",
         },
         // Dark Energy Survey: deep but small southern footprint (~5000 deg²
@@ -159,6 +197,7 @@ pub fn real_surveys() -> Vec<RealSurvey> {
             },
             ra_exclusion_deg: Some((100.0, 300.0)),
             max_distance_au: None,
+            depth_map: None,
             reference: "Bernardinelli et al. (2022); SGC box as p9-survey::refine",
         },
         // TESS shift-stack (Rice & Laughlin 2020): the blind search's
@@ -177,9 +216,68 @@ pub fn real_surveys() -> Vec<RealSurvey> {
             },
             ra_exclusion_deg: None,
             max_distance_au: Some(SENSITIVITY_DISTANCE_AU),
+            depth_map: None,
             reference: "Rice & Laughlin (2020), PSJ 1, 81; sectors 18-19",
         },
     ]
+}
+
+/// The "LSST (to date)" survey entry, built from the rubin-watch coverage
+/// map when it exists: per-pixel LINKED depth (P(≥3 detections) = 95% over
+/// the pixel's r-band visit history, via `p9_core::analysis::surveys::
+/// linked_depth` on the file's single-visit fiducial), with crowding-flagged
+/// pixels (|b| < 10°) excluded — the same conservative plane treatment the
+/// analytic entries use. Distinct from the Rubin FORECAST entries elsewhere:
+/// this one only claims sky Rubin has actually observed ≥ 3 times.
+pub fn lsst_to_date_survey(path: &std::path::Path) -> Option<RealSurvey> {
+    use p9_core::analysis::surveys::linked_depth;
+    use p9_core::data::lsst_coverage::CoverageMap;
+    let map = match CoverageMap::load(path) {
+        Ok(m) => m,
+        Err(e) => {
+            if path.exists() {
+                panic!("coverage map at {path:?} is malformed: {e}");
+            }
+            return None;
+        }
+    };
+    let band = map.bands.get("r")?;
+    let fiducial = *map.fiducial_depth.get("r")?;
+    let npix = p9_core::coords::healpix::npix(map.nside);
+    let crowded: std::collections::HashSet<usize> = map.crowding_pixels.iter().copied().collect();
+    let mut depth = vec![0.0f32; npix];
+    let mut covered = 0usize;
+    for (k, &pix) in band.pixels.iter().enumerate() {
+        if crowded.contains(&pix) {
+            continue;
+        }
+        // Steepness 4.0/mag matches the workspace's LSST survey model
+        // (p9-2023-lsst-strategy default).
+        if let Some(d) = linked_depth(band.n_visits[k], fiducial, 4.0, 3, 0.95) {
+            depth[pix] = d as f32;
+            covered += 1;
+        }
+    }
+    if covered == 0 {
+        return None; // nothing linkable yet: entry would accept nowhere
+    }
+    Some(RealSurvey {
+        name: "LSST (to date)",
+        depth: fiducial,
+        footprint: Footprint {
+            dec_min_deg: -90.0,
+            dec_max_deg: 90.0,
+            galactic_lat_min_deg: 10.0,
+            coverage_fraction: 1.0,
+        },
+        ra_exclusion_deg: None,
+        max_distance_au: None,
+        depth_map: Some(PixelDepthMap {
+            nside: map.nside,
+            depth,
+        }),
+        reference: "rubin_watch/lsst_coverage.json (alert-derived, linked depth P(>=3)=95%)",
+    })
 }
 
 /// Per-direction coverage summary at one sky cell.
@@ -202,18 +300,22 @@ pub fn cell_coverage(
     gal_b_deg: f64,
     dist_au: f64,
 ) -> CellCoverage {
-    let mut best: Option<(&RealSurvey,)> = None;
+    let mut best: Option<(&RealSurvey, f64)> = None;
     for s in surveys {
-        if s.constrains(ra_deg, dec_deg, gal_b_deg, dist_au) {
-            match best {
-                Some((b,)) if b.depth >= s.depth => {}
-                _ => best = Some((s,)),
-            }
+        if !s.constrains(ra_deg, dec_deg, gal_b_deg, dist_au) {
+            continue;
+        }
+        let Some(d) = s.effective_depth(ra_deg, dec_deg, gal_b_deg) else {
+            continue;
+        };
+        match best {
+            Some((_, bd)) if bd >= d => {}
+            _ => best = Some((s, d)),
         }
     }
     match best {
-        Some((s,)) => CellCoverage {
-            best_depth: Some(s.depth),
+        Some((s, d)) => CellCoverage {
+            best_depth: Some(d),
             best_survey: Some(s.name),
         },
         None => CellCoverage {
@@ -237,7 +339,10 @@ pub fn exclusion_probability(
 ) -> f64 {
     let mut survive = 1.0_f64;
     for s in surveys {
-        if s.constrains(ra_deg, dec_deg, gal_b_deg, dist_au) && s.depth >= v {
+        if s.constrains(ra_deg, dec_deg, gal_b_deg, dist_au)
+            && s.effective_depth(ra_deg, dec_deg, gal_b_deg)
+                .is_some_and(|d| d >= v)
+        {
             survive *= 1.0 - s.footprint.coverage_fraction;
         }
     }
@@ -330,5 +435,83 @@ mod tests {
         // only ever ADDS coverage, never displaces a deeper survey.
         let c = cell_coverage(&s, 30.0, 60.0, 40.0, 100.0);
         assert_eq!(c.best_survey, Some("PS1 3pi"));
+    }
+
+    #[test]
+    fn lsst_to_date_entry_from_synthetic_map() {
+        // Synthetic map: full southern cap heavily visited in r + one
+        // barely-visited and one crowded pixel; check acceptance semantics
+        // and the linked-depth physics end to end.
+        use p9_core::coords::healpix::{ang2pix_ring, npix};
+        let nside = 64u32;
+        let deep_pix = ang2pix_ring(nside, 40.0, -45.0);
+        let thin_pix = ang2pix_ring(nside, 200.0, -45.0);
+        let plane_pix = ang2pix_ring(nside, 120.0, -60.0);
+        let mut pixels: Vec<usize> = vec![deep_pix, thin_pix, plane_pix];
+        pixels.sort_unstable();
+        let nv = |p: usize| {
+            if p == deep_pix {
+                200
+            } else if p == thin_pix {
+                2
+            } else {
+                50
+            }
+        };
+        let json = format!(
+            r#"{{"schema_version":1,"generated_utc":"t",
+                 "healpix":{{"nside":64,"ordering":"ring"}},
+                 "window":{{"first_night":"a","last_night":"b"}},
+                 "source":"test","n_reconstructed_visits":3,
+                 "band_fiducial_depth":{{"r":24.3}},
+                 "bands":{{"r":{{"pixels":[{p0},{p1},{p2}],
+                                 "n_visits":[{n0},{n1},{n2}],
+                                 "last_visit_mjd":[61234.0,61234.0,61234.0]}}}},
+                 "flags":{{"template_epoch_pixels":[],
+                           "crowding_pixels":[{plane}]}}}}"#,
+            p0 = pixels[0],
+            p1 = pixels[1],
+            p2 = pixels[2],
+            n0 = nv(pixels[0]),
+            n1 = nv(pixels[1]),
+            n2 = nv(pixels[2]),
+            plane = plane_pix,
+        );
+        let dir = std::env::temp_dir().join("p9-hull-cov-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("cov.json");
+        std::fs::write(&path, json).unwrap();
+
+        let s = lsst_to_date_survey(&path).expect("entry builds");
+        // Deep pixel: covered, linked depth beyond single-visit (200 tries).
+        let d = s.effective_depth(40.0, -45.0, 30.0).expect("deep covered");
+        assert!(d > 24.3 && d < 25.6, "deep linked depth = {d}");
+        // Thin pixel (2 visits < 3 required): not covered.
+        assert!(s.effective_depth(200.0, -45.0, 30.0).is_none());
+        // Crowded pixel: excluded despite 50 visits.
+        assert!(s.effective_depth(120.0, -60.0, 5.0).is_none());
+        // Random un-observed direction: not covered.
+        assert!(!s.accepts(10.0, 60.0, 40.0));
+        // The entry beats PS1-region depths where it applies: hull ranking
+        // picks it at the deep pixel over CRTS (the only analytic survey
+        // covering RA 40 dec -45... none do; so best == LSST).
+        let mut all = real_surveys();
+        all.push(s);
+        let c = cell_coverage(&all, 40.0, -45.0, 30.0, 500.0);
+        assert_eq!(c.best_survey, Some("LSST (to date)"));
+        assert!(c.best_depth.unwrap() > 24.3);
+        // Missing file -> no entry (hull output unchanged).
+        assert!(lsst_to_date_survey(&dir.join("nope.json")).is_none());
+    }
+
+    #[test]
+    fn coverage_monotonicity_more_visits_never_less_depth() {
+        use p9_core::analysis::surveys::linked_depth;
+        let mut last = 0.0;
+        for n in [3u32, 5, 10, 30, 100, 300] {
+            let d = linked_depth(n, 24.3, 4.0, 3, 0.95).unwrap();
+            assert!(d >= last, "depth must grow with visits: {n} -> {d}");
+            last = d;
+        }
     }
 }

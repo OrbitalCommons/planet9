@@ -218,6 +218,32 @@ fn main() {
 
     let mut surveys: Vec<SurveyReach> = Vec::new();
 
+    // Observed-to-date Rubin coverage (rubin-watch map): sky fraction of
+    // pixels with >= 3 r-band visits — the linkable-coverage criterion the
+    // search hull uses. Reported alongside (never instead of) the forecast
+    // rows: "to date" is data, the forecasts stay forecasts.
+    if let Ok(map) = p9_core::data::lsst_coverage::CoverageMap::load(std::path::Path::new(
+        "rubin_watch/lsst_coverage.json",
+    )) {
+        if let Some(r) = map.bands.get("r") {
+            let linkable = r.n_visits.iter().filter(|&&n| n >= 3).count();
+            let frac = linkable as f64 / p9_core::coords::healpix::npix(map.nside) as f64;
+            let depth = *map.fiducial_depth.get("r").unwrap_or(&24.3);
+            surveys.push(SurveyReach {
+                name: "Rubin/LSST (to date)",
+                kind: "optical",
+                status: "data",
+                coverage: "partial",
+                sky_fraction: frac,
+                reference: "rubin_watch/lsst_coverage.json, >=3 r visits",
+                reach: mass_earth
+                    .iter()
+                    .map(|&m| optical_reach(m, depth))
+                    .collect(),
+            });
+        }
+    }
+
     for &(name, status, coverage, sky_fraction, reference, depth) in optical {
         surveys.push(SurveyReach {
             name,

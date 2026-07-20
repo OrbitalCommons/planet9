@@ -183,7 +183,22 @@ fn ra_center(grid: &SkyGrid, i_ra: usize) -> f64 {
 fn main() {
     let grid = default_grid();
     let studies = studies::catalog();
-    let surveys = surveys::real_surveys();
+    let mut surveys = surveys::real_surveys();
+    // "LSST (to date)": observed-coverage entry from the rubin-watch map
+    // (absent file -> byte-identical output to the pre-coverage hull).
+    let coverage_path = std::path::Path::new("rubin_watch/lsst_coverage.json");
+    if let Some(lsst_now) = surveys::lsst_to_date_survey(coverage_path) {
+        eprintln!(
+            "including LSST (to date) from {:?}: {} linkable pixels",
+            coverage_path,
+            lsst_now
+                .depth_map
+                .as_ref()
+                .map(|m| m.depth.iter().filter(|d| **d > 0.0).count())
+                .unwrap_or(0)
+        );
+        surveys.push(lsst_now);
+    }
 
     // The space telescope we are pointing.
     let scope = telescope::catalog()

@@ -17,17 +17,62 @@ fn usage() -> ! {
     eprintln!(
         "usage: p9-rubin-watch mpc-sync [--dry-run] [--skip-battery] \
          [--ledger PATH] [--reports DIR] [--fixtures DIR]\n\
+       p9-rubin-watch coverage [--map PATH]\n\
          \n\
-         --fixtures DIR reads DIR/mpc_distant.json and DIR/sbdb_query.json \
-         instead of the network."
+         mpc-sync: --fixtures DIR reads DIR/mpc_distant.json and \
+         DIR/sbdb_query.json instead of the network.\n\
+         coverage: validate + summarize the LSST coverage map (schema gate)."
     );
     std::process::exit(2)
 }
 
+fn coverage_main(mut argv: impl Iterator<Item = String>) -> ! {
+    let mut map_path = std::path::PathBuf::from("rubin_watch/lsst_coverage.json");
+    while let Some(a) = argv.next() {
+        match a.as_str() {
+            "--map" => map_path = argv.next().unwrap_or_else(|| usage()).into(),
+            _ => usage(),
+        }
+    }
+    let map = match p9_core::data::lsst_coverage::CoverageMap::load(&map_path) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("coverage map INVALID: {e}");
+            std::process::exit(2);
+        }
+    };
+    let npix = p9_core::coords::healpix::npix(map.nside);
+    let pix_area =
+        4.0 * std::f64::consts::PI / npix as f64 * (180.0 / std::f64::consts::PI).powi(2);
+    println!(
+        "coverage map OK: nside {}, window {}..{}, {} visits, source {:?}",
+        map.nside, map.first_night, map.last_night, map.n_reconstructed_visits, map.source
+    );
+    for (band, b) in &map.bands {
+        let linkable = b.n_visits.iter().filter(|&&n| n >= 3).count();
+        println!(
+            "  {band}: {} covered pixels ({:.0} deg2), {} linkable (>=3 visits, {:.0} deg2), fiducial {:.1}",
+            b.pixels.len(),
+            b.pixels.len() as f64 * pix_area,
+            linkable,
+            linkable as f64 * pix_area,
+            map.fiducial_depth[band]
+        );
+    }
+    println!(
+        "  flags: {} crowding pixels, {} template-epoch pixels",
+        map.crowding_pixels.len(),
+        map.template_epoch_pixels.len()
+    );
+    std::process::exit(0)
+}
+
 fn parse_args() -> Args {
     let mut argv = std::env::args().skip(1);
-    if argv.next().as_deref() != Some("mpc-sync") {
-        usage();
+    match argv.next().as_deref() {
+        Some("mpc-sync") => {}
+        Some("coverage") => coverage_main(argv),
+        _ => usage(),
     }
     let mut args = Args {
         dry_run: false,

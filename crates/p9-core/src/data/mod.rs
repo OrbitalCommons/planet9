@@ -2,6 +2,7 @@
 
 pub mod ephemeris_constraint;
 pub mod etno;
+pub mod lsst_coverage;
 pub mod posterior;
 pub mod reference_population;
 pub mod refresh;
