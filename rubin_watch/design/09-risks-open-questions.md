@@ -43,10 +43,10 @@
 
 ## Explicit dependencies on user action
 
-1. ~~Fink registration~~ **Done 2026-07-17** (username matthew, group
-   matthew_cosmicfrontier; connectivity verified both surveys). Remaining
-   user-adjacent step: create the first portal Data Transfer job (browser
-   login) — after that everything is scripted.
+1. ~~Fink registration~~ **Done 2026-07-17**; ~~portal Data Transfer
+   click~~ **scripted 2026-07-20** (`fink_submit_job.py` drives the
+   portal's unauthenticated Dash submit callback directly — no browser
+   steps remain anywhere in the pipeline).
 2. OQ-2 data-rights check (optional upgrade).
 3. Frozen-table adoptions and candidate confirmations are human-reviewed
    PRs by design — the automation proposes, the human disposes.
