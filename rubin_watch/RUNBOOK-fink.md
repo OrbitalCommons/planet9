@@ -74,11 +74,28 @@ associations (`ss_name`) intact.
 
 ## Data Transfer (the LSST SSO path)
 
-1. Create the job in the portal: https://lsst.fink-portal.org/download —
-   pick nights, apply `b_is_solar_system` (selection A) or negate it +
-   quality cuts (selection B), choose the Light-SSO packet schema.
+Job creation is fully scripted — the portal's submit flow is an
+unauthenticated Dash callback, driven directly by
+`scripts/rubin_watch/fink_submit_job.py` (verified against the portal
+source; first programmatic job: batch 8, 2026-07-20):
+
+```bash
+# selection A (SSO-tagged)
+~/.venvs/fink/bin/python scripts/rubin_watch/fink_submit_job.py   --start 2026-07-16 --stop 2026-07-18   --block b_is_solar_system --content "Light SSO packet"
+
+# selection B (unassociated residue, the slow-mover feed)
+~/.venvs/fink/bin/python scripts/rubin_watch/fink_submit_job.py   --start 2026-07-16 --stop 2026-07-18   --block "NOT b_is_solar_system" --content "Light static packet"   --extra-cond "diaSource.reliability > 0.9;"
+```
+
+Both dates are REQUIRED (a missing stop date crashes the server-side date
+parser — the Batch-5 failure). Negation is the literal label
+`NOT <block>`. One job per invocation; their Spark cluster does the work,
+so keep requests scoped.
+
+1. (Manual fallback: https://lsst.fink-portal.org/download with the same
+   choices.)
 2. The job yields a private topic `ftransfer_lsst_<date>_<id>` (lives ~7
-   days). Consume with:
+   days; allow minutes for the Spark job to start streaming). Consume with:
 
 ```bash
 ~/.venvs/fink/bin/fink_datatransfer -survey lsst \
