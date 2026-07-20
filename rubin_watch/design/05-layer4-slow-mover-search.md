@@ -1,5 +1,16 @@
 # 05 — Layer 4: slow-mover search (Phase 4)
 
+> **Status 2026-07-19: implemented** (`p9_rubin_watch::linker` +
+> `export_linker_input.py` + `link`/`--calibrate` CLI; RUNBOOK-linker.md).
+> One algorithmic refinement vs the spec below, learned from testing: the
+> 5-parameter refit searches the FULL 1/d range (coarse 60-point scan +
+> fine refinement), because residual-parallax chains link a true object at
+> badly wrong hypotheses too — the cluster's hypothesis is a proposal, not
+> a prior. SR-6 gate passes as an offline test (≥ 90% for V ≤ 23, ≥ 3
+> nights); live smoke on 4,509 selection-A detections (DE421) yields 0
+> candidates as single-night physics demands. Awaiting selection-B
+> multi-night data for the first real search.
+
 The custom science layer: link unassociated DIA sources across nights into
 candidates moving like a body at d ∈ [300, 1000] AU. This is the regime
 where Rubin's own tracklet-based expectations break down and where the

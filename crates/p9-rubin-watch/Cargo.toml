@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
 p9-2026-apsidal-clustering = { path = "../p9-2026-apsidal-clustering" }
 p9-2021-perihelion-gap = { path = "../p9-2021-perihelion-gap" }
 p9-2024-neptune-crossing = { path = "../p9-2024-neptune-crossing" }

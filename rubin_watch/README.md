@@ -48,6 +48,13 @@ and turns each discovery into a recomputed verdict.
 
 ## Status
 
+- 2026-07-19 (later still) — **Phase 4 (slow-mover linker) implemented.**
+  Distance-hypothesis linking (300–1000 AU, ~580 hypotheses), drift-aware
+  clustering, full-range 5-param refit, static/χ²/photometric gates,
+  injection-recovery harness meeting SR-6 (≥ 90% at V ≤ 23) as a test.
+  Live smoke: 4,509 real detections through DE421 → 0 candidates (correct
+  for single-night data). The system now needs only multi-night
+  selection-B pulls to begin the real search. See `RUNBOOK-linker.md`.
 - 2026-07-19 (later) — **Phase 2 (coverage) implemented.** Store →
   `rubin_watch/lsst_coverage.json` (sparse, healpy-convention; Rust
   `ang2pix_ring` fixture-locked to healpy) → hull "LSST (to date)" entry
