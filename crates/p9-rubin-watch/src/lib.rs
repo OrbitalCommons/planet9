@@ -6,6 +6,7 @@
 pub mod battery;
 pub mod classify;
 pub mod ledger;
+pub mod linker;
 pub mod report;
 pub mod sources;
 pub mod sync;

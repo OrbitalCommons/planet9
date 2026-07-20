@@ -2134,6 +2134,7 @@ name = "p9-rubin-watch"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "nalgebra",
  "p9-2016-inclined-tnos",
  "p9-2021-perihelion-gap",
  "p9-2024-neptune-crossing",

@@ -18,12 +18,115 @@ fn usage() -> ! {
         "usage: p9-rubin-watch mpc-sync [--dry-run] [--skip-battery] \
          [--ledger PATH] [--reports DIR] [--fixtures DIR]\n\
        p9-rubin-watch coverage [--map PATH]\n\
+       p9-rubin-watch link --input FILE.json [--out DIR] [--calibrate N]\n\
          \n\
          mpc-sync: --fixtures DIR reads DIR/mpc_distant.json and \
          DIR/sbdb_query.json instead of the network.\n\
-         coverage: validate + summarize the LSST coverage map (schema gate)."
+         coverage: validate + summarize the LSST coverage map (schema gate).\n\
+         link: run the slow-mover linker on one tile input (from \
+         export_linker_input.py); --calibrate N runs the injection harness."
     );
     std::process::exit(2)
+}
+
+fn link_main(mut argv: impl Iterator<Item = String>) -> ! {
+    use p9_rubin_watch::linker;
+    let mut input_path: Option<std::path::PathBuf> = None;
+    let mut out_dir = std::path::PathBuf::from("rubin_watch/candidates");
+    let mut calibrate: Option<usize> = None;
+    while let Some(a) = argv.next() {
+        match a.as_str() {
+            "--input" => input_path = Some(argv.next().unwrap_or_else(|| usage()).into()),
+            "--out" => out_dir = argv.next().unwrap_or_else(|| usage()).into(),
+            "--calibrate" => {
+                calibrate = Some(
+                    argv.next()
+                        .and_then(|n| n.parse().ok())
+                        .unwrap_or_else(|| usage()),
+                )
+            }
+            _ => usage(),
+        }
+    }
+    let Some(input_path) = input_path else {
+        usage()
+    };
+    let raw = std::fs::read_to_string(&input_path).expect("read linker input");
+    let input: linker::LinkerInput = serde_json::from_str(&raw).expect("parse linker input");
+    let ts = p9_core::coords::observer::Timescale::default();
+
+    // DE421 when the kernel is cached; the circular fallback is fine for
+    // smoke tests but is reported so nobody mistakes it for survey-grade.
+    let mut ephem = p9_core::coords::observer::EphemerisEarth::try_new();
+    let mut circular = p9_core::coords::observer::CircularEarth;
+    let provider_name = if ephem.is_ok() {
+        "de421"
+    } else {
+        "circular-earth (FALLBACK)"
+    };
+    eprintln!(
+        "tile {}: {} detections, {} visits, provider {provider_name}",
+        input.tile,
+        input.detections.len(),
+        input.visits.len()
+    );
+
+    if let Some(n) = calibrate {
+        let res = match ephem.as_mut() {
+            Ok(e) => linker::calibrate(&input, e, &ts, n, 20260719),
+            Err(_) => linker::calibrate(&input, &mut circular, &ts, n, 20260719),
+        };
+        println!(
+            "calibration: {}/{} recovered (efficiency {:.2})",
+            res.recovered, res.injected, res.efficiency
+        );
+        for (d, v, ndet, rec, fitted) in &res.detail {
+            println!(
+                "  d={d:.0} V={v:.1} n_det={ndet} recovered={rec} fitted_d={:?}",
+                fitted.map(|f| f.round())
+            );
+        }
+        std::process::exit(0);
+    }
+
+    let cands = match ephem.as_mut() {
+        Ok(e) => linker::link(&input, e, &ts),
+        Err(_) => linker::link(&input, &mut circular, &ts),
+    };
+    println!("candidates: {}", cands.len());
+    if !cands.is_empty() {
+        std::fs::create_dir_all(&out_dir).expect("mkdir candidates");
+        let (now, today) = clock::now_utc();
+        for (k, c) in cands.iter().enumerate() {
+            let id = format!("cand-{today}-t{}-{k:03}", input.tile);
+            let record = serde_json::json!({
+                "schema_version": 1,
+                "candidate_id": id,
+                "status": "linked",
+                "generated_utc": now,
+                "provider": provider_name,
+                "tile": input.tile,
+                "window": { "mjd_start": input.mjd_start, "mjd_end": input.mjd_end },
+                "fit": c.fit,
+                "members": c.members,
+            });
+            let path = out_dir.join(format!("{id}.json"));
+            std::fs::write(
+                &path,
+                serde_json::to_string_pretty(&record).unwrap()
+                    + "
+",
+            )
+            .expect("write candidate");
+            println!(
+                "  {} d={:.0} AU chi2/dof={:.2} -> {path:?}",
+                id,
+                c.fit.d_au,
+                c.fit.chi2 / c.fit.dof.max(1) as f64
+            );
+        }
+    }
+    std::process::exit(if cands.is_empty() { 0 } else { 1 })
 }
 
 fn coverage_main(mut argv: impl Iterator<Item = String>) -> ! {
@@ -72,6 +175,7 @@ fn parse_args() -> Args {
     match argv.next().as_deref() {
         Some("mpc-sync") => {}
         Some("coverage") => coverage_main(argv),
+        Some("link") => link_main(argv),
         _ => usage(),
     }
     let mut args = Args {
