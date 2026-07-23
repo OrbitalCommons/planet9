@@ -92,6 +92,17 @@ parser — the Batch-5 failure). Negation is the literal label
 `NOT <block>`. One job per invocation; their Spark cluster does the work,
 so keep requests scoped.
 
+**Nights must exist in Fink's archive.** The Spark job gates every night on
+the statistics API (`api.lsst.fink-portal.org/api/v1/statistics`); a night
+missing there is silently dropped, and if the whole range is missing the
+job `sys.exit(1)`s before creating any topic — no error surfaces anywhere
+(batches 8/20: the archive stalled at 2026-07-14 while livestream alerts
+kept flowing, so "recent" nights were unfetchable). The submitter now
+pre-checks the range and prints the archived nights; if it reports none,
+pick different dates — resubmitting the same range only wastes their
+cluster. Archive lag vs livestream is a known divergence; if it persists
+more than a week, mail contact@fink-broker.org.
+
 1. (Manual fallback: https://lsst.fink-portal.org/download with the same
    choices.)
 2. The job yields a private topic `ftransfer_lsst_<date>_<id>` (lives ~7
