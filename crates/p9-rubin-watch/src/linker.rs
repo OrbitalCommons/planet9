@@ -43,6 +43,12 @@ pub const MIN_STATIC_DELTA_CHI2: f64 = 25.0;
 /// and brightness together demand an absurd body.
 pub const H_MIN: f64 = -9.0;
 pub const H_MAX: f64 = 5.0;
+/// Fitted own motion must be achievable by a bound body at the fitted
+/// distance: ≤ this margin × the circular mean motion (0.9856/d^1.5 °/day).
+/// Chance triplets absorb arbitrary sky motion into the drift term (first
+/// live 90-day run: 4 "candidates", all with drift 4–45× the physical
+/// ceiling); real bodies cannot, and the injection truth stays within 1×.
+pub const DRIFT_MARGIN: f64 = 2.0;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Detection {
@@ -321,7 +327,7 @@ fn fit_members(prep: &[Prepared], members: &[usize]) -> Option<(CandidateFit, f6
     let (inv_lo, inv_hi) = (1.0 / R_MAX_AU, 1.0 / R_MIN_AU);
     let coarse_step = (inv_hi - inv_lo) / 60.0;
     let mut best: Option<(f64, f64, [f64; 4])> = None;
-    let mut consider = |inv_d: f64, best: &mut Option<(f64, f64, [f64; 4])>| {
+    let consider = |inv_d: f64, best: &mut Option<(f64, f64, [f64; 4])>| {
         if let Some((chi2, params)) = eval(inv_d) {
             if best.as_ref().is_none_or(|(bc, _, _)| chi2 < *bc) {
                 *best = Some((chi2, inv_d, params));
@@ -340,7 +346,7 @@ fn fit_members(prep: &[Prepared], members: &[usize]) -> Option<(CandidateFit, f6
     let (chi2, inv_d, [l0, b0, dl, db]) = best?;
 
     // Static-source model: best fixed topocentric position.
-    let (mut sra, mut sdec, mut n) = (0.0, 0.0, 0.0);
+    let (mut sdec, mut n) = (0.0, 0.0);
     let obs: Vec<(f64, f64)> = members
         .iter()
         .map(|&i| {
@@ -356,7 +362,7 @@ fn fit_members(prep: &[Prepared], members: &[usize]) -> Option<(CandidateFit, f6
         sdec += dec;
         n += 1.0;
     }
-    sra = y.atan2(x).to_degrees().rem_euclid(360.0);
+    let sra = y.atan2(x).to_degrees().rem_euclid(360.0);
     sdec /= n;
     let mut chi2_static = 0.0;
     for (k, &i) in members.iter().enumerate() {
@@ -442,6 +448,13 @@ pub fn link(input: &LinkerInput, earth: &mut impl EarthProvider, ts: &Timescale)
             continue;
         }
         if fit.static_delta_chi2 < MIN_STATIC_DELTA_CHI2 {
+            continue;
+        }
+        let n_mean = 0.9856 / fit.d_au.powf(1.5);
+        let rate = ((fit.dlam_dt_deg_day * fit.beta0_deg.to_radians().cos()).powi(2)
+            + fit.dbeta_dt_deg_day.powi(2))
+        .sqrt();
+        if rate > DRIFT_MARGIN * n_mean {
             continue;
         }
         // Photometric plausibility: implied absolute magnitude at the fitted
@@ -708,6 +721,56 @@ mod tests {
         // Implied H at 600 AU and V 21.8 is planet-like.
         let h = c.fit.implied_h_mag.unwrap();
         assert!((-8.0..0.0).contains(&h), "H = {h:.1}");
+    }
+
+    /// A track whose own motion is 10× the bound-orbit ceiling at its
+    /// distance: parallax-consistent, but no real body at 600 AU can move
+    /// that fast — the DRIFT_MARGIN gate must reject it (first live run's
+    /// false-candidate mode).
+    #[test]
+    fn unphysical_drift_is_rejected() {
+        let mut earth = CircularEarth;
+        let ts = Timescale::default();
+        let d_true = 600.0;
+
+        let mut input = empty_input();
+        let visits = input.visits.clone();
+        let t0 = mjd_to_time(&ts, visits[0].mjd);
+        let e0 = earth.earth_position(&t0);
+        let (lon, lat) =
+            equatorial_to_ecliptic(visits[0].ra.to_radians(), visits[0].dec.to_radians());
+        let p0 = Prepared {
+            u: unit_from_ecliptic(lon, lat),
+            earth: [e0.x, e0.y, e0.z],
+            mjd: visits[0].mjd,
+            sigma: DEFAULT_SIGMA_ARCSEC,
+            night: night_of(visits[0].mjd),
+            idx: 0,
+        };
+        let (l0, b0) = helio_lonlat(&p0, d_true).unwrap();
+        let n_mean = (0.9856 / d_true.powf(1.5)).to_radians(); // rad/day
+        for (k, v) in visits.iter().enumerate() {
+            let t = mjd_to_time(&ts, v.mjd);
+            let e = earth.earth_position(&t);
+            let dt = v.mjd - visits[0].mjd;
+            let (ra, dec) = forward_radec(l0 + 10.0 * n_mean * dt, b0, d_true, &[e.x, e.y, e.z]);
+            input.detections.push(Detection {
+                alert_id: k as u64,
+                mjd: v.mjd,
+                ra,
+                dec,
+                band: "r".into(),
+                psf_mag: Some(21.8),
+                sigma_arcsec: Some(0.1),
+            });
+        }
+
+        let cands = link(&input, &mut earth, &ts);
+        assert!(
+            cands.is_empty(),
+            "10× mean-motion drift must not survive: {:?}",
+            cands[0].fit
+        );
     }
 
     #[test]

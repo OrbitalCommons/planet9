@@ -10,6 +10,16 @@
 > nights); live smoke on 4,509 selection-A detections (DE421) yields 0
 > candidates as single-night physics demands. Awaiting selection-B
 > multi-night data for the first real search.
+>
+> **Status 2026-07-23: first real search run** (selection-B, 45 nights /
+> 90-day window, 81 tiles). Second amendment learned live: the refit must
+> gate the fitted drift against the bound-orbit ceiling at the fitted
+> distance (≤ `DRIFT_MARGIN` (2) × 0.9856/d^1.5 °/day). The ungated run
+> produced 4 chance-triplet "candidates" whose drift terms were 4–45× any
+> bound body's motion at their fitted 570–840 AU — the 5-param model
+> absorbs arbitrary sky motion into drift unless drift is tied back to the
+> distance it claims. Gated: 0 candidates in 81 tiles; injections (which
+> draw truth within 1× the ceiling) are unaffected, SR-6 still ≥ 90%.
 
 The custom science layer: link unassociated DIA sources across nights into
 candidates moving like a body at d ∈ [300, 1000] AU. This is the regime

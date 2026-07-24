@@ -47,17 +47,22 @@ before becoming a candidate record.
 | LINK_TOL / DRIFT_MAX | 3″ / 1.5″ day⁻¹ | transform residual + noise / own motion ceiling with margin |
 | MIN_NIGHTS | 3 | over-determines the 5-param fit |
 | χ²/dof, static Δχ², H window | ≤ 3, ≥ 25, [−9, 5] | fit quality, star veto, photometric plausibility |
+| DRIFT_MARGIN | 2 × mean motion at fitted d | the 5-param model absorbs arbitrary sky motion into the drift term unless drift is tied to the distance it claims — the ungated first 90-day run yielded 4 chance triplets at 4–45× the bound-orbit ceiling |
 
-## Validation state (2026-07-19)
+## Validation state (2026-07-23)
 
 - Offline: synthetic 600 AU mover recovered with fitted d within 10%;
-  static source and 120 AU decoy rejected; 2-night object rejected;
-  **SR-6 calibration harness ≥ 90% for V ≤ 23 with ≥ 3 covered nights** on
-  a dense synthetic cadence (all as tests, all green).
-- Live: 4,509 real selection-A detections (single night, known asteroids)
-  through DE421 → 0 candidates, as physics demands. A real candidate
-  search needs selection-B data spanning ≥ 3 nights — the standing portal
-  ask.
+  static source, 120 AU decoy, 2-night object, and 10×-mean-motion drift
+  all rejected; **SR-6 calibration harness ≥ 90% for V ≤ 23 with ≥ 3
+  covered nights** on a dense synthetic cadence (all as tests, all green).
+- Live 2026-07-19: 4,509 selection-A detections (single night, known
+  asteroids) → 0 candidates, as physics demands.
+- Live 2026-07-23: first real search — selection-B, 45 nights
+  (2026-04-15..07-14), 813k unassociated high-reliability detections, 81
+  tiles (76 with ≥ 3 detection nights), DE421 → **0 candidates** after the
+  drift gate. A 3-night-only window (07-12..14) was shown to have NO tile
+  with 3 nights of coverage — single-window pulls that short are vacuous;
+  use the 90-day window.
 
 ## Candidate handling
 

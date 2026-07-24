@@ -48,6 +48,16 @@ and turns each discovery into a recomputed verdict.
 
 ## Status
 
+- 2026-07-23 — **First real 90-day slow-mover search run.** Diagnosed the
+  silent Data Transfer failures (jobs gate each night on the statistics
+  API; the LSST archive stalled at 07-14 — submitter now pre-checks),
+  showed 3-night windows are vacuous at tile scale (no tile reaches 3
+  nights), pulled selection-B over 45 nights / 90 days (813k rows),
+  coverage → r-linkable 865 deg², and ran all 81 tiles: **0 candidates**
+  after adding the physical drift gate (`DRIFT_MARGIN`; the ungated run's
+  4 "candidates" carried drift 4–45× the bound-orbit ceiling). Per-tile
+  SR-6 injections on real cadence recover with fitted d within ~5%. See
+  `reports/rubin-watch/2026-07-23-first-90d-search.md`.
 - 2026-07-19 (later still) — **Phase 4 (slow-mover linker) implemented.**
   Distance-hypothesis linking (300–1000 AU, ~580 hypotheses), drift-aware
   clustering, full-range 5-param refit, static/χ²/photometric gates,

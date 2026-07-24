@@ -30,6 +30,27 @@ import sys
 import urllib.request
 
 PORTAL = "https://lsst.fink-portal.org"
+STATS_API = "https://api.lsst.fink-portal.org/api/v1/statistics"
+
+
+def archived_nights(start: str, stop: str) -> list[str]:
+    """Nights in [start, stop] present in Fink's statistics table — the same
+    gate the server-side Spark job applies per night (check_path_exist); a
+    night absent here is silently dropped, and a range with NO archived night
+    makes the job sys.exit(1) before creating any topic (the batch-8/20
+    failure: the archive stalled at 2026-07-14 while alerts kept streaming)."""
+    with urllib.request.urlopen(
+        urllib.request.Request(
+            STATS_API,
+            data=json.dumps({"date": "", "columns": "f:alerts",
+                             "output-format": "json"}).encode(),
+            headers={"Content-Type": "application/json"},
+        ),
+        timeout=60,
+    ) as r:
+        nights = {row["f:night"] for row in json.load(r)}
+    lo, hi = start.replace("-", ""), stop.replace("-", "")
+    return sorted(n for n in nights if lo <= n <= hi)
 
 
 def fetch_output_spec() -> tuple[str, list]:
@@ -99,6 +120,14 @@ def main() -> int:
     ap.add_argument("--extra-cond", default=None,
                     help='semicolon-terminated SQL, e.g. "diaSource.reliability > 0.9;"')
     args = ap.parse_args()
+
+    nights = archived_nights(args.start, args.stop)
+    if not nights:
+        print(f"no archived nights in [{args.start}, {args.stop}] — the job "
+              "would exit(1) server-side without creating a topic; pick nights "
+              f"listed by {STATS_API}", file=sys.stderr)
+        return 2
+    print(f"archived nights in range: {' '.join(nights)}", file=sys.stderr)
 
     resp = submit(args.start, args.stop, args.block, args.tag, args.content,
                   args.extra_cond)
