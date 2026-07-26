@@ -164,8 +164,15 @@ pub fn secular_hamiltonian(
 ) -> f64 {
     let eta = (1.0 - e * e).sqrt();
 
-    // Term 1: Giant-planet J2 precession
-    let h_j2 = -1.5 * GM_SUN * params.j2_eff / (a * a * a * eta * eta * eta);
+    // Term 1: Giant-planet J2 precession — the doubly-averaged interior-ring
+    // quadrupole ⟨δΦ⟩ = −(GM J2_eff / 4 a³η³)(3cos²i − 1). Its ∂/∂G at i = 0
+    // is exactly `precession_rate_j2` (pinned in the tests); the previous
+    // −(3/2)/(a³η³) form (no inclination factor) overweighted the giants'
+    // term 3× and missed the (3cos²i − 1) sign flip above i ≈ 54.7° that the
+    // θ-portraits scan across.
+    let cos_i = i.cos();
+    let h_j2 = -0.25 * GM_SUN * params.j2_eff * (3.0 * cos_i * cos_i - 1.0)
+        / (a * a * a * eta * eta * eta);
 
     // Term 2: Rotating frame contribution (linear in the action √(GMa)·η)
     let h_frame = -params.precession_rate_9 * (GM_SUN * a).sqrt() * eta;
@@ -330,5 +337,48 @@ mod tests {
     fn test_high_inclination_action_positive() {
         let theta = high_inclination_action(0.5, 30.0 * DEG2RAD);
         assert!(theta > 0.0, "action should be positive at i=30deg");
+    }
+
+    #[test]
+    fn h_j2_derivative_matches_precession_rate() {
+        // dH_j2/dG at i = 0 must equal the closed-form precession_rate_j2.
+        // G = L·η with L = √(GM a): finite-difference in η at fixed a.
+        let (a, e) = (300.0, 0.5);
+        let j2_eff = compute_j2_effective();
+        let eta0 = (1.0f64 - e * e).sqrt();
+        let l = (GM_SUN * a).sqrt();
+        let h_of_eta = |eta: f64| -0.25 * GM_SUN * j2_eff * 2.0 / (a * a * a * eta * eta * eta);
+        let d_eta = 1e-6;
+        let dh_dg = (h_of_eta(eta0 + d_eta) - h_of_eta(eta0 - d_eta)) / (2.0 * d_eta) / l;
+        let rate = precession_rate_j2(a, e, j2_eff);
+        assert!(
+            (dh_dg.abs() - rate).abs() / rate < 1e-6,
+            "dH/dG = {dh_dg:.3e} vs precession_rate_j2 = {rate:.3e}"
+        );
+    }
+
+    #[test]
+    fn h_j2_inclination_factor_flips_sign_at_critical_angle() {
+        // (3cos²i − 1) crosses zero at i = 54.7°: the giants' averaged
+        // quadrupole reverses sign for high-inclination orbits — essential
+        // to the θ-portrait scan up to 180°.
+        let params = SecularHamiltonianParams::default_paper();
+        let h_low = secular_hamiltonian(300.0, 0.3, 0.0, 0.0, 0.0, &params);
+        let h_crit = secular_hamiltonian(300.0, 0.3, 54.7f64.to_radians(), 0.0, 0.0, &params);
+        let h_high = secular_hamiltonian(300.0, 0.3, 90.0f64.to_radians(), 0.0, 0.0, &params);
+        // Isolate the J2 term by differencing against a zero-J2 params clone.
+        let mut no_j2 = params.clone();
+        no_j2.j2_eff = 0.0;
+        let j2_low = h_low - secular_hamiltonian(300.0, 0.3, 0.0, 0.0, 0.0, &no_j2);
+        let j2_crit =
+            h_crit - secular_hamiltonian(300.0, 0.3, 54.7f64.to_radians(), 0.0, 0.0, &no_j2);
+        let j2_high =
+            h_high - secular_hamiltonian(300.0, 0.3, 90.0f64.to_radians(), 0.0, 0.0, &no_j2);
+        assert!(j2_low < 0.0, "prograde J2 term negative: {j2_low:.3e}");
+        assert!(
+            j2_crit.abs() < j2_low.abs() * 0.01,
+            "J2 term ~0 at 54.7°: {j2_crit:.3e}"
+        );
+        assert!(j2_high > 0.0, "polar J2 term positive: {j2_high:.3e}");
     }
 }
