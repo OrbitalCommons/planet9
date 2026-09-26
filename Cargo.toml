@@ -76,6 +76,8 @@ members = [
     "crates/p9-2026-stellar-companions",
     "crates/p9-2026-alpha-slope",
     "crates/p9-search-hull", "crates/p9-rubin-watch",
+    "crates/p9-2026-cluster-inclinations",
+    "crates/p9-2026-flyby-evolution",
 ]
 
 [workspace.dependencies]

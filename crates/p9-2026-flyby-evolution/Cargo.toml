@@ -1,0 +1,15 @@
+[package]
+name = "p9-2026-flyby-evolution"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Pfalzner, Wagner & Bischoff (2026) 'Trans-Neptunian Object dynamics even better explained by a stellar flyby after 4.5 Gyr of evolution' (arXiv:2609.03575)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+rand = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
