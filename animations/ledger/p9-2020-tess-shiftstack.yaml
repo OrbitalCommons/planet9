@@ -1,0 +1,12 @@
+crate: p9-2020-tess-shiftstack
+cite: Rice & Laughlin (2020)
+title: 'Exploring Trans-Neptunian Space with TESS: A Targeted Shift-Stacking Search for Planet
+  Nine and Distant TNOs in the Galactic Plane'
+arxiv: '2010.13791'
+date: 2020-10
+kind: search
+headline: Sweeping trial tracks across TESS
+claim: Targeted shift-stacking of TESS recovers known distant TNOs and sets P9's reach.
+adds: The method recovers real movers and bounds P9 detectability. Reach depends on the depth
+  gain from frame stacking.
+track: none

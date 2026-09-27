@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import yaml
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from p9_manim import content  # noqa: E402
+from p9_manim import content, ledger  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -43,18 +43,25 @@ def manifest_entries():
 
 
 def with_companions(entries):
-    """Interleave each scene's auto-generated discussion/learning beat after it."""
+    """Frame each scene with its auto-generated companions: a prereq scene is
+    followed by its key learning; a paper scene is preceded by its claim and
+    followed by what it added."""
     out = []
     for e in entries:
-        out.append(e)
         f = e["file"]
-        if "/preface/" in f and e["scene"] in content.PREFACE_LEARNING:
-            out.append({"file": "scenes/discussion.py", "scene": "Learn_" + e["scene"]})
-        elif "/papers/" in f:
+        if "/papers/" in f:
             crate = os.path.basename(os.path.dirname(f)).replace("_", "-")
-            if crate in content.PAPER_TEXT:
-                out.append({"file": "scenes/discussion.py",
-                            "scene": "Discuss_" + crate.replace("-", "_")})
+            tag = crate.replace("-", "_")
+            framed = ledger.has(crate)
+            if framed:
+                out.append({"file": "scenes/companions.py", "scene": "Claim_" + tag})
+            out.append(e)
+            if framed:
+                out.append({"file": "scenes/companions.py", "scene": "Adds_" + tag})
+            continue
+        out.append(e)
+        if "/preface/" in f and e["scene"] in content.PREFACE_LEARNING:
+            out.append({"file": "scenes/companions.py", "scene": "Learn_" + e["scene"]})
     return out
 
 
@@ -95,7 +102,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     qdir = QMAP[args.quality]
     entries = with_companions(manifest_entries())
-    print(f"{len(entries)} scenes (incl. discussion/learning), {args.jobs} parallel jobs", flush=True)
+    print(f"{len(entries)} scenes (incl. claim/adds/learning companions), {args.jobs} parallel jobs", flush=True)
 
     results = {}
     with ThreadPoolExecutor(max_workers=args.jobs) as ex:

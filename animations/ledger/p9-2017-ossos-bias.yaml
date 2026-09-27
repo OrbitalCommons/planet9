@@ -1,0 +1,11 @@
+crate: p9-2017-ossos-bias
+cite: Shankman et al. (2017)
+title: OSSOS VI. Striking Biases in the detection of large semimajor axis Trans-Neptunian Objects
+arxiv: '1706.05348'
+date: 2017-06
+kind: critique
+headline: Is the clustering even real?
+claim: The apparent ETNO clustering may be an artefact of where and when surveys looked.
+adds: Selection effects can manufacture clustering, so the null must be modelled carefully.
+  It is the central counter-argument the field still debates.
+track: none

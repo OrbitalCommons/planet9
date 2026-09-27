@@ -1,0 +1,11 @@
+crate: p9-2025-stacking
+cite: Geringer-Sameth, Golovich & Iwabuchi (2025)
+title: Multi-year stacking searches for solar system bodies
+arxiv: '2509.25428'
+date: 2025-09
+kind: forecast
+headline: Searching a haystack of orbits
+claim: Matched-filter digital tracking over many years of images can find a faint mover.
+adds: Stacking years of data is powerful if trials are counted honestly. Significance must be
+  corrected for the huge search space.
+track: none

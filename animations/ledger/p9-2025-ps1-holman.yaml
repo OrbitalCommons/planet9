@@ -1,0 +1,11 @@
+crate: p9-2025-ps1-holman
+cite: Holman et al. (2025)
+title: 'A Pan-STARRS Search for Distant Planets: Part 1'
+arxiv: '2506.02144'
+date: 2025-06
+kind: search
+headline: Stacking pixels along a guess
+claim: A pixel-level shift-and-stack of Pan-STARRS reaches deeper than catalogue linking.
+adds: Digital tracking digs below the single-image limit. The gain comes at the cost of an enormous
+  trial space.
+track: none

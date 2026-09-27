@@ -8,13 +8,28 @@ scene module per topic. See issue #185 for the full design.
 
 ```
 animations/
-  p9_manim/        shared style + reusable mobjects (theme, layout, orbits, dataio)
+  p9_manim/        shared style + reusable mobjects (theme, layout, orbits, sky,
+                   gauges, ledger, contribution, dataio)
+  ledger/<crate>.yaml         one dated entry per paper: citation, claim, what it
+                              added, and the gauge it moves
   scenes/
     preface/       Act 0 — orbital-mechanics + observational-astronomy primer (P00–P13)
     papers/<crate>/scene.py   one module per reproduced paper
-  manifest.yaml    ordered scene list (preface + papers)
+    companions.py  auto-generated Claim_/Adds_/Learn_ beats
+  tools/contact_sheet.py      render a scene and tile frames for review
+  manifest.yaml    ordered scene list (preface + papers by act and date + finale)
+  STYLE.md         how a paper is put on screen
   Makefile         render helpers
 ```
+
+## What each paper contributes
+
+Every paper plays as three beats: its **claim** (dated on a ribbon of the whole
+literature), its **scene**, and what it **added** — shown on one of four gauges
+that run through the film (significance of the clustering, best-fit orbit,
+fraction of predicted orbits ruled out, size of the sample), with the number
+reproduced in this workspace set against the published one. See
+[STYLE.md](STYLE.md).
 
 The film is **data-driven**: physics numbers come from the Rust crates (e.g.
 `figures/viability.json` via `cargo run -p p9-viability`), loaded by

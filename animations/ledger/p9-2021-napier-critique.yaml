@@ -1,0 +1,11 @@
+crate: p9-2021-napier-critique
+cite: Napier et al. (2021)
+title: No Evidence for Orbital Clustering in the Extreme Trans-Neptunian Objects
+arxiv: '2102.05601'
+date: 2021-02
+kind: critique
+headline: The skeptics' rebuttal
+claim: Accounting for survey selection, the ETNO data do not require Planet Nine.
+adds: The clustering may be consistent with a uniform parent population. Careful, survey-by-survey
+  debiasing is essential before claiming a signal.
+track: none

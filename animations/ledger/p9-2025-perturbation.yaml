@@ -1,0 +1,10 @@
+crate: p9-2025-perturbation
+cite: Belyakov & Batygin (2025)
+arxiv: TODO
+date: 2025-06
+kind: dynamics
+headline: Stability, by hand
+claim: Perturbation theory can describe scattered-disk stability under Planet Nine analytically.
+adds: The analytic boundary reproduces the N-body results. Theory predicts the stability edge
+  without giant simulations.
+track: none

@@ -1,0 +1,19 @@
+crate: p9-2024-panstarrs
+cite: Brown, Holman & Batygin (2024)
+title: A Pan-STARRS1 Search for Planet Nine
+arxiv: '2401.17977'
+date: 2024-01
+kind: search
+headline: Stacking the surveys
+claim: Adding a Pan-STARRS1 search to ZTF and DES sharply shrinks the viable Planet Nine space.
+adds: The combined searches rule out ~78.5% of the prior. About one-fifth of the parameter space
+  survives -- where Rubin will look.
+track: excluded
+excluded:
+  label: PS1
+  cumulative: '@cumulative'
+result:
+  label: ruled out by ZTF + DES + PS1
+  key: cumulative
+  fmt: pct1
+  published: 0.78

@@ -1,0 +1,12 @@
+crate: p9-2016-wise-coadd
+cite: Meisner et al. (2016)
+title: Searching for Planet Nine with Coadded WISE and NEOWISE-Reactivation Images
+arxiv: '1611.00015'
+date: 2016-10
+kind: search
+headline: Deeper by stacking
+claim: Stacking WISE exposures (and using the W2 band) deepens the thermal search for a cold
+  Planet Nine.
+adds: Stacking extends WISE's reach, but only modestly for the coldest, most distant cases.
+  All-sky thermal coverage still leaves distant solutions open.
+track: none

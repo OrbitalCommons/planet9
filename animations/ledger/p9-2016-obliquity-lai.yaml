@@ -1,0 +1,11 @@
+crate: p9-2016-obliquity-lai
+cite: Lai (2016)
+title: 'Solar Obliquity Induced by Planet Nine: Simple Calculation'
+arxiv: '1608.01421'
+date: 2016-08
+kind: indirect
+headline: The obliquity, from first principles
+claim: The solar obliquity from Planet Nine can be derived analytically, not just numerically.
+adds: The analytic theory reproduces ~6 degrees for plausible P9 inclinations. It confirms the
+  numerical obliquity result from first principles.
+track: none

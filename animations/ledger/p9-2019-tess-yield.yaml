@@ -1,0 +1,11 @@
+crate: p9-2019-tess-yield
+cite: Payne, Holman & Pál (2019)
+title: 'A TESS Search for Distant Solar System Objects: Yield Estimates'
+arxiv: '1911.03676'
+date: 2019-11
+kind: forecast
+headline: Stacking thousands of frames
+claim: Shift-stacking TESS full-frame images can recover a fraction of Planet Nine solutions.
+adds: An exoplanet survey can be re-aimed at the outer solar system. TESS recovers the brighter
+  / nearer part of P9 parameter space.
+track: none

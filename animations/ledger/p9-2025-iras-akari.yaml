@@ -1,0 +1,12 @@
+crate: p9-2025-iras-akari
+cite: Phan et al. (2025)
+title: A Search for Planet Nine with IRAS and AKARI Data
+arxiv: '2504.17288'
+date: 2025-04
+kind: search
+headline: A 23-year baseline in the far-IR
+claim: A cold Planet Nine would have moved measurably between the IRAS (1983) and AKARI (2006)
+  surveys.
+adds: The pair search yields a short candidate list (one good candidate). Thermal surveys give
+  an independent detection channel needing follow-up.
+track: none

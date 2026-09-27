@@ -1,0 +1,11 @@
+crate: p9-2021-act-mm
+cite: Naess et al. (2021)
+title: 'The Atacama Cosmology Telescope: A search for Planet 9'
+arxiv: '2104.10264'
+date: 2021-04
+kind: search
+headline: Hunting in the CMB maps
+claim: The ACT millimetre maps can be searched for a moving Planet Nine point source.
+adds: CMB telescopes double as outer-solar-system surveys. ACT's sensitivity reaches several
+  hundred AU for plausible masses.
+track: none

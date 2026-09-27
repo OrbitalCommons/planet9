@@ -1,75 +1,103 @@
-"""Brown & Batygin (2022) -- ZTF search.
+"""Brown & Batygin (2021) -- a search for Planet Nine in the ZTF archive.
 
-A direct shift-and-link search of ZTF public data finds nothing, ruling out
-56.4% of the predicted Planet Nine parameter space (the brightest / nearest
-solutions). Reproduced in p9-2021-ztf (`compute_exclusion`).
+The first search scored against the whole predicted population: every synthetic
+Planet Nine drawn from the orbit posterior is placed on the sky with its
+brightness, and the ZTF survey model decides whether three years of public
+images would have linked it. Nothing was found, so every member ZTF would have
+caught is ruled out -- the bright, nearby ones. Reproduced in p9-2021-ztf;
+the population, detection probabilities and efficiency curve shown here are the
+crate's own (anim.json -> papers -> p9-2021-ztf).
 """
 import numpy as np
 from manim import (
-    Create,
     DOWN,
+    UP,
+    Create,
     FadeIn,
     FadeOut,
-    LEFT,
-    Rectangle,
-    RIGHT,
+    LaggedStart,
     Scene,
-    Text,
-    UP,
     VGroup,
-    Write,
 )
 
 import p9_manim as P
-from p9_manim import dataio, layout, paper, timing
+from p9_manim import dataio, layout, paper, sky, timing, widgets
 
 CRATE = "p9-2021-ztf"
 
 
-def _exclusion(key, fallback):
-    """Real per-orbit exclusion fraction from dataio.section('exclusion')."""
-    try:
-        val = dataio.section("exclusion").get(key)
-        if val is not None:
-            return float(val)
-    except Exception:
-        pass
-    return fallback
-
-
 class Ztf2021(Scene):
     def construct(self):
-        tb = paper.title_block(CRATE, "First big bite out of the search")
-        self.play(Write(tb[0]), FadeIn(tb[1]))
-        self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
+        d = (dataio.section("papers") or {})[CRATE]
+        pop = d["population"]
+        frac = d["ztf"]
+        dec_limit = d["dec_limit_deg"]
 
-        # a declination strip: ZTF sees dec > -30 deg
-        sky = Rectangle(width=10, height=2.0, color=P.MUTED, stroke_width=1).shift(UP * 0.8)
-        sky.set_fill(P.MUTED, opacity=0.05)
-        foot = Rectangle(width=10 * (1 - (-30 + 90) / 180.0), height=2.0, color=P.PURPLE, stroke_width=2)
-        foot.set_fill(P.PURPLE, opacity=0.12).align_to(sky, RIGHT).align_to(sky, UP)
-        foot_lbl = layout.label("ZTF footprint (dec > −30°), r ≈ 20.5", font_size=16, color=P.PURPLE).next_to(sky, UP, buff=0.1)
-        self.play(Create(sky), Create(foot), FadeIn(foot_lbl))
-        timing.hold_to_read(self, foot_lbl, settle=0.6)
+        self.add(paper.scene_header(CRATE))
 
-        # exclusion bar filling to the real ZTF-ruled-out fraction
-        frac = _exclusion("ztf", 0.564)
-        track = Rectangle(width=8.0, height=0.8, color=P.MUTED, stroke_width=2).shift(DOWN * 1.4)
-        fill = Rectangle(width=8.0 * frac, height=0.8, color=P.RED, stroke_width=0).set_fill(P.RED, opacity=0.5)
-        fill.align_to(track, LEFT).align_to(track, UP)
-        self.play(Create(track))
-        self.play(Create(fill), run_time=1.5)
-        pct = Text(f"{frac*100:.1f}% of parameter space ruled out", font_size=22, color=P.RED).next_to(track, DOWN, buff=0.25)
-        self.play(Write(pct))
-        timing.hold_to_read(self, pct, settle=0.8)
+        # 1. where the predicted planet could be tonight
+        m = sky.SkyMap(width=12.0, dec_range=(-75, 75), centre=(0.0, 0.1, 0.0))
+        ecl, gal = m.reference_curves()
+        self.play(FadeIn(m), run_time=0.8)
+        self.play(Create(ecl), Create(gal), run_time=1.2)
+        key = m.legend([("ecliptic", P.ORANGE), ("galactic plane ±10°", P.PURPLE)])
+        self.play(FadeIn(key))
 
-        eq = layout.explain_equation(
-            self,
-            [r"f_{\rm excl}", "=", r"\langle P_{\rm det}\rangle"],
-            [(0, "fraction of P9 parameter space ruled out"),
-             (2, "average detection probability over the prior")],
-            color=P.RED, scale=0.78, where=UP * 2.55)
-        self.play(FadeOut(eq))
+        caught = [s for s in pop if s["p_detect"] >= 0.5]
+        missed = [s for s in pop if s["p_detect"] < 0.5]
+        dots_c = m.dots(caught, color=P.TEAL)
+        dots_m = m.dots(missed, color=P.TEAL)
+        cap = layout.caption(f"{len(pop)} synthetic Planet Nines drawn from the predicted orbits",
+                             font_size=22)
+        self.play(LaggedStart(*[FadeIn(x) for x in (dots_c, dots_m)], lag_ratio=0.2),
+                  FadeIn(cap), FadeOut(key), run_time=1.6)
+        timing.hold_to_read(self, cap, settle=0.8)
+
+        # 2. what ZTF can see
+        foot = m.dec_band(dec_limit, 90)
+        cap2 = layout.caption(
+            f"ZTF images everything north of {dec_limit:.0f}°, every few nights, to V ≈ 20.5",
+            font_size=22)
+        self.play(FadeIn(foot), FadeOut(cap), FadeIn(cap2), run_time=1.0)
+        timing.hold_to_read(self, cap2, settle=0.6)
+
+        # 3. the ones it would have linked are ruled out
+        cap3 = layout.caption(
+            "Nothing was found: every one ZTF would have linked is ruled out", font_size=22)
+        self.play(dots_c.animate.set_color(P.RED), dots_m.animate.set_opacity(0.55),
+                  FadeOut(cap2), FadeIn(cap3), run_time=1.6)
+        tally = paper.result_readout("predicted orbits ruled out", f"{100 * frac:.1f}%",
+                                     color=P.RED).scale(0.62)
+        tally.move_to(m.frame.get_corner(UP + P.layout.RIGHT) + np.array([-1.35, -0.6, 0]))
+        self.play(FadeIn(tally))
+        timing.hold_to_read(self, cap3, tally, settle=1.0)
+        self.play(FadeOut(VGroup(m, ecl, gal, foot, dots_c, dots_m, tally, cap3)))
+
+        # 4. why the survivors survive: they are faint
+        v = np.array([s["v_mag"] for s in pop])
+        pdet = np.array([s["p_detect"] for s in pop])
+        edges = np.arange(17.0, 26.01, 0.5)
+        hit, _ = np.histogram(v, bins=edges, weights=pdet)
+        tot, _ = np.histogram(v, bins=edges)
+        top = max(10, int(np.ceil(tot.max() / 20.0) * 20))
+        ax, labels = widgets.labeled_axes(
+            [17, 26, 1], [0, top, top // 4], x_label="apparent magnitude V  (fainter →)",
+            y_label="synthetic planets", y_rotate=True, numbers=True,
+            x_length=10.0, y_length=4.2, shift_down=-0.35)
+        bars_hit = widgets.histogram(ax, edges, hit, color=P.RED, opacity=0.75)
+        bars_left = widgets.histogram(ax, edges, tot - hit, color=P.TEAL, opacity=0.55, base=hit)
+        depth = widgets.marker_line(ax, 20.5, (0, top), "ZTF depth  V ≈ 20.5", side=UP)
+        self.play(Create(ax), FadeIn(labels))
+        self.play(FadeIn(bars_hit, lag_ratio=0.1), FadeIn(bars_left, lag_ratio=0.1), run_time=1.4)
+        self.play(Create(depth))
+        legend = VGroup(
+            layout.label("ruled out by ZTF", font_size=16, color=P.RED),
+            layout.label("still hidden: too faint or outside the footprint",
+                         font_size=16, color=P.TEAL),
+        ).arrange(DOWN, buff=0.12, aligned_edge=P.layout.LEFT)
+        legend.move_to(ax.c2p(23.9, 0.8 * top))
+        self.play(FadeIn(legend))
+        timing.hold_to_read(self, legend, settle=1.2)
 
         layout.show_takeaway(
-            self, "No planet found yet -- but more than half the hiding places are now gone.")
+            self, "ZTF removes the bright half of the prediction; what is left is fainter than V ≈ 21.")

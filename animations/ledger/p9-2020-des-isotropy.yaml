@@ -1,0 +1,11 @@
+crate: p9-2020-des-isotropy
+cite: Bernardinelli et al. (2020)
+title: Testing the isotropy of the Dark Energy Survey's extreme trans-Neptunian objects
+arxiv: '2003.08901'
+date: 2020-03
+kind: critique
+headline: Is the DES sample isotropic?
+claim: The DES distant-object sample tests whether the orbital angles are isotropic.
+adds: Within its coverage, DES sees no strong clustering signal. Footprint and selection strongly
+  shape any such test.
+track: none

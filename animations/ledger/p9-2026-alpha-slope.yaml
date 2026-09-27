@@ -1,0 +1,13 @@
+crate: p9-2026-alpha-slope
+cite: Eldadi & Loeb (2026)
+title: A Framework for Applying the Loeb-Turner $\alpha$-Slope Test to Archival Photometry of
+  Trans-Neptunian Objects
+arxiv: '2605.17098'
+date: 2026-05
+kind: forecast
+headline: Reflected or self-luminous?
+claim: How a body's brightness fades with distance (flux ~ d^alpha) reveals whether it shines
+  by reflection or its own light.
+adds: All 24 'self-luminous' detections trace to a single instrument -- calibration systematics,
+  not new physics. Archival photometry is too messy to run the test cleanly even on Pluto.
+track: none

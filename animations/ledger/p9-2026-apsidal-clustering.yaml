@@ -1,0 +1,11 @@
+crate: p9-2026-apsidal-clustering
+cite: Siraj, Chyba & Tremaine (2026)
+title: Measuring Apsidal Clustering
+arxiv: '2604.25990'
+date: 2026-04
+kind: critique
+headline: Measuring the clustering, carefully
+claim: A calibrated statistic can rigorously measure the ETNO apsidal clustering.
+adds: The estimator turns 'they look aligned' into a number with error bars. It puts the clustering
+  claim on firmer statistical ground.
+track: none

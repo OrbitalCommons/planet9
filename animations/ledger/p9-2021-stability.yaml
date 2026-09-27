@@ -1,0 +1,12 @@
+crate: p9-2021-stability
+cite: Batygin, Mardling & Nesvorny (2021)
+title: The Stability Boundary of the Distant Scattered Disk
+arxiv: '2111.00305'
+date: 2021-10
+kind: dynamics
+headline: The edge of survival
+claim: Distant scattered-disk orbits survive 4.5 Gyr only outside a perihelion/semimajor-axis
+  boundary.
+adds: The stability boundary bounds the dynamically allowed P9 family. Survival over the age
+  of the system is a hard constraint.
+track: none

@@ -1,0 +1,11 @@
+crate: p9-2021-orbit
+cite: Brown & Batygin (2021)
+title: The orbit of Planet Nine
+arxiv: '2108.09868'
+date: 2021-08
+kind: evidence
+headline: The posterior that anchors it all
+claim: A Markov-chain fit to all constraints yields a posterior on Planet Nine's orbit.
+adds: The posterior narrows where to point next. It seeds this project's reference population
+  for every survey-reach figure.
+track: none

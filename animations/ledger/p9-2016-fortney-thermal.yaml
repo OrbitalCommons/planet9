@@ -1,0 +1,12 @@
+crate: p9-2016-fortney-thermal
+cite: Fortney et al. (2016)
+title: 'The Hunt for Planet Nine: Atmosphere, Spectra, Evolution, and Detectability'
+arxiv: '1604.07424'
+date: 2016-04
+kind: physical
+headline: Still warm from birth
+claim: Retained formation heat makes Planet Nine warmer (and brighter in the IR) than solar
+  equilibrium alone.
+adds: P9 is warmer than a passive blackbody, easing thermal detection. Brightness predictions
+  must include internal heat, not just reflected sunlight.
+track: none

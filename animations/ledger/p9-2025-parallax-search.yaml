@@ -1,0 +1,11 @@
+crate: p9-2025-parallax-search
+cite: Socas-Navarro & Trujillo (2025)
+title: A targeted, parallax-based search for Planet Nine
+arxiv: '2504.05473'
+date: 2025-04
+kind: search
+headline: Letting Earth do the work
+claim: Earth's orbital baseline lets a targeted parallax search isolate a nearby body.
+adds: Two epochs plus Earth's baseline can pin a nearby planet's distance. Parallax is a direct,
+  geometric distance handle.
+track: none

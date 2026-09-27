@@ -1,0 +1,11 @@
+crate: p9-2019-clustering
+cite: Brown & Batygin (2019)
+title: Orbital clustering in the distant solar system
+arxiv: '1901.07115'
+date: 2019-01
+kind: evidence
+headline: Putting a number on it
+claim: The ETNO alignment can be quantified with circular statistics to a defensible significance.
+adds: Circular statistics convert 'looks aligned' into a number. The measured concentration
+  is significant for the current sample.
+track: none

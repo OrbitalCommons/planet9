@@ -1,0 +1,11 @@
+crate: p9-2016-cassini-ranging
+cite: Fienga et al. (2016)
+title: Constraints on the location of a possible 9th planet derived from the Cassini data
+arxiv: '1602.06116'
+date: 2016-02
+kind: indirect
+headline: Weighing a planet through Saturn
+claim: Planet Nine perturbs Saturn enough to shift the precisely measured Earth-Saturn range.
+adds: The data most favour P9 near a true anomaly of 108-129 degrees (least disturbance). Ranging
+  both caps the mass and points toward where on its orbit P9 currently sits.
+track: none

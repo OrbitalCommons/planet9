@@ -1,0 +1,11 @@
+crate: p9-2018-wise-search
+cite: Meisner et al. (2017)
+title: A 3pi Search for Planet Nine at 3.4 microns with WISE and NEOWISE
+arxiv: '1712.04950'
+date: 2017-12
+kind: search
+headline: All-sky, but only so deep
+claim: An all-sky WISE W1 search constrains relatively nearby or massive Planet Nine solutions.
+adds: WISE rules out close/massive P9 but leaves distant cold solutions open. Whole-sky coverage
+  trades against depth.
+track: none

@@ -43,6 +43,23 @@ def _short_cite(desc):
     return desc[:60]
 
 
+def scene_header(crate):
+    """A slim header for a paper scene: headline (left) and citation (right),
+    pinned to the top edge. The claim beat has already introduced the paper, so
+    the scene itself only needs a reminder of where we are."""
+    from manim import LEFT, RIGHT
+
+    from . import layout, ledger
+
+    e = ledger.entry(crate)
+    _, col = ledger.kind_label(e)
+    head = layout.label(e["headline"], font_size=22, color=T.FG, weight="BOLD")
+    head.to_edge(UP, buff=0.3).to_edge(LEFT, buff=0.5)
+    cite = layout.label(e["cite"], font_size=16, color=col)
+    cite.to_edge(UP, buff=0.34).to_edge(RIGHT, buff=0.5)
+    return VGroup(head, cite)
+
+
 def result_readout(label, value, color=T.GREEN):
     """A boxed 'reproduced: <value>' readout for the paper's headline number."""
     lab = Text(label, color=T.MUTED, font_size=20)

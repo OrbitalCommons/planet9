@@ -1,0 +1,11 @@
+crate: p9-2017-bias
+cite: Brown (2017)
+title: Observational bias and the clustering of distant eccentric Kuiper belt objects
+arxiv: '1706.04175'
+date: 2017-06
+kind: evidence
+headline: Debiasing the sky
+claim: Even after carefully modelling survey selection, a real clustering signal remains.
+adds: Bias alone cannot explain the observed clustering. The signal survives a careful selection-function
+  treatment.
+track: none

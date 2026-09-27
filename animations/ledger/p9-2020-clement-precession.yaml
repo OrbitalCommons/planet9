@@ -1,0 +1,13 @@
+crate: p9-2020-clement-precession
+cite: Clement & Kaib (2020)
+title: Orbital precession in the distant solar system; further constraining the Planet Nine
+  hypothesis with numerical simulations
+arxiv: '2005.05326'
+date: 2020-05
+kind: dynamics
+headline: Precessing in step
+claim: Planet Nine sets a coupled precession pattern that keeps distant orbits aligned as they
+  rotate.
+adds: Alignment is maintained dynamically, not frozen. The precession pattern is a signature
+  of the perturber.
+track: none

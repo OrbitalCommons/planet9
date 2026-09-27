@@ -1,0 +1,11 @@
+crate: p9-2017-dynamics
+cite: Batygin & Morbidelli (2017)
+title: Dynamical Evolution Induced by Planet Nine
+arxiv: '1710.01804'
+date: 2017-10
+kind: dynamics
+headline: A trap in phase space
+claim: Planet Nine creates a stable phase-space island in which distant orbits stay anti-aligned.
+adds: Apsidal confinement is the dynamical origin of the clustering. The island's extent depends
+  on P9's mass and eccentricity.
+track: none

@@ -1,0 +1,30 @@
+crate: p9-2016-evidence
+cite: Batygin & Brown (2016)
+title: Evidence for a Distant Giant Planet in the Solar System
+arxiv: '1601.05438'
+date: 2016-01
+kind: evidence
+headline: Six orbits that line up
+claim: The most distant Kuiper belt objects point the same way and share an orbital plane; a
+  distant massive planet is holding them there.
+adds: 'The hypothesis itself. Six orbits aligned in direction and in plane, at odds of about
+  1 in 14,000 by chance, plus a concrete perturber that would do it: ten Earth masses on an
+  eccentric orbit 700 AU out.'
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: pro
+  label: Batygin & Brown 2016
+orbit:
+  mass: '@mass'
+  a: '@a'
+  e: '@e'
+  i: '@i'
+sample:
+  n: '@n_sample'
+  what: stable objects with a > 250 AU
+result:
+  label: significance of the joint alignment
+  key: sigma
+  fmt: sigma
+  published: 3.8

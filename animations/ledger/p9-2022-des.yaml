@@ -1,0 +1,19 @@
+crate: p9-2022-des
+cite: Belyakov, Bernardinelli & Brown (2022)
+title: Limits on the Detection of Planet Nine in the Dark Energy Survey
+arxiv: '2203.07642'
+date: 2022-03
+kind: search
+headline: Deep, but narrow
+claim: The deep but narrow DES survey rules out faint, distant solutions in its footprint.
+adds: DES adds ~5% unique exclusion after ZTF. Depth buys little if the footprint is small --
+  coverage is king.
+track: excluded
+excluded:
+  label: DES
+  cumulative: '@cumulative'
+result:
+  label: newly ruled out by DES
+  key: des_unique
+  fmt: pct1
+  published: 0.05
