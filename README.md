@@ -19,3 +19,6 @@ Planet Nine is a hypothetical large planet in the far outer Solar System, propos
   Rubin/LSST alerts and MPC publishing: discovery ingestion, coverage
   tracking, and a slow-mover search. Start at
   [rubin_watch/README.md](rubin_watch/README.md).
+- `reports/space-telescope/` — where a small space telescope should image
+  for Planet Nine: three regions, visit lengths, cadence and calendar. Start
+  at [reports/space-telescope/STRATEGY.md](reports/space-telescope/STRATEGY.md).
