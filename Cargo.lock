@@ -2263,6 +2263,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "p9-space-strategy"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "p9-2021-ztf",
+ "p9-2022-des",
+ "p9-2023-lsst-strategy",
+ "p9-2024-panstarrs",
+ "p9-core",
+ "p9-survey",
+ "rand 0.8.5",
+ "rand_distr",
+ "rayon",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "p9-survey"
 version = "0.1.0"
 dependencies = [

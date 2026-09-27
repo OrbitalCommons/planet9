@@ -1,0 +1,22 @@
+[package]
+name = "p9-space-strategy"
+version = "0.1.0"
+edition = "2021"
+description = "Where a small space telescope should image to find Planet Nine or notable distant TNOs: residual-probability tiling, depth tiers, and an opposition calendar"
+
+[dependencies]
+nalgebra = "0.32"
+p9-2021-ztf = { version = "0.1.0", path = "../p9-2021-ztf" }
+p9-2022-des = { version = "0.1.0", path = "../p9-2022-des" }
+p9-2023-lsst-strategy = { version = "0.1.0", path = "../p9-2023-lsst-strategy" }
+p9-2024-panstarrs = { version = "0.1.0", path = "../p9-2024-panstarrs" }
+p9-core = { version = "0.1.0", path = "../p9-core" }
+p9-survey = { version = "0.1.0", path = "../p9-survey" }
+rand = "0.8"
+rand_distr = "0.4"
+rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+approx = "0.5"
