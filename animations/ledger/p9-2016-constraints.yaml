@@ -5,9 +5,20 @@ title: Observational constraints on the orbit and location of Planet Nine in the
 arxiv: '1603.05712'
 date: 2016-03
 kind: evidence
-headline: Turning a hunch into a number
-claim: If Planet Nine is real, its sculpting leaves quantitative, testable signatures in the
-  distant disk.
-adds: Two metrics -- apsidal confinement and a detached-object surplus -- turn the hypothesis
-  into numbers. Acceptable P9 parameters are those that reproduce both metrics simultaneously.
+headline: Narrowing down where to look
+claim: Simulations over a grid of masses and orbits show which planets reproduce the alignment,
+  and where on its orbit such a planet could still be hiding.
+adds: Only a narrow family works, a = 380-980 AU, perihelion 150-350 AU, 5-20 Earth masses,
+  tilted about 30 degrees. Existing surveys already cover the bright two-thirds of the orbit;
+  the planet is probably near aphelion at V = 22-25.
 track: none
+orbit:
+  mass: '@mass'
+  a: '@a'
+  e: '@e'
+  i: '@i'
+result:
+  label: orbit already within survey reach
+  key: orbit_fraction_wide
+  fmt: pct0
+  published: 0.667
