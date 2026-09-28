@@ -5,7 +5,14 @@ arxiv: '1710.01804'
 date: 2017-10
 kind: dynamics
 headline: A trap in phase space
-claim: Planet Nine creates a stable phase-space island in which distant orbits stay anti-aligned.
-adds: Apsidal confinement is the dynamical origin of the clustering. The island's extent depends
-  on P9's mass and eccentricity.
+claim: Orbit-averaged theory alone cannot explain why the anti-aligned cluster survives; the
+  missing ingredient should be mean-motion resonance with Planet Nine.
+adds: The secular island that anti-aligns orbits sits entirely on orbits crossing Planet Nine's,
+  so resonant phase protection is what keeps the cluster alive. It takes over beyond P/P₉ ≈ 0.1,
+  where aphelia reach Planet Nine's perihelion.
 track: none
+result:
+  label: secular-to-resonant transition, P/P₉
+  key: critical_ratio
+  fmt: '{:.2f}'
+  published: 0.1
