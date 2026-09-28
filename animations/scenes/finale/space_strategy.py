@@ -28,7 +28,13 @@ from p9_manim import dataio, layout, sky, timing, widgets
 ZONE_COLOURS = {
     "Anticentre crossing": P.ORANGE,
     "North of Rubin": P.TEAL,
-    "Galactic-centre crossing": P.RED,
+    "Galactic-centre crossing": P.PURPLE,
+}
+# where each zone's name card sits relative to its tiles
+CARD_SIDE = {
+    "Anticentre crossing": UP,
+    "North of Rubin": UP,
+    "Galactic-centre crossing": DOWN,
 }
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -47,6 +53,19 @@ def _header(text):
     title = layout.label(text, font_size=24, color=P.FG, weight="BOLD")
     title.to_edge(UP, buff=0.32)
     return VGroup(badge, title)
+
+
+def _tick_numbers(ax, xs=(), ys=(), x_fmt="{:,.0f}", y_fmt="{:.0f}", font_size=14):
+    """Legible tick numbers (the Axes defaults render too small at 480p)."""
+    x0, y0 = ax.x_range[0], ax.y_range[0]
+    g = VGroup()
+    for x in xs:
+        g.add(layout.label(x_fmt.format(x), font_size=font_size, color=P.FG)
+              .next_to(ax.c2p(x, y0), DOWN, buff=0.12))
+    for y in ys:
+        g.add(layout.label(y_fmt.format(y), font_size=font_size, color=P.FG)
+              .next_to(ax.c2p(x0, y), LEFT, buff=0.12))
+    return g
 
 
 def _tile(m, t, colour, opacity=0.0, stroke=1.4):
@@ -83,14 +102,16 @@ class WhereToImage(Scene):
         timing.hold_to_read(self, cap, settle=0.8)
 
         # 2. Rubin's reach
-        rubin = Line(m.p(180.0 + 179.9, 12.0), m.p(180.0 - 179.9, 12.0),
-                     color=P.BLUE, stroke_width=2.2)
-        rubin_lab = layout.label("Rubin takes everything south of +12°", font_size=14,
-                                 color=P.BLUE)
-        rubin_lab.next_to(m.p(308, 12), UP, buff=0.08)
+        rb = dataio.section("preface")["finale"]["rubin"]
+        rubin = Line(m.p(180.0 + 179.9, rb["dec_max"]), m.p(180.0 - 179.9, rb["dec_max"]),
+                     color=P.PURPLE, stroke_width=2.2)
+        rubin_lab = layout.label(f"Rubin's limit, {rb['dec_max']:+.0f}°", font_size=14,
+                                 color=P.PURPLE)
+        rubin_lab.next_to(m.p(345, rb["dec_max"]), UP, buff=0.08).align_to(m.frame, LEFT)
+        rubin_lab.shift(RIGHT * 0.15)
         cap2 = layout.caption(
-            "Rubin will reach V ≈ 25 here. Planet Nine is V ≈ 19–23: leave that sky to Rubin.",
-            font_size=20)
+            f"Rubin will search south of {rb['dec_max']:+.0f}° anyway: "
+            "spend the space telescope where it can't.", font_size=20)
         self.play(Create(rubin), FadeIn(rubin_lab), FadeOut(cap), FadeIn(cap2))
         timing.hold_to_read(self, cap2, settle=0.6)
         self.play(FadeOut(cap2))
@@ -107,17 +128,22 @@ class WhereToImage(Scene):
                 f"{zone['dec_range_deg'][1]:+.0f}°   {zone['area_deg2']:.0f} deg²",
                 font_size=13, color=P.FG)
             card = VGroup(name, where).arrange(DOWN, buff=0.07, aligned_edge=LEFT)
-            anchor = tiles.get_center()
-            card.next_to(tiles, UP if anchor[1] < 1.0 else DOWN, buff=0.18)
+            card.add_background_rectangle(color=P.BG, opacity=0.85, buff=0.06)
+            card.next_to(tiles, CARD_SIDE[zone["zone"]], buff=0.18)
             if card.get_right()[0] > 6.6:
                 card.shift(LEFT * (card.get_right()[0] - 6.6))
             if card.get_left()[0] < -6.6:
                 card.shift(RIGHT * (-6.6 - card.get_left()[0]))
-            line = layout.caption(
-                f"{zone['why'][0].upper()}{zone['why'][1:]}: "
-                f"{zone['median_integration_s']:.0f} s visits, "
-                f"{zone['hours']:.0f} h, best in {_season(zone['opposition_months'])}.",
-                font_size=19)
+            line = VGroup(
+                layout.label(f"{zone['why'][0].upper()}{zone['why'][1:]}.", font_size=19,
+                             color=P.FG),
+                layout.label(
+                    f"median planet V {zone['median_v']:.1f} at "
+                    f"{zone['median_dist_au']:.0f} AU  ·  "
+                    f"{zone['median_integration_s']:.0f} s visits  ·  {zone['hours']:.0f} h  ·  "
+                    f"best in {_season(zone['opposition_months'])}",
+                    font_size=16, color=colour),
+            ).arrange(DOWN, buff=0.1).to_edge(DOWN, buff=0.3)
             self.play(FadeIn(tiles, lag_ratio=0.01), FadeIn(card), FadeIn(line), run_time=1.3)
             timing.hold_to_read(self, line, settle=1.2)
             self.play(FadeOut(line), FadeOut(card), tiles.animate.set_fill(opacity=0.06),
@@ -138,12 +164,19 @@ class WhatItBuys(Scene):
         budgets = d["budgets_h"]
         top = max(max(p["captured"]) for p in d["policies"]) * 100
         ymax = int(np.ceil(top / 5.0) * 5)
-        ax, labels = widgets.labeled_axes(
-            [0, 8000, 1000], [0, ymax, 5], x_label="wall-clock hours",
-            y_label="chance of finding Planet Nine (%)", numbers=True, x_length=8.2, y_length=4.4, shift_down=-0.25)
-        VGroup(ax, labels).shift(LEFT * 2.2)
+        ax = widgets.axes([0, 8000, 1000], [0, ymax, 5], x_length=8.0, y_length=4.3,
+                          font_size=14, shift_down=0.0)
+        ax.move_to([-1.7, 0.2, 0])
+        nums = _tick_numbers(ax, range(2000, 8001, 2000), range(5, ymax + 1, 5))
+        labels = VGroup(
+            nums,
+            layout.label("space-telescope hours", font_size=16, color=P.FG)
+            .next_to(ax, DOWN, buff=0.45),
+            layout.label("chance of finding Planet Nine (%)", font_size=16, color=P.FG)
+            .rotate(np.pi / 2).next_to(ax, LEFT, buff=0.45),
+        )
         self.play(Create(ax), FadeIn(labels))
-        colours = [P.RED, P.ORANGE, P.TEAL]
+        colours = [P.PURPLE, P.ORANGE, P.TEAL]
         legend = VGroup()
         for pol, col in zip(d["policies"][:3], colours):
             xs = [0.0] + list(budgets)
@@ -151,12 +184,12 @@ class WhatItBuys(Scene):
             curve = widgets.curve(ax, xs, ys, color=col, stroke_width=3.2)
             row = VGroup(
                 layout.label(pol["policy"], font_size=15, color=col, weight="BOLD"),
-                layout.label(f"{100 * pol['unique']:.0f}% of the prediction left to find",
-                             font_size=12, color=P.MUTED),
+                layout.label(f"{100 * pol['unique']:.0f}% of the prediction in play",
+                             font_size=13, color=P.FG),
             ).arrange(DOWN, buff=0.05, aligned_edge=LEFT)
             legend.add(row)
             legend.arrange(DOWN, buff=0.28, aligned_edge=LEFT)
-            legend.move_to([4.6, 1.2, 0])
+            legend.move_to([4.75, 1.3, 0])
             self.play(Create(curve), FadeIn(row), run_time=1.1)
         ref = Dot(ax.c2p(d["reference_hours"], 100 * d["reference_captured"]),
                   radius=0.09, color=P.FG)
@@ -164,11 +197,17 @@ class WhatItBuys(Scene):
             f"reference campaign: {d['reference_hours']:.0f} h, "
             f"{100 * d['reference_captured']:.1f}%", font_size=14, color=P.FG)
         ref_lab.next_to(ref, DOWN + RIGHT, buff=0.1)
-        cap = layout.caption(
-            "Most of what is left is Rubin's. The campaign takes the part that is not.",
+        cap0 = layout.caption(
+            "Racing Rubin everywhere buys the most, but mostly by duplicating Rubin.",
             font_size=20)
-        self.play(FadeIn(ref), FadeIn(ref_lab), FadeIn(cap))
-        timing.hold_to_read(self, cap, legend, settle=1.2)
+        self.play(FadeIn(cap0))
+        timing.hold_to_read(self, cap0, legend, settle=0.8)
+        cap = layout.caption(
+            f"The reference plan concedes Rubin's sky and still covers "
+            f"{100 * d['reference_share_of_unique']:.0f}% of what only it can reach.",
+            font_size=20)
+        self.play(FadeIn(ref), FadeIn(ref_lab), FadeOut(cap0), FadeIn(cap))
+        timing.hold_to_read(self, cap, settle=1.2)
         self.play(*[FadeOut(x) for x in self.mobjects[1:]])
 
         # 2. the calendar
@@ -178,10 +217,13 @@ class WhatItBuys(Scene):
         for t in d["tiles"]:
             by_zone[t["zone"]][t["opposition_month"] - 1] += t["hours"]
         ymax = int(np.ceil(max(hours) / 100.0) * 100)
-        ax2, lab2 = widgets.labeled_axes(
-            [0, 12, 1], [0, ymax, 100], y_label="telescope hours",
-            x_length=9.6, y_length=3.9, shift_down=-0.1)
-        ax2.get_y_axis().add_numbers()
+        ax2 = widgets.axes([0, 12, 1], [0, ymax, 100], x_length=9.6, y_length=3.9,
+                           shift_down=-0.1)
+        lab2 = VGroup(
+            _tick_numbers(ax2, (), range(100, ymax + 1, 100)),
+            layout.label("telescope hours per month", font_size=16, color=P.FG)
+            .rotate(np.pi / 2).next_to(ax2, LEFT, buff=0.6),
+        )
         self.play(Create(ax2), FadeIn(lab2))
         bars, ticks = VGroup(), VGroup()
         for slot, month in enumerate(order):
@@ -200,12 +242,18 @@ class WhatItBuys(Scene):
                                                                    aligned_edge=LEFT)
         key.move_to(ax2.c2p(2.6, 0.78 * ymax))
         cap2 = layout.caption(
-            "Each region is imaged at opposition, when the planet moves fastest.",
+            "Each region is imaged at opposition, when the planet drifts fastest.",
             font_size=20)
         self.play(FadeIn(ticks), FadeIn(bars, lag_ratio=0.05), FadeIn(key), FadeIn(cap2),
                   run_time=1.6)
-        timing.hold_to_read(self, cap2, settle=1.4)
-        self.play(FadeOut(cap2))
+        timing.hold_to_read(self, cap2, settle=1.0)
+        cap3 = layout.caption(
+            f"{d['telescope']['n_epochs']} visits per field, hours apart: "
+            "a star stays put, Planet Nine creeps.", font_size=20)
+        self.play(FadeOut(cap2), FadeIn(cap3))
+        timing.hold_to_read(self, cap3, settle=1.0)
+        self.play(FadeOut(cap3))
 
         layout.show_takeaway(
-            self, "Four short visits per field, hours apart: the motion is the detection.")
+            self, f"{d['reference_hours']:.0f} hours in one year, all on sky "
+                  "no other survey will search.")
