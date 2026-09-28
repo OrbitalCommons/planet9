@@ -3,10 +3,15 @@ cite: Kaib et al. (2019)
 title: 'OSSOS XV: Probing the Distant Solar System with Observed Scattering TNOs'
 arxiv: '1905.09286'
 date: 2019-05
-kind: critique
-headline: Lifting orbits out of reach
-claim: Planet Nine lifts scattering-disk objects above the Neptune-scattering line into detached
-  orbits.
-adds: P9 ferries objects into the detached belt. The detached population's supply constrains
-  P9's strength.
+kind: dynamics
+headline: What the scattering objects allow
+claim: The 69 scattering objects and centaurs from OSSOS, with biases known, test whether
+  a distant planet or the Oort cloud supplies the steeply tilted ones.
+adds: A 5 Earth-mass planet yields the observed share of scatterers tilted past 45 degrees
+  but excites inclinations overall more than observed; the Oort cloud gives about 3 times
+  too few. The asymmetry it imprints on detached orbits is weaker than presumed.
 track: none
+result:
+  label: scattering orbits lifted clear of Neptune (secular model)
+  key: detached_fraction
+  fmt: pct0

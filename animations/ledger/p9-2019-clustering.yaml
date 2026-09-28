@@ -4,8 +4,22 @@ title: Orbital clustering in the distant solar system
 arxiv: '1901.07115'
 date: 2019-01
 kind: evidence
-headline: Putting a number on it
-claim: The ETNO alignment can be quantified with circular statistics to a defensible significance.
-adds: Circular statistics convert 'looks aligned' into a number. The measured concentration
-  is significant for the current sample.
-track: none
+headline: Fourteen orbits, both alignments at once
+claim: With the survey bias modelled in perihelion direction and in orbital pole together,
+  the fourteen known distant orbits are still too aligned to be chance.
+adds: The sample grows from 10 to 14 and the test covers perihelion direction and orbital
+  plane jointly. The chance of clustering this strong in both is 0.2%. OSSOS alone, with four
+  such objects, could not have detected it.
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: pro
+  label: B&B 2019
+sample:
+  n: '@n_sample'
+  what: distant objects behind the clustering claim
+result:
+  label: chance of the joint clustering
+  key: p_combined
+  fmt: pct2
+  published: 0.002
