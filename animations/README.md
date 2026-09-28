@@ -31,8 +31,8 @@ fraction of predicted orbits ruled out, size of the sample), with the number
 reproduced in this workspace set against the published one. See
 [STYLE.md](STYLE.md).
 
-The film is **data-driven**: physics numbers come from the Rust crates (e.g.
-`figures/viability.json` via `cargo run -p p9-viability`), loaded by
+The film is **data-driven**: physics numbers come from the Rust crates (collected
+into `animations/data/anim.json` by `cargo run --release -p p9-anim-data`), loaded by
 `p9_manim.dataio`. Python only draws what Rust computed.
 
 ## Setup
@@ -54,11 +54,14 @@ make preface Q=h          # 1080p60
 
 Rendered video/image artifacts land in `media/` (gitignored).
 
-## Preface curriculum (P00–P13)
+## Preface curriculum
 
-Newton's ellipse → Kepler's laws → orbital elements (incl. ϖ) → outer-system
-geography → the clustering clue → precession → resonance → how P9 sculpts the
-belt → reflected-light & thermal detection → surveys & selection bias →
-indirect dynamical fingerprints → the current mass×distance viable region
-(bridges to the survey act). Targets a physics-literate audience new to
-astro/orbital mechanics.
+Newton's ellipse and Kepler's laws (P00–P02) → orbital elements, incl. ϖ (P03)
+→ outer-system geography to scale (P04) → the clustering clue (P05) →
+precession (P06) → resonance (P07) → how Planet Nine sculpts the belt: the
+orbit-averaged ring, the anti-aligned island, 4 Gyr of herding (P08) →
+reflected light and thermal emission (P09–P10) → slow movers and selection bias
+(P11) → indirect fingerprints: Cassini ranging and the solar obliquity (P12) →
+the predicted orbits carved away survey by survey (P13). Targets a
+physics-literate audience new to astro/orbital mechanics. Their numbers come
+from `crates/p9-anim-data/src/preface/`, one module per scene file.

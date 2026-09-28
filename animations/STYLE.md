@@ -104,8 +104,8 @@ The frame is 14.2 wide by 8.0 high, origin at the centre.
 | zone | y range | use |
 |---|---|---|
 | header | above 3.4 | `paper.scene_header` only |
-| stage | −2.9 to 3.1 | all figures, legends, equations |
-| caption | below −3.1 | `layout.caption`, `layout.show_takeaway` |
+| stage | −2.7 to 3.1 | all figures, legends, equations |
+| caption | below −2.7 | `layout.caption`, `layout.show_takeaway` (the takeaway box reaches up to −2.7) |
 
 Nothing may overlap anything else. In particular keep legends off the data,
 equations off the labels, and axis labels clear of the caption zone (raise the
@@ -128,7 +128,7 @@ axes with a negative `shift_down` when a takeaway follows).
 | helper | use |
 |---|---|
 | `sky.SkyMap` | RA/Dec map, east left: `.reference_curves()`, `.dots()`, `.dec_band()`, `.box()`, `.cells()`, `.polyline()`, `.legend()`, `.p(ra, dec)` |
-| `widgets.labeled_axes(..., numbers=True, y_rotate=True)` | axes with tick numbers and labels |
+| `widgets.labeled_axes(..., numbers=True, y_rotate=True)` | axes with tick numbers and labels; axes cross at the lower-left corner of the ranges (`cross_at_zero=True` for a signed plot) |
 | `widgets.histogram`, `widgets.curve`, `widgets.marker_line` | data on axes |
 | `orbits.*` | Sun, Kepler ellipses, apse arrows, real ETNO swarms, precession |
 | `layout.label` | every small text (kerning-safe) |
@@ -142,13 +142,20 @@ Put any new helper a scene needs in that scene's own file.
 ## Checking a scene
 
 ```bash
+export CARGO_TARGET_DIR=$HOME/.cache/p9-target-<worktree>   # one per worktree, see below
 cargo run --release -p p9-anim-data            # from the repo root: refresh anim.json
 cd animations
-python tools/contact_sheet.py scenes/papers/<crate>/scene.py <SceneClass> --frames 12 --out /tmp/<crate>.png
-python tools/contact_sheet.py scenes/companions.py Claim_<crate> --frames 4 --out /tmp/<crate>_claim.png
-python tools/contact_sheet.py scenes/companions.py Adds_<crate>  --frames 6 --out /tmp/<crate>_adds.png
+python3 tools/contact_sheet.py scenes/papers/<crate>/scene.py <SceneClass> --frames 12 --out /tmp/<crate>.png
+python3 tools/contact_sheet.py scenes/companions.py Claim_<crate> --frames 4 --out /tmp/<crate>_claim.png
+python3 tools/contact_sheet.py scenes/companions.py Adds_<crate>  --frames 6 --out /tmp/<crate>_adds.png
 ```
 
 Open each PNG and look at every frame. A scene is done when nothing overlaps or
 runs off the frame, every number on screen traces to the export, the text is
 readable at 480p, and the three beats tell one story.
+
+Every worktree builds `p9-anim-data` to the same binary path, so worktrees that
+share a `CARGO_TARGET_DIR` overwrite each other's binary and `cargo run` can
+silently write another branch's exports. Give each worktree its own target
+directory, and confirm your paper's keys are in `anim.json` before rendering.
+Wrap renders in `timeout`: manim occasionally deadlocks.
