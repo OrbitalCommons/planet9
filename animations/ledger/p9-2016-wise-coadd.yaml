@@ -4,9 +4,15 @@ title: Searching for Planet Nine with Coadded WISE and NEOWISE-Reactivation Imag
 arxiv: '1611.00015'
 date: 2016-10
 kind: search
-headline: Deeper by stacking
-claim: Stacking WISE exposures (and using the W2 band) deepens the thermal search for a cold
-  Planet Nine.
-adds: Stacking extends WISE's reach, but only modestly for the coldest, most distant cases.
-  All-sky thermal coverage still leaves distant solutions open.
+headline: Stacking WISE to reach 800 AU
+claim: Coadding a day of WISE 3.4 µm exposures reveals far fainter moving objects than single
+  frames, deep enough to find a self-luminous Planet Nine out to 800 AU.
+adds: No Planet Nine brighter than W1 = 16.66 in the 1,840 deg² that Cassini ranging favoured.
+  If it glows at 3.4 µm like the brightest model atmospheres, that patch is empty out to
+  800 AU, nearly twice the 430 AU reach of single exposures.
 track: none
+result:
+  label: reach for the brightest model
+  key: reach_luminous_coadd_au
+  fmt: au
+  published: 800
