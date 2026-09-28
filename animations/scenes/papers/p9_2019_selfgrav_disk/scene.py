@@ -236,7 +236,7 @@ class SelfgravDisk2019(Scene):
         timing.hold_to_read(self, cap4, key[:5], settle=0.6)
         riders = VGroup(*[Dot(t.get_start(), radius=0.06, color=t.get_color()).set_z_index(5)
                           for t in trajs])
-        cap4b = layout.caption("Follow each orbit: small loops keep their apse near the disc's",
+        cap4b = layout.caption("Follow each orbit: small loops keep their apse near the disc's apse",
                                font_size=22)
         self.play(FadeIn(riders), FadeOut(cap4), FadeIn(cap4b), run_time=0.5)
         self.play(*[MoveAlongPath(r, t) for r, t in zip(riders, trajs)], run_time=4.0,
