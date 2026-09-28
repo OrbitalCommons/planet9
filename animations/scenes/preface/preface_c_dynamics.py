@@ -227,7 +227,7 @@ class P05Clustering(Scene):
         pct = 100.0 * hist / d["mc_trials"]
         edges = np.linspace(0, 1, len(hist) + 1)
         ax, ax_lbls = _plot_axes(
-            [0, 1, 0.2], [0, 8, 2], 5.2, 3.3, np.array([3.75, 0.45, 0]),
+            [0, 1, 0.2], [0, 8, 2], 5.2, 3.2, np.array([3.75, 0.62, 0]),
             [(v, f"{v:.1f}") for v in (0, 0.2, 0.4, 0.6, 0.8, 1.0)],
             [(v, f"{v}%") for v in (0, 2, 4, 6, 8)],
             "R̄ of ten random directions", "share of random skies")
@@ -250,9 +250,11 @@ class P05Clustering(Scene):
         frac = d["mc_frac_beat"]
         readout = layout.label(f"as aligned as the real ones: {100 * frac:.1f}%  (1 in {1 / frac:.0f})",
                                font_size=20, color=P.FG)
-        readout.move_to(np.array([3.4, -2.3, 0]))
+        readout.move_to(np.array([3.4, -1.95, 0]))
+        rayleigh = layout.label(f"(Rayleigh test: p = {d['rayleigh_p']:.3f})", font_size=16, color=P.MUTED)
+        rayleigh.next_to(readout, DOWN, buff=0.1)
         self.play(bars_hi.animate.set_fill(P.ORANGE, opacity=1).set_stroke(P.ORANGE),
-                  FadeIn(readout), run_time=0.8)
+                  FadeIn(readout), FadeIn(rayleigh), run_time=0.8)
         timing.hold_to_read(self, readout, settle=0.8)
         cap = _say(self, "Caveat: this assumes the surveys looked everywhere equally (Preface 11)")
         _unsay(self, cap, scale_note)

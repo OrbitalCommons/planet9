@@ -319,6 +319,15 @@ fn portrait(tab: &Table) -> Value {
     })
 }
 
+/// One swarm orbit: semi-major axis, sampled (Δϖ, e), and the sample at which
+/// its perihelion first reached Neptune (if it did).
+struct SwarmTrack {
+    a: f64,
+    w: Vec<f64>,
+    e: Vec<f64>,
+    removed: Option<usize>,
+}
+
 /// A scattered disk (q = 32–50 AU, random orientation) evolved for 4 Gyr at a
 /// handful of semi-major axes. Orbits whose perihelion reaches Neptune are
 /// marked removed at that sample.
@@ -328,7 +337,7 @@ fn swarm(p9: &P9Params, j2: f64) -> Value {
     let n_out = 201;
     let mut rng = rand::rngs::StdRng::seed_from_u64(2016);
     let mut particles = Vec::new();
-    let mut tracks: Vec<(f64, Vec<f64>, Vec<f64>, Option<usize>)> = Vec::new();
+    let mut tracks: Vec<SwarmTrack> = Vec::new();
     for &a in &a_vals {
         let tab = Table::build(a, p9, j2);
         for _ in 0..per_a {
@@ -337,7 +346,12 @@ fn swarm(p9: &P9Params, j2: f64) -> Value {
             let raw = integrate(&tab, w0, 1.0 - q0 / a, T_SWARM_MYR * DAYS_PER_MYR, false);
             let (_, ws, es) = resample(&raw, n_out);
             let removed = es.iter().position(|&e| a * (1.0 - e) < A_NEPTUNE);
-            tracks.push((a, ws, es, removed));
+            tracks.push(SwarmTrack {
+                a,
+                w: ws,
+                e: es,
+                removed,
+            });
         }
     }
     let t_myr: Vec<f64> = (0..n_out)
@@ -350,8 +364,8 @@ fn swarm(p9: &P9Params, j2: f64) -> Value {
     for k in 0..n_out {
         let ws: Vec<f64> = tracks
             .iter()
-            .filter(|t| alive_at(k, &t.3))
-            .map(|t| t.1[k])
+            .filter(|t| alive_at(k, &t.removed))
+            .map(|t| t.w[k])
             .collect();
         alive.push(ws.len());
         rbar.push(round(mean_resultant_length(&ws), 3));
@@ -366,19 +380,19 @@ fn swarm(p9: &P9Params, j2: f64) -> Value {
     let q_at = |k: usize| -> Vec<f64> {
         let mut q: Vec<f64> = tracks
             .iter()
-            .filter(|t| alive_at(k, &t.3))
-            .map(|t| t.0 * (1.0 - t.2[k]))
+            .filter(|t| alive_at(k, &t.removed))
+            .map(|t| t.a * (1.0 - t.e[k]))
             .collect();
         q.sort_by(|a, b| a.partial_cmp(b).unwrap());
         q
     };
     let median = |v: Vec<f64>| if v.is_empty() { 0.0 } else { v[v.len() / 2] };
-    for (a, ws, es, removed) in &tracks {
+    for t in &tracks {
         particles.push(json!({
-            "a": a,
-            "dvarpi_deg": deg(ws),
-            "e": r4(es),
-            "removed_at": removed,
+            "a": t.a,
+            "dvarpi_deg": deg(&t.w),
+            "e": r4(&t.e),
+            "removed_at": t.removed,
         }));
     }
     json!({
@@ -404,16 +418,12 @@ pub fn export() -> Value {
         .collect();
     json!({
         "p9": {
-            "label": "Batygin & Brown (2016)",
             "mass_earth": p9.mass_earth,
             "a": p9.a,
             "e": p9.e,
-            "q": p9.a * (1.0 - p9.e),
-            "Q": p9.a * (1.0 + p9.e),
             "period_yr": round(p9.a.powf(1.5), 0),
         },
         "neptune_a": A_NEPTUNE,
-        "j2_eff_au2": j2,
         "ring": p9_ring(&p9, 90),
         "energy": ring_energy(&p9),
         "portrait": portrait(&tab),

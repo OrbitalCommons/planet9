@@ -13,7 +13,7 @@ use rand::{Rng, SeedableRng};
 use serde_json::{Value, json};
 
 use p9_2017_dynamics::hamiltonian::{compute_j2_effective, precession_rate_j2_per_year};
-use p9_core::analysis::circular::{circular_mean, mean_resultant_length, rayleigh_p_value};
+use p9_core::analysis::circular::{mean_resultant_length, rayleigh_p_value};
 use p9_core::data::etno::BROWN_2017_SAMPLE;
 use p9_core::types::solve_kepler;
 
@@ -81,7 +81,6 @@ fn clustering() -> Value {
             "varpi_deg": round(o.longitude_of_perihelion().to_degrees(), 2),
         })).collect::<Vec<_>>(),
         "r_bar": round(r_obs, 3),
-        "mean_varpi_deg": round(circular_mean(&varpis).unwrap_or(0.0).to_degrees().rem_euclid(360.0), 1),
         "rayleigh_p": rayleigh_p_value(&varpis),
         "mc_trials": trials,
         "mc_hist": hist,
@@ -148,7 +147,6 @@ fn precession() -> Value {
 
     let sedna = &objs[0];
     json!({
-        "j2_eff_au2": j2,
         "giants": [["Jupiter", 5.203], ["Saturn", 9.537], ["Uranus", 19.189], ["Neptune", A_NEPTUNE]],
         "curve_q_au": q_ref,
         "curve_a_au": a_curve.iter().map(|a| round(*a, 2)).collect::<Vec<_>>(),
