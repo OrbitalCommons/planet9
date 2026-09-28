@@ -4,8 +4,16 @@ title: Evolution and Magnitudes of Candidate Planet Nine
 arxiv: '1602.07465'
 date: 2016-02
 kind: physical
-headline: Cooling for 4.5 billion years
-claim: Thermal-evolution models set Planet Nine's present-day brightness from its age and mass.
-adds: Today P9 is faint but warm enough to glow in the far-IR. Evolution models tie detectability
-  to formation history.
+headline: How bright after 4.6 billion years?
+claim: Cooling models of a small ice giant give Planet Nine's present radius, temperature
+  and brightness in every band from the optical to the far-infrared.
+adds: A 10 Earth-mass planet at 700 AU is still 47 K, far above the 10 K sunlight alone would
+  give. It is V = 21.7 in reflected light but magnitude 10-11 near 20 µm from its own heat.
+  A 50 Earth-mass planet would already have been seen.
 track: none
+result:
+  label: V of 10 M⊕ at 700 AU
+  key: v_10me_700au
+  fmt: mag
+  published: 21.7
+  tolerance: 0.02

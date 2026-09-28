@@ -4,8 +4,15 @@ title: A 3pi Search for Planet Nine at 3.4 microns with WISE and NEOWISE
 arxiv: '1712.04950'
 date: 2017-12
 kind: search
-headline: All-sky, but only so deep
-claim: An all-sky WISE W1 search constrains relatively nearby or massive Planet Nine solutions.
-adds: WISE rules out close/massive P9 but leaves distant cold solutions open. Whole-sky coverage
-  trades against depth.
+headline: Three quarters of the sky at 3.4 µm
+claim: Four years of WISE and NEOWISE coadds extend the moving-object search from one patch
+  to every part of the sky away from the galactic plane.
+adds: Nothing moves like Planet Nine brighter than W1 = 16.7 over 76% of the sky. That excludes
+  a self-luminous planet out to 800-900 AU, but says little if it shines at 3.4 µm by reflected
+  sunlight alone, which fades below the limit beyond about 200 AU.
 track: none
+result:
+  label: fraction of the sky searched
+  key: sky_fraction
+  fmt: pct0
+  published: 0.76

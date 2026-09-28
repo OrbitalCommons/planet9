@@ -5,8 +5,15 @@ title: 'Exploring Trans-Neptunian Space with TESS: A Targeted Shift-Stacking Sea
 arxiv: '2010.13791'
 date: 2020-10
 kind: search
-headline: Sweeping trial tracks across TESS
-claim: Targeted shift-stacking of TESS recovers known distant TNOs and sets P9's reach.
-adds: The method recovers real movers and bounds P9 detectability. Reach depends on the depth
-  gain from frame stacking.
+headline: Shift-stacking through the galactic plane
+claim: A blind shift-stacking pipeline on TESS images can find slow, faint bodies where the
+  crowded galactic plane defeats ordinary surveys.
+adds: The pipeline recovered Sedna and two fainter objects, then searched Sectors 18-19 at
+  70-800 AU. Blind, it is reliable only for V < 21 within 150 AU; Planet Nine at 300-460 AU would
+  be bright enough but crawls 2-3 times slower, so the galactic plane stays open.
 track: none
+result:
+  label: trial tracks per sector
+  key: trial_tracks
+  fmt: '{:.0f}'
+  published: 748
