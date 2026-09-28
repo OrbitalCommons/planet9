@@ -170,14 +170,11 @@ class P09ReflectedLight(Scene):
 
         nep, plu = d["neptune"], d["pluto"]
         anchors = VGroup()
-        for body, name in ((nep, "Neptune"), (plu, "Pluto today")):
+        for body, name in ((nep, "Neptune"), (plu, "Pluto")):
             pt = fr.p(np.log10(body["r_au"]), -body["v"])
             dot = Dot(pt, radius=0.07, color=P.GREEN)
             lab = layout.label(f"{name}  V {body['v']:.1f}", font_size=18, color=P.GREEN)
-            if name == "Neptune":
-                lab.next_to(dot, RIGHT, buff=0.12)
-            else:
-                lab.next_to(dot, DOWN, buff=0.1).align_to(dot, LEFT)
+            lab.next_to(dot, RIGHT, buff=0.12)
             anchors.add(VGroup(dot, lab))
         self.play(FadeIn(anchors, lag_ratio=0.4), run_time=1.0)
 
