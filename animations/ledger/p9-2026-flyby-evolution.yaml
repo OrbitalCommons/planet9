@@ -5,7 +5,15 @@ title: Trans-Neptunian Object dynamics even better explained by a stellar flyby 
 arxiv: '2609.03575'
 date: 2026-09
 kind: alternative
-headline: p9-2026-flyby-evolution
-claim: TODO
-adds: TODO
+headline: The flyby, 4.5 billion years on
+claim: A 0.8 M☉ star passing at 110 AU, inclined 70°, reproduces the TNO families. Does the match
+  survive 4.5 Gyr of the giant planets?
+adds: It improves. Neptune clears 63% of the 30-40 AU tracers (13% in the first 10 Myr) and 80% of
+  the cold belt, while detached, Sedna-like and retrograde orbits stay put. No present-day planet
+  is needed.
 track: none
+result:
+  label: 30-40 AU tracers displaced (5 Myr here, 10 Myr in paper)
+  key: near_neptune_loss
+  fmt: pct0
+  published: 0.13
