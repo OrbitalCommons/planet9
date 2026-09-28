@@ -160,12 +160,17 @@ def clustering(entry):
         here = d.get_center()
         lab = layout.label(f"{pay.get('label', '')}  {float(pay['sigma']):.1f}σ",
                            font_size=14, color=col, weight="BOLD")
-        lab.next_to(d, RIGHT, buff=0.1)
-        if lab.get_right()[0] > frame.get_right()[0] - 0.1:
-            lab.next_to(d, LEFT, buff=0.1)
+        # Label on the side away from the previous claim, so the arrow between
+        # the two never runs under it; above the dot if that side leaves the panel.
+        prev = dots[-1][0].get_center() if recent else None
+        lab.next_to(d, LEFT if prev is not None and prev[0] > here[0] else RIGHT, buff=0.1)
+        if (lab.get_right()[0] > frame.get_right()[0] - 0.1
+                or lab.get_left()[0] < frame.get_left()[0] + 0.1):
+            lab.next_to(d, UP, buff=0.1)
+            lab.shift(RIGHT * max(0.0, frame.get_left()[0] + 0.1 - lab.get_left()[0]))
+            lab.shift(LEFT * max(0.0, lab.get_right()[0] - frame.get_right()[0] + 0.1))
         anims = [GrowFromCenter(d), FadeIn(lab)]
         if recent:
-            prev = dots[-1][0].get_center()
             if np.linalg.norm(here - prev) > 0.35:
                 anims.append(Create(Arrow(prev, here, buff=0.12, color=col,
                                           stroke_width=2.5, max_tip_length_to_length_ratio=0.12)))
