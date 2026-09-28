@@ -292,7 +292,7 @@ class P06Precession(Scene):
         cap = _say(self, "Jupiter, Saturn, Uranus and Neptune circle the Sun again and again...",
                    hold=False)
         self.play(Create(rings), FadeIn(dots), FadeIn(names))
-        self.play(tt.animate.set_value(2.0), run_time=3.0, rate_func=rate_functions.linear)
+        self.play(tt.animate.set_value(1.6), run_time=2.4, rate_func=rate_functions.linear)
         _unsay(self, cap)
         blur = VGroup(*[Circle(radius=kz * ag, color=P.ORANGE, stroke_width=9).move_to(C)
                         .set_stroke(opacity=0.45) for _, ag in giants])
@@ -324,15 +324,15 @@ class P06Precession(Scene):
             C, C + k * np.sqrt(a_s * (1 - e_s)) * 2.4 * _u(v0 + creep * lap.get_value()),
             buff=0, color=P.ORANGE, stroke_width=4, tip_length=0.16))
         trail = VGroup()
-        for j in range(5):
+        for j in range(4):
             trail.add(_mapped_orbit(a_s, e_s, v0 + creep * j, k, C, P.GREEN, 1.2, 0.25))
         cap = _say(self, "Their extra pull near perihelion makes a distant orbit's direction creep "
                          "forward", hold=False)
         self.play(Create(live), FadeIn(body), GrowArrow(apse))
-        for j in range(4):
+        for j in range(3):
             self.add(trail[j])
-            self.play(lap.animate.set_value(j + 1), run_time=1.4, rate_func=rate_functions.linear)
-        self.add(trail[4])
+            self.play(lap.animate.set_value(j + 1), run_time=1.2, rate_func=rate_functions.linear)
+        self.add(trail[3])
         timing.hold_to_read(self, cap, settle=0.2)
         _unsay(self, cap)
         sped = layout.label("(sped up enormously)", font_size=16, color=P.MUTED)
@@ -360,7 +360,6 @@ class P06Precession(Scene):
             [r"\dot\varpi", r"\approx", r"\tfrac{3}{2}\,n", r"\,\dfrac{J_2}{a^2}",
              r"\,\dfrac{1}{(1-e^2)^2}"],
             [
-                (2, "n, the orbit's mean motion: distant orbits are slow"),
                 (3, "J₂ = ½ Σ m a² of the giants' rings, weakened by distance a²"),
                 (4, "eccentric orbits dip close to the rings, so they turn faster"),
             ],
@@ -421,12 +420,11 @@ class P06Precession(Scene):
             ax2, np.append(tt_[tt_ <= clock.get_value()], clock.get_value()),
             np.append(rb_[tt_ <= clock.get_value()], np.interp(clock.get_value(), tt_, rb_)),
             color=P.GREEN, stroke_width=3))
-        cap = _say(self, "Thought experiment: start the ten real orbits perfectly aligned...", hold=False)
+        cap = _say(self, "Thought experiment: start the ten real orbits aligned; each precesses at its "
+                         "own rate", hold=False)
         self.play(FadeIn(sun2), Create(ring), FadeIn(arrows), FadeIn(t_lbl), Create(ax2), FadeIn(lbl2))
         self.add(trace)
-        timing.hold_to_read(self, cap, settle=0.2)
-        _unsay(self, cap)
-        cap = _say(self, "...and let each one precess at its own real rate", hold=False)
+        self.wait(1.0)
         self.play(clock.animate.set_value(d["t_half_myr"]), run_time=3.5, rate_func=rate_functions.linear)
         half = DashedLine(ax2.c2p(d["t_half_myr"], 0), ax2.c2p(d["t_half_myr"], 1), color=P.ORANGE,
                           stroke_width=2)
@@ -439,13 +437,11 @@ class P06Precession(Scene):
                          color=P.GREEN, stroke_width=1.5).set_stroke(opacity=0.7)
         obs_lbl = layout.label(f"today's sky: {d['r_bar_observed']:.2f}", font_size=16, color=P.GREEN)
         obs_lbl.next_to(ax2.c2p(4500, d["r_bar_observed"]), UP, buff=0.08, aligned_edge=RIGHT)
-        cap = _say(self, "Run on to today: the directions just keep churning", hold=False)
+        cap = _say(self, f"Run on to today: chance brings back today's alignment only "
+                         f"{100 * d['frac_time_above_observed']:.1f}% of the time", hold=False)
         self.play(Create(obs), FadeIn(obs_lbl), run_time=0.6)
-        self.play(clock.animate.set_value(d["age_myr"]), run_time=5.5, rate_func=rate_functions.linear)
-        timing.hold_to_read(self, cap, settle=0.2)
-        _unsay(self, cap)
-        cap = _say(self, f"Chance brings back today's alignment only "
-                         f"{100 * d['frac_time_above_observed']:.1f}% of the time")
+        self.play(clock.animate.set_value(d["age_myr"]), run_time=4.5, rate_func=rate_functions.linear)
+        timing.hold_to_read(self, cap, settle=0.3)
         _unsay(self, cap)
         layout.show_takeaway(
             self, "Left alone, precession scrambles any alignment: something must hold it in place.")
