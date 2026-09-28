@@ -200,10 +200,16 @@ def orbit(entry):
     pay = entry["orbit"]
     prev = prior[-1]["orbit"] if prior else None
     frame = _frame("best-fit Planet Nine orbit (top view)")
-    biggest = max([float(pay["a"]) * (1 + float(pay.get("e", 0.3)))]
-                  + ([float(prev["a"]) * (1 + float(prev.get("e", 0.3)))] if prev else []))
-    scale = (W * 0.62) / (2.0 * biggest)
-    centre = np.array([0.95, 0.15, 0.0])
+    # Perihelion points left (varpi = pi): each orbit spans x in [-q, Q] and
+    # y in [-b, b] around the Sun. Fit the union between the title and the
+    # before/after text lines, and centre it there.
+    shapes = [(float(o["a"]), float(o.get("e", 0.3))) for o in ([pay, prev] if prev else [pay])]
+    left = max(a * (1 - e) for a, e in shapes)
+    right = max(a * (1 + e) for a, e in shapes)
+    half_h = max(a * np.sqrt(1 - e * e) for a, e in shapes)
+    box_w, box_h, box_y = W - 1.0, H - 1.55, 0.1
+    scale = min(box_w / (left + right), box_h / (2.0 * half_h))
+    centre = np.array([-(right - left) * scale / 2, box_y, 0.0])
     sun = Dot(np.zeros(3), radius=0.05, color=T.SUN)
     nep = orbits.ellipse_orbit(30.0 * scale, 0.0, color=T.MUTED, stroke_width=1.2)
     art = VGroup(sun, nep)
