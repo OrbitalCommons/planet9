@@ -4,8 +4,22 @@ title: Observational bias and the clustering of distant eccentric Kuiper belt ob
 arxiv: '1706.04175'
 date: 2017-06
 kind: evidence
-headline: Debiasing the sky
-claim: Even after carefully modelling survey selection, a real clustering signal remains.
-adds: Bias alone cannot explain the observed clustering. The signal survives a careful selection-function
-  treatment.
-track: none
+headline: Can the surveys fake the alignment?
+claim: Distant objects are found only near perihelion and only where surveys looked; model
+  that bias for each object and ask whether the alignment survives.
+adds: The first bias-corrected test. Ten objects beyond 230 AU have only a 1.2% chance of
+  sharing their perihelion direction under the modelled survey bias, and 0.025% once the
+  clustering of their orbital planes is included. Bias is present but does not explain it.
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: pro
+  label: Brown 2017
+sample:
+  n: '@n_sample'
+  what: distant objects behind the clustering claim
+result:
+  label: chance of the perihelion alignment under bias
+  key: p_varpi
+  fmt: pct1
+  published: 0.012
