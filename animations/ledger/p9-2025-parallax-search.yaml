@@ -4,8 +4,14 @@ title: A targeted, parallax-based search for Planet Nine
 arxiv: '2504.05473'
 date: 2025-04
 kind: search
-headline: Letting Earth do the work
-claim: Earth's orbital baseline lets a targeted parallax search isolate a nearby body.
-adds: Two epochs plus Earth's baseline can pin a nearby planet's distance. Parallax is a direct,
-  geometric distance handle.
+headline: Two nights, 98 square degrees
+claim: Earth's motion shifts a planet at 500-800 AU by 4-7 arcseconds per night, 20-30 times
+  its own orbital drift, so images from two consecutive nights can reveal it.
+adds: No candidate in a 98 square-degree field to r = 21.3 at 85% confidence, a region earlier
+  searches constrained poorly. But the field is 0.2% of the sky, and the updated prediction of
+  V = 22 is fainter than the depth reached.
 track: none
+result:
+  label: shift per night at 500 AU
+  key: shift_500
+  fmt: '{:.1f} arcsec'

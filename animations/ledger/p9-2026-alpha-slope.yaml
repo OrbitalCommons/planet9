@@ -6,8 +6,14 @@ arxiv: '2605.17098'
 date: 2026-05
 kind: forecast
 headline: Reflected or self-luminous?
-claim: How a body's brightness fades with distance (flux ~ d^alpha) reveals whether it shines
-  by reflection or its own light.
-adds: All 24 'self-luminous' detections trace to a single instrument -- calibration systematics,
-  not new physics. Archival photometry is too messy to run the test cleanly even on Pluto.
+claim: Reflected sunlight fades as distance to the power -4 and self-luminous emission as -2,
+  so archival photometry of trans-Neptunian objects should tell the two apart.
+adds: It cannot yet. None of Pluto's 22 bins recovers -4. Of 8,606 bins 186 pass every cut,
+  53 reflected, 109 neither, and 24 self-luminous that all come from Pan-STARRS, a calibration
+  artefact. Rubin's uniform photometry can settle it.
 track: none
+result:
+  label: slope recovered for reflected light
+  key: alpha_reflected
+  fmt: '{:.2f}'
+  published: -4.0
