@@ -137,7 +137,8 @@ axes with a negative `shift_down` when a takeaway follows).
 | `paper.result_readout` | a boxed number |
 | `timing.hold_to_read` | reading-paced holds |
 
-Put any new helper a scene needs in that scene's own file.
+A helper only one scene uses stays in that scene's file; once a second scene
+needs it, move it into `p9_manim/` instead of copying it.
 
 ## Checking a scene
 
