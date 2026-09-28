@@ -3,6 +3,7 @@
 //! hand-tuned constants. Writes `animations/data/anim.json`.
 
 mod papers;
+mod preface;
 
 use std::collections::BTreeMap;
 
@@ -300,6 +301,7 @@ fn main() {
     out.insert("solar_system", solar_system());
     out.insert("sky", sky());
     out.insert("papers", serde_json::to_value(papers::all()).unwrap());
+    out.insert("preface", serde_json::to_value(preface::all()).unwrap());
 
     let json = serde_json::to_string_pretty(&out).unwrap();
     std::fs::create_dir_all("animations/data").unwrap();
