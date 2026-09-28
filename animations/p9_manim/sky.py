@@ -186,11 +186,13 @@ class SkyMap(VGroup):
     def cells(self, ra_centres, dec_centres, values, color=T.ORANGE, vmax=None, max_opacity=0.9,
               floor=0.02):
         """A gridded map (row-major, dec rows x ra columns) as translucent cells
-        whose opacity scales with value / vmax."""
+        whose opacity scales with value / vmax. A cell straddling the map's RA
+        seam is split there, so none stretches across the whole map."""
         vals = np.asarray(values, dtype=float).reshape(len(dec_centres), len(ra_centres))
         vmax = float(vmax if vmax is not None else np.nanmax(vals))
         dra = abs(ra_centres[1] - ra_centres[0])
         ddec = abs(dec_centres[1] - dec_centres[0])
+        seam = (self.ra_centre + 180.0) % 360.0
         g = VGroup()
         for iy, dec in enumerate(dec_centres):
             if not self.inside(dec):
@@ -199,8 +201,11 @@ class SkyMap(VGroup):
                 f = vals[iy, ix] / vmax if vmax > 0 else 0.0
                 if not np.isfinite(f) or f < floor:
                     continue
-                a = self.p(ra - dra / 2, dec - ddec / 2)
-                b = self.p(ra + dra / 2, dec + ddec / 2)
-                cell = Polygon(a, [b[0], a[1], 0], b, [a[0], b[1], 0], stroke_width=0)
-                g.add(cell.set_fill(color, opacity=max_opacity * min(f, 1.0)))
+                lo, hi = max(ra - dra / 2, 0.0), min(ra + dra / 2, 359.999)
+                spans = [(lo, seam - 1e-3), (seam + 1e-3, hi)] if lo < seam < hi else [(lo, hi)]
+                for ra_lo, ra_hi in spans:
+                    a = self.p(ra_lo, dec - ddec / 2)
+                    b = self.p(ra_hi, dec + ddec / 2)
+                    cell = Polygon(a, [b[0], a[1], 0], b, [a[0], b[1], 0], stroke_width=0)
+                    g.add(cell.set_fill(color, opacity=max_opacity * min(f, 1.0)))
         return g

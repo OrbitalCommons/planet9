@@ -145,7 +145,8 @@ class WiseSearch2018(Scene):
         m = sky.SkyMap(width=10.0, dec_range=(-80, 80), centre=(-1.3, 0.55, 0.0))
         ecl, gal = m.reference_curves()
         whole = m.dec_band(-90, 90, opacity=0.16)
-        plane = _mask_cells(m, mask, P.RED, 0.35)
+        plane = m.cells(mask["ra_centres"], mask["dec_centres"], mask["masked"], color=P.RED,
+                        vmax=1.0, max_opacity=0.35, floor=0.5)
         self.play(FadeIn(m), run_time=0.8)
         self.play(Create(ecl), Create(gal), run_time=1.0)
         dots = m.dots(pop, color=P.TEAL, radius=0.028)
@@ -283,32 +284,6 @@ def _readout(title, value, note, colour):
     box = SurroundingRectangle(g, color=colour, buff=0.18, corner_radius=0.08)
     box.set_fill(colour, opacity=0.06)
     return VGroup(box, g)
-
-
-def _mask_cells(m, mask, colour, opacity):
-    """The masked cells of the footprint grid, split where a cell straddles the
-    map's RA seam so none stretches across the whole map."""
-    ras, decs = mask["ra_centres"], mask["dec_centres"]
-    vals = np.asarray(mask["masked"]).reshape(len(decs), len(ras))
-    dra, ddec = ras[1] - ras[0], decs[1] - decs[0]
-    seam = (m.ra_centre + 180.0) % 360.0
-    g = VGroup()
-    for iy, dec in enumerate(decs):
-        if not m.inside(dec):
-            continue
-        for ix, ra in enumerate(ras):
-            if vals[iy, ix] < 0.5:
-                continue
-            lo, hi = max(ra - dra / 2, 0.0), min(ra + dra / 2, 359.999)
-            spans = [(lo, hi)]
-            if lo < seam < hi:
-                spans = [(lo, seam - 1e-3), (seam + 1e-3, hi)]
-            for a_ra, b_ra in spans:
-                a = m.p(a_ra, dec - ddec / 2)
-                b = m.p(b_ra, dec + ddec / 2)
-                cell = Polygon(a, [b[0], a[1], 0], b, [a[0], b[1], 0], stroke_width=0)
-                g.add(cell.set_fill(colour, opacity=opacity))
-    return g
 
 
 def _bars(plot, edges, counts, base, colour):
