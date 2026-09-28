@@ -45,6 +45,12 @@ def _frame(title):
     return VGroup(box, cap)
 
 
+def _local(frame, mob):
+    """Map ``mob`` from panel-local coordinates (origin-centred, unscaled) into
+    the panel's current placement, which the caller may have moved and scaled."""
+    return mob.scale(frame[0].width / W, about_point=np.zeros(3)).shift(frame[0].get_center())
+
+
 # ---- excluded ---------------------------------------------------------------
 
 def excluded(entry):
@@ -87,15 +93,15 @@ def excluded(entry):
     def animate(scene):
         new = Rectangle(width=max(bar_w * (after - before), 1e-3), height=bar_h, stroke_width=0)
         new.set_fill(T.RED, opacity=0.78)
-        new.move_to([x0 + bar_w * (before + after) / 2, 0, 0]).shift(frame[0].get_center())
+        _local(frame, new.move_to([x0 + bar_w * (before + after) / 2, 0, 0]))
         lab = layout.label(f"{pay.get('label', '')}  +{100 * (after - before):.1f}%",
                            font_size=14, color=T.RED, weight="BOLD")
         lab.next_to(new, UP, buff=0.12)
         after_txt = layout.label(f"{100 * after:.0f}%", font_size=30, color=T.RED, weight="BOLD")
         after_txt.move_to(before_txt)
         remain2 = remain.copy().move_to(
-            track.get_left() + RIGHT * bar_w * (1 + after) / 2)
-        if bar_w * (1 - after) < remain.width + 0.2:
+            _local(frame, Dot([x0 + bar_w * (1 + after) / 2, 0, 0])).get_center())
+        if frame[0].width * (1 - after) * bar_w / W < remain.width + 0.2:
             remain2.set_opacity(0)
         scene.play(GrowFromCenter(new), FadeIn(lab, shift=UP * 0.1),
                    Transform(before_txt, after_txt), Transform(remain, remain2), run_time=1.6)
@@ -149,9 +155,9 @@ def clustering(entry):
 
     def animate(scene):
         level = len(recent)
-        here = pos(pay["sigma"], level) + frame[0].get_center()
         col = colour(pay.get("stance", "pro"))
-        d = Dot(here, radius=0.11, color=col)
+        d = _local(frame, Dot(pos(pay["sigma"], level), radius=0.11, color=col))
+        here = d.get_center()
         lab = layout.label(f"{pay.get('label', '')}  {float(pay['sigma']):.1f}σ",
                            font_size=14, color=col, weight="BOLD")
         lab.next_to(d, RIGHT, buff=0.1)
@@ -214,10 +220,10 @@ def orbit(entry):
         panel.add(old_txt)
 
     def animate(scene):
-        new = _orbit_curve(pay, scale, T.BLUE).shift(centre + frame[0].get_center())
+        new = _local(frame, _orbit_curve(pay, scale, T.BLUE).shift(centre))
         txt = layout.label("after:   " + _orbit_text(pay), font_size=14, color=T.BLUE,
                            weight="BOLD")
-        txt.move_to(frame[0].get_center() + np.array([0, -H / 2 + 0.3, 0]))
+        _local(frame, txt.move_to([0, -H / 2 + 0.3, 0]))
         scene.play(Create(new), FadeIn(txt), run_time=1.8)
         panel.add(new, txt)
 
@@ -248,10 +254,9 @@ def sample(entry):
     panel = VGroup(frame, dots, count)
 
     def animate(scene):
-        shift = frame[0].get_center()
         anims = []
         if after >= before:
-            new = VGroup(*[Dot(spot(k) + shift, radius=0.09, color=T.GREEN)
+            new = VGroup(*[_local(frame, Dot(spot(k), radius=0.09, color=T.GREEN))
                            for k in range(before, after)])
             if len(new):
                 anims.append(FadeIn(new, lag_ratio=0.15))
