@@ -4,8 +4,15 @@ title: 'A TESS Search for Distant Solar System Objects: Yield Estimates'
 arxiv: '1911.03676'
 date: 2019-11
 kind: forecast
-headline: Stacking thousands of frames
-claim: Shift-stacking TESS full-frame images can recover a fraction of Planet Nine solutions.
-adds: An exoplanet survey can be re-aimed at the outer solar system. TESS recovers the brighter
-  / nearer part of P9 parameter space.
+headline: An exoplanet telescope turned outward
+claim: Shifting and stacking the 1,300 images of a TESS sector reaches I = 22, deep enough
+  to reveal Planet Nine and hundreds of new Kuiper belt objects.
+adds: A depth of I = 22 over most of the sky puts a 5-10 Earth-mass planet within reach to
+  about 700 AU, and its drift across a sector stays measurable to 900 AU. The same stacks could
+  turn up hundreds of new Kuiper belt objects and Centaurs.
 track: none
+result:
+  label: depth of one stacked sector
+  key: stacked_depth
+  fmt: 'I = {:.1f}'
+  published: 22.0
