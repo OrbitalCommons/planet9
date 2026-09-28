@@ -23,8 +23,8 @@ use p9_core::analysis::photometry::{
 use p9_core::analysis::stacking::orbit_metric::apparent_sky_rate_at_opposition;
 use p9_core::analysis::surveys::limiting_magnitude;
 use p9_core::analysis::thermal::{
-    C_LIGHT, H_PLANCK, K_BOLTZ, T_SUN, effective_temp, max_detectable_distance, planck_bnu,
-    reflected_flux_jy, solar_equilibrium_temp, thermal_flux_jy,
+    C_LIGHT, H_PLANCK, K_BOLTZ, T_SUN, WIEN_X_NU, effective_temp, max_detectable_distance,
+    planck_bnu, reflected_flux_jy, solar_equilibrium_temp, thermal_flux_jy,
 };
 use p9_core::constants::EARTH_RADIUS_KM;
 use p9_core::types::{P9Params, solve_kepler};
@@ -42,8 +42,6 @@ const NEPTUNE_AU: f64 = 30.07;
 const NEPTUNE_T_OBS_K: f64 = 59.0;
 /// The Moon's mean apparent diameter (arcsec), the everyday angular anchor.
 const MOON_DIAMETER_ARCSEC: f64 = 1865.0;
-/// Wien's displacement constant in frequency form: B_nu peaks at h nu = x k T.
-const WIEN_X_NU: f64 = 2.821_439_372;
 
 fn log_grid(lo: f64, hi: f64, n: usize) -> Vec<f64> {
     let (a, b) = (lo.log10(), hi.log10());

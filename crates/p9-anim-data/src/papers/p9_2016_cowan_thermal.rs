@@ -3,7 +3,7 @@
 use p9_2016_cowan_thermal::sed::{
     COWAN_FAINT_FLUX_1MM_MJY, COWAN_FLUX_1MM_MJY, ONE_MM_M, P9Sed, sensitivity::CMB_1MM_MJY,
 };
-use p9_core::analysis::thermal::{C_LIGHT, R_EARTH_M};
+use p9_core::analysis::thermal::{C_LIGHT, H_PLANCK, K_BOLTZ, R_EARTH_M, WIEN_X_NU};
 use serde_json::{Value, json};
 
 /// Points on the log-wavelength grid of the spectrum (0.3 µm to 1 cm).
@@ -62,7 +62,8 @@ pub fn export() -> Value {
         "published_flux_1mm_mjy": COWAN_FLUX_1MM_MJY,
         "published_faint_flux_1mm_mjy": COWAN_FAINT_FLUX_1MM_MJY,
         "cmb_threshold_mjy": CMB_1MM_MJY,
-        "wien_peak_um": fid.wien_peak_wavelength_m() * 1.0e6,
+        // The plotted spectrum is per unit frequency, so mark its B_nu peak.
+        "wien_peak_um": 1.0e6 * C_LIGHT * H_PLANCK / (WIEN_X_NU * K_BOLTZ * fid.temp_k),
         "crossover_um": fid.crossover_wavelength_m().map(|m| m * 1.0e6),
         "v_band_flux_mjy": fid.total_flux_mjy(0.55e-6),
         "parallax_arcmin": (1.0 / fid.distance_au).atan().to_degrees() * 60.0,
