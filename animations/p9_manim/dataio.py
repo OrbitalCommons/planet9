@@ -1,8 +1,9 @@
 """Load data computed by the Rust crates / plotting scripts.
 
 The film is data-driven: physics numbers come from the workspace, not from
-hand-tuned constants in Python. Right now the survey-reach map is read from
-``figures/viability.json`` (produced by ``cargo run -p p9-viability``).
+hand-tuned constants in Python. Almost everything is read from
+``animations/data/anim.json`` (``cargo run --release -p p9-anim-data``); the
+space-telescope finale reads ``figures/space_strategy.json``.
 """
 import json
 import os
@@ -22,17 +23,6 @@ def load_json(rel_path):
         return None
     with open(p) as fh:
         return json.load(fh)
-
-
-def viability():
-    """The mass x distance survey-reach dataset, or None if not generated."""
-    return load_json("figures/viability.json")
-
-
-def search_hull():
-    """Where-to-point dataset (sky coverage hull vs P9 posterior, per-study
-    clouds, LSST reach), or None. Regenerate with ``cargo run -p p9-search-hull``."""
-    return load_json("figures/search_hull.json")
 
 
 def space_strategy():

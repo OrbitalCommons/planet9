@@ -155,7 +155,7 @@ class CarvingTheSky(Scene):
             keys.append(sv["key"])
             after = _survival(o, keys)[::SHOW]
             if sv["key"] == "p_des":
-                foot = VGroup(*[m.box(ra - 1, min(ra + 1, 359.999), dec - 1, dec + 1,
+                foot = VGroup(*[m.box(ra - 1, ra + 1, dec - 1, dec + 1,
                                       color=P.PURPLE,
                                       opacity=0.16, stroke_width=0)
                                 for ra, dec in d["des_cells"] if dec > -61])

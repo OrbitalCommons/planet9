@@ -167,6 +167,8 @@ class SkyMap(VGroup):
     def box(self, ra_lo, ra_hi, dec_lo, dec_hi, color=T.PURPLE, opacity=0.13, stroke_width=1.5):
         """An RA/Dec rectangle from ``ra_lo`` eastward to ``ra_hi`` (wrapping
         through RA 0 when ra_hi < ra_lo); returns a VGroup of 1-2 polygons."""
+        ra_lo = float(ra_lo) % 360.0
+        ra_hi = 359.999 if float(ra_hi) % 360.0 == 0.0 else float(ra_hi) % 360.0
         spans = [(ra_lo, ra_hi)] if ra_hi >= ra_lo else [(ra_lo, 359.999), (0.0, ra_hi)]
         edge = (self.ra_centre + 180.0) % 360.0
         pieces = []

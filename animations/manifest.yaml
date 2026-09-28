@@ -107,6 +107,8 @@ papers:
   - {file: scenes/papers/p9_2026_flyby_evolution/scene.py, scene: FlybyEvolution2026}  # 2026-09  Pfalzner, Wagner & Bischoff (2026)
 
 finale:
-  - {file: scenes/finale/search_hull.py, scene: SearchReachHull}
+  - {file: scenes/finale/search_hull.py, scene: CarvingTheSky}
+  - {file: scenes/finale/search_hull.py, scene: WhereItHides}
+  - {file: scenes/finale/search_hull.py, scene: WhatRubinTakes}
   - {file: scenes/finale/space_strategy.py, scene: WhereToImage}
   - {file: scenes/finale/space_strategy.py, scene: WhatItBuys}
