@@ -23,7 +23,7 @@ const PAPER_N_ETNOS: usize = 14;
 /// angles drawn from the density proportional to `weight`.
 fn null_r_bar_density(n: usize, weight: &dyn Fn(f64) -> f64, w_max: f64, seed: u64) -> Vec<f64> {
     let mut rng = StdRng::seed_from_u64(seed);
-    let mut counts = vec![0usize; R_BINS];
+    let mut counts = [0usize; R_BINS];
     let mut sample = vec![0.0; n];
     for _ in 0..N_NULL {
         for s in sample.iter_mut() {

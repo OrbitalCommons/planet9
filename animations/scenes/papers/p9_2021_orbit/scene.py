@@ -124,7 +124,8 @@ class Orbit2021(Scene):
                          color=P.BLUE, weight="BOLD"),
             layout.label(interval_text("inclination", post["i"], "°"), font_size=20,
                          color=P.BLUE, weight="BOLD"),
-            layout.label(f"{len(samples)} draws from the published\nposterior (each dot one planet)",
+            layout.label(f"{len(samples)} draws from the published\n"
+                         "posterior (each dot one planet)",
                          font_size=15, color=P.FG, line_spacing=0.9),
         ).arrange(DOWN, buff=0.3, aligned_edge=LEFT)
         rows.move_to([4.5, 0.4, 0])
