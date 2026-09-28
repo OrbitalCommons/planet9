@@ -95,7 +95,8 @@ class Ztf2021(Scene):
             layout.label("still hidden: too faint or outside the footprint",
                          font_size=16, color=P.TEAL),
         ).arrange(DOWN, buff=0.12, aligned_edge=P.layout.LEFT)
-        legend.move_to(ax.c2p(23.9, 0.8 * top))
+        # Upper right, over the thin faint tail, clear of the tall bars.
+        legend.next_to(ax.c2p(26, top), DOWN + P.layout.LEFT, buff=0.1)
         self.play(FadeIn(legend))
         timing.hold_to_read(self, legend, settle=1.2)
 
