@@ -4,8 +4,20 @@ title: Testing the isotropy of the Dark Energy Survey's extreme trans-Neptunian 
 arxiv: '2003.08901'
 date: 2020-03
 kind: critique
-headline: Is the DES sample isotropic?
-claim: The DES distant-object sample tests whether the orbital angles are isotropic.
-adds: Within its coverage, DES sees no strong clustering signal. Footprint and selection strongly
-  shape any such test.
-track: none
+headline: One survey, tested on its own
+claim: If Planet Nine aligns the distant orbits, the extreme objects found by the Dark Energy
+  Survey should differ from an isotropic population seen through the same survey.
+adds: The first test on a single survey with a fully known selection function. Of twelve Kuiper
+  tests on 3 to 7 objects, two reach p = 0.03, both in the node. DES alone neither needs
+  Planet Nine nor rules it out.
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: con
+  label: DES Y4 2020
+result:
+  label: smallest of the twelve p-values
+  key: min_p_selection
+  fmt: '{:.3f}'
+  published: 0.03
+  tolerance: 0.15

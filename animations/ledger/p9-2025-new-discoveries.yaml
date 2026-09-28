@@ -4,8 +4,18 @@ title: 'Discovery of a dwarf planet candidate in an extremely wide orbit: 2017 O
 arxiv: '2505.15806'
 date: 2025-05
 kind: discovery
-headline: New objects, sharper test
-claim: New distant-TNO discoveries sharpen the test of the clustering hypothesis.
-adds: Each new world is a fresh, unforgiving test. The hypothesis must accommodate the outliers
-  as well as the fits.
-track: none
+headline: A new world pointing the wrong way
+claim: A dwarf-planet candidate found in archival images, 2017 OF201, travels far enough out
+  that Planet Nine should have herded its orbit into line with the others.
+adds: '2017 OF201: about 700 km across, a = 830 AU, perihelion 45 AU, pointing 106° off the
+  cluster. Added to the vetted sample it drops the alignment strength from 0.65 to 0.57;
+  Ammonite, found three months later and also off-cluster, takes it to 0.47.'
+track: sample
+sample:
+  n: '@n_field'
+  what: distant objects, the newest one off the cluster
+result:
+  label: semi-major axis of 2017 OF201
+  key: of201_a
+  fmt: au
+  published: 830
