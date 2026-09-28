@@ -2,7 +2,7 @@
 
 use p9_2016_fortney_thermal::published::{MASS_MAX_EARTH, MASS_MIN_EARTH, TEFF_MAX_K, TEFF_MIN_K};
 use p9_2016_fortney_thermal::{P9Thermal, W1_WAVELENGTH_M, W2_WAVELENGTH_M};
-use p9_core::analysis::thermal::R_EARTH_M;
+use p9_core::analysis::thermal::{C_LIGHT, H_PLANCK, K_BOLTZ, R_EARTH_M, WIEN_X_NU};
 use serde_json::{Value, json};
 
 /// Heliocentric distance at which the spectrum and the mass scan are evaluated.
@@ -72,7 +72,8 @@ pub fn export() -> Value {
             "with_internal_heat_k": t_total,
         },
         "sed": {"log_wavelength_um": log_um, "log_flux_jy": log_flux},
-        "sed_peak_um": nominal.sed_peak_wavelength_m() * 1.0e6,
+        // The plotted spectrum is per unit frequency (Jy), so mark its B_nu peak.
+        "sed_peak_um": 1.0e6 * C_LIGHT * H_PLANCK / (WIEN_X_NU * K_BOLTZ * nominal.effective_temp()),
         "far_ir_flux_jy": nominal.far_ir_flux_jy(),
         "w1": {"wavelength_um": W1_WAVELENGTH_M * 1.0e6, "log_flux_jy": log_w1},
         "w2": {"wavelength_um": W2_WAVELENGTH_M * 1.0e6, "log_flux_jy": log_w2},
