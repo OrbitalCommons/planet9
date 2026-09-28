@@ -5,9 +5,14 @@ title: Outer Solar System Perihelion Gap Formation Through Interactions with a H
 arxiv: '2107.06296'
 date: 2021-07
 kind: dynamics
-headline: The gap in between
-claim: A deficit of objects at intermediate perihelion separates the scattering and detached
-  populations.
-adds: The perihelion gap is a structural fingerprint of the distant disk. Its presence is consistent
-  with P9-driven sculpting.
+headline: The empty lane at 50 to 65 AU
+claim: Almost no distant, eccentric orbits have perihelia between 50 and 65 AU. Is that gap
+  real, and can a distant planet carve it?
+adds: One continuous population is very unlikely to leave the gap. With a distant planet, captured
+  objects sweep across it in perihelion cycles and linger beyond 65 AU, so the gap should hold
+  about 20% as many objects as the region just outside it.
 track: none
+result:
+  label: chance that one smooth population leaves this gap
+  key: p_paper_epoch
+  fmt: pct1
