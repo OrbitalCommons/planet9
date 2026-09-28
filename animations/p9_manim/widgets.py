@@ -20,9 +20,21 @@ from manim import (
 from . import theme as T
 
 
-def axes(x_range, y_range, x_length=9.0, y_length=3.9, font_size=16, shift_down=0.5):
-    """The film's standard dark Axes (muted, no tips)."""
-    ax = Axes(
+class _BoxAxes(Axes):
+    """Axes that cross at the bottom-left corner of the plotted range rather
+    than at zero, so a range that spans or excludes zero does not draw its axes
+    through the middle of the data."""
+
+    @staticmethod
+    def _origin_shift(axis_range):
+        return axis_range[0]
+
+
+def axes(x_range, y_range, x_length=9.0, y_length=3.9, font_size=16, shift_down=0.5,
+         cross_at_zero=False):
+    """The film's standard dark Axes (muted, no tips). They cross at the lower-left
+    corner of the ranges; ``cross_at_zero=True`` restores manim's crossing at 0."""
+    ax = (Axes if cross_at_zero else _BoxAxes)(
         x_range=x_range,
         y_range=y_range,
         x_length=x_length,
