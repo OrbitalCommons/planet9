@@ -5,16 +5,16 @@ arxiv: '1601.05438'
 date: 2016-01
 kind: evidence
 headline: Six orbits that line up
-claim: The most distant Kuiper belt objects point the same way and share an orbital plane; a
-  distant massive planet is holding them there.
-adds: 'The hypothesis itself. Six orbits aligned in direction and in plane, at odds of about
-  1 in 14,000 by chance, plus a concrete perturber that would do it: ten Earth masses on an
-  eccentric orbit 700 AU out.'
+claim: The most distant stable Kuiper belt orbits share a perihelion direction and an orbital
+  plane, too closely for chance; a distant massive planet is holding them there.
+adds: 'The hypothesis itself. Six orbits aligned in perihelion and in plane, a 0.007% coincidence,
+  and a perturber that would do it: about 10 Earth masses at a = 700 AU, e = 0.6, with its
+  perihelion on the opposite side of the Sun from theirs.'
 track: clustering
 clustering:
   sigma: '@sigma'
   stance: pro
-  label: Batygin & Brown 2016
+  label: B&B 2016
 orbit:
   mass: '@mass'
   a: '@a'
@@ -22,7 +22,7 @@ orbit:
   i: '@i'
 sample:
   n: '@n_sample'
-  what: stable objects with a > 250 AU
+  what: distant objects behind the clustering claim
 result:
   label: significance of the joint alignment
   key: sigma

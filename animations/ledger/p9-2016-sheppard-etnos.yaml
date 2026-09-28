@@ -4,8 +4,18 @@ title: 'New Extreme Trans-Neptunian Objects: Towards a Super-Earth in the Outer 
 arxiv: '1608.08772'
 date: 2016-08
 kind: discovery
-headline: More objects, same direction
-claim: Newly discovered extreme TNOs extend the clustered sample motivating Planet Nine.
-adds: The growing ETNO sample has so far reinforced the clustering signal. More objects sharpen
-  -- but also stress-test -- the hypothesis.
-track: none
+headline: Two new orbits, one pointing backwards
+claim: A dedicated deep survey finds new extreme objects; if the planet is real, their orbits
+  should fall into the same pattern as the known ones.
+adds: Two new detached objects join the sample. 2014 SR349 lines up with the cluster; 2013
+  FT28 points almost exactly the opposite way, the first anti-aligned orbit. Both share the
+  argument-of-perihelion clustering. 2014 FE72 reaches the outer Oort cloud.
+track: sample
+sample:
+  n: '@n_after'
+  what: distant objects behind the clustering claim
+result:
+  label: 2013 FT28 perihelion, away from the cluster
+  key: ft28_offset_deg
+  fmt: deg
+  published: 180.0
