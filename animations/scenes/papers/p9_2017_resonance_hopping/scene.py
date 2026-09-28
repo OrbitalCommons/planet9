@@ -66,10 +66,10 @@ class ResonanceHopping2017(Scene):
         # Shared semimajor-axis frame: overlap parameter K below, islands above.
         ax = widgets.axes([A_LO, A_HI, 50], [-1, 1.5, 0.5], x_length=12.0, y_length=2.7,
                           shift_down=0.0)
-        ax.move_to([0.25, -1.05, 0])
+        ax.move_to([0.25, -0.75, 0])
         ax.get_x_axis().add_numbers(range(300, 701, 100), font_size=16)
         x_lab = layout.label("semimajor axis of the small body  (AU)", font_size=16)
-        x_lab.next_to(ax, DOWN, buff=0.45)
+        x_lab.next_to(ax, DOWN, buff=0.2)
         base = Line([x_of(ax, A_LO), STRIP_Y, 0], [x_of(ax, A_HI), STRIP_Y, 0],
                     color=P.MUTED, stroke_width=2)
         p9 = Dot([x_of(ax, a9), STRIP_Y, 0], radius=0.09, color=P.BLUE)

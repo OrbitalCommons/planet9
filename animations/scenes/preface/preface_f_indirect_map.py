@@ -638,11 +638,11 @@ class P13Map(Scene):
         r_lab = layout.label("Rubin, one visit (forecast)", font_size=17, color=P.TEAL)
         r_lab.next_to(fr.p(*r_end), DOWN + LEFT, buff=0.08)
         cap = _say(self, f"Rubin (from 2025): {100 * d['rubin_bright_frac']:.1f}% of the "
-                         "survivors are bright enough for a single visit.", cap, hold=False)
+                         "survivors are bright enough, if they sit in its sky.", cap, hold=False)
         self.play(Create(rubin), FadeIn(r_lab), run_time=1.4)
         timing.hold_to_read(self, cap, settle=1.2)
         cap = _say(self, "Each paper that follows moves one of these lines, or reshapes the cloud "
                          "itself.", cap, settle=1.2)
         self.play(FadeOut(cap))
         layout.show_takeaway(
-            self, f"~{100 * d['excluded_frac'][-1]:.0f}% ruled out; Rubin can reach the rest.")
+            self, f"~{100 * d['excluded_frac'][-1]:.0f}% ruled out; the rest is bright enough for Rubin.")
