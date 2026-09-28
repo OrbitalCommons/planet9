@@ -4,8 +4,15 @@ title: Measuring the Mean Plane of the Distant Kuiper Belt
 arxiv: '2508.14156'
 date: 2025-08
 kind: alternative
-headline: A different, closer culprit
-claim: A separate, smaller, closer perturber ('Planet Y') would warp the Kuiper belt's mean
-  plane.
-adds: Not every anomaly needs Planet Nine. A nearer small world can warp the belt's plane instead.
+headline: A warp in the distant belt
+claim: With no unseen planet, the distant Kuiper belt's mean plane must be the invariable plane. A
+  bias-free measurement from 50 to 400 AU tests that.
+adds: 'The mean plane tilts about 15° beyond 80 AU (96% confidence at 80-200 AU, 98% at 80-400 AU)
+  yet stays flat at 50-80 AU. A Mercury-to-Earth-mass planet at 100-200 AU, inclined 10° or more,
+  could hold that warp: not Planet Nine.'
 track: none
+result:
+  label: forced tilt at 80-200 AU, Earth mass at 150 AU
+  key: warp_bin_tilt_earth_deg
+  fmt: deg
+  published: 15.0
