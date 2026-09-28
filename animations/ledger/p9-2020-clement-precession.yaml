@@ -5,9 +5,14 @@ title: Orbital precession in the distant solar system; further constraining the 
 arxiv: '2005.05326'
 date: 2020-05
 kind: dynamics
-headline: Precessing in step
-claim: Planet Nine sets a coupled precession pattern that keeps distant orbits aligned as they
-  rotate.
-adds: Alignment is maintained dynamically, not frozen. The precession pattern is a signature
-  of the perturber.
+headline: Seventeen orbits are not enough
+claim: Do the distant objects that survive 4 Gyr beside Planet Nine end up anti-aligned with
+  it, and would a sample of only 17 detections show that reliably?
+adds: In every Planet Nine run over 60% of the detectable survivors are anti-aligned with it.
+  But 17 orbits drawn from them scatter widely in clustering, and 17 random orbits still average
+  R̄ ≈ 0.2, so more detections are needed.
 track: none
+result:
+  label: mean clustering R̄ of 17 random orbits
+  key: r_bar_null_mean_17
+  fmt: '{:.2f}'

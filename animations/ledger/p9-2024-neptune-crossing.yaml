@@ -3,10 +3,16 @@ cite: Batygin et al. (2024)
 title: Generation of Low-Inclination, Neptune-Crossing TNOs by Planet Nine
 arxiv: '2404.11594'
 date: 2024-04
-kind: dynamics
-headline: Brushing past Neptune
-claim: Some distant objects dip to Neptune-crossing perihelia, testing the P9 and scattering
-  picture.
-adds: The supply rate of crossers bounds the distant population. It connects the observed TNOs
-  to their dynamical source.
+kind: evidence
+headline: Neptune crossers as a new test
+claim: Long-period, low-inclination objects that cross Neptune's orbit are short-lived, so
+  their perihelia test whether Planet Nine keeps supplying them.
+adds: A line of evidence independent of the clustering. The perihelia of 17 Neptune-crossing
+  objects with a > 100 AU match simulations that include Planet Nine (p = 0.41), and the same
+  simulations without it are rejected at about 5σ.
 track: none
+result:
+  label: P9-free model rejected (paper ζ on our null)
+  key: paper_zeta_free_sigma
+  fmt: sigma
+  published: 5.0

@@ -5,7 +5,15 @@ title: Distant TNO Inclinations as a Constraint on Primordial Cluster Perturbati
 arxiv: '2607.15646'
 date: 2026-07
 kind: dynamics
-headline: p9-2026-cluster-inclinations
-claim: TODO
-adds: TODO
+headline: Cold orbits, gentle birth cluster
+claim: Could Planet Nine cool a population stirred by a violent birth cluster into the low
+  inclinations seen today? If not, those inclinations constrain the cluster.
+adds: It cannot. Debiased, the 19 observed high-perihelion objects have an inclination width
+  of 12°. Cluster-stirred populations stay near 26° beside Planet Nine and are rejected at
+  about 3σ; quiescent ones end at 16–19.5°. The birth cluster was mild.
 track: none
+result:
+  label: intrinsic inclination width of the observed sample
+  key: w_best_deg
+  fmt: deg
+  published: 12.0
