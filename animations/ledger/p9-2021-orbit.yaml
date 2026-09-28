@@ -1,0 +1,30 @@
+crate: p9-2021-orbit
+cite: Brown & Batygin (2021)
+title: The orbit of Planet Nine
+arxiv: '2108.09868'
+date: 2021-08
+kind: evidence
+headline: An orbit with error bars
+claim: The clustering survives an updated survey-bias calculation, so the distant orbits can be
+  inverted for the mass and orbit of the planet that shepherds them.
+adds: 'Clustering at 99.6% confidence, and the first full posterior from fitting simulations to
+  11 objects: 6.2 Earth masses, a = 380 AU, perihelion 300 AU, inclination 16°. Closer and
+  brighter than the 2016 guess, with a sky map to search.'
+track: orbit
+orbit:
+  mass: '@mass'
+  a: '@a'
+  e: '@e'
+  i: '@i'
+clustering:
+  sigma: '@sigma_mc_bias'
+  stance: pro
+  label: Brown & Batygin 2021
+sample:
+  n: '@paper_n_sample'
+  what: distant objects in the clustering sample
+result:
+  label: confidence that the clustering is real
+  key: confidence_mc_bias
+  fmt: pct1
+  published: 0.996

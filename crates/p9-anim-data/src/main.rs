@@ -2,6 +2,9 @@
 //! manim film, so the visualisations are derived from data rather than
 //! hand-tuned constants. Writes `animations/data/anim.json`.
 
+mod papers;
+mod preface;
+
 use std::collections::BTreeMap;
 
 use serde::Serialize;
@@ -248,6 +251,34 @@ fn solar_system() -> Value {
     })
 }
 
+/// Reference curves for the sky panels: the ecliptic and the galactic plane as
+/// (RA, Dec) polylines.
+fn sky() -> Value {
+    use p9_core::coords::sky::{
+        ecliptic_to_equatorial_deg, ecliptic_vec_to_equatorial_deg, galactic_to_ecliptic_matrix,
+    };
+    let lons: Vec<f64> = (0..=360).map(|k| k as f64).collect();
+    let ecliptic: Vec<(f64, f64)> = lons
+        .iter()
+        .map(|&l| ecliptic_to_equatorial_deg(l, 0.0))
+        .collect();
+    let galactic_at = |b_deg: f64| -> Vec<(f64, f64)> {
+        lons.iter()
+            .map(|&l| {
+                let (l, b) = (l.to_radians(), b_deg.to_radians());
+                let g = nalgebra::Vector3::new(b.cos() * l.cos(), b.cos() * l.sin(), b.sin());
+                ecliptic_vec_to_equatorial_deg(&(galactic_to_ecliptic_matrix() * g))
+            })
+            .collect()
+    };
+    json!({
+        "ecliptic": ecliptic,
+        "galactic_plane": galactic_at(0.0),
+        "galactic_b_plus10": galactic_at(10.0),
+        "galactic_b_minus10": galactic_at(-10.0),
+    })
+}
+
 fn main() {
     let mut out: BTreeMap<&str, Value> = BTreeMap::new();
     out.insert(
@@ -268,6 +299,9 @@ fn main() {
     out.insert("cassini", cassini());
     out.insert("stability", stability());
     out.insert("solar_system", solar_system());
+    out.insert("sky", sky());
+    out.insert("papers", serde_json::to_value(papers::all()).unwrap());
+    out.insert("preface", serde_json::to_value(preface::all()).unwrap());
 
     let json = serde_json::to_string_pretty(&out).unwrap();
     std::fs::create_dir_all("animations/data").unwrap();

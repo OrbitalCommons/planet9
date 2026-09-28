@@ -1,0 +1,23 @@
+crate: p9-2024-siraj-orbit
+cite: Siraj, Chyba & Tremaine (2024)
+title: Orbit of a Possible Planet X
+arxiv: '2410.18170'
+date: 2024-10
+kind: evidence
+headline: A second fit, a different planet
+claim: Adding distant objects shown to be stable for billions of years, the clustering in
+  perihelion longitude can be refitted for the unseen planet's mass and orbit.
+adds: 'An independent fit from a larger, stable sample: 4.4 ± 1.1 Earth masses at 290 ± 30 AU,
+  e = 0.29, tilted 6.8°. Lighter, closer and flatter than the 2021 orbit; only 0.06% of the
+  2021 predicted orbits come within 1σ of the new best fit.'
+track: orbit
+orbit:
+  mass: '@mass'
+  a: '@a'
+  e: '@e'
+  i: '@i'
+result:
+  label: best-fit mass (here from the 10-object sample)
+  key: map_mass
+  fmt: mearth
+  published: 4.4

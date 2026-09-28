@@ -1,0 +1,19 @@
+crate: p9-2025-russell-albedo
+cite: Russell & White (2025)
+title: The Radius, Composition, Albedo, and Absolute Magnitude of Planet Nine Based on Exoplanets
+  with Teq less than 600 K and the Planet Nine Reference Population 3.0
+arxiv: '2507.22297'
+date: 2025-07
+kind: physical
+headline: A mini-Neptune at magnitude 22
+claim: Cold exoplanets of measured mass and radius show what a 6.6 Earth-mass planet is made
+  of, and therefore how large and how reflective Planet Nine should be.
+adds: Planet Nine is most likely a mini-Neptune of 2.0-2.6 Earth radii with a 0.6-3.5% hydrogen-helium
+  envelope and albedo 0.33-0.47. That gives absolute magnitude -6.1 to -5.2 and V = 21.9 to
+  22.7, with a disk large telescopes could resolve.
+track: none
+result:
+  label: absolute magnitude, bright end
+  key: h_bright
+  fmt: '{:.1f}'
+  published: -6.1

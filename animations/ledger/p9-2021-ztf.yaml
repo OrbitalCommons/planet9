@@ -1,0 +1,21 @@
+crate: p9-2021-ztf
+cite: Brown & Batygin (2021)
+title: A search for Planet Nine using the Zwicky Transient Facility public archive
+arxiv: '2110.13117'
+date: 2021-10
+kind: search
+headline: First big bite out of the search
+claim: Three years of public ZTF images should already contain Planet Nine if it is on one of
+  the brighter, nearer predicted orbits.
+adds: The first search tested against the full predicted population. Nothing moves like Planet
+  Nine in ZTF, which removes the bright, nearby half of the predicted orbits and pushes the
+  hunt fainter and toward the galactic plane.
+track: excluded
+excluded:
+  label: ZTF
+  cumulative: '@cumulative'
+result:
+  label: predicted orbits ruled out
+  key: ztf
+  fmt: pct1
+  published: 0.564

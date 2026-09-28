@@ -1,0 +1,18 @@
+crate: p9-2024-primordial-alignment
+cite: Huang & Gladman (2023)
+title: Primordial Orbital Alignment of Sednoids
+arxiv: '2310.20614'
+date: 2023-10
+kind: alternative
+headline: Aligned at birth?
+claim: 'Run the three sednoids backwards under the giant planets'' precession: their apsidal lines
+  bunch tightly only once, 4.5 billion years ago.'
+adds: Sedna, 2012 VP113 and Leleakuhonua shared one apsidal direction, near longitude 200°, when the
+  Solar System formed. A since-ejected planet fits that; a planet still in orbit would have erased
+  it.
+track: none
+result:
+  label: look-back time of the tightest alignment
+  key: best_epoch_gyr
+  fmt: '{:.2f} Gyr'
+  published: 4.5

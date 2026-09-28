@@ -1,0 +1,18 @@
+crate: p9-2020-secular-octupole
+cite: Köhne & Batygin (2020)
+title: On the Dynamical Origins of Retrograde Jupiter Trojans and their Connection to High-Inclination
+  TNOs
+arxiv: '2008.11242'
+date: 2020-08
+kind: dynamics
+headline: A retrograde Trojan from the far disk
+claim: Jupiter's retrograde co-orbital Ka'epaoka'awela (i = 163°) and the high-inclination
+  Centaurs come from one source, distant orbits tilted and sent inward by Planet Nine.
+adds: Clones of the retrograde Trojan run back 100 Myr settle at i = 90–135° beyond Neptune,
+  among the high-inclination Centaurs that Planet Nine produces. Forward runs take scattered-disk
+  objects all the way into Jupiter's 1:−1 resonance.
+track: none
+result:
+  label: octupole strength at a = 250 AU (secular model)
+  key: epsilon_oct
+  fmt: '{:.2f}'

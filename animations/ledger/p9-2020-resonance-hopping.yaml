@@ -1,0 +1,17 @@
+crate: p9-2020-resonance-hopping
+cite: Khain, Becker & Adams (2020)
+title: The Resonance Hopping Effect in the Neptune-Planet Nine System
+arxiv: '2010.02234'
+date: 2020-10
+kind: dynamics
+headline: Neptune makes the orbits hop
+claim: Distant objects jump abruptly between resonances with Planet Nine. What triggers the
+  jumps, and does the orbital alignment depend on the resonances?
+adds: Neptune triggers them. Its scattering makes semi-major axes diffuse, carrying objects
+  from one resonance to the next. Anti-aligned objects survive without any resonance, so the
+  alignment is driven by secular, not resonant, interactions.
+track: none
+result:
+  label: synthetic belt outside any resonance
+  key: non_resonant
+  fmt: pct0

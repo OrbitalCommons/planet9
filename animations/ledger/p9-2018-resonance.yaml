@@ -1,0 +1,17 @@
+crate: p9-2018-resonance
+cite: Bailey, Brown & Batygin (2018)
+title: Feasibility of a resonance-based Planet Nine search
+arxiv: '1809.02594'
+date: 2018-09
+kind: dynamics
+headline: Resonances cannot locate Planet Nine
+claim: Which resonances does a scattered disk actually fill under an eccentric Planet Nine, and
+  can the resonances of observed objects then fix its semimajor axis?
+adds: 'Most resonant objects sit in high-order ratios, not N/1 or N/2, so all six clustered objects
+  being N/1 or N/2 is very unlikely. Counting every ratio flattens the ~660 AU peak of earlier
+  resonance fits: resonances cannot locate Planet Nine.'
+track: none
+result:
+  label: resonant particles in N/1 or N/2
+  key: p_simple
+  fmt: pct0

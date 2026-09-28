@@ -1,0 +1,23 @@
+crate: p9-2019-review
+cite: Batygin et al. (2019)
+title: The Planet Nine Hypothesis
+arxiv: '1902.10103'
+date: 2019-02
+kind: review
+headline: A smaller, closer planet
+claim: Three years of data and about 1,800 new simulations revise the planet that best explains
+  the distant orbits.
+adds: 'The planet shrinks and moves in: 5-10 Earth masses at a = 400-800 AU, e = 0.2-0.5,
+  tilted 15-25 degrees, against 10 Earth masses at 700 AU in 2016. Orbits are confined beyond
+  about 250 AU. A closer planet is a brighter one.'
+track: orbit
+orbit:
+  mass: '@mass'
+  a: '@a'
+  e: '@e'
+  i: '@i'
+result:
+  label: orbits are confined beyond
+  key: a_c
+  fmt: au
+  published: 250.0

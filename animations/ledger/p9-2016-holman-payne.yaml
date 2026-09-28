@@ -1,0 +1,19 @@
+crate: p9-2016-holman-payne
+cite: Holman & Payne (2016)
+title: 'Observational Constraints on Planet Nine: Cassini Range Observations'
+arxiv: '1604.03180'
+date: 2016-04
+kind: indirect
+headline: Cassini points at a patch of sky
+claim: Fitting the Cassini range residuals with a tidal perturber free in direction and strength
+  constrains the sky position, distance and mass of a distant planet.
+adds: Turned ranging into a place to look. Combined with the orbits the clustering allows, the
+  fit leaves a region centred on RA 40°, Dec -15° reaching about 20° each way, and favours a tide
+  2.3-11.4 times that of 10 M⊕ at 700 AU.
+track: none
+result:
+  label: preferred region centre, RA
+  key: favored_ra_deg
+  fmt: deg
+  published: 40.0
+  tolerance: 0.2

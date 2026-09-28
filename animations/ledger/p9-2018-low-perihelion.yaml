@@ -1,0 +1,25 @@
+crate: p9-2018-low-perihelion
+cite: Cáceres & Gomes (2018)
+title: 'The Influence of Planet 9 on the Orbits of Distant TNOs: The Case for a Low Perihelion
+  Planet'
+arxiv: '1808.01248'
+date: 2018-08
+kind: dynamics
+headline: A Planet Nine that swings in to 90 AU
+claim: Planet Nine need not keep its perihelion at 200–400 AU; one that dips below 100 AU might
+  cluster the distant TNOs just as well, or better.
+adds: Low-perihelion planets are back in play. q9 = 60–100 AU gives tighter angular clustering than
+  q9 ≈ 300 AU, and q9 ≈ 90 AU still spares the classical Kuiper belt, which q9 = 60 AU
+  does not.
+track: orbit
+# The paper's preferred planet (its a9 = 1500 AU, q9 = 90 AU, i9 = 30°, 16.5 M⊕ model);
+# e = 1 - 90/1500. The crate reproduces the q9 trend, not this fit.
+orbit:
+  mass: 16.5
+  a: 1500
+  e: 0.94
+  i: 30
+result:
+  label: apse spread narrows, q9 280 → 70 AU
+  key: narrowing
+  fmt: pct0

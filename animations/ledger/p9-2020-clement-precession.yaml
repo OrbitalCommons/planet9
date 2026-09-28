@@ -1,0 +1,18 @@
+crate: p9-2020-clement-precession
+cite: Clement & Kaib (2020)
+title: Orbital precession in the distant solar system; further constraining the Planet Nine
+  hypothesis with numerical simulations
+arxiv: '2005.05326'
+date: 2020-05
+kind: dynamics
+headline: Seventeen orbits are not enough
+claim: Do the distant objects that survive 4 Gyr beside Planet Nine end up anti-aligned with
+  it, and would a sample of only 17 detections show that reliably?
+adds: In every Planet Nine run over 60% of the detectable survivors are anti-aligned with it.
+  But 17 orbits drawn from them scatter widely in clustering, and 17 random orbits still average
+  R̄ ≈ 0.2, so more detections are needed.
+track: none
+result:
+  label: mean clustering R̄ of 17 random orbits
+  key: r_bar_null_mean_17
+  fmt: '{:.2f}'

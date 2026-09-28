@@ -1,0 +1,23 @@
+crate: p9-2016-resonance-prediction
+cite: Malhotra, Volk & Wang (2016)
+title: Corralling a distant planet with extreme resonant Kuiper belt objects
+arxiv: '1603.02196'
+date: 2016-03
+kind: dynamics
+headline: Reading the planet's period off four orbits
+claim: The four longest-period Kuiper belt objects have periods in simple ratios; if each
+  is in an N:1 or N:2 resonance with an unseen planet, its period follows.
+adds: The first orbit for the planet derived from period ratios instead of apsidal alignment.
+  A period near 17,000 years puts it 665 AU out, on a rounder orbit (e below about 0.2)
+  than the 700 AU, e = 0.6 first guess. No resonance has been confirmed.
+track: orbit
+orbit:
+  mass: 10
+  a: '@best_a9_au'
+  e: 0.18
+  i: 18
+result:
+  label: planet semi-major axis
+  key: best_a9_au
+  fmt: au
+  published: 665

@@ -1,0 +1,26 @@
+crate: p9-2024-panstarrs
+cite: Brown, Holman & Batygin (2024)
+title: A Pan-STARRS1 Search for Planet Nine
+arxiv: '2401.17977'
+date: 2024-01
+kind: search
+headline: A magnitude deeper, same sky
+claim: Pan-STARRS1 covers the sky north of -30° to V = 21.5, a magnitude deeper than ZTF, so
+  it should link most of the predicted orbits that ZTF and DES could not reach.
+adds: No Planet Nine in Pan-STARRS1. With ZTF and DES, about three quarters of the predicted
+  orbits (paper 78%) are now ruled out. The survivors are fainter, near V = 22, and move the best
+  estimate out to a = 500 AU and 6.6 Earth masses.
+track: excluded
+excluded:
+  label: PS1
+  cumulative: '@cumulative'
+orbit:
+  mass: '@orbit_mass'
+  a: '@orbit_a'
+  e: '@orbit_e'
+  i: '@orbit_i_deg'
+result:
+  label: ruled out by ZTF + DES + PS1
+  key: cumulative
+  fmt: pct1
+  published: 0.78

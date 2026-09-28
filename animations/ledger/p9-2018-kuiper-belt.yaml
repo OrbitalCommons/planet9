@@ -1,0 +1,18 @@
+crate: p9-2018-kuiper-belt
+cite: Khain, Batygin & Brown (2018)
+title: The Generation of the Distant Kuiper Belt by Planet Nine from an Initially Broad Perihelion
+  Distribution
+arxiv: '1804.11281'
+date: 2018-04
+kind: dynamics
+headline: Only a broad disk makes two clusters
+claim: What Planet Nine sculpts depends on where the belt started. A primordial disk with
+  perihelia only near Neptune (30-36 AU) should not yield the aligned cluster.
+adds: Aligned survivors need perihelia high enough never to cross Planet Nine's orbit. The
+  bimodal perihelion distribution (anti-aligned near 44 AU, aligned near 100 AU) appears only if
+  the primordial disk reached well beyond 36 AU.
+track: none
+result:
+  label: lowest perihelion of a never-crossing aligned orbit (a = 345 AU)
+  key: aligned_safe_q_min
+  fmt: au

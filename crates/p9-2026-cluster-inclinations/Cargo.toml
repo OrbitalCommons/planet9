@@ -1,0 +1,16 @@
+[package]
+name = "p9-2026-cluster-inclinations"
+version = "0.1.0"
+edition = "2021"
+description = "Reproduction of Bansal, Brunton, Batygin, Pichierri & Nesvorný (2026) 'Distant TNO Inclinations as a Constraint on Primordial Cluster Perturbations in the Presence of Planet Nine' (arXiv:2607.15646)"
+
+[dependencies]
+p9-core = { path = "../p9-core" }
+nalgebra = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

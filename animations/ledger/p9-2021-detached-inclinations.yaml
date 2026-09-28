@@ -1,0 +1,18 @@
+crate: p9-2021-detached-inclinations
+cite: Anderson & Kaib (2021)
+title: Signatures of a Distant Planet on the Inclination Distribution of the Detached Kuiper
+  Belt
+arxiv: '2109.13307'
+date: 2021-09
+kind: dynamics
+headline: Low inclinations that need a planet
+claim: Models of Kuiper belt formation with eight planets and with nine should fill the distant
+  detached region with different orbital inclinations.
+adds: With eight planets, distant detached orbits are made by Kozai cycles inside Neptune's
+  resonances, which leave none below i ≈ 20°. A ninth planet adds a low-inclination detached
+  group, so further detections there can test it.
+track: none
+result:
+  label: Planet Nine sets the orbit planes beyond (secular model)
+  key: a_equal_au
+  fmt: au

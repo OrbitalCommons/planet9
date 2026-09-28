@@ -1,0 +1,17 @@
+crate: p9-2024-oort-selfgrav
+cite: Batygin & Nesvorný (2024)
+title: Self-Gravitational Dynamics Within the Inner Oort Cloud
+arxiv: '2405.15139'
+date: 2024-05
+kind: dynamics
+headline: The cloud's own gravity is too slow
+claim: If the inner Oort cloud holds several Earth masses, its own gravity could drive Kozai-like
+  cycles in the perihelia and inclinations of distant orbits.
+adds: The cycles exist and move perihelia across the observed range, but a single one takes
+  far longer than the age of the Sun. The self-gravity of the inner Oort cloud has a negligible
+  effect on the architecture of the distant solar system.
+track: none
+result:
+  label: secular timescale at a = 1000 AU, q = 100 AU
+  key: timescale_gyr
+  fmt: '{:.0f} Gyr'

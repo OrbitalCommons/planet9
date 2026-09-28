@@ -1,0 +1,17 @@
+crate: p9-2019-selfgrav-disk
+cite: Sefilian & Touma (2018)
+title: Shepherding in a Self-Gravitating Disk of Trans-Neptunian Objects
+arxiv: '1804.06859'
+date: 2018-04
+kind: alternative
+headline: Maybe it's the disk itself
+claim: A massive, eccentric disk of trans-Neptunian objects can cancel the planets' apsidal precession
+  and hold eccentric orbits anti-aligned with itself.
+adds: About 10 Earth masses spread from 40 to 750 AU shepherd distant orbits into apsidal confinement
+  within a few hundred Myr, so clustering need not mean a planet. That much mass has to survive out
+  there.
+track: none
+result:
+  label: 'apsidal period, 10 M⊕ disc at 250 AU (paper: 100-1000 Myr)'
+  key: period_myr
+  fmt: '{:.0f} Myr'

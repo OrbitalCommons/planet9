@@ -1,0 +1,18 @@
+crate: p9-2016-cowan-thermal
+cite: Cowan, Holder & Kaib (2016)
+title: 'Cosmologists in Search of Planet Nine: the Case for CMB Experiments'
+arxiv: '1602.05963'
+date: 2016-02
+kind: forecast
+headline: A job for the CMB telescopes
+claim: A Neptune-sized Planet Nine at 40 K glows brightest in the far-infrared, so millimetre
+  CMB surveys could pick up its heat, about 30 mJy at 1 mm from 700 AU.
+adds: The first proposal to hunt Planet Nine by its own heat at millimetre wavelengths, where
+  it fades only as distance squared. It would show a 5 arcmin yearly parallax; the obstacle
+  is confusion with thousands of asteroids of the same flux.
+track: none
+result:
+  label: flux at 1 mm from 700 AU
+  key: flux_1mm_mjy
+  fmt: '{:.0f} mJy'
+  published: 30

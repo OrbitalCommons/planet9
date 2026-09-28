@@ -1,0 +1,19 @@
+crate: p9-2025-stellar-flybys
+cite: Hu et al. (2025)
+title: 'Early Stellar Flybys are Unlikely: Improved Constraints from Sednoids and Large-$q$
+  TNOs'
+arxiv: '2505.16317'
+date: 2025-05
+kind: alternative
+headline: An early flyby is a long shot
+claim: A star that made the sednoids must also leave them at low inclination and apsidally aligned.
+  How likely is a flyby that does all of it?
+adds: 'Only near-coplanar or ecliptic-symmetric passes keep i < 30° and the alignment: about 3% of
+  random orientations. Folded with the chance of any pass inside 1000 AU, a flyby that fits has odds
+  of 5% at most.'
+track: none
+result:
+  label: 'chance a fitting flyby occurred (paper: upper limit)'
+  key: p_total
+  fmt: pct1
+  published: 0.05

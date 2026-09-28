@@ -1,0 +1,19 @@
+crate: p9-2025-simons-forecast
+cite: Simons Observatory Collaboration (2025)
+title: 'The Simons Observatory: Science Goals and Forecasts for the Enhanced Large Aperture
+  Telescope'
+arxiv: '2503.00636'
+date: 2025-03
+kind: forecast
+headline: Millimetre reach out to 900 AU
+claim: The upgraded Simons Observatory will map 60% of the sky at millimetre wavelengths, deep
+  enough to catch the thermal glow of a 5 Earth-mass Planet Nine.
+adds: A forecast, not a search. A 5 Earth-mass planet would be detected out to 500 AU over
+  the shallow half of the survey and 900 AU in its deep fields. The ACT search reached 325-625
+  AU and ruled out 17% of the orbits.
+track: none
+result:
+  label: reach for 5 Earth masses, deep fields
+  key: so_deep_reach_5
+  fmt: au
+  published: 900

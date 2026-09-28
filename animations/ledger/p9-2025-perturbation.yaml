@@ -1,0 +1,18 @@
+crate: p9-2025-perturbation
+cite: Belyakov & Batygin (2025)
+title: The Perturbation Theory Approach to Stability in the Scattered Disk
+arxiv: '2508.10119'
+date: 2025-08
+kind: dynamics
+headline: Chaos closer to Neptune
+claim: Carrying the resonance-overlap theory of the scattered disk past the quadrupole should
+  explain the chaos of orbits nearer to Neptune.
+adds: The octupole's 1:j and 3:j resonances set no new stability limit on their own. Nearer
+  to Neptune, chains of ever higher index (2:j, 3:j, 4:j and on) intersect, and those intersections
+  explain the local chaos that shapes the scattered disk.
+track: none
+result:
+  label: perihelion where the chains overlap, a = 200 AU
+  key: q_onset_headline_au
+  fmt: '{:.1f} AU'
+  published: 39.7

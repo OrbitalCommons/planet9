@@ -1,0 +1,18 @@
+crate: p9-2021-act-mm
+cite: Naess et al. (2021)
+title: 'The Atacama Cosmology Telescope: A search for Planet 9'
+arxiv: '2104.10264'
+date: 2021-04
+kind: search
+headline: Hunting in the CMB maps
+claim: Seven years of ACT millimetre maps, shifted and stacked along every plausible orbit,
+  could reveal Planet Nine's thermal glow at 300-2000 AU.
+adds: The first millimetre search finds nothing above 4-12 mJy at 150 GHz over 18,000 deg².
+  That excludes a 5 Earth-mass planet within 325-625 AU and a 10 Earth-mass one within 425-775
+  AU there, about 17% and 9% of the orbital parameter space.
+track: none
+result:
+  label: 150 GHz flux, 5 M⊕ at 500 AU
+  key: flux_5me_150_mjy
+  fmt: '{:.1f} mJy'
+  published: 5.3

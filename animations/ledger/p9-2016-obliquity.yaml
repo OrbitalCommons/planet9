@@ -1,0 +1,17 @@
+crate: p9-2016-obliquity
+cite: Bailey, Batygin & Brown (2016)
+title: Solar Obliquity Induced by Planet Nine
+arxiv: '1607.03963'
+date: 2016-07
+kind: indirect
+headline: Why is the Sun tilted?
+claim: Over 4.5 Gyr an inclined Planet Nine torques the giant planets' plane out from under the
+  Sun's equator, producing the unexplained 6° solar obliquity.
+adds: Secular integrations over a grid of mass, a, e and inclination show that 10-20 M⊕ planets
+  with perihelia near 250 AU give 6° if inclined 15°-30°. The nominal 700 AU orbit gives only
+  3°-5°. The Sun's tilt becomes a constraint on the planet.
+track: none
+result:
+  label: 'tilt from the nominal planet (paper: 3°-5°)'
+  key: nominal_obliquity_deg
+  fmt: deg

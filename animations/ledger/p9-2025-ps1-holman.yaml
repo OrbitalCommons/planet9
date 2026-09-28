@@ -1,0 +1,21 @@
+crate: p9-2025-ps1-holman
+cite: Holman et al. (2025)
+title: 'A Pan-STARRS Search for Distant Planets: Part 1'
+arxiv: '2506.02144'
+date: 2025-06
+kind: search
+headline: Pan-STARRS again, every exposure
+claim: Linking detections from 708,554 Pan-STARRS1 exposures, calibrated with injected synthetic
+  objects, should find any planet bright enough out to 1600 AU.
+adds: It finds 692 solar-system objects, 109 of them new, but no planet. Alone the search rules
+  out 76% of the predicted orbits, against 69% for the 2024 Pan-STARRS1 search, and what remains
+  is concentrated in the galactic plane.
+track: excluded
+excluded:
+  label: PS1 2025
+  cumulative: '@cumulative'
+result:
+  label: ruled out by this search alone
+  key: alone
+  fmt: pct1
+  published: 0.758

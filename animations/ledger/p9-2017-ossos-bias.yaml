@@ -1,0 +1,21 @@
+crate: p9-2017-ossos-bias
+cite: Shankman et al. (2017)
+title: OSSOS VI. Striking Biases in the detection of large semimajor axis Trans-Neptunian Objects
+arxiv: '1706.05348'
+date: 2017-06
+kind: critique
+headline: A survey that knows its own blind spots
+claim: OSSOS recorded exactly where and how deep it looked, so its own distant discoveries
+  test the alignment with the selection effects fully known.
+adds: Where a survey points can make a uniform population look clustered (alignment 0.00 to
+  0.29 in the reproduction). OSSOS's own eight distant finds (a > 150 AU), an independent,
+  fully characterised sample, are consistent with orbits pointing every way.
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: con
+  label: Shankman 2017
+result:
+  label: chance a uniform sky looks this aligned
+  key: p_chance
+  fmt: pct0

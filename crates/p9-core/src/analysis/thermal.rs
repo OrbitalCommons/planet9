@@ -39,6 +39,11 @@ pub const R_EARTH_M: f64 = 6.371e6;
 /// Wien displacement constant for the B_λ peak (m·K): λ_peak = b / T.
 pub const WIEN_B_M_K: f64 = 2.897_771_955e-3;
 
+/// Wien displacement in frequency form: B_ν peaks at h ν = x k T. A spectrum
+/// plotted per unit frequency (Jy) peaks here, at λ ≈ 127 µm for 40 K, not at
+/// the B_λ peak b / T ≈ 72 µm.
+pub const WIEN_X_NU: f64 = 2.821_439_372;
+
 /// Planck function B_ν(T) in W/m²/Hz/sr at frequency `nu_hz`.
 ///
 /// The dimensionless argument x = hν/kT is guarded: for x > 700 (deep on the

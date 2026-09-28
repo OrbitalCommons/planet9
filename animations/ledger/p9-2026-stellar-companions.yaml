@@ -1,0 +1,18 @@
+crate: p9-2026-stellar-companions
+cite: Benakli (2026)
+title: A Solar-System Window for Hidden Stellar Companions
+arxiv: '2606.25190'
+date: 2026-06
+kind: forecast
+headline: A window for hidden companions
+claim: The Sun's nearest companion might be a dark object bound at hundreds to thousands of
+  AU, felt only through gravity, rather than an ordinary star at a parsec.
+adds: Planetary ephemerides allow a mass growing as distance cubed, 1 Earth mass at 300 AU,
+  38 at 1000 AU, a Jupiter near 2000 AU. Smooth dark matter supplies less than a Pluto mass
+  inside 1000 AU, so such a companion must be a compact bound object.
+track: none
+result:
+  label: largest mass allowed at 1000 AU
+  key: envelope_1000
+  fmt: mearth
+  published: 38

@@ -1,0 +1,18 @@
+crate: p9-2016-cassini-ranging
+cite: Fienga et al. (2016)
+title: Constraints on the location of a possible 9th planet derived from the Cassini data
+arxiv: '1602.06116'
+date: 2016-02
+kind: indirect
+headline: Weighing a planet through Saturn
+claim: Adding a 10 M⊕ planet at 700 AU to the INPOP ephemeris changes the Cassini Earth-Saturn
+  range residuals by an amount set by where the planet is on its orbit.
+adds: The first full ephemeris refit with Planet Nine in it. Cassini ranging forbids true anomalies
+  -130° to -100° and -65° to 85°, and the residuals shrink by 7% if the planet sits at 117.8°
+  (+11°, -10°), about 600 AU from the Sun.
+track: none
+result:
+  label: favoured true anomaly
+  key: favored_deg
+  fmt: deg
+  published: 117.8

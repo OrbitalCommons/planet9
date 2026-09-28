@@ -1,0 +1,18 @@
+crate: p9-2016-obliquity-lai
+cite: Lai (2016)
+title: 'Solar Obliquity Induced by Planet Nine: Simple Calculation'
+arxiv: '1608.01421'
+date: 2016-08
+kind: indirect
+headline: The solar tilt in one formula
+claim: The Sun's tilt under Planet Nine follows in closed form from two precession frequencies,
+  with the precession of the Sun's own spin axis included.
+adds: A closed form, θ = (2Ωy/Ωz) sin(Ωz t/2), replaces the numerical integrations. A 6° tilt
+  with the right node needs an effective semi-major axis a√(1-e²) of 340-480 AU, and the tilt
+  is largest where the two precessions match.
+track: none
+result:
+  label: planet-plane precession period
+  key: plane_precession_period_gyr
+  fmt: '{:.1f} Gyr'
+  published: 87.5

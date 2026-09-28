@@ -1,0 +1,18 @@
+crate: p9-2021-stability
+cite: Batygin, Mardling & Nesvorny (2021)
+title: The Stability Boundary of the Distant Scattered Disk
+arxiv: '2111.00305'
+date: 2021-10
+kind: dynamics
+headline: Where Neptune's chaos ends
+claim: The perihelion boundary between scattering and detached orbits follows from the overlap
+  of an infinite chain of 2:j resonances with Neptune.
+adds: The boundary now has a formula. Below a critical perihelion that rises with semi-major
+  axis (41 AU at a = 500 AU) the resonances overlap and orbits turn chaotic within one period,
+  diffusing in semi-major axis at a rate set by perihelion alone.
+track: none
+result:
+  label: critical perihelion at a = 500 AU
+  key: q_crit_headline_au
+  fmt: '{:.1f} AU'
+  published: 41.4

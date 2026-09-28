@@ -1,0 +1,25 @@
+crate: p9-2026-apsidal-clustering
+cite: Siraj, Chyba & Tremaine (2026)
+title: Measuring Apsidal Clustering
+arxiv: '2604.25990'
+date: 2026-04
+kind: critique
+headline: The clustering, remeasured
+claim: A likelihood method that does not care where surveys pointed, applied to every distant
+  object on a long-term stable orbit, measures how real the clustering is.
+adds: A footprint-independent estimator and a sample grown from 21 to 25 stable objects. The
+  clustering falls from 2.7σ to 1.9σ (two-sided; 1.6σ one-sided on the gauge) and its
+  direction is poorly constrained. Rubin's discoveries will settle it.
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: con
+  label: Siraj+ 2026
+sample:
+  n: '@paper_n_sample'
+  what: distant objects on long-term stable orbits
+result:
+  label: 'significance after adding off-cluster objects (here 10 + 2 real, paper 21 + 4)'
+  key: sigma_real_plus_two_sided
+  fmt: sigma
+  published: 1.9

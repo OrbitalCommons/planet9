@@ -1,0 +1,22 @@
+crate: p9-2021-des-catalog
+cite: Bernardinelli et al. (2021)
+title: A search of the full six years of the Dark Energy Survey for outer Solar System objects
+arxiv: '2109.03758'
+date: 2021-09
+kind: discovery
+headline: 815 objects, one known selection
+claim: Six years of DES images, searched as a single data set, give a catalogue of distant
+  objects whose detection biases are known well enough to test models against.
+adds: 815 trans-Neptunian objects, 461 of them new, complete to r = 23.8 over 5,000 square
+  degrees, with a public survey simulator. Its 16 extreme objects (a > 150 AU) are consistent
+  with pointing in random directions.
+track: clustering
+clustering:
+  sigma: '@sigma'
+  stance: con
+  label: DES Y6 2021
+result:
+  label: survey footprint
+  key: footprint_deg2
+  fmt: '{:,.0f} deg²'
+  published: 5000

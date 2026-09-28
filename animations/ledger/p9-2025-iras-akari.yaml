@@ -1,0 +1,18 @@
+crate: p9-2025-iras-akari
+cite: Phan et al. (2025)
+title: A Search for Planet Nine with IRAS and AKARI Data
+arxiv: '2504.17288'
+date: 2025-04
+kind: search
+headline: One pair, 23 years apart
+claim: A 7-17 Earth-mass planet at 500-700 AU would be in both far-infrared all-sky catalogues,
+  IRAS (1983) and AKARI (2006), displaced by 42 to 69.6 arcminutes.
+adds: Thirteen source pairs pass the flux and separation cuts and one survives image inspection,
+  47.5 arcminutes apart near declination -49°. Two positions cannot fix an orbit, so it remains
+  a candidate until someone observes it again.
+track: none
+result:
+  label: separation of the candidate pair
+  key: candidate_separation
+  fmt: '{:.1f} arcmin'
+  published: 47.4586

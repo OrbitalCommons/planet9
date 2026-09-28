@@ -1,137 +1,179 @@
-"""Benakli (2026) -- A Solar-System window for hidden stellar companions.
+"""Benakli (2026) -- a Solar-System window for hidden stellar companions.
 
-A tidal mass-distance envelope, calibrated to Planet-Nine-like constraints,
-caps the mass an unseen companion can have at a given distance: M_max grows as
-distance cubed. That window admits Earth-to-sub-Saturn masses at hundreds of AU,
-rising to ~1 Jupiter mass near 2000 AU -- far more than any smooth dark-matter
-halo could supply. Reproduced in p9-2026-stellar-companions.
+How massive could a dark companion of the Sun be, at a given distance, without
+the planetary ephemerides having noticed? The tidal pull on the planets scales
+as M/d^3, so the allowed mass grows as the cube of distance. The crate computes
+that envelope (anchored at 5 Earth masses, 500 AU) and the mass of smooth dark
+matter enclosed within the same radius, which is tens of thousands of times too
+small. Everything is from anim.json -> papers -> p9-2026-stellar-companions.
 """
 import numpy as np
 from manim import (
-    Create,
     DOWN,
+    LEFT,
+    RIGHT,
+    UP,
+    Create,
+    DashedLine,
     Dot,
+    DoubleArrow,
     FadeIn,
     FadeOut,
-    LEFT,
-    Line,
     Polygon,
-    RIGHT,
     Scene,
-    UP,
+    ValueTracker,
     VGroup,
-    Write,
+    always_redraw,
 )
 
 import p9_manim as P
-from p9_manim import layout, paper, timing, widgets
+from p9_manim import dataio, layout, paper, timing, widgets
 
 CRATE = "p9-2026-stellar-companions"
 
-# Tidal envelope, anchored to a Planet-Nine-like point: M_max(d) = M_* (d/d_*)^3
-D_STAR = 300.0     # AU
-M_STAR = 1.0       # Earth masses
+X_LO, X_HI = 2.0, 3.6          # log10 distance (AU)
+Y_LO, Y_HI = -6.0, 4.0         # log10 mass (Earth masses)
 
 
-def m_max(d):
-    return M_STAR * (d / D_STAR) ** 3
+def rows(items, font_size=15, buff=0.14):
+    g = VGroup(*[layout.label(t, font_size=font_size, color=c) for t, c in items])
+    return g.arrange(DOWN, buff=buff, aligned_edge=LEFT)
+
+
+def inside(xs, ys):
+    """Points of a curve that fall inside the plot, as log10 pairs."""
+    out = []
+    for x, y in zip(np.log10(xs), np.log10(ys)):
+        if X_LO <= x <= X_HI and Y_LO <= y <= Y_HI:
+            out.append((x, y))
+    return out
 
 
 class StellarCompanions2026(Scene):
     def construct(self):
-        tb = paper.title_block(CRATE, "A window for hidden companions", cite="Benakli (2026)")
-        self.play(Write(tb[0]), FadeIn(tb[1]))
-        self.play(tb.animate.scale(0.62).to_edge(UP, buff=0.3))
+        d = (dataio.section("papers") or {})[CRATE]
+        pub = d["published"]
+        p9 = d["planet_nine"]
 
-        # mass (Y, log) vs distance (X, log). Axes drawn over log10 coordinates.
-        # X: 100..3000 AU -> log10 2..3.48 ; Y: 0.1..1000 Mearth -> log10 -1..3
-        x_lo, x_hi = 2.0, np.log10(3000.0)
-        y_lo, y_hi = -1.0, 3.0
-        ax = widgets.axes([x_lo, x_hi, 1.0], [y_lo, y_hi, 1.0], x_length=9.6, y_length=4.4,
-                          font_size=18, shift_down=0.45)
-        xlab = layout.label("distance from Sun (AU)", font_size=18, color=P.FG).next_to(ax, DOWN, buff=0.55)
-        ylab = layout.label("mass (Earth masses)", font_size=18, color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.55)
-        self.play(Create(ax), FadeIn(xlab), FadeIn(ylab))
+        self.add(paper.scene_header(CRATE))
 
-        # tick relabels in real units (decades)
-        tick_grp = VGroup()
+        # Axes cross at their origin, so plot offsets from the lower-left corner
+        # (log10 distance - X_LO, log10 mass - Y_LO) and label ticks by hand.
+        ax = widgets.axes([0, X_HI - X_LO, 10], [0, Y_HI - Y_LO, 10], x_length=7.4,
+                          y_length=4.2, shift_down=-0.55)
+
+        def q(x, y):
+            return ax.c2p(x - X_LO, y - Y_LO)
+
+        marks = VGroup()
         for au in (100, 300, 1000, 3000):
-            t = layout.label(str(au), font_size=14, color=P.MUTED)
-            t.next_to(ax.c2p(np.log10(au), y_lo), DOWN, buff=0.14)
-            tick_grp.add(t)
-        for me, txt in [(-1, "0.1"), (0, "1"), (1, "10"), (2, "100"), (3, "1000")]:
-            t = layout.label(txt, font_size=14, color=P.MUTED)
-            t.next_to(ax.c2p(x_lo, me), LEFT, buff=0.14)
-            tick_grp.add(t)
-        self.add(tick_grp)
+            marks.add(layout.label(f"{au:,}", font_size=14, color=P.MUTED)
+                      .next_to(q(np.log10(au), Y_LO), DOWN, buff=0.12))
+        xl = layout.label("distance from the Sun (AU)", font_size=17, color=P.FG)
+        xl.next_to(ax, DOWN, buff=0.45)
+        yl = layout.label("mass  (logarithmic)", font_size=15, color=P.FG).rotate(np.pi / 2)
+        yl.next_to(ax, LEFT, buff=1.05)
+        bodies = [("Pluto", d["pluto_earth"]), ("Earth", 1.0), ("Saturn", d["saturn_earth"]),
+                  ("Jupiter", d["jupiter_earth"])]
+        guides = VGroup()
+        for name, m in bodies:
+            y = np.log10(m)
+            guides.add(DashedLine(q(X_LO, y), q(X_HI, y), color=P.MUTED,
+                                  stroke_width=1.0).set_stroke(opacity=0.5))
+            marks.add(layout.label(name, font_size=14, color=P.MUTED)
+                      .next_to(q(X_LO, y), LEFT, buff=0.12))
+        frame = VGroup(ax, marks, xl, yl, guides)
+        frame.shift(LEFT * 1.9)
 
-        # the M_max(d) ∝ d³ envelope line (in log-log it is a straight line)
-        ds = np.linspace(100.0, 3000.0, 80)
-        lx = np.log10(ds)
-        ly = np.clip(np.log10(m_max(ds)), y_lo, y_hi)
-        env_line = ax.plot_line_graph(lx, ly, line_color=P.TEAL, add_vertex_dots=False, stroke_width=3)
+        # 1. the envelope the ephemerides allow, swept out along distance
+        env = inside(d["distance_au"], d["envelope_earth"])
+        ex = np.array([p[0] for p in env])
+        ey = np.array([p[1] for p in env])
+        line = widgets.curve(ax, ex - X_LO, ey - Y_LO, color=P.TEAL)
+        allowed = Polygon(*[q(x, y) for x, y in env], q(env[-1][0], Y_LO),
+                          q(env[0][0], Y_LO), stroke_width=0).set_fill(P.TEAL, opacity=0.1)
+        allowed_lab = layout.label("allowed: too weak a tug to notice", font_size=14,
+                                   color=P.TEAL).move_to(q(3.05, -1.2))
+        cap = layout.caption(
+            "A distant mass tugs the planets as M/d³: ten times farther can hide "
+            "a thousand times more", font_size=21)
+        self.play(FadeIn(frame), run_time=1.0)
+        self.play(Create(line), FadeIn(allowed), FadeIn(cap), run_time=1.5)
+        self.play(FadeIn(allowed_lab))
 
-        # shade the ALLOWED window: below the envelope, above the floor
-        pts = [ax.c2p(x, y) for x, y in zip(lx, ly)]
-        pts += [ax.c2p(lx[-1], y_lo)]
-        pts += [ax.c2p(lx[0], y_lo)]
-        allowed = Polygon(*pts, color=P.TEAL, fill_opacity=0.16, stroke_width=0)
-        self.play(FadeIn(allowed), Create(env_line))
+        logd = ValueTracker(np.log10(300.0))
 
-        env_lbl = layout.label("M_max ∝ d³  (tidal limit)", font_size=16, color=P.TEAL, weight="BOLD")
-        env_lbl.move_to(ax.c2p(np.log10(165), np.log10(400)))
-        win_lbl = layout.label("allowed window", font_size=18, color=P.TEAL, weight="BOLD")
-        win_lbl.move_to(ax.c2p(np.log10(1500), np.log10(0.18)))
-        self.play(FadeIn(env_lbl), FadeIn(win_lbl))
+        def reading():
+            x = logd.get_value()
+            y = float(np.interp(x, ex, ey))
+            dot = Dot(q(x, y), radius=0.08, color=P.TEAL)
+            txt = layout.label(f"{10 ** x:,.0f} AU: up to {10 ** y:,.1f} M⊕" if y < 1.5
+                               else f"{10 ** x:,.0f} AU: up to {10 ** y:,.0f} M⊕",
+                               font_size=15, color=P.TEAL, weight="BOLD")
+            txt.next_to(dot, UP + LEFT, buff=0.08)
+            return VGroup(dot, txt)
 
-        # anchor points along the envelope
-        anchors = [
-            (300, 1, "300 AU → ~1 M⊕"),
-            (1000, 40, "1000 AU → ~40 M⊕ (sub-Saturn)"),
-            (2000, 320, "2000 AU → ~320 M⊕ (≈1 Jupiter)"),
-        ]
-        ups = [DOWN, UP, UP]
-        anchor_grp = VGroup()
-        for (d, m, name), updir in zip(anchors, ups):
-            dot = Dot(ax.c2p(np.log10(d), np.log10(m)), radius=0.07, color=P.GREEN)
-            lbl = layout.label(name, font_size=14, color=P.GREEN)
-            if updir is DOWN:
-                lbl.next_to(dot, DOWN + RIGHT, buff=0.08)
-            else:
-                lbl.next_to(dot, updir, buff=0.1)
-            anchor_grp.add(dot, lbl)
-            self.play(FadeIn(dot), FadeIn(lbl), run_time=0.5)
+        probe = always_redraw(reading)
+        self.add(probe)
+        self.play(logd.animate.set_value(np.log10(d["distance_for_jupiter"])), run_time=3.5)
+        self.wait(0.6)
+        self.remove(probe)
+        timing.hold_to_read(self, cap, settle=0.2)
 
-        timing.hold_to_read(self, win_lbl, settle=0.8)
+        nine = Dot(q(np.log10(p9["a_au"]), np.log10(p9["mass_earth"])), radius=0.08,
+                   color=P.BLUE)
+        nine_lab = layout.label("Planet Nine", font_size=14, color=P.BLUE)
+        nine_lab.next_to(nine, UP + LEFT, buff=0.06)
+        paper_pts = VGroup(*[
+            Dot(q(np.log10(r["distance_au"]), np.log10(r["published_mass_earth"])),
+                radius=0.045, color=P.FG)
+            for r in d["table"]])
+        key = rows([
+            ("heaviest companion the", P.TEAL),
+            ("planets' motions allow", P.TEAL),
+            (f"{d['envelope_300']:.1f} M⊕ at 300 AU", P.TEAL),
+            (f"{d['envelope_1000']:.0f} M⊕ at 1,000 AU", P.TEAL),
+            (f"Saturn at {d['distance_for_saturn']:,.0f} AU", P.TEAL),
+            (f"Jupiter at {d['distance_for_jupiter']:,.0f} AU", P.TEAL),
+            ("white dots: the paper's table", P.FG),
+            (f"{pub['envelope_1000']:.0f} M⊕ at 1,000 AU", P.FG),
+        ], font_size=15)
+        key[2:].shift(DOWN * 0.15)
+        key[6:].shift(DOWN * 0.2)
+        key.move_to([5.0, 1.45, 0])
+        cap1b = layout.caption(
+            f"Anchored where Planet Nine sits: {d['anchor']['mass_earth']:.0f} M⊕ at "
+            f"{d['anchor']['distance_au']:.0f} AU is just allowed", font_size=21)
+        self.play(FadeIn(nine), FadeIn(nine_lab), FadeIn(paper_pts), FadeIn(key),
+                  FadeOut(cap), FadeIn(cap1b), run_time=1.2)
+        timing.hold_to_read(self, cap1b, key, settle=0.8)
 
-        eq = layout.explain_equation(
-            self,
-            [r"M_{\max}(d)", "=", r"M_\star", r"\left(\dfrac{d}{d_\star}\right)^{3}"],
-            [
-                (0, "the heaviest hidden companion still allowed at distance d"),
-                (2, "anchored to a Planet-Nine-like reference mass and distance"),
-                (3, "a tidal-constraint envelope: the cap grows as distance cubed"),
-            ],
-            scale=0.8,
-            where=DOWN * 1.55,
-        )
-        self.play(FadeOut(eq), FadeOut(allowed), FadeOut(env_line), FadeOut(env_lbl),
-                  FadeOut(win_lbl), FadeOut(anchor_grp), FadeOut(ax), FadeOut(xlab), FadeOut(ylab),
-                  FadeOut(tick_grp))
-
-        # second beat: a smooth dark-matter halo cannot supply such a thing
-        readout = paper.result_readout(
-            "dark-matter halo mass within 1000 AU", "< Pluto", color=P.PURPLE)
-        readout.move_to(DOWN * 0.3)
-        note = layout.label(
-            "the local dark-matter density integrates to only a sub-Pluto mass —\n"
-            "a smooth halo cannot be the source",
-            font_size=20, color=P.FG)
-        note.next_to(readout, DOWN, buff=0.45)
-        self.play(FadeIn(readout, shift=UP * 0.15))
-        self.play(FadeIn(note))
-        timing.hold_to_read(self, note, settle=1.2)
-        self.play(FadeOut(readout), FadeOut(note))
+        # 2. smooth dark matter cannot fill it
+        halo = inside(d["distance_au"], d["halo_earth"])
+        halo_line = widgets.curve(ax, [p[0] - X_LO for p in halo],
+                                  [p[1] - Y_LO for p in halo], color=P.RED)
+        x_k = 3.0
+        gap = DoubleArrow(q(x_k, np.log10(d["halo_1000_earth"])),
+                          q(x_k, np.log10(d["envelope_1000"])), buff=0.08,
+                          color=P.FG, stroke_width=2.5, tip_length=0.18)
+        gap_lab = layout.label(f"× {d['halo_shortfall_1000']:,.0f}", font_size=16,
+                               color=P.FG, weight="BOLD")
+        gap_lab.next_to(gap, RIGHT, buff=0.1)
+        key2 = rows([
+            ("smooth dark matter", P.RED),
+            ("inside the same radius:", P.RED),
+            (f"{d['halo_1000_pluto']:.2f} Pluto masses", P.RED),
+            ("within 1,000 AU", P.RED),
+        ], font_size=15)
+        key2.next_to(key, DOWN, buff=0.45, aligned_edge=LEFT)
+        cap2 = layout.caption(
+            f"The galaxy's dark matter, {d['rho_dm_msun_pc3']:.2f} solar masses per cubic "
+            "parsec, adds up to almost nothing here", font_size=21)
+        self.play(Create(halo_line), FadeIn(key2), FadeOut(allowed_lab), FadeOut(cap1b),
+                  FadeIn(cap2), run_time=1.4)
+        self.play(Create(gap), FadeIn(gap_lab))
+        timing.hold_to_read(self, cap2, key2, settle=1.0)
+        self.play(FadeOut(cap2))
 
         layout.show_takeaway(
-            self, "A hidden companion must be a bound, gravity-only object — not dark matter.")
+            self, "There is room for a dark companion, but only a compact, bound one.")

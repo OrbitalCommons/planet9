@@ -1,0 +1,18 @@
+crate: p9-2018-secular-dynamics
+cite: Li et al. (2018)
+title: The Secular Dynamics of TNOs and Planet Nine Interactions
+arxiv: '1806.06867'
+date: 2018-06
+kind: dynamics
+headline: Past ~250 AU, Planet Nine steers the apse
+claim: Orbit-averaged (secular) torques alone, with no resonances, can hold distant perihelia
+  anti-aligned with an eccentric Planet Nine once the orbit is wide enough.
+adds: Clustering needs no mean-motion resonance. Beyond a ≈ 250 AU (perihelia 30–80 AU) the giant
+  planets turn an orbit too slowly to compete, and a ~10 M⊕, e9 ≳ 0.4 planet at 400–800 AU
+  locks the apses anti-aligned.
+track: none
+result:
+  label: libration sets in above
+  key: a_crit_au
+  fmt: au
+  published: 250

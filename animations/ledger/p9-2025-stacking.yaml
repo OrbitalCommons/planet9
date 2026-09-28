@@ -1,0 +1,18 @@
+crate: p9-2025-stacking
+cite: Geringer-Sameth, Golovich & Iwabuchi (2025)
+title: Multi-year stacking searches for solar system bodies
+arxiv: '2509.25428'
+date: 2025-09
+kind: forecast
+headline: Six years of images, one stack
+claim: Adding thousands of survey images along every possible orbit reveals bodies too faint
+  for any single exposure, if the number of trial orbits can be afforded.
+adds: A metric on orbit space counts the trial orbits exactly. Stacking six years of ZTF along
+  billions of orbits reaches Rubin's single-exposure depth and would reveal 18% of the predicted
+  Planet Nines, most of the 22% not yet ruled out.
+track: none
+result:
+  label: predicted orbits newly within reach
+  key: p9_new
+  fmt: pct0
+  published: 0.18

@@ -1,0 +1,19 @@
+crate: p9-2016-iorio-precession
+cite: Iorio (2015)
+title: Preliminary constraints on the location of the recently hypothesized new planet of the
+  Solar System from planetary orbital dynamics
+arxiv: '1512.05288'
+date: 2015-12
+kind: indirect
+headline: Saturn's orbit as a planet detector
+claim: Saturn's perihelion and node, pinned by Cassini ranging, precess too slowly to tolerate
+  a 10 M⊕ perturber unless it is far along its orbit.
+adds: The first dynamical limit on where the planet is now. Saturn's supplementary perihelion
+  precession (-0.32 ± 0.47 mas per century) admits it only at true anomaly 130°-240°, far from
+  perihelion. A proof of principle from published bounds, not a dedicated fit.
+track: none
+result:
+  label: allowed arc begins at true anomaly
+  key: allowed_from_deg
+  fmt: deg
+  published: 130.0

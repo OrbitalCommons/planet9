@@ -1,0 +1,18 @@
+crate: p9-2021-oort-cloud
+cite: Batygin & Brown (2021)
+title: Injection of Inner Oort Cloud Objects Into the Distant Kuiper Belt by Planet Nine
+arxiv: '2104.05799'
+date: 2021-04
+kind: dynamics
+headline: Planet Nine reaches into the Oort cloud
+claim: Planet Nine should also drag inner Oort cloud objects down into the distant Kuiper
+  belt, mixing a second population into the observed sample.
+adds: The distant census is a mixture of Kuiper belt objects and injected inner Oort cloud
+  objects. The injected ones are confined more weakly (67% against 88%), so matching the observed
+  clustering takes a more eccentric Planet Nine.
+track: none
+result:
+  label: injected Oort cloud orbits anti-aligned with Planet Nine
+  key: f_varpi_ioc
+  fmt: pct0
+  published: 0.67

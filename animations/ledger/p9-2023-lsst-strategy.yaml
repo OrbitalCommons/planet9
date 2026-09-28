@@ -1,0 +1,18 @@
+crate: p9-2023-lsst-strategy
+cite: Schwamb et al. (2023)
+title: Tuning the Legacy Survey of Space and Time (LSST) Observing Strategy for Solar System
+  Science
+arxiv: '2303.02355'
+date: 2023-03
+kind: forecast
+headline: Tuning the survey that could win
+claim: Simulated ten-year LSST schedules show how cadence, filters and footprint change what
+  Rubin discovers among the solar system's small and distant bodies.
+adds: Most cadence choices move the discovery metrics by under 5%; the footprint moves them
+  far more. Scored against the predicted Planet Nines, every one inside the baseline footprint
+  is linked, so the reach is set by sky coverage, about half the orbits.
+track: none
+result:
+  label: predicted orbits within LSST's baseline reach
+  key: fraction
+  fmt: pct0

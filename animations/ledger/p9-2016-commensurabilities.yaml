@@ -1,0 +1,18 @@
+crate: p9-2016-commensurabilities
+cite: de la Fuente Marcos, de la Fuente Marcos & Aarseth (2016)
+title: 'Dynamical impact of the Planet Nine scenario: N-body experiments'
+arxiv: '1604.06241'
+date: 2016-04
+kind: dynamics
+headline: Does the nominal planet keep its flock?
+claim: Integrate the six objects behind the hypothesis under the nominal Planet Nine and
+  see whether their orbits, above all the argument of perihelion, stay confined.
+adds: The first N-body stress test of the nominal orbit. It holds Sedna and 2012 VP113 for
+  hundreds of Myr but destabilises 2004 VN112, 2007 TG422 and 2013 RF98 within tens of
+  Myr, so the planet's orbit must differ from the nominal one.
+track: none
+result:
+  label: orbits of the six made unstable
+  key: n_unstable
+  fmt: '{:.0f}'
+  published: 3

@@ -18,6 +18,7 @@
 pub mod ephemeris;
 pub mod plan;
 pub mod refine;
+pub mod sampling;
 pub mod schema;
 pub mod skymap;
 pub mod studies;

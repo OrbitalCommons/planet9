@@ -59,7 +59,7 @@ def label(text, font_size=18, color=None, weight="NORMAL", **kw):
 
 def caption(text, font_size=None):
     """Bottom caption line."""
-    t = Text(text, color=T.FG, font_size=font_size or T.SMALL_SIZE)
+    t = label(text, font_size=font_size or T.SMALL_SIZE, color=T.FG)
     t.to_edge(DOWN, buff=0.45)
     return t
 

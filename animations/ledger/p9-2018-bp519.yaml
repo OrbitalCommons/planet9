@@ -1,0 +1,21 @@
+crate: p9-2018-bp519
+cite: Becker et al. (2018)
+title: Discovery and Dynamical Analysis of an Extreme Trans-Neptunian Object with a High Orbital
+  Inclination
+arxiv: '1805.05355'
+date: 2018-05
+kind: discovery
+headline: An orbit tilted 54 degrees
+claim: The Dark Energy Survey finds 2015 BP519, a distant object on a steeply tilted orbit
+  that the known giant planets cannot produce.
+adds: 'The most extreme orbit yet: a = 450 AU, e = 0.92, tilted 54 degrees, twice as steep
+  as any clustered object. Planet Nine pumps distant orbits to such tilts; BP519 would be
+  the first of the predicted high-inclination, perihelion-shepherded objects.'
+track: sample
+sample:
+  n: '@n_sample'
+  what: distant objects behind the clustering claim
+result:
+  label: tilt a Planet Nine-pumped orbit reaches
+  key: pumped_i_deg
+  fmt: deg

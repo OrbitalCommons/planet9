@@ -1,0 +1,17 @@
+crate: p9-2016-fortney-thermal
+cite: Fortney et al. (2016)
+title: 'The Hunt for Planet Nine: Atmosphere, Spectra, Evolution, and Detectability'
+arxiv: '1604.07424'
+date: 2016-04
+kind: physical
+headline: A cold, blue, methane-poor world
+claim: Interior and atmosphere models in the Uranus-Neptune tradition predict Planet Nine's
+  temperature, radius, albedo and spectrum.
+adds: Planet Nine is at most 35-50 K. Methane freezes out, leaving a bright Rayleigh-scattering
+  atmosphere (albedo near 0.75) that leaks 3-5 µm light some 20 orders of magnitude above
+  a blackbody, enough to put it on the edge of WISE's reach.
+track: none
+result:
+  label: 'intrinsic temperature, 10 M⊕ (paper: 35-50 K)'
+  key: teff_10me
+  fmt: '{:.0f} K'

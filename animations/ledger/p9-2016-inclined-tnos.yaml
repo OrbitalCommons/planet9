@@ -1,0 +1,17 @@
+crate: p9-2016-inclined-tnos
+cite: Batygin & Brown (2016)
+title: Generation of Highly Inclined Trans-Neptunian Objects by Planet Nine
+arxiv: '1610.04992'
+date: 2016-10
+kind: dynamics
+headline: Kicking orbits out of the plane
+claim: The Planet Nine that clusters distant orbits should also tip scattered-disk objects
+  steep, even retrograde, and hand them to Neptune, making bodies like Drac and Niku.
+adds: A second, independent signature. The same planet explains the steep and retrograde
+  Kuiper belt objects no giant-planet history could. Here 6 of 48 test orbits pass 50° within
+  50 Myr and one goes retrograde; Neptune's inward hand-off needs longer runs.
+track: none
+result:
+  label: test orbits tipped past 50° in 50 Myr
+  key: high_fraction
+  fmt: pct0

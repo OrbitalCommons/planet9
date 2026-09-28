@@ -1,0 +1,17 @@
+crate: p9-2018-chaotic-dynamics
+cite: Hadden et al. (2017)
+title: Chaotic Dynamics of Trans-Neptunian Objects Perturbed by Planet Nine
+arxiv: '1712.06547'
+date: 2017-12
+kind: dynamics
+headline: When resonances collide
+claim: Near Planet Nine the mean-motion resonances overlap, so distant objects should wander
+  chaotically rather than follow smooth, orbit-averaged paths.
+adds: Chaos is built in. For a 10 M⊕ planet at 500 AU, orbits within ~110 AU of it overlap
+  into a chaotic sea at e = 0.85, the sea grows with the planet's mass, and Neptune adds a
+  second chaotic band at low perihelion.
+track: none
+result:
+  label: chaotic zone inward of Planet Nine at e = 0.85
+  key: zone_e085_au
+  fmt: au
