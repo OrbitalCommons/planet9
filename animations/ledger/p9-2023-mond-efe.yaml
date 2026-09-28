@@ -4,9 +4,14 @@ title: Modified Newtonian Dynamics as an Alternative to the Planet Nine Hypothes
 arxiv: '2304.00576'
 date: 2023-04
 kind: alternative
-headline: Clustering without a planet?
-claim: Modified Newtonian Dynamics' external-field effect can align distant apsides without
-  a planet.
-adds: Clustering might require modified gravity rather than a ninth planet. It is a serious
-  alternative to the P9 hypothesis.
+headline: Modified gravity instead of a planet
+claim: In MOND the Galaxy's field leaves a quadrupole tide on the outer Solar System, which should
+  line distant orbits up with the Galactic centre.
+adds: 'A planet-free, falsifiable prediction: the long axes of a > 250 AU orbits point along the Galactic-centre
+  direction, ecliptic longitude 267°. The ten Brown (2017) objects sit a mean 36° from that axis;
+  random is 45°.'
 track: none
+result:
+  label: 'mean apsidal offset from the Galactic axis (random: 45°)'
+  key: mean_line_sep_deg
+  fmt: deg
