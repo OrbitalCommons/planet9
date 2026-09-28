@@ -4,7 +4,15 @@ title: A Far-Infrared Search for Planet Nine Using AKARI All-Sky Survey
 arxiv: '2506.12854'
 date: 2025-06
 kind: search
-headline: A candidate that didn't survive
-claim: The proposed IRAS/AKARI far-IR candidate is not actually Planet Nine.
-adds: The candidate does not survive follow-up. Extraordinary claims require corroborating evidence.
+headline: Two more far-infrared candidates
+claim: Over six months a planet at 300-800 AU shifts 10-25 arcminutes by parallax, so AKARI
+  alone can find it, as a source that holds still for a day and is gone months later.
+adds: Of 5.3 million single-scan detections, two candidates remain in a 20° by 40° region,
+  each seen at one epoch only. They lie 3° apart, far more than a planet moves, so they are not
+  one object, and neither is near the earlier IRAS-AKARI pair. None is confirmed.
 track: none
+result:
+  label: six-month parallax at 300 AU
+  key: parallax_max
+  fmt: '{:.1f} arcmin'
+  published: 25.0
