@@ -5,8 +5,14 @@ title: Evaluating the Dynamical Stability of Outer Solar System Objects in the P
 arxiv: '1706.06609'
 date: 2017-06
 kind: dynamics
-headline: Sticking, then hopping
-claim: Distant objects are not locked forever but hop between resonances with Planet Nine.
-adds: Resonance trapping is intermittent, not permanent. Hopping shapes the long-term distribution
-  of distant orbits.
+headline: Objects hop between overlapping resonances
+claim: In N-body runs of eight distant objects under many Planet Nines, some sit in one resonance
+  while others hop between neighbouring ones yet stay anti-aligned.
+adds: 'Staying in one resonance is not needed for stability: Sedna and 2012 VP113 stay put while
+  2007 TG422 and 2013 RF98 hop. Resonances overlapping beyond ~590 AU explain the hopping, and
+  stability yields a posterior on a₉ and e₉.'
 track: none
+result:
+  label: resonance overlap begins (a₉ = 700 AU)
+  key: a_hop
+  fmt: au

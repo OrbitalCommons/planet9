@@ -5,8 +5,14 @@ title: Orbital clustering of distant Kuiper Belt Objects by hypothetical Planet 
 arxiv: '1605.02473'
 date: 2016-05
 kind: dynamics
-headline: Locked in by a slow resonance
-claim: Distant KBOs are confined by capture into a secular resonance with Planet Nine.
-adds: A secular resonance maintains the clustering without fine-tuned initial conditions. The
-  libration centre and amplitude are set by P9's orbit.
+headline: Secular or resonant?
+claim: The secular model behind the clustering was built on a truncated series that does
+  not converge; recomputed with no expansion, it may confine orbits without any resonance.
+adds: Computed without the truncated series, the secular Hamiltonian has a high-eccentricity
+  family of orbits whose apse never lines up with the planet's. Secular dynamics alone can
+  hold orbits anti-aligned; resonance is one route to clustering, not the only one.
 track: none
+result:
+  label: error of the truncated series at 400 AU
+  key: truncation_error
+  fmt: pct0
