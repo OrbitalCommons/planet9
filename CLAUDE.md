@@ -27,3 +27,15 @@ indirection in the consuming crate:
 - **Import symbols; don't fully-qualify at the call site.** Bring a symbol into
   scope with `use p9_core::module::thing;` and call it unqualified (`thing()`),
   rather than writing `p9_core::module::thing()` inline at the call site.
+
+## Manim film (`animations/`)
+
+- Spec: `animations/STYLE.md`. Python draws, Rust computes: every number a scene
+  shows comes from `crates/p9-anim-data` (`papers/<crate>.rs`, `preface/<file>.rs`)
+  via `animations/data/anim.json`.
+- Use a per-worktree `CARGO_TARGET_DIR` when regenerating `anim.json`; a shared
+  one lets worktrees overwrite each other's `p9-anim-data` binary silently.
+- Check scenes with `animations/tools/contact_sheet.py` (`python3`, wrapped in
+  `timeout`), and look at every frame.
+- Shared plotting/layout helpers live in `animations/p9_manim/`; reuse them
+  rather than copying a helper into a scene file.
