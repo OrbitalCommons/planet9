@@ -118,9 +118,13 @@ class MondEfe2023(Scene):
         orbit_lab.move_to(o + DOWN * 2.75)
 
         lon = np.array(d["lon_deg"])
-        rbar = np.array(d["rbar"])
+        # only differences in the averaged energy matter: offset it so the
+        # plotted range starts at zero, where manim's axes cross
+        floor = float(np.floor(min(d["rbar"]) * 10) / 10)
+        rbar = np.array(d["rbar"]) - floor
+        r_circ = d["rbar_circular"] - floor
         top = float(np.ceil(rbar.max() * 10) / 10)
-        bot = float(np.floor(rbar.min() * 10) / 10)
+        bot = 0.0
         ax, labs = widgets.labeled_axes(
             [0, 360, 90], [bot, top, 0.1], x_label="longitude of the orbit's long axis  (deg)",
             y_label="tidal energy, orbit-averaged", y_rotate=True, numbers=False,
@@ -131,10 +135,10 @@ class MondEfe2023(Scene):
         ticks = VGroup(*[layout.label(f"{x}", font_size=14, color=P.MUTED)
                          .next_to(ax.c2p(x, bot), DOWN, buff=0.12) for x in (0, 90, 180, 270, 360)])
         curve = widgets.curve(ax, lon, rbar, color=P.ORANGE)
-        circ = DashedLine(ax.c2p(0, d["rbar_circular"]), ax.c2p(360, d["rbar_circular"]),
-                          color=P.MUTED, stroke_width=1.5)
+        circ = DashedLine(ax.c2p(0, r_circ), ax.c2p(360, r_circ), color=P.MUTED,
+                          stroke_width=1.5)
         circ_lab = layout.label("circular orbit", font_size=13, color=P.MUTED)
-        circ_lab.next_to(ax.c2p(360, d["rbar_circular"]), RIGHT, buff=0.08)
+        circ_lab.next_to(ax.c2p(360, r_circ), RIGHT, buff=0.08)
         gc_marks = VGroup()
         for x in (gc - 180.0, gc):
             gc_marks.add(DashedLine(ax.c2p(x, bot), ax.c2p(x, top), color=P.PURPLE,
