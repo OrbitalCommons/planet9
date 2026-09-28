@@ -4,8 +4,15 @@ title: A search for Planet 9 in the IRAS data
 arxiv: '2111.03831'
 date: 2021-11
 kind: search
-headline: Combing the IRAS archive
-claim: A moving far-IR source in the IRAS archive could be a cold, distant Planet Nine.
-adds: The archive yields tantalising single-epoch flags. A second epoch is required to confirm
-  proper motion.
+headline: One candidate in the 1983 IRAS scans
+claim: Planet Nine could have been recorded by IRAS in 1983 as a faint 60 µm source that
+  shifts by arcminutes between passes months apart.
+adds: Of 683 paired detections one survives, a 0.57 Jy source that moved 20 arcmin in 12
+  weeks, fitting a 3-5 Earth-mass body at 225 ± 15 AU. It sits 72° from the ecliptic in galactic
+  cirrus, far from every predicted orbit, and is unconfirmed.
 track: none
+result:
+  label: distance implied by 0.57 Jy at 40 K
+  key: implied_distance_au
+  fmt: au
+  published: 225

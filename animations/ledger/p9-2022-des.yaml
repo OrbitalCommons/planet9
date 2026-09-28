@@ -5,9 +5,11 @@ arxiv: '2203.07642'
 date: 2022-03
 kind: search
 headline: Deep, but narrow
-claim: The deep but narrow DES survey rules out faint, distant solutions in its footprint.
-adds: DES adds ~5% unique exclusion after ZTF. Depth buys little if the footprint is small --
-  coverage is king.
+claim: Six years of the Dark Energy Survey reach r = 23.8 over 5,000 deg². Would it have
+  linked the predicted Planet Nines that ZTF was too shallow to see?
+adds: DES recovers 87% of the predicted planets that cross its footprint, but only one in
+  nine does. After removing those ZTF had already excluded, it rules out another 5% of the
+  predicted orbits; the rest lie outside its 12% of the sky.
 track: excluded
 excluded:
   label: DES

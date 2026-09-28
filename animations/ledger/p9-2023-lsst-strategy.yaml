@@ -5,8 +5,14 @@ title: Tuning the Legacy Survey of Space and Time (LSST) Observing Strategy for 
 arxiv: '2303.02355'
 date: 2023-03
 kind: forecast
-headline: Designing the survey that could win
-claim: Rubin/LSST's discovery fraction for Planet Nine is set by its observing-strategy choices.
-adds: A well-designed LSST strategy discovers most of the viable region. Survey design, not
-  just telescope size, decides the outcome.
+headline: Tuning the survey that could win
+claim: Simulated ten-year LSST schedules show how cadence, filters and footprint change what
+  Rubin discovers among the solar system's small and distant bodies.
+adds: Most cadence choices move the discovery metrics by under 5%; the footprint moves them
+  far more. Scored against the predicted Planet Nines, every one inside the baseline footprint
+  is linked, so the reach is set by sky coverage, about half the orbits.
 track: none
+result:
+  label: predicted orbits within LSST's baseline reach
+  key: fraction
+  fmt: pct0
