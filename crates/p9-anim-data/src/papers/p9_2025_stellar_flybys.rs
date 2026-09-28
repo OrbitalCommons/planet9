@@ -36,7 +36,7 @@ fn p_encounter_within(q_au: f64, density_per_pc3: f64) -> f64 {
 /// Which acceptance band an orientation (inclination, argument of periastron)
 /// falls in, by the crate's tolerances.
 fn band(incl: f64, arg_peri: f64) -> &'static str {
-    let coplanar = incl < COPLANAR_TOL_RAD || incl > PI - COPLANAR_TOL_RAD;
+    let coplanar = !(COPLANAR_TOL_RAD..=PI - COPLANAR_TOL_RAD).contains(&incl);
     let near_node = |w: f64| {
         let d = w.rem_euclid(PI);
         d.min(PI - d) < SYMMETRIC_TOL_RAD
