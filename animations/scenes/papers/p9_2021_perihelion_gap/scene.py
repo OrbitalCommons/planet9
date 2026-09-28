@@ -126,7 +126,8 @@ class PerihelionGap2021(Scene):
                          "as q = 65–100 AU", font_size=17, color=P.TEAL),
             layout.label("(paper's prediction)", font_size=14, color=P.MUTED),
         ).arrange(DOWN, buff=0.1, aligned_edge=LEFT).move_to([4.4, -0.4, 0])
-        self.play(FadeOut(odds), FadeIn(pred))
+        self.play(FadeOut(odds), run_time=0.4)
+        self.play(FadeIn(pred))
         timing.hold_to_read(self, pred, settle=0.6)
         nb = new[0]
         today = d["today"]
