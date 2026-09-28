@@ -4,8 +4,15 @@ title: Tilting Uranus via Secular Spin-Orbit Resonance with Planet 9
 arxiv: '2207.11823'
 date: 2022-07
 kind: indirect
-headline: How to tip a planet on its side
-claim: A primordial spin-orbit resonance sweep can tip a planet's spin axis far over.
-adds: Resonant obliquity sweeps are a real, demonstrated mechanism. They lend plausibility to
-  the P9 solar-tilt scenario.
+headline: Could Planet Nine tip Uranus over?
+claim: As Planet Nine migrates outward, Uranus' nodal precession slows through its spin precession
+  rate, and a secular spin-orbit resonance drags the spin axis over.
+adds: In N-body runs a migrating Planet Nine tips Uranus to 76°-106°, several past the observed
+  98°. The catch is that it needs a spin precession rate near 5″/yr, a hundred times today's
+  0.045″/yr, so the idea rests on a primordial disk or moon.
 track: none
+result:
+  label: peak obliquity at α = 5.3″/yr
+  key: showcase_peak_deg
+  fmt: deg
+  published: 103.49

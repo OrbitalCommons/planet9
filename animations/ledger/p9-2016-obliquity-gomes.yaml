@@ -6,7 +6,14 @@ arxiv: '1607.05111'
 date: 2016-07
 kind: indirect
 headline: Tilting the whole planetary plane
-claim: Planet Nine tilts the entire planetary plane away from the solar equator.
-adds: Whether framed as tilting the Sun or the planets, the ~6 degree mismatch follows from
-  P9. It is a complementary derivation of the obliquity result.
+claim: The giant planets' invariant plane precesses slowly about the total angular momentum,
+  Planet Nine included, and so tilts away from the solar equator.
+adds: An analytic map from the planet's mass, a, e and inclination to the tilt. Reaching 5.9°
+  pins the orbit down. At 10 M⊕ and 30° inclination a 700 AU planet needs e = 0.8, more eccentric
+  than Batygin & Brown's 0.6, and its node is tied to the tilt direction.
 track: none
+result:
+  label: eccentricity needed at 700 AU
+  key: required_e_700
+  fmt: '{:.2f}'
+  published: 0.8
