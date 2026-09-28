@@ -4,8 +4,15 @@ title: Measuring the degree of clustering and diffusion of trans-Neptunian objec
 arxiv: '2503.07146'
 date: 2025-03
 kind: evidence
-headline: How fast does alignment fade?
-claim: Both the degree of clustering and its rate of diffusion can be measured.
-adds: Seeing clustering today implies a force maintaining it. Diffusion sets how long alignment
-  can persist unaided.
+headline: Sorting the orbits by stability
+claim: Integrating clones of every distant object measures how fast its orbit diffuses, so the
+  clustering can be measured separately for stable and unstable orbits.
+adds: Stable and metastable orbits cluster around a perihelion longitude of 50°, more tightly
+  farther out, with poles tilted off the planets' plane. Unstable orbits split into two groups
+  near 25° and 205°. Any explanation must reproduce that sorting.
 track: none
+result:
+  label: perihelion longitude the stable orbits cluster around
+  key: mean_varpi_deg
+  fmt: '{:.0f}°'
+  published: 50
