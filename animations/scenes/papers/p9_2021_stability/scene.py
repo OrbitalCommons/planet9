@@ -146,7 +146,7 @@ class Stability2021(Scene):
         below.move_to(ax3.c2p(1250, 25))
         self.play(FadeIn(eq))
         cap5 = layout.caption("Overlap sets in below a critical perihelion "
-                              "that rises slowly with a", font_size=22)
+                              "that rises slowly with orbit size", font_size=22)
         self.play(FadeIn(cap5), Create(ax3), FadeIn(lab3))
         self.play(Create(crit), FadeIn(above), FadeIn(below), run_time=1.5)
         timing.hold_to_read(self, cap5, eq, settle=0.4)
