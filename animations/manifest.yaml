@@ -104,4 +104,5 @@ papers:
 
 finale:
   - {file: scenes/finale/search_hull.py, scene: SearchReachHull}
-  - {file: scenes/finale/search_hull.py, scene: WhereToPoint}
+  - {file: scenes/finale/space_strategy.py, scene: WhereToImage}
+  - {file: scenes/finale/space_strategy.py, scene: WhatItBuys}

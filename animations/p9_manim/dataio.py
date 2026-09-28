@@ -35,6 +35,12 @@ def search_hull():
     return load_json("figures/search_hull.json")
 
 
+def space_strategy():
+    """Where a small space telescope should image (zones, tiles, frontier,
+    calendar), or None. Regenerate with ``cargo run -p p9-space-strategy``."""
+    return load_json("figures/space_strategy.json")
+
+
 _ANIM_CACHE = {}
 
 

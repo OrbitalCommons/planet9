@@ -1,10 +1,9 @@
 """Finale -- the search-hull "where to point" conclusion.
 
-Two data-driven scenes that close the film: SearchReachHull shows the
-distance x apparent-brightness reach hull (how far each survey depth can see a
-6.2 Mearth Planet Nine), and WhereToPoint maps the un-searched, space-reachable
-sliver of the posterior onto the sky. Numbers come from p9-search-hull via
-figures/search_hull.json (dataio.search_hull()).
+SearchReachHull shows the distance x apparent-brightness reach hull: how far
+each survey depth can see a 6.2 Mearth Planet Nine. Numbers come from
+p9-search-hull via figures/search_hull.json (dataio.search_hull()). The sky
+strategy that follows it is in space_strategy.py.
 """
 import numpy as np
 from manim import (
@@ -200,123 +199,3 @@ class SearchReachHull(Scene):
         layout.show_takeaway(
             self,
             "All-sky surveys reach ~600 AU; V=24.5 from space reaches ~1200 AU.")
-
-
-class WhereToPoint(Scene):
-    """The sky map: the un-searched, space-reachable sliver of the posterior."""
-
-    def construct(self):
-        self.add(layout.concept_badge("FINALE"))
-        title = Text("Where to point next", color=P.FG, font_size=32,
-                     weight="BOLD").to_edge(UP, buff=0.55)
-        self.play(Write(title))
-
-        data = dataio.search_hull()
-        if data:
-            clouds = data["study_clouds"]
-            targets = data["targets"]
-            surveys = data["surveys"]
-            lsst = data["lsst"]
-            resid_reach = data["summary"]["residual_space_reachable_prob"]
-        else:  # documented fallback
-            clouds = _fallback_clouds()
-            targets = [{"rank": 1, "ra_deg": 61.5, "dec_deg": 10.5,
-                        "v_mean": 21.6, "dist_mean_au": 667.0,
-                        "best_survey": "PS1 3pi"}]
-            surveys = [
-                {"name": "PS1 3pi", "depth": 21.5, "dec_min_deg": -30.0, "dec_max_deg": 90.0},
-                {"name": "DES", "depth": 23.8, "dec_min_deg": -65.0, "dec_max_deg": 5.0},
-            ]
-            lsst = {"dec_min_deg": -75.0, "dec_max_deg": 12.0}
-            resid_reach = 0.29
-
-        ax = widgets.axes([0, 360, 60], [-60, 60, 30], x_length=10.0, y_length=4.0,
-                          font_size=16, shift_down=0.35)
-        xlab = layout.label("right ascension (deg)", font_size=18,
-                            color=P.FG).next_to(ax, DOWN, buff=0.25)
-        ylab = layout.label("declination (deg)", font_size=18,
-                            color=P.FG).rotate(np.pi / 2).next_to(ax, LEFT, buff=0.12)
-        self.play(Create(ax), FadeIn(xlab), FadeIn(ylab))
-
-        def band(dec_lo, dec_hi, color, opacity):
-            dec_lo = max(dec_lo, -60.0)
-            dec_hi = min(dec_hi, 60.0)
-            if dec_hi <= dec_lo:
-                return None
-            return Polygon(
-                ax.c2p(0, dec_lo), ax.c2p(360, dec_lo),
-                ax.c2p(360, dec_hi), ax.c2p(0, dec_hi),
-                color=color, fill_opacity=opacity, stroke_width=0,
-            )
-
-        # schematic survey coverage bands ("already searched")
-        survey_colors = [P.BLUE, P.GREEN, P.MUTED, P.ORANGE]
-        cov_group = VGroup()
-        for i, s in enumerate(surveys):
-            b = band(s.get("dec_min_deg", -60.0), s.get("dec_max_deg", 60.0),
-                     survey_colors[i % len(survey_colors)], 0.07)
-            if b is not None:
-                cov_group.add(b)
-        cov_lbl = layout.label("already searched (survey dec bands)", font_size=14,
-                               color=P.MUTED).move_to(ax.c2p(180, -52))
-        self.play(FadeIn(cov_group), FadeIn(cov_lbl))
-
-        # P9 posterior swarm across the sky (pool a couple of studies)
-        swarm = VGroup()
-        for i, study in enumerate(clouds[:3]):
-            for s in study["samples"][::25]:
-                ra, dec = s["ra_deg"], s["dec_deg"]
-                if 0 <= ra <= 360 and -60 <= dec <= 60:
-                    swarm.add(Dot(ax.c2p(ra, dec), radius=0.024, color=P.TEAL,
-                                  fill_opacity=0.7))
-        swarm_lbl = layout.label("P9 posterior (study clouds)", font_size=14,
-                                 color=P.TEAL).move_to(ax.c2p(260, 48))
-        self.play(FadeIn(swarm, lag_ratio=0.01), FadeIn(swarm_lbl))
-        timing.hold_to_read(self, swarm_lbl, settle=0.4)
-
-        # Rubin/LSST footprint outline
-        lo = max(lsst.get("dec_min_deg", -75.0), -60.0)
-        hi = min(lsst.get("dec_max_deg", 12.0), 60.0)
-        lsst_rect = Rectangle(
-            width=ax.c2p(360, 0)[0] - ax.c2p(0, 0)[0],
-            height=ax.c2p(0, hi)[1] - ax.c2p(0, lo)[1],
-            color=P.PURPLE, stroke_width=2.5,
-        ).set_fill(P.PURPLE, opacity=0.05)
-        lsst_rect.move_to(ax.c2p(180, (lo + hi) / 2))
-        lsst_lbl = layout.label("Rubin/LSST reach (r<=24.5)", font_size=14,
-                                color=P.PURPLE, weight="BOLD").move_to(ax.c2p(70, -22))
-        self.play(Create(lsst_rect), FadeIn(lsst_lbl))
-
-        # mark top targets; #1 gets a bright ring + readout
-        ring_group = VGroup()
-        for t in targets[:4]:
-            ra, dec = t["ra_deg"], t["dec_deg"]
-            if t.get("rank", 99) == 1 or t is targets[0]:
-                ring = Circle(radius=0.22, color=P.RED, stroke_width=4).move_to(ax.c2p(ra, dec))
-            else:
-                ring = Circle(radius=0.13, color=P.ORANGE, stroke_width=2.5).move_to(ax.c2p(ra, dec))
-            ring_group.add(ring)
-        top = targets[0]
-        t1_lbl = layout.label(
-            f"#1: RA {top['ra_deg']:.0f}, Dec {top['dec_deg']:+.0f}, "
-            f"V~{top['v_mean']:.1f}, ~{round(top['dist_mean_au']):.0f} AU",
-            font_size=15, color=P.RED, weight="BOLD")
-        t1_lbl.next_to(ax.c2p(top["ra_deg"], top["dec_deg"]), UP, buff=0.28)
-        self.play(*[Create(r) for r in ring_group], FadeIn(t1_lbl))
-        timing.hold_to_read(self, t1_lbl, settle=0.5)
-
-        # boxed headline readout
-        pct = f"{resid_reach * 100:.0f}%"
-        rd_lab = layout.label("un-searched AND space-reachable", font_size=16, color=P.MUTED)
-        rd_val = layout.label(f"{pct} of the P9 posterior", font_size=24,
-                              color=P.GREEN, weight="BOLD").next_to(rd_lab, DOWN, buff=0.1)
-        rd = VGroup(rd_lab, rd_val)
-        rd_box = SurroundingRectangle(rd, color=P.GREEN, buff=0.2, corner_radius=0.1)
-        rd_box.set_fill(P.GREEN, opacity=0.06)
-        readout = VGroup(rd_box, rd).scale(0.85).to_corner(UP + RIGHT, buff=0.4).shift(DOWN * 0.9)
-        self.play(FadeIn(readout))
-        timing.hold_to_read(self, rd_val, settle=0.6)
-
-        layout.show_takeaway(
-            self,
-            "Point at the northern arc past PS1's depth: 29% un-searched, reachable.")
