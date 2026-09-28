@@ -9,11 +9,15 @@ preface:
   - {file: scenes/preface/preface_c_dynamics.py,    scene: P05Clustering}
   - {file: scenes/preface/preface_c_dynamics.py,    scene: P06Precession}
   - {file: scenes/preface/preface_c_dynamics.py,    scene: P07Resonance}
-  - {file: scenes/preface/preface_d_mechanism.py,   scene: P08Sculpting}
+  - {file: scenes/preface/preface_d_mechanism.py,   scene: P08Rings}
+  - {file: scenes/preface/preface_d_mechanism.py,   scene: P08Island}
+  - {file: scenes/preface/preface_d_mechanism.py,   scene: P08Herding}
   - {file: scenes/preface/preface_e_detection.py,   scene: P09ReflectedLight}
   - {file: scenes/preface/preface_e_detection.py,   scene: P10Thermal}
-  - {file: scenes/preface/preface_e_detection.py,   scene: P11Surveys}
-  - {file: scenes/preface/preface_f_indirect_map.py, scene: P12Indirect}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P11Movers}
+  - {file: scenes/preface/preface_e_detection.py,   scene: P11SelectionBias}
+  - {file: scenes/preface/preface_f_indirect_map.py, scene: P12Ranging}
+  - {file: scenes/preface/preface_f_indirect_map.py, scene: P12Obliquity}
   - {file: scenes/preface/preface_f_indirect_map.py, scene: P13Map}
 
 # Per-paper scenes, grouped into acts and ordered by arXiv posting date within
