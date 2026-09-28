@@ -138,7 +138,8 @@ class WhereToImage(Scene):
                 layout.label(f"{zone['why'][0].upper()}{zone['why'][1:]}.", font_size=19,
                              color=P.FG),
                 layout.label(
-                    f"median planet V {zone['median_v']:.1f} at {zone['median_dist_au']:.0f} AU  ·  "
+                    f"median planet V {zone['median_v']:.1f} at "
+                    f"{zone['median_dist_au']:.0f} AU  ·  "
                     f"{zone['median_integration_s']:.0f} s visits  ·  {zone['hours']:.0f} h  ·  "
                     f"best in {_season(zone['opposition_months'])}",
                     font_size=16, color=colour),
